@@ -1,0 +1,3935 @@
+\chapter{Gateway de Telemetría para Smart Energy}
+
+\section{Introducción}
+
+El gateway constituye el componente central de la arquitectura de telemetría propuesta. Este dispositivo actúa como puente entre las redes de campo (802.15.4/Thread) y las redes de área amplia (802.11ah/HaLow), consolidando datos de múltiples medidores inteligentes y transmitiéndolos de manera segura hacia la plataforma IoT en la nube.
+
+\subsection{Función del Gateway en la Arquitectura AMI}
+
+En el contexto de Infraestructuras de Medición Avanzada (AMI), el gateway cumple las siguientes funciones críticas:
+
+\begin{itemize}
+    \item \textbf{Agregación de datos}: Recopila información de múltiples DCUs (Data Concentrator Units) que gestionan clústeres de medidores.
+    \item \textbf{Protocol translation}: Realiza la conversión entre protocolos de red de área local (Thread/802.15.4) y protocolos de aplicación cloud (MQTT/TLS).
+    \item \textbf{Seguridad}: Implementa cifrado end-to-end mediante TLS/mTLS, autenticación mutua y gestión de certificados.
+    \item \textbf{Resiliencia}: Proporciona buffering local, manejo de desconexiones y reintento automático ante fallos de conectividad.
+    \item \textbf{Edge computing}: Permite preprocesamiento local de datos, filtrado y compresión antes de la transmisión.
+\end{itemize}
+
+\section{Conformidad con Estándares Internacionales}
+
+\subsection{IEEE 2030.5-2023 (Smart Energy Profile 2.0)}
+
+El gateway implementa funcionalidades alineadas con IEEE 2030.5 (SEP 2.0), el estándar para aplicaciones de Smart Energy sobre TCP/IP. Este estándar define una arquitectura RESTful para gestión de energía del usuario final, incluyendo respuesta a la demanda, control de carga, precios dinámicos y recursos energéticos distribuidos (DER).
+
+\subsubsection{Function Sets Implementados}
+
+El gateway soporta los siguientes \textit{Function Sets} de IEEE 2030.5:
+
+\begin{enumerate}
+    \item \textbf{Device Capability (DCAP)}: Descubrimiento de capacidades del gateway y endpoints.
+    \begin{itemize}
+        \item Recurso: \texttt{/dcap}
+        \item Expone: MeteringMirror, Time, Messaging, EndDevice List.
+    \end{itemize}
+    
+    \item \textbf{Time (TM)}: Sincronización horaria NTP/PTP para timestamps precisos.
+    \begin{itemize}
+        \item Recurso: \texttt{/tm}
+        \item Precisión: <100 ms (suficiente para facturación).
+    \end{itemize}
+    
+    \item \textbf{Metering Mirror (MM)}: Reflejo de datos de medición para lectura por utilidades.
+    \begin{itemize}
+        \item Recurso: \texttt{/mup/\{deviceID\}/MirrorUsagePoint}
+        \item Datos: Energía activa (Wh), reactiva (VArh), demanda (W).
+        \item Granularidad: 15 min (alineado con IEC 62056).
+    \end{itemize}
+    
+    \item \textbf{Messaging (MSG)}: Notificaciones y alertas bidireccionales.
+    \begin{itemize}
+        \item Texto simple para eventos críticos (cortes, sobrecarga).
+    \end{itemize}
+    
+    \item \textbf{End Device (ED)}: Registro y gestión de dispositivos.
+    \begin{itemize}
+        \item Recurso: \texttt{/edev}
+        \item Identif icación: LFDI (Long Form Device Identifier) basado en certificado X.509.
+    \end{itemize}
+\end{enumerate}
+
+\subsubsection{Arquitectura RESTful}
+
+El gateway expone una API REST HTTP/TLS compatible con IEEE 2030.5:
+
+\begin{verbatim}
+# Ejemplo: Consultar telemetría de medidor
+GET https://gateway:8883/mup/0123456789ABCDEF/MirrorUsagePoint
+Authorization: Bearer <JWT-TOKEN>
+
+# Respuesta (XML IEEE 2030.5)
+<MirrorUsagePoint>
+  <mRID>0123456789ABCDEF</mRID>
+  <MirrorMeterReading>
+    <Reading>
+      <value>1234567</value>  <!-- Wh acumulado -->
+      <timePeriod>
+        <duration>900</duration>  <!-- 15 min -->
+        <start>1730000000</start>
+      </timePeriod>
+    </Reading>
+  </MirrorMeterReading>
+</MirrorUsagePoint>
+\end{verbatim}
+
+\subsubsection{Seguridad IEEE 2030.5}
+
+\begin{itemize}
+    \item \textbf{TLS 1.2/1.3 obligatorio}: Todas las comunicaciones cifradas.
+    \item \textbf{Certificados X.509 ECC}: Autenticación mutua con curva P-256.
+    \item \textbf{LFDI derivado de certificado}: \texttt{SHA-256(SubjectPublicKeyInfo)[0:20]}.
+    \item \textbf{Role-Based Access Control (RBAC)}: Permisos según rol del cliente (utility, usuario, DER).
+\end{itemize}
+
+\subsection{ISO/IEC 30141:2024 (IoT Reference Architecture)}
+
+ISO/IEC 30141 define una arquitectura de referencia para sistemas IoT con cuatro vistas: funcional, información, despliegue y operacional. El gateway implementa múltiples entidades funcionales de este modelo:
+
+\subsubsection{Vista Funcional del Gateway}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{|l|p{7cm}|p{3.5cm}|}
+\hline
+\textbf{Entidad Funcional} & \textbf{Función} & \textbf{Implementación} \\
+\hline
+\textbf{Sensing} & Recepción de datos de sensores (medidores) via Thread/HaLow & OTBR + bridge Python \\
+\hline
+\textbf{Actuation} & Envío de comandos a dispositivos (ej. desconexión) & MQTT RPC + CoAP \\
+\hline
+\textbf{Processing} & Procesamiento local (agregación, normalización) & ThingsBoard Edge Rule Engine \\
+\hline
+\textbf{Storage} & Almacenamiento persistente de datos y configuración & PostgreSQL + ext4 \\
+\hline
+\textbf{Communication} & Gestión de protocolos (Thread, HaLow, LTE, Ethernet) & OpenWRT netifd + Docker \\
+\hline
+\textbf{Security} & Autenticación, cifrado, control de acceso & TLS/mTLS, WPA3-SAE, nftables \\
+\hline
+\textbf{Management} & Configuración, monitoreo, actualización OTA & LuCI + Watchtower + mwan3 \\
+\hline
+\textbf{Application Support} & APIs para aplicaciones (REST, MQTT) & TB Edge API + IEEE 2030.5 endpoints \\
+\hline
+\end{tabular}
+\caption{Entidades funcionales ISO/IEC 30141 en el gateway}
+\end{table}
+
+\subsubsection{Vista de Información}
+
+El gateway maneja los siguientes modelos de información:
+
+\begin{itemize}
+    \item \textbf{Device Model}: Metadatos de medidores (ID, ubicación, tipo, características).
+    \item \textbf{Observation Model}: Telemetría (timestamps, valores, calidad, unidades).
+    \item \textbf{Command Model}: Instrucciones a dispositivos (cambio de intervalo, desconexión).
+    \item \textbf{Event Model}: Notificaciones de eventos (alarmas, cortes, reconexiones).
+\end{itemize}
+
+Estos modelos se mapean a:
+\begin{itemize}
+    \item IEEE 2030.5: MirrorUsagePoint, EndDevice, Reading.
+    \item ThingsBoard: Device, Telemetry, Attributes, RPC.
+    \item OBIS/DLMS: Códigos IEC 62056 (ej. \texttt{1-0:1.8.0} = energía activa total).
+\end{itemize}
+
+\subsubsection{Vista de Despliegue}
+
+\begin{figure}[h]
+\centering
+\begin{verbatim}
+┌─────────────── Gateway (Deployment Node) ────────────────┐
+│  OpenWRT Linux (OS Node)                                 │
+│  ┌────────────────────────────────────────────────────┐  │
+│  │ Docker Engine (Container Runtime)                  │  │
+│  │  ┌──────────┐  ┌──────────┐  ┌──────────┐         │  │
+│  │  │   OTBR   │  │ TB Edge  │  │PostgreSQL│         │  │
+│  │  │(Thread)  │  │(Process) │  │(Storage) │         │  │
+│  │  └────┬─────┘  └────┬─────┘  └────┬─────┘         │  │
+│  │       │             │             │                │  │
+│  │  ┌────┴─────────────┴─────────────┴──────┐        │  │
+│  │  │  Host Network Bridge (Communication)  │        │  │
+│  │  └───────────────────────────────────────┘        │  │
+│  └────────────────────────────────────────────────────┘  │
+│  ┌────────────────────────────────────────────────────┐  │
+│  │ HW Interfaces: Thread RCP, HaLow, LTE M.2, Eth    │  │
+│  └────────────────────────────────────────────────────┘  │
+└───────────────────────────────────────────────────────────┘
+\end{verbatim}
+\caption{Vista de despliegue ISO/IEC 30141 del gateway}
+\end{figure}
+
+\subsubsection{Vista Operacional}
+
+Actividades operacionales según ISO/IEC 30141:
+
+\begin{itemize}
+    \item \textbf{Provisioning}: Configuración inicial vía LuCI o CLI (UCI).
+    \item \textbf{Monitoring}: Healthchecks Docker, vnstat (tráfico), mwan3 (WAN), logs syslog.
+    \item \textbf{Maintenance}: Actualizaciones OTA con Watchtower, backups automatizados.
+    \item \textbf{Fault Management}: Failover WAN automático, restart de contenedores no-healthy.
+\end{itemize}
+
+\section{Requisitos del Gateway}
+
+\subsection{Requisitos Funcionales}
+
+\begin{enumerate}
+    \item \textbf{RF-GW-001}: El gateway debe recibir datos de al menos 10 DCUs simultáneamente mediante 802.11ah (HaLow).
+    \item \textbf{RF-GW-002}: Debe normalizar y transformar datos OBIS de DLMS/COSEM a formato JSON/CBOR.
+    \item \textbf{RF-GW-003}: Debe publicar telemetría a broker MQTT con QoS 1 o 2 garantizando entrega.
+    \item \textbf{RF-GW-004}: Debe soportar topics MQTT estructurados: \texttt{telemetry/\{region\}/\{dcu\}/\{meter\}}.
+    \item \textbf{RF-GW-005}: Debe mantener buffer persistente local (ext4) con capacidad mínima de 7 días.
+    \item \textbf{RF-GW-006}: Debe soportar uplink redundante: Ethernet WAN (primario) y LTE M.2 (backup automático).
+    \item \textbf{RF-GW-007}: Debe operar como Access Point HaLow (902-928 MHz) con alcance mínimo de 1 km.
+    \item \textbf{RF-GW-008 (IEEE 2030.5)}: Debe exponer API REST compatible con IEEE 2030.5 Function Sets: DCAP, TM, MM, MSG, ED.
+    \item \textbf{RF-GW-009 (IEEE 2030.5)}: Debe implementar MirrorUsagePoint para lectura de telemetría con granularidad de 15 minutos.
+    \item \textbf{RF-GW-010 (ISO/IEC 30141)}: Debe implementar entidades funcionales: Sensing, Processing, Storage, Communication, Security, Management.
+\end{enumerate}
+
+\subsection{Requisitos No Funcionales}
+
+\begin{enumerate}
+    \item \textbf{RNF-GW-001}: Latencia E2E (DCU→Gateway→Cloud) menor a 5 segundos para lecturas instantáneas.
+    \item \textbf{RNF-GW-002}: Disponibilidad mayor al 99.5\% con failover automático Ethernet ↔ LTE en <30 seg.
+    \item \textbf{RNF-GW-003}: Consumo energético en modo activo menor a 15W (con LTE en idle).
+    \item \textbf{RNF-GW-004}: Operación en rango de temperatura -10°C a +50°C (Morse Micro: -40°C a +85°C).
+    \item \textbf{RNF-GW-005}: Throughput HaLow: mínimo 20 Mbps agregado (suficiente para 10 DCUs @ 2 Mbps c/u).
+    \item \textbf{RNF-GW-006 (IEEE 2030.5)}: Precisión de sincronización horaria <100 ms para timestamping de lecturas.
+    \item \textbf{RNF-GW-007 (IEEE 2030.5)}: Soporte de al menos 250 EndDevices simultáneos (vía DCUs).
+\end{enumerate}
+
+\subsection{Requisitos de Seguridad}
+
+\begin{enumerate}
+    \item \textbf{RS-GW-001}: Autenticación mutua TLS 1.2/1.3 con broker MQTT y ThingsBoard Cloud.
+    \item \textbf{RS-GW-002}: Certificados X.509 con renovación automática antes de expiración.
+    \item \textbf{RS-GW-003}: Secure Boot habilitado para prevenir firmware no autorizado.
+    \item \textbf{RS-GW-004}: Cifrado de credenciales y llaves en memoria no volátil (UCI encrypt).
+    \item \textbf{RS-GW-005}: OTA (Over-The-Air) segura con validación de firma digital de imágenes Docker.
+    \item \textbf{RS-GW-006 (IEEE 2030.5)}: Certificados ECC P-256 para autenticación de EndDevices.
+    \item \textbf{RS-GW-007 (IEEE 2030.5)}: LFDI (Long Form Device Identifier) derivado de certificado X.509.
+    \item \textbf{RS-GW-008 (IEEE 2030.5)}: RBAC (Role-Based Access Control) para APIs REST.
+    \item \textbf{RS-GW-009}: WPA3-SAE con PMF obligatorio en interfaz HaLow.
+\end{enumerate}
+
+\section{Arquitectura de Software del Gateway}
+
+\subsection{Stack de Contenedores}
+
+El gateway implementa una arquitectura basada en contenedores Docker con servicios desacoplados:
+
+\begin{figure}[h]
+\centering
+% TODO: Insertar diagrama de arquitectura Docker (OTBR + TB Edge + Bridge)
+\caption{Arquitectura de contenedores del gateway OpenWRT}
+\label{fig:gateway-stack}
+\end{figure}
+
+\subsubsection{Capa de Sistema Operativo (OpenWRT)}
+
+\begin{itemize}
+    \item \textbf{Kernel Linux 5.15+}: Con soporte para namespaces, cgroups y overlay filesystem.
+    \item \textbf{UCI (Unified Configuration Interface)}: Gestión centralizada de red, firewall y servicios.
+    \item \textbf{nftables}: Firewall con reglas para aislamiento de contenedores y NAT.
+    \item \textbf{netifd}: Gestión de interfaces de red (WAN, LAN, VLANs, bridges).
+\end{itemize}
+
+\subsubsection{Capa de Orquestación (Docker + Compose)}
+
+\begin{itemize}
+    \item \textbf{Docker Engine 24+}: Runtime de contenedores con storage driver overlay2.
+    \item \textbf{Docker Compose 2.x}: Definición declarativa de multi-contenedor con volúmenes y redes.
+    \item \textbf{LuCI Docker Manager}: Interfaz web para gestión visual de contenedores.
+\end{itemize}
+
+\subsubsection{Capa de Servicios (Contenedores)}
+
+\begin{itemize}
+    \item \textbf{OpenThread Border Router}: Gestión de red Thread y ruteo IPv6.
+    \item \textbf{ThingsBoard Edge}: Plataforma IoT local con dashboards y reglas.
+    \item \textbf{PostgreSQL}: Base de datos para persistencia de TB Edge.
+    \item \textbf{Thread-TB Bridge}: Aplicación custom para integración OTBR $\leftrightarrow$ TB Edge.
+    \item \textbf{MQTT Broker (Mosquitto)}: Opcional, para segregar tráfico interno.
+\end{itemize}
+
+\subsection{Stack de Comunicación}
+
+\subsubsection{Capa Física y de Enlace}
+
+\begin{itemize}
+    \item \textbf{802.15.4/Thread}: Interfaz radio RCP (nRF52840/ESP32-H2) conectada vía USB al contenedor OTBR.
+    \item \textbf{802.11ah (HaLow - Morse Micro)}: Backhaul desde DCUs al gateway (902-928 MHz, hasta 3 km).
+    \item \textbf{802.11ac/ax}: WiFi dual-band (2.4/5 GHz) para gestión local y configuración web.
+    \item \textbf{LTE Cat-6 (M.2)}: Uplink celular para zonas sin infraestructura fija o como backup WAN.
+    \item \textbf{Ethernet Gigabit}: Puerto WAN para fibra/ADSL/cable como uplink primario + 4 puertos LAN.
+\end{itemize}
+
+\textbf{Diagrama de conectividad}:
+\begin{verbatim}
+DCUs (Thread) 
+    ↓ [802.11ah / Morse Micro / 902-928 MHz / hasta 3 km]
+Gateway OpenWRT (HaLow AP + OTBR + TB Edge)
+    ↓ [WAN: Ethernet Gigabit (prioridad 1) o LTE M.2 (prioridad 2)]
+Internet → ThingsBoard Cloud
+\end{verbatim}
+
+\subsubsection{Capa de Red}
+
+\begin{itemize}
+    \item \textbf{IPv6}: Red Thread usa prefijo ULA \texttt{fd00::/64}, ruteado por OTBR hacia LAN.
+    \item \textbf{IPv4 NAT}: Para uplink WAN hacia Internet y ThingsBoard Cloud.
+    \item \textbf{mDNS/DNS-SD}: Descubrimiento de servicios entre Thread y LAN (proxy en OTBR).
+\end{itemize}
+
+\subsubsection{Capa de Transporte}
+
+\begin{itemize}
+    \item \textbf{TCP/TLS}: Conexiones seguras entre TB Edge y ThingsBoard Cloud (puerto 7070).
+    \item \textbf{MQTT/TLS}: Publicación de telemetría desde bridge hacia TB Edge (puerto 1883/8883).
+    \item \textbf{CoAP/UDP}: Protocolo ligero para dispositivos Thread con recursos limitados.
+\end{itemize}
+
+\subsubsection{Capa de Aplicación}
+
+\begin{itemize}
+    \item \textbf{MQTT 3.1.1/5.0}: Protocolo principal para telemetría y comandos.
+    \item \textbf{HTTP/REST}: API de TB Edge para configuración y consultas.
+    \item \textbf{WebSocket}: Para dashboards en tiempo real en interfaz web de TB Edge.
+    \item \textbf{JSON}: Formato de serialización estándar para payloads.
+\end{itemize}
+
+\subsection{Componentes de Software}
+
+\subsubsection{Contenedor OpenThread Border Router}
+
+Responsable de:
+\begin{itemize}
+    \item Gestionar la red Thread (formación, comisionado, ruteo).
+    \item Actuar como líder (Leader) de la red Thread mesh.
+    \item Rutear tráfico IPv6 entre Thread (\texttt{fd00::/64}) y LAN.
+    \item Proporcionar web UI para diagnóstico y configuración (\texttt{http://[fd00::1]:80}).
+    \item Publicar prefijos de red vía Router Advertisement.
+\end{itemize}
+
+Configuración de red Thread:
+\begin{verbatim}
+docker exec -it otbr ot-ctl dataset init new
+docker exec -it otbr ot-ctl dataset networkname "SmartGrid-Thread"
+docker exec -it otbr ot-ctl dataset panid 0xABCD
+docker exec -it otbr ot-ctl dataset channel 15
+docker exec -it otbr ot-ctl dataset commit active
+docker exec -it otbr ot-ctl ifconfig up
+docker exec -it otbr ot-ctl thread start
+\end{verbatim}
+
+\subsubsection{Contenedor ThingsBoard Edge}
+
+Funciones principales:
+\begin{itemize}
+    \item \textbf{Ingestión de datos}: Recibe telemetría vía MQTT, HTTP, CoAP desde bridge.
+    \item \textbf{Procesamiento local}: Ejecuta reglas (Rule Engine) para alarmas y transformaciones.
+    \item \textbf{Almacenamiento}: Persiste time-series en PostgreSQL local.
+    \item \textbf{Dashboards}: Interfaz web con visualizaciones en tiempo real.
+    \item \textbf{Sincronización cloud}: Envía datos agregados a ThingsBoard Cloud vía gRPC.
+\end{itemize}
+
+Creación de dispositivo en TB Edge:
+\begin{verbatim}
+# Vía API REST
+curl -X POST http://localhost:8080/api/device \
+  -H "X-Authorization: Bearer $TOKEN" \
+  -d '{
+    "name": "SmartMeter-001",
+    "type": "energy-meter",
+    "label": "Medidor Residencial Sector A"
+  }'
+\end{verbatim}
+
+\subsubsection{Contenedor PostgreSQL}
+
+\begin{itemize}
+    \item Base de datos relacional para TB Edge (dispositivos, usuarios, dashboards).
+    \item Time-series híbrido con extensión TimescaleDB (opcional, mejora rendimiento).
+    \item Volumen persistente en \texttt{/mnt/docker/postgres-data} para sobrevivir reinicios.
+    \item Backups automáticos vía cron: \texttt{pg\_dump} diario a \texttt{/mnt/docker/backups}.
+\end{itemize}
+
+\subsubsection{Bridge Thread $\leftrightarrow$ ThingsBoard}
+
+Aplicación custom (Python/Node.js) que:
+\begin{itemize}
+    \item Suscribe a topics MQTT de dispositivos Thread (publicados localmente).
+    \item Parsea payloads (CBOR/JSON) y extrae telemetría (energía, potencia, voltaje).
+    \item Transforma a formato ThingsBoard:
+\end{itemize}
+
+\begin{verbatim}
+{
+  "ts": 1730000000000,
+  "values": {
+    "energy_kwh": 1234.56,
+    "power_w": 3450.0,
+    "voltage_v": 220.5,
+    "current_a": 15.68,
+    "frequency_hz": 60.02
+  }
+}
+\end{verbatim}
+
+\begin{itemize}
+    \item Publica a TB Edge vía MQTT usando access token del dispositivo.
+    \item Maneja reconexión, buffering local (Redis/SQLite) en caso de downtime de TB Edge.
+\end{itemize}
+
+Ejemplo de implementación (Node.js):
+\begin{verbatim}
+const mqtt = require('mqtt');
+
+// Cliente para Thread devices
+const threadClient = mqtt.connect('mqtt://localhost:1883');
+
+// Cliente para TB Edge
+const tbClient = mqtt.connect('mqtt://localhost:1883', {
+  username: 'DEVICE_ACCESS_TOKEN'
+});
+
+threadClient.on('message', (topic, payload) => {
+  const data = JSON.parse(payload);
+  
+  const telemetry = {
+    ts: Date.now(),
+    values: {
+      energy_kwh: data.energy,
+      power_w: data.power,
+      voltage_v: data.voltage
+    }
+  };
+  
+  tbClient.publish('v1/devices/me/telemetry', 
+                   JSON.stringify(telemetry));
+});
+
+threadClient.subscribe('thread/telemetry/#');
+\end{verbatim}
+
+\subsubsection{Módulo de Seguridad}
+
+\begin{itemize}
+    \item \textbf{Firewall nftables}: Reglas para aceptar solo puertos necesarios (MQTT 1883/8883, HTTP 8080, SSH 22).
+    \item \textbf{TLS/mTLS}: Certificados X.509 para conexión TB Edge $\leftrightarrow$ TB Cloud.
+    \item \textbf{Secrets management}: Variables sensibles (passwords, tokens) en Docker secrets o variables de entorno cifradas.
+    \item \textbf{Actualizaciones automáticas}: Watchtower container para actualizar imágenes Docker periódicamente.
+\end{itemize}
+
+Ejemplo de reglas nftables:
+\begin{verbatim}
+# Permitir MQTT desde LAN a contenedores
+nft add rule inet fw4 forward iifname "br-lan" \
+  tcp dport {1883, 8883} accept
+
+# Bloquear acceso externo a PostgreSQL
+nft add rule inet fw4 input iifname "wan" \
+  tcp dport 5432 drop
+\end{verbatim}
+
+\section{Flujo de Datos End-to-End}
+
+\subsection{Flujo Normal de Operación}
+
+\begin{enumerate}
+    \item \textbf{Medidor → Nodo Thread (ESP32C6)}: El medidor inteligente envía lecturas via RS-485/DLMS al nodo adaptador Thread.
+    \item \textbf{Nodo Thread → OTBR}: El nodo publica telemetría via CoAP/MQTT sobre Thread (IPv6 \texttt{fd00::/64}).
+    \item \textbf{OTBR: Ruteo IPv6}: El contenedor OTBR rutea el paquete desde Thread hacia la red LAN del gateway.
+    \item \textbf{Bridge: Transformación}: El contenedor bridge recibe el mensaje, lo parsea y transforma al formato ThingsBoard.
+    \item \textbf{Bridge → TB Edge}: El bridge publica vía MQTT (puerto 1883) al contenedor TB Edge.
+    \item \textbf{TB Edge: Procesamiento}: TB Edge ejecuta Rule Engine (ej. alarmas por consumo excesivo), actualiza dashboards y almacena en PostgreSQL.
+    \item \textbf{TB Edge → TB Cloud}: Periódicamente (cada 5 min), TB Edge sincroniza datos agregados con ThingsBoard Cloud vía gRPC/TLS (puerto 7070).
+    \item \textbf{Usuario: Visualización}: Operador accede a dashboards en TB Cloud o localmente en TB Edge (\texttt{http://<gateway-ip>:8080}).
+\end{enumerate}
+
+\subsection{Flujo en Modo Edge (Sin Conectividad Cloud)}
+
+\begin{enumerate}
+    \item Gateway detecta pérdida de conectividad WAN (ping a \texttt{8.8.8.8} falla).
+    \item TB Edge activa modo offline: continúa recibiendo telemetría local y ejecutando reglas.
+    \item Dashboards locales permanecen funcionales (acceso vía LAN).
+    \item Datos se acumulan en PostgreSQL local (límite: 30 días o 10 GB, configurable).
+    \item Al recuperar conectividad, TB Edge sincroniza automáticamente backlog con cloud (chunked uploads).
+\end{enumerate}
+
+\subsection{Flujo de Comandos Downlink (Cloud → Dispositivo)}
+
+\begin{enumerate}
+    \item Operador envía comando desde TB Cloud (ej. "cambiar intervalo de lectura a 5 min").
+    \item TB Cloud envía comando a TB Edge vía gRPC.
+    \item TB Edge publica comando en topic MQTT: \texttt{v1/devices/<device-id>/rpc/request/+}.
+    \item Bridge suscrito a este topic recibe el comando y lo traduce al formato Thread/CoAP.
+    \item Bridge envía comando CoAP PUT a dispositivo Thread: \texttt{coap://[fd00::abcd]/config/interval}.
+    \item Dispositivo Thread ejecuta comando, responde con ACK y actualiza configuración.
+    \item Bridge publica respuesta a TB Edge: \texttt{v1/devices/<device-id>/rpc/response/123}.
+    \item TB Edge sincroniza respuesta con TB Cloud.
+\end{enumerate}
+
+\subsection{Flujo de Actualización OTA de Contenedores}
+
+\begin{enumerate}
+    \item Watchtower container verifica actualizaciones de imágenes Docker cada 24h.
+    \item Si nueva versión disponible (ej. \texttt{openthread/otbr:3.5.0}), descarga imagen.
+    \item Watchtower detiene contenedor actual, crea nuevo con misma configuración (volúmenes, redes).
+    \item Si nuevo contenedor arranca correctamente (healthcheck OK), elimina imagen antigua.
+    \item Si falla, rollback automático a imagen anterior.
+    \item Logs de actualización en \texttt{/mnt/docker/watchtower/watchtower.log}.
+\end{enumerate}
+
+\section{Implementación del Gateway con OpenWRT}
+
+\subsection{Justificación de la Plataforma}
+
+Se selecciona OpenWRT como sistema operativo del gateway por:
+
+\begin{itemize}
+    \item \textbf{Flexibilidad}: Linux embebido con gestión de paquetes (opkg) y configuración vía UCI.
+    \item \textbf{Soporte Docker}: Contenedorización de servicios (OpenThread Border Router, ThingsBoard Edge).
+    \item \textbf{Redes avanzadas}: VLAN, firewall (nftables), QoS, IPv6 nativo.
+    \item \textbf{Hardware compatible}: Amplio soporte para routers con expansión de almacenamiento (USB, NVMe).
+    \item \textbf{Comunidad activa}: Actualizaciones de seguridad frecuentes y extenso repositorio de paquetes.
+\end{itemize}
+
+\subsection{Hardware del Gateway}
+
+\subsubsection{Plataforma Base}
+
+\begin{itemize}
+    \item \textbf{SoC}: MediaTek MT7621AT (MIPS 1004Kc dual-core @ 880 MHz) o similar con soporte PCIe y M.2.
+    \item \textbf{RAM}: 512 MB DDR3 para soportar Docker y múltiples contenedores simultáneos.
+    \item \textbf{Flash}: 16 MB NOR flash para OpenWRT + 32 GB USB 3.0/NVMe M.2 para contenedores y datos.
+    \item \textbf{WiFi dual-band}: 802.11ac/ax (2.4/5 GHz) para gestión y configuración local.
+    \item \textbf{Ethernet}: 5 puertos Gigabit (1 WAN + 4 LAN) con soporte PoE+ para alimentación.
+    \item \textbf{Alimentación}: PoE+ 802.3at (25W) o adaptador 12V/2A.
+\end{itemize}
+
+\subsubsection{Conectividad 802.11ah (HaLow) con Morse Micro}
+
+El gateway integra chipset \textbf{Morse Micro MM6108} para comunicación HaLow:
+
+\begin{itemize}
+    \item \textbf{Chipset}: Morse Micro MM6108 SoC con soporte 802.11ah completo.
+    \item \textbf{Interfaz}: PCIe/SDIO conectado al bus del router vía miniPCIe o M.2 Key E.
+    \item \textbf{Frecuencia}: 902-928 MHz (ISM band, región América) con canales de 1/2/4/8 MHz.
+    \item \textbf{Alcance}: Hasta 1-3 km en línea de vista con antena externa 5 dBi.
+    \item \textbf{Throughput}: Hasta 40 Mbps (MCS10, 8 MHz BW) suficiente para 10+ DCUs.
+    \item \textbf{Seguridad}: WPA3-SAE con PMF (Protected Management Frames) obligatorio.
+    \item \textbf{Ventajas Morse Micro}:
+    \begin{itemize}
+        \item Estabilidad industrial: operación -40°C a +85°C.
+        \item Drivers Linux mainline (ath11k) con soporte OpenWRT nativo.
+        \item Menor consumo: <500 mW en TX, <50 mW en RX.
+        \item Certificaciones FCC/CE completadas para despliegue comercial.
+    \end{itemize}
+\end{itemize}
+
+\textbf{Modos de Operación HaLow Soportados}:
+
+\begin{itemize}
+    \item \textbf{AP (Access Point)}: Gateway como punto de acceso central para DCUs.
+    \item \textbf{STA (Station)}: Gateway como cliente conectado a AP HaLow externo.
+    \item \textbf{802.11s Mesh}: Malla autogestionada entre múltiples gateways.
+    \item \textbf{EasyMesh}: IEEE 1905.1 con Multi-AP para roaming y gestión centralizada.
+\end{itemize}
+
+\section{Implementación en Raspberry Pi 4 con OpenWRT}
+
+\subsection{Hardware de la Implementación Real}
+
+\subsubsection{Plataforma Raspberry Pi 4 Model B}
+
+El prototipo del gateway se implementó sobre \textbf{Raspberry Pi 4 Model B} debido a sus capacidades superiores de procesamiento multi-core y memoria RAM, esenciales para ejecutar múltiples contenedores Docker simultáneamente.
+
+\textbf{Especificaciones Raspberry Pi 4}:
+\begin{itemize}
+    \item \textbf{SoC}: Broadcom BCM2711, Cortex-A72 quad-core ARMv8 64-bit @ 1.5 GHz
+    \item \textbf{RAM}: 4 GB LPDDR4-3200 SDRAM (versión 4 GB seleccionada)
+    \item \textbf{GPU}: VideoCore VI @ 500 MHz (OpenGL ES 3.1, Vulkan 1.0)
+    \item \textbf{Almacenamiento}:
+    \begin{itemize}
+        \item Boot: microSD 32 GB Class 10 (OpenWRT system)
+        \item Data: M.2 NVMe SSD 256 GB via PCIe HAT (Docker volumes, PostgreSQL, queue)
+    \end{itemize}
+    \item \textbf{Conectividad integrada}:
+    \begin{itemize}
+        \item Ethernet: Gigabit Ethernet (1000 Mbps, Broadcom BCM54213PE PHY)
+        \item WiFi: 802.11ac dual-band 2.4/5 GHz (Cypress CYW43455, usado solo para gestión local)
+        \item Bluetooth: 5.0 BLE (no utilizado en esta implementación)
+    \end{itemize}
+    \item \textbf{Puertos de expansión}:
+    \begin{itemize}
+        \item 2× USB 3.0 (5 Gbps)
+        \item 2× USB 2.0 (480 Mbps)
+        \item 40-pin GPIO header (alimentación 3.3V/5V, I2C, SPI, UART)
+        \item 1× PCIe 1× lane via GPIO 40-pin (requiere HAT adapter)
+    \end{itemize}
+    \item \textbf{Alimentación}: 5V/3A via USB-C (fuente oficial Raspberry Pi)
+    \item \textbf{Dimensiones}: 85 mm × 56 mm × 17 mm (sin HATs)
+    \item \textbf{Consumo típico}: 2.7-6.4W según carga (idle vs CPU 100\%)
+\end{itemize}
+
+\subsubsection{Justificación de Raspberry Pi 4 vs Router OpenWRT Tradicional}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{|l|c|c|}
+\hline
+\textbf{Característica} & \textbf{RPi 4 (BCM2711)} & \textbf{Router MT7621AT} \\
+\hline
+Arquitectura CPU & ARMv8 64-bit & MIPS 1004Kc 32-bit \\
+Cores & 4 (Cortex-A72) & 2 (880 MHz) \\
+Clock & 1.5 GHz & 880 MHz \\
+RAM & 4 GB LPDDR4 & 512 MB DDR3 \\
+Docker support & Nativo ARM64 & Limitado (swap req.) \\
+PostgreSQL & Sí (TimescaleDB ARM64) & No (insuf. RAM) \\
+Kafka & Sí (Confluent ARM64) & No (OOM frecuente) \\
+PCIe nativo & Sí (1× lane via HAT) & Sí (miniPCIe) \\
+GPIO/SPI & 40-pin, SPI0/1 & Limitado \\
+Costo (2025) & \$55 (4 GB) & \$40-60 (industrial) \\
+\hline
+\end{tabular}
+\caption{Comparación Raspberry Pi 4 vs Router OpenWRT tradicional}
+\end{table}
+
+\textbf{Ventajas clave de Raspberry Pi 4 para este proyecto}:
+\begin{enumerate}
+    \item \textbf{Multi-core real}: 4 núcleos Cortex-A72 permiten paralelización de contenedores Docker (OTBR, TB Edge, PostgreSQL, Kafka) sin contención de CPU.
+    \item \textbf{RAM abundante}: 4 GB suficientes para PostgreSQL (512 MB), Kafka (1 GB), TB Edge (1 GB), sistema (500 MB) con margen.
+    \item \textbf{Ecosistema ARM64}: Imágenes Docker oficiales multi-arch (linux/arm64/v8) disponibles para todos los componentes.
+    \item \textbf{PCIe para NVMe}: M.2 HAT permite SSD NVMe con >3000 IOPS, crítico para PostgreSQL y queue persistente.
+    \item \textbf{GPIO/SPI flexible}: Conexión directa de módulo HaLow via SPI sin necesidad de adaptadores USB.
+    \item \textbf{Comunidad}: Soporte extendido de OpenWRT, drivers mainline, documentación abundante.
+\end{enumerate}
+
+\textbf{Desventajas (mitigadas)}:
+\begin{itemize}
+    \item \textbf{No switch Ethernet integrado}: Solo 1 puerto Gigabit (suficiente para gateway con uplink único).
+    \item \textbf{No PoE nativo}: Requiere HAT PoE+ (IEEE 802.3at) para alimentación centralizada (agregado en implementación).
+    \item \textbf{Thermal throttling}: CPU reduce frecuencia si T° >80°C, mitigado con ventilador activo (ver subsección térmica).
+\end{itemize}
+
+\subsubsection{Periféricos y Módulos de Conectividad}
+
+\paragraph{Thread/802.15.4: nRF52840 Dongle}
+
+\textbf{Hardware}:
+\begin{itemize}
+    \item \textbf{Modelo}: Nordic Semiconductor nRF52840 Dongle (PCA10059)
+    \item \textbf{SoC}: nRF52840 (ARM Cortex-M4F @ 64 MHz, 1 MB Flash, 256 KB RAM)
+    \item \textbf{Radio}: 802.15.4 @ 2.4 GHz, Bluetooth 5.3, Thread 1.3, Zigbee 3.0
+    \item \textbf{Potencia TX}: +8 dBm máximo (configurable -20 a +8 dBm)
+    \item \textbf{Sensibilidad RX}: -95 dBm (250 kbps OQPSK)
+    \item \textbf{Interfaz}: USB 2.0 Full-Speed (conectado a USB 3.0 port de RPi 4)
+    \item \textbf{Antena}: Integrada PCB 2.4 GHz (omnidireccional, ganancia ~2 dBi)
+    \item \textbf{Firmware}: OpenThread RCP (Radio Co-Processor) v1.3
+    \item \textbf{Identificación en Linux}: \texttt{/dev/ttyACM0} (CDC ACM device)
+\end{itemize}
+
+\textbf{Rol en arquitectura}:
+\begin{itemize}
+    \item nRF52840 ejecuta stack 802.15.4 PHY/MAC en modo RCP.
+    \item Raspberry Pi ejecuta OpenThread Border Router (OTBR) que controla RCP via UART over USB.
+    \item Gateway expone prefijo Thread (fd00::/64) y rutea paquetes IPv6 entre Thread mesh y Ethernet/HaLow.
+\end{itemize}
+
+\paragraph{HaLow 802.11ah: Morse Micro MM6108 via SPI}
+
+\textbf{Hardware}:
+\begin{itemize}
+    \item \textbf{Chipset}: Morse Micro MM6108 SoC
+    \item \textbf{Estándar}: IEEE 802.11ah-2016 completo (S1G PHY)
+    \item \textbf{Frecuencia}: 902-928 MHz (ISM band US/América)
+    \item \textbf{Canales}: 1/2/4/8 MHz bandwidth (implementación usa 8 MHz)
+    \item \textbf{Throughput}: Hasta 40 Mbps (MCS10, 8 MHz, MIMO 1×1)
+    \item \textbf{Alcance típico}: 1-3 km LOS (line-of-sight) con antena 5 dBi
+    \item \textbf{Potencia TX}: +20 dBm (100 mW, regulación FCC Part 15.247)
+    \item \textbf{Consumo}: <500 mW TX, <50 mW RX, <10 mW sleep
+    \item \textbf{Interfaz Raspberry Pi}: SPI0 via GPIO 40-pin
+    \begin{itemize}
+        \item GPIO 8 (CE0): Chip Select
+        \item GPIO 10 (MOSI): Master Out Slave In
+        \item GPIO 9 (MISO): Master In Slave Out
+        \item GPIO 11 (SCLK): SPI Clock (max 10 MHz)
+        \item GPIO 25: Interrupt Request (IRQ)
+    \end{itemize}
+    \item \textbf{Driver Linux}: \texttt{ath11k} (mainline kernel 5.19+, backport a OpenWRT 23.05)
+    \item \textbf{Identificación}: \texttt{wlan2} (wireless interface)
+    \item \textbf{Roadmap}: Soporte USB 2.0 High-Speed planificado (Q2 2026) para simplificar integración en futuras versiones.
+\end{itemize}
+
+\textbf{Conexión SPI en GPIO Raspberry Pi 4}:
+\begin{verbatim}
+# Pines físicos en GPIO 40-pin header
+Pin 19 (GPIO 10) --> MOSI    (Morse Micro)
+Pin 21 (GPIO 9)  --> MISO    (Morse Micro)
+Pin 23 (GPIO 11) --> SCLK    (Morse Micro)
+Pin 24 (GPIO 8)  --> CS0     (Morse Micro)
+Pin 22 (GPIO 25) --> IRQ     (Morse Micro)
+Pin 17           --> 3.3V    (alimentación módulo)
+Pin 20           --> GND     (ground común)
+\end{verbatim}
+
+\textbf{Habilitación SPI en OpenWRT}:
+\begin{verbatim}
+# /boot/config.txt (Raspberry Pi firmware config)
+dtparam=spi=on
+dtoverlay=spi0-1cs
+
+# Verificar dispositivo SPI
+ls -l /dev/spidev0.0
+# Esperado: crw-rw---- 1 root spi 153, 0 /dev/spidev0.0
+
+# Cargar módulo ath11k_ahb (AHB bus para SPI)
+modprobe ath11k_ahb
+
+# Verificar interfaz wireless
+iw dev
+# Esperado: wlan2 Interface phy#2 type managed
+\end{verbatim}
+
+\paragraph{LTE Modem: Quectel BG95-M3}
+
+\textbf{Hardware}:
+\begin{itemize}
+    \item \textbf{Modelo}: Quectel BG95-M3 (LTE Cat-M1/Cat-NB2 + EGPRS)
+    \item \textbf{Bandas LTE-M (Cat-M1)}: B2/B4/B5/B12/B13 (cobertura América)
+    \item \textbf{Bandas NB-IoT (Cat-NB2)}: B2/B4/B5/B12/B13/B66/B71
+    \item \textbf{Fallback}: EGPRS (2G) para zonas sin LTE
+    \item \textbf{Throughput}: 375 kbps DL / 375 kbps UL (Cat-M1), 60 kbps (NB-IoT)
+    \item \textbf{Latencia}: 100-300 ms (Cat-M1), 1-10 s (NB-IoT)
+    \item \textbf{Interfaz}: USB 2.0 High-Speed (conectado a USB 3.0 port de RPi 4)
+    \item \textbf{Protocolo}: QMI (Qualcomm MSM Interface) + AT commands
+    \item \textbf{GNSS integrado}: GPS/GLONASS/Galileo/BeiDou (no utilizado en gateway)
+    \item \textbf{SIM}: Nano-SIM (4FF) con plan M2M de operador local
+    \item \textbf{Antena}: Externa 4G/LTE 3 dBi (conector U.FL/IPEX)
+    \item \textbf{Consumo}: <300 mA @ 3.3V (1W típico), <10 mA PSM (Power Save Mode)
+    \item \textbf{Certificaciones}: FCC/CE/PTCRB/GCF (aprobado operadores América)
+\end{itemize}
+
+\textbf{Identificación en Linux}:
+\begin{verbatim}
+# USB device
+lsusb | grep Quectel
+# Esperado: Bus 001 Device 004: ID 2c7c:0296 Quectel Wireless Solutions Co.
+
+# Interfaces de red
+ls /dev/ttyUSB*
+# /dev/ttyUSB0 (AT commands)
+# /dev/ttyUSB1 (PPP dial-up, no usado)
+# /dev/ttyUSB2 (NMEA GPS, no usado)
+
+# QMI network interface (usado para data)
+ls /sys/class/net/
+# wwan0 (QMI interface)
+\end{verbatim}
+
+\textbf{Ventajas Quectel BG95 para Smart Energy}:
+\begin{itemize}
+    \item \textbf{LTE-M optimizado}: Menor latencia vs NB-IoT (100 ms vs 1-10 s), adecuado para comandos RPC downlink.
+    \item \textbf{Bajo consumo}: PSM mode permite <10 mA idle, extendiendo operación con baterías de respaldo.
+    \item \textbf{Multi-band}: Cobertura Colombia (B2/B4), México (B2/B4/B5), USA (B12/B13).
+    \item \textbf{Fallback 2G}: EGPRS garantiza conectividad en zonas rurales sin LTE.
+    \item \textbf{Drivers mainline}: ModemManager + QMI support nativo en OpenWRT 23.05.
+\end{itemize}
+
+\paragraph{Almacenamiento: M.2 NVMe SSD via PCIe HAT}
+
+\textbf{Hardware}:
+\begin{itemize}
+    \item \textbf{HAT}: Geekworm X1001 M.2 NVMe PCIe HAT
+    \item \textbf{Interfaz}: PCIe 1× Gen 2 (5 Gbps, 500 MB/s teórico)
+    \item \textbf{Conexión}: GPIO 40-pin (PCIe lanes redirigidos desde USB 3.0 controller)
+    \item \textbf{SSD}: Kingston NV2 M.2 2280 NVMe 256 GB (PCIe 4.0, retrocompatible PCIe 2.0)
+    \item \textbf{Performance medida} (con Raspberry Pi 4 PCIe 2.0):
+    \begin{itemize}
+        \item Lectura secuencial: 350-400 MB/s
+        \item Escritura secuencial: 280-320 MB/s
+        \item IOPS 4K random read: 3200-3500
+        \item IOPS 4K random write: 2800-3200
+        \item Latencia: <1 ms (95th percentile)
+    \end{itemize}
+    \item \textbf{Filesystem}: ext4 con journaling, montado en \texttt{/mnt/ssd}
+    \item \textbf{Uso}:
+    \begin{itemize}
+        \item \texttt{/mnt/ssd/docker/} (Docker data root, 100 GB)
+        \item \texttt{/mnt/ssd/postgres/} (PostgreSQL + TimescaleDB, 80 GB)
+        \item \texttt{/mnt/ssd/tb-edge-data/} (ThingsBoard Edge queue, 50 GB)
+        \item \texttt{/mnt/ssd/backups/} (backups automáticos, 26 GB)
+    \end{itemize}
+\end{itemize}
+
+\textbf{Ventajas NVMe vs microSD/USB}:
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{|l|c|c|c|}
+\hline
+\textbf{Métrica} & \textbf{microSD Class 10} & \textbf{USB 3.0 SSD} & \textbf{NVMe M.2 (HAT)} \\
+\hline
+Lectura seq. (MB/s) & 80-95 & 250-400 & 350-400 \\
+Escritura seq. (MB/s) & 20-40 & 200-350 & 280-320 \\
+IOPS 4K random & 100-500 & 1000-2000 & 3000-3500 \\
+Latencia (ms) & 5-20 & 1-5 & <1 \\
+Durabilidad (ciclos E/W) & 10k-100k & 100k-1M & >1M \\
+MTBF (horas) & 50k & 1M & 1.5M \\
+\hline
+\end{tabular}
+\caption{Comparación almacenamiento para gateway IoT}
+\end{table}
+
+\paragraph{Alimentación: PoE+ HAT}
+
+\textbf{Hardware}:
+\begin{itemize}
+    \item \textbf{Modelo}: Waveshare PoE HAT (B) for Raspberry Pi 4
+    \item \textbf{Estándar}: IEEE 802.3at (PoE+, 25.5W máx)
+    \item \textbf{Entrada}: 42-57V DC (inyector PoE en switch Ethernet)
+    \item \textbf{Salida}: 5V/5A (25W) via GPIO 40-pin
+    \item \textbf{Eficiencia}: >85\% (típico 90\%)
+    \item \textbf{Ventilador}: 30 mm, 5V, control PWM por GPIO (encendido si T°>60°C)
+    \item \textbf{Aislamiento}: 1500V DC isolation
+\end{itemize}
+
+\textbf{Ventajas PoE+ para gateway Smart Energy}:
+\begin{itemize}
+    \item Instalación simplificada: 1 cable Ethernet (datos + alimentación).
+    \item Redundancia: UPS centralizado en switch PoE mantiene gateway operativo ante corte eléctrico.
+    \item Cable >50m: Cat5e/Cat6 sin degradación (vs USB-C limitado a 1-2m).
+\end{itemize}
+
+\subsection{Sistema Operativo: OpenWRT 23.05 en Raspberry Pi 4}
+
+\subsubsection{Versión y Arquitectura}
+
+\begin{itemize}
+    \item \textbf{Versión OpenWRT}: 23.05.0 (released 2023-10)
+    \item \textbf{Target}: \texttt{bcm27xx/bcm2711} (Raspberry Pi 4 specific)
+    \item \textbf{Subtarget}: \texttt{rpi-4} (64-bit ARMv8 kernel)
+    \item \textbf{Kernel}: Linux 5.15.134 (LTS kernel con patches Raspberry Pi Foundation)
+    \item \textbf{Arquitectura binarios}: \texttt{aarch64\_cortex-a72} (ARM64v8)
+    \item \textbf{Libc}: musl 1.2.4 (lightweight C library)
+    \item \textbf{Bootloader}: Raspberry Pi firmware (start4.elf, bootcode.bin en FAT32 boot partition)
+\end{itemize}
+
+\subsubsection{Instalación OpenWRT en Raspberry Pi 4}
+
+\textbf{Paso 1: Descarga de imagen}:
+\begin{verbatim}
+# Descargar imagen oficial desde OpenWRT
+wget https://downloads.openwrt.org/releases/23.05.0/targets/bcm27xx/bcm2711/\
+openwrt-23.05.0-bcm27xx-bcm2711-rpi-4-ext4-factory.img.gz
+
+# Verificar checksum SHA256
+sha256sum openwrt-23.05.0-bcm27xx-bcm2711-rpi-4-ext4-factory.img.gz
+\end{verbatim}
+
+\textbf{Paso 2: Escritura en microSD}:
+\begin{verbatim}
+# Linux/macOS
+gunzip openwrt-23.05.0-bcm27xx-bcm2711-rpi-4-ext4-factory.img.gz
+sudo dd if=openwrt-23.05.0-bcm27xx-bcm2711-rpi-4-ext4-factory.img \
+        of=/dev/sdX bs=4M conv=fsync status=progress
+# Reemplazar /dev/sdX con dispositivo correcto (lsblk para listar)
+
+# Windows: usar Raspberry Pi Imager o balenaEtcher
+# Seleccionar imagen .img y microSD target
+\end{verbatim}
+
+\textbf{Paso 3: Configuración inicial (first boot)}:
+\begin{verbatim}
+# Conectar RPi 4 a red Ethernet (DHCP automático en eth0)
+# Conectar via SSH (default IP: 192.168.1.1 si no DHCP)
+ssh root@192.168.1.1
+# Password inicial: <vacío> (presionar Enter)
+
+# Cambiar password root
+passwd
+# Ingresar nueva contraseña segura
+
+# Configurar hostname
+uci set system.@system[0].hostname='smartgrid-gateway-001'
+uci commit system
+/etc/init.d/system reload
+
+# Actualizar timezone
+uci set system.@system[0].timezone='CST6CDT,M3.2.0,M11.1.0'  # Colombia
+uci set system.@system[0].zonename='America/Bogota'
+uci commit system
+/etc/init.d/system reload
+
+# Configurar NTP servers
+uci set system.ntp.server='0.co.pool.ntp.org'
+uci add_list system.ntp.server='1.co.pool.ntp.org'
+uci commit system
+/etc/init.d/sysntpd restart
+\end{verbatim}
+
+\textbf{Paso 4: Actualización de paquetes y drivers esenciales}:
+\begin{verbatim}
+# Actualizar lista de paquetes
+opkg update
+
+# Instalar utilidades base
+opkg install nano htop iperf3 tcpdump curl wget-ssl ca-certificates
+
+# Docker y dependencias
+opkg install dockerd docker-compose luci-app-dockerman
+opkg install kmod-nf-nat kmod-veth kmod-br-netfilter
+
+# ModemManager para Quectel BG95
+opkg install modemmanager libqmi usb-modeswitch
+
+# OpenThread Border Router dependencies
+opkg install wpantund ot-br-posix avahi-daemon
+
+# HaLow drivers (ath11k backport)
+opkg install kmod-ath11k kmod-ath11k-ahb
+
+# SPI support
+opkg install kmod-spi-bcm2835 kmod-spi-dev
+
+# Filesystem tools
+opkg install e2fsprogs fdisk blkid kmod-usb-storage kmod-fs-ext4
+\end{verbatim}
+
+\subsubsection{Configuración de Almacenamiento NVMe}
+
+\textbf{Detección y particionamiento}:
+\begin{verbatim}
+# Verificar detección de SSD NVMe
+lsblk
+# Esperado:
+# nvme0n1     259:0    0  238.5G  0 disk
+# ├─nvme0n1p1 259:1    0  238.5G  0 part
+
+# Si no particionado, crear partición GPT
+fdisk /dev/nvme0n1
+# Comandos: g (create GPT), n (new partition), w (write)
+
+# Formatear ext4 con journaling
+mkfs.ext4 -L ssd-data /dev/nvme0n1p1
+
+# Crear punto de montaje
+mkdir -p /mnt/ssd
+
+# Montaje automático en /etc/config/fstab
+block detect > /etc/config/fstab
+uci set fstab.@mount[-1].enabled='1'
+uci set fstab.@mount[-1].target='/mnt/ssd'
+uci commit fstab
+/etc/init.d/fstab enable
+/etc/init.d/fstab start
+
+# Verificar montaje
+df -h /mnt/ssd
+# Esperado: /dev/nvme0n1p1  234G   60M  222G   1% /mnt/ssd
+
+# Crear directorios Docker
+mkdir -p /mnt/ssd/docker
+mkdir -p /mnt/ssd/postgres
+mkdir -p /mnt/ssd/tb-edge-data
+mkdir -p /mnt/ssd/backups
+\end{verbatim}
+
+\textbf{Configuración Docker data-root en SSD}:
+\begin{verbatim}
+# /etc/docker/daemon.json
+{
+  "data-root": "/mnt/ssd/docker",
+  "log-driver": "json-file",
+  "log-opts": {
+    "max-size": "10m",
+    "max-file": "3"
+  },
+  "storage-driver": "overlay2"
+}
+
+# Reiniciar Docker
+/etc/init.d/dockerd restart
+
+# Verificar data-root
+docker info | grep "Docker Root Dir"
+# Esperado: Docker Root Dir: /mnt/ssd/docker
+\end{verbatim}
+
+\subsection{Configuración de Conectividad}
+
+\subsubsection{Thread Border Router con nRF52840}
+
+\textbf{Paso 1: Flash firmware OpenThread RCP en nRF52840}:
+\begin{verbatim}
+# Desde PC de desarrollo (no en Raspberry Pi)
+# Descargar nRF Command Line Tools y J-Link
+wget https://www.nordicsemi.com/-/media/Software-and-other-downloads/\
+Desktop-software/nRF-command-line-tools/sw/Versions-10-x-x/\
+10-21-0/nrf-command-line-tools_10.21.0_Linux-amd64.tar.gz
+
+# Descargar firmware RCP pre-compilado
+wget https://github.com/openthread/ot-nrf528xx/releases/download/\
+thread-reference-20230706/ot-rcp-ot-nrf52840-dongle.hex
+
+# Flash via nrfjprog (dongle en modo bootloader DFU)
+nrfjprog --program ot-rcp-ot-nrf52840-dongle.hex --chiperase --reset
+\end{verbatim}
+
+\textbf{Paso 2: Configuración OTBR en Raspberry Pi}:
+\begin{verbatim}
+# Instalar OpenThread Border Router
+opkg install ot-br-posix wpantund
+
+# Configurar wpantund para /dev/ttyACM0
+cat > /etc/wpantund.conf <<EOF
+Config:NCP:SocketPath "/dev/ttyACM0"
+Config:NCP:SocketBaud 115200
+Config:TUN:InterfaceName wpan0
+Config:IPv6:Prefix fd00::/64
+EOF
+
+# Habilitar IP forwarding
+echo "net.ipv6.conf.all.forwarding=1" >> /etc/sysctl.conf
+sysctl -p
+
+# Iniciar servicio
+/etc/init.d/wpantund enable
+/etc/init.d/wpantund start
+
+# Verificar interfaz Thread
+ifconfig wpan0
+# Esperado: wpan0 Link encap:UNSPEC HWaddr ...
+#           inet6 addr: fd00::1/64 Scope:Global
+
+# Formar red Thread
+wpanctl form "SmartGrid-Thread" -c 15 -p fd00::
+# Network Name: SmartGrid-Thread
+# Channel: 15
+# PAN ID: auto-generated
+# Extended PAN ID: auto-generated
+\end{verbatim}
+
+\subsubsection{HaLow 802.11ah via SPI}
+
+\textbf{Configuración driver ath11k SPI}:
+\begin{verbatim}
+# Habilitar SPI en boot config
+echo "dtparam=spi=on" >> /boot/config.txt
+echo "dtoverlay=spi0-1cs" >> /boot/config.txt
+reboot
+
+# Cargar módulo kernel
+modprobe ath11k_ahb
+
+# Verificar detección
+iw dev
+# Esperado: phy#2 Interface wlan2 type managed
+
+# Configurar interfaz HaLow AP (ver secciones anteriores para UCI completo)
+# Canal 7 (917 MHz), BW 8 MHz, WPA3-SAE
+\end{verbatim}
+
+\subsubsection{LTE Modem Quectel BG95}
+
+\textbf{Configuración ModemManager}:
+\begin{verbatim}
+# Cargar módulos USB serial
+modprobe option
+modprobe qmi_wwan
+echo "2c7c 0296" > /sys/bus/usb-serial/drivers/option1/new_id
+
+# Iniciar ModemManager
+/etc/init.d/modemmanager enable
+/etc/init.d/modemmanager start
+
+# Detectar modem
+mmcli -L
+# Esperado: /org/freedesktop/ModemManager1/Modem/0 [Quectel] BG95
+
+# Configurar APN y conectar
+mmcli -m 0 --simple-connect="apn=internet.comcel.com.co"
+# Reemplazar con APN de operador local
+
+# Verificar interfaz wwan0
+ifconfig wwan0
+# Esperado: inet addr:10.x.x.x (IP privada del operador)
+
+# Configurar como WAN secundaria con mwan3 (ver sección failover)
+\end{verbatim}
+
+Las siguientes subsecciones detallan cada modo de operación.
+
+\paragraph{Modo AP (Access Point)}
+
+\textbf{Función}: Gateway actúa como punto de acceso central al cual se conectan DCUs y medidores HaLow.
+
+\textbf{Configuración Router Mode (NAT)}:
+\begin{verbatim}
+# Interfaz HaLow (wlan2)
+uci set wireless.halow=wifi-device
+uci set wireless.halow.type='mac80211'
+uci set wireless.halow.channel='7'  # 917 MHz
+uci set wireless.halow.bandwidth='8'
+uci set wireless.halow.hwmode='11ah'
+uci set wireless.halow.country='US'
+uci set wireless.halow.txpower='20'  # 20 dBm (100 mW)
+
+uci set wireless.halow_ap=wifi-iface
+uci set wireless.halow_ap.device='halow'
+uci set wireless.halow_ap.mode='ap'
+uci set wireless.halow_ap.network='halow_lan'
+uci set wireless.halow_ap.ssid='SmartGrid-HaLow-AP'
+uci set wireless.halow_ap.encryption='sae'
+uci set wireless.halow_ap.key='<WPA3-KEY>'
+uci set wireless.halow_ap.ieee80211w='2'  # PMF required
+uci set wireless.halow_ap.max_inactivity='600'  # 10 min timeout
+uci set wireless.halow_ap.max_listen_interval='10'
+
+# Red independiente con NAT
+uci set network.halow_lan=interface
+uci set network.halow_lan.proto='static'
+uci set network.halow_lan.ipaddr='192.168.50.1'
+uci set network.halow_lan.netmask='255.255.255.0'
+uci commit network wireless
+/etc/init.d/network restart
+wifi reload
+\end{verbatim}
+
+\textbf{Configuración Bridge Mode (L2)}:
+\begin{verbatim}
+# HaLow AP bridged a br-lan
+uci set wireless.halow_ap.network='lan'
+uci set wireless.halow_ap.mode='ap'
+uci delete network.halow_lan  # No red separada
+uci commit
+wifi reload
+\end{verbatim}
+
+\textbf{Ventajas}:
+\begin{itemize}
+    \item Cobertura centralizada: DCUs hasta 3 km LOS.
+    \item Control total: airtime fairness, QoS, filtrado MAC.
+    \item Simplicidad: topología estrella sin routing complejo.
+\end{itemize}
+
+\textbf{Desventajas}:
+\begin{itemize}
+    \item Single point of failure.
+    \item No extensión automática de rango.
+\end{itemize}
+
+\paragraph{Modo STA (Station/Cliente)}
+
+\textbf{Función}: Gateway se conecta como cliente a un AP HaLow externo (ej. backhaul rural).
+
+\textbf{Configuración}:
+\begin{verbatim}
+uci set wireless.halow_sta=wifi-iface
+uci set wireless.halow_sta.device='halow'
+uci set wireless.halow_sta.mode='sta'
+uci set wireless.halow_sta.network='wan'  # Uplink WAN
+uci set wireless.halow_sta.ssid='Utility-HaLow-Backhaul'
+uci set wireless.halow_sta.encryption='sae'
+uci set wireless.halow_sta.key='<WPA3-KEY>'
+uci set wireless.halow_sta.ieee80211w='2'
+uci commit wireless
+wifi reload
+\end{verbatim}
+
+\textbf{Caso de uso}: Gateway en zona rural sin fibra/LTE, conecta vía HaLow a torre de utilidad con enlace backhaul.
+
+\textbf{Ventajas}:
+\begin{itemize}
+    \item Ahorro costo celular (sin plan LTE mensual).
+    \item Mayor throughput que LTE en zonas congestionadas.
+\end{itemize}
+
+\paragraph{Modo 802.11s Mesh}
+
+\textbf{Función}: Malla autogestionada entre múltiples gateways HaLow con routing automático.
+
+\textbf{Configuración}:
+\begin{verbatim}
+# Instalar paquete mesh
+opkg install wpad-mesh-openssl
+
+uci set wireless.halow_mesh=wifi-iface
+uci set wireless.halow_mesh.device='halow'
+uci set wireless.halow_mesh.mode='mesh'
+uci set wireless.halow_mesh.mesh_id='SmartGrid-Mesh'
+uci set wireless.halow_mesh.network='mesh_lan'
+uci set wireless.halow_mesh.encryption='sae'
+uci set wireless.halow_mesh.key='<MESH-KEY>'
+uci set wireless.halow_mesh.mesh_fwding='1'
+uci set wireless.halow_mesh.mesh_ttl='31'
+
+# Red mesh con batman-adv
+uci set network.mesh_lan=interface
+uci set network.mesh_lan.proto='batadv_hardif'
+uci set network.mesh_lan.master='bat0'
+uci set network.mesh_lan.mtu='1532'
+
+uci set network.bat0=interface
+uci set network.bat0.proto='static'
+uci set network.bat0.ipaddr='10.50.0.1'
+uci set network.bat0.netmask='255.255.255.0'
+uci commit
+/etc/init.d/network restart
+wifi reload
+\end{verbatim}
+
+\textbf{Protocolo de routing}: HWMP (Hybrid Wireless Mesh Protocol) en kernel o batman-adv en userspace.
+
+\textbf{Arquitectura extendida}:
+\begin{verbatim}
+[Gateway A]---3km Mesh---[Gateway B]---2km Mesh---[Gateway C]
+    |                      |                      |
+ DCU 1-10              DCU 11-20             DCU 21-30
+\end{verbatim}
+
+\textbf{Ventajas}:
+\begin{itemize}
+    \item Auto-healing: rutas alternativas si un nodo falla.
+    \item Extensión de cobertura: 3 gateways = 6-9 km total.
+    \item Sin infraestructura central.
+\end{itemize}
+
+\textbf{Desventajas}:
+\begin{itemize}
+    \item Latencia variable (multi-hop).
+    \item Overhead de protocolo mesh (15-20\% throughput).
+\end{itemize}
+
+\paragraph{Modo EasyMesh (IEEE 1905.1 Multi-AP)}
+
+\textbf{Función}: Controller/Agent mesh con gestión centralizada y roaming WiFi entre APs.
+
+\textbf{Arquitectura}:
+\begin{verbatim}
+[Controller]---Eth/HaLow---[Agent 1]---HaLow---[Agent 2]
+     |                          |                  |
+ DCU 1-10                   DCU 11-20          DCU 21-30
+\end{verbatim}
+
+\textbf{Configuración Controller}:
+\begin{verbatim}
+opkg install ieee1905-daemon map-controller
+
+# Controller config
+uci set mapcontroller.config=config
+uci set mapcontroller.config.enabled='1'
+uci set mapcontroller.config.interfaces='eth0 wlan2'
+uci commit mapcontroller
+/etc/init.d/ieee1905 restart
+
+# HaLow AP frontal
+uci set wireless.halow_ap.easymesh='1'
+uci commit wireless
+wifi reload
+\end{verbatim}
+
+\textbf{Configuración Agent}:
+\begin{verbatim}
+opkg install ieee1905-daemon map-agent
+
+uci set mapagent.config=config
+uci set mapagent.config.enabled='1'
+uci set mapagent.config.controller='192.168.1.1'
+uci set mapagent.config.backhaul_iface='wlan2'  # HaLow backhaul
+uci commit mapagent
+/etc/init.d/ieee1905 restart
+\end{verbatim}
+
+\textbf{Ventajas}:
+\begin{itemize}
+    \item Roaming transparente: DCU cambia entre APs sin desconexión.
+    \item Gestión centralizada: configuración desde Controller.
+    \item Steering: Controller dirige clientes a AP óptimo (load balancing).
+    \item Band steering: 802.11ah + 802.11n/ac combinados.
+\end{itemize}
+
+\textbf{Desventajas}:
+\begin{itemize}
+    \item Complejidad: requiere IEEE 1905.1 daemon.
+    \item Controller single point of failure (mitigar con HA).
+\end{itemize}
+
+\paragraph{Comparación de Modos HaLow}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{|l|c|c|c|c|}
+\hline
+\textbf{Característica} & \textbf{AP} & \textbf{STA} & \textbf{802.11s Mesh} & \textbf{EasyMesh} \\
+\hline
+Cobertura & 3 km & 3 km & 6-9 km & 6-9 km \\
+Topología & Estrella & P2P & Malla & Árbol \\
+Auto-healing & No & No & Sí & Sí \\
+Roaming & No & N/A & Manual & Automático \\
+Gestión & Local & N/A & Distribuida & Centralizada \\
+Complejidad & Baja & Baja & Media & Alta \\
+Latencia & <50 ms & <50 ms & <200 ms & <100 ms \\
+Throughput (10 nodos) & 40 Mbps & 40 Mbps & 30 Mbps & 35 Mbps \\
+\hline
+\end{tabular}
+\caption{Comparación de modos de operación HaLow}
+\end{table}
+
+\paragraph{Recomendación de Arquitectura}
+
+Para despliegue AMI Smart Grid se recomienda:
+
+\begin{itemize}
+    \item \textbf{Zona urbana densa (<1 km)}: Modo AP con bridge a LAN.
+    \item \textbf{Zona rural extendida (3-9 km)}: Modo 802.11s Mesh con 2-3 gateways.
+    \item \textbf{Multi-edificio (campus)}: EasyMesh con Controller central y Agents por edificio.
+    \item \textbf{Backup WAN}: Modo STA conectado a torre utilidad con fibra.
+\end{itemize}
+
+\textbf{Beneficios arquitectónicos de modos avanzados}:
+
+\begin{enumerate}
+    \item \textbf{Extensión de cobertura}: Mesh/EasyMesh multiplica alcance sin infraestructura adicional (3 gateways = 9 km vs 3 km de AP único).
+    \item \textbf{Resiliencia}: Rutas alternativas en mesh eliminan single point of failure.
+    \item \textbf{Escalabilidad}: EasyMesh permite agregar Agents sin reconfigurar red completa.
+    \item \textbf{Reducción CAPEX}: Menos gateways con backhaul dedicado (fibra/LTE) al usar mesh HaLow como backhaul.
+    \item \textbf{QoE mejorada}: Roaming EasyMesh evita desconexiones durante handoff de DCU móvil (ej. vehículo de mantenimiento).
+\end{enumerate}
+
+\subsubsection{Conectividad Celular LTE (M.2 Socket)}
+
+Para redundancia y uplink WAN, el gateway incorpora módulo LTE Cat-4/Cat-6:
+
+\begin{itemize}
+    \item \textbf{Socket}: M.2 Key B (PCIe + USB 3.0 combo) para módems 4G/LTE.
+    \item \textbf{Módulos compatibles}:
+    \begin{itemize}
+        \item Quectel EM060K-GL (Cat-6, 300 Mbps DL, 50 Mbps UL).
+        \item Sierra Wireless EM7565 (Cat-12, 600 Mbps DL).
+        \item Telit LM960 (Cat-18, 1.2 Gbps DL con agregación de portadoras).
+    \end{itemize}
+    \item \textbf{Bandas soportadas}: B2/B4/B5/B7/B12/B13/B66 (Colombia/Latinoamérica).
+    \item \textbf{Interfaz}: USB 3.0 con protocolo QMI/MBIM, drivers ModemManager en OpenWRT.
+    \item \textbf{SIM}: Nano-SIM con soporte eSIM (MFF2) en módulos avanzados.
+    \item \textbf{Antenas}: 2x conectores U.FL para diversidad MIMO 2×2.
+    \item \textbf{Consumo}: <2W en transmisión activa, <100mW en idle.
+    \item \textbf{Casos de uso}:
+    \begin{itemize}
+        \item Uplink principal en zonas sin fibra/ADSL disponible.
+        \item Backup automático si falla conexión Ethernet WAN.
+        \item VPN site-to-site con ThingsBoard Cloud vía IPsec/WireGuard.
+    \end{itemize}
+\end{itemize}
+
+Configuración en OpenWRT (ModemManager):
+\begin{verbatim}
+opkg update
+opkg install modemmanager luci-proto-modemmanager usb-modeswitch
+
+# Configurar interfaz LTE
+uci set network.lte=interface
+uci set network.lte.proto='modemmanager'
+uci set network.lte.device='/sys/devices/platform/ahb/1e1c0000.xhci/usb1/1-1'
+uci set network.lte.apn='internet.movistar.com.co'
+uci set network.lte.pincode='0000'
+uci set network.lte.metric='10'  # Mayor prioridad que Ethernet WAN
+uci commit network
+ifup lte
+\end{verbatim}
+
+Verificación de conexión:
+\begin{verbatim}
+mmcli -L  # Listar módems detectados
+mmcli -m 0 --simple-status  # Estado (señal, operador, IP)
+\end{verbatim}
+
+\subsubsection{Expansión de Almacenamiento}
+
+Para soportar Docker y volúmenes persistentes:
+
+\begin{itemize}
+    \item \textbf{Opción 1}: USB 3.0 flash drive (32-64 GB) formateado ext4.
+    \item \textbf{Opción 2}: Adaptador M.2 NVMe vía USB/PCIe (mejor rendimiento I/O).
+    \item \textbf{Montaje}: \texttt{/mnt/docker} con overlay filesystem para \texttt{/var/lib/docker}.
+\end{itemize}
+
+Configuración en OpenWRT:
+\begin{verbatim}
+opkg update
+opkg install block-mount kmod-fs-ext4 kmod-usb-storage-uas
+mkfs.ext4 /dev/sda1
+block detect > /etc/config/fstab
+uci set fstab.@mount[0].target='/mnt/docker'
+uci set fstab.@mount[0].enabled='1'
+uci commit fstab
+/etc/init.d/fstab enable
+/etc/init.d/fstab start
+\end{verbatim}
+
+\subsection{Instalación de Docker en OpenWRT}
+
+\subsubsection{Paquetes Requeridos}
+
+\begin{verbatim}
+opkg install dockerd docker-compose luci-app-dockerman
+/etc/init.d/dockerd enable
+/etc/init.d/dockerd start
+\end{verbatim}
+
+\subsubsection{Configuración de Docker Daemon}
+
+Archivo \texttt{/etc/docker/daemon.json}:
+\begin{verbatim}
+{
+  "data-root": "/mnt/docker",
+  "storage-driver": "overlay2",
+  "log-driver": "json-file",
+  "log-opts": {
+    "max-size": "10m",
+    "max-file": "3"
+  }
+}
+\end{verbatim}
+
+Reiniciar Docker:
+\begin{verbatim}
+/etc/init.d/dockerd restart
+docker info  # Verificar data-root en /mnt/docker
+\end{verbatim}
+
+\subsection{Despliegue de OpenThread Border Router}
+
+\subsubsection{Función del OTBR}
+
+El OpenThread Border Router (OTBR) actúa como:
+\begin{itemize}
+    \item \textbf{Puente IPv6}: Rutea tráfico entre red Thread (802.15.4) y backbone Ethernet/WiFi.
+    \item \textbf{Comisionado Thread}: Permite unir nuevos dispositivos a la red Thread.
+    \item \textbf{mDNS proxy}: Descubrimiento de servicios entre Thread e IP.
+    \item \textbf{Web UI}: Interfaz de gestión en \texttt{http://[fd00::1]:80}.
+\end{itemize}
+
+\subsubsection{Docker Compose para OTBR}
+
+Archivo \texttt{/mnt/docker/otbr/docker-compose.yml}:
+\begin{verbatim}
+version: '3'
+services:
+  otbr:
+    image: openthread/otbr:latest
+    container_name: otbr
+    network_mode: host
+    privileged: true
+    volumes:
+      - /dev/ttyUSB0:/dev/ttyUSB0
+      - ./otbr-config:/etc/openthread
+    environment:
+      - OTBR_LOG_LEVEL=info
+      - INFRA_IF_NAME=br-lan
+      - RADIO_URL=spinel+hdlc+uart:///dev/ttyUSB0?uart-baudrate=115200
+    restart: unless-stopped
+\end{verbatim}
+
+Despliegue:
+\begin{verbatim}
+cd /mnt/docker/otbr
+docker-compose up -d
+docker logs -f otbr  # Verificar inicio correcto
+\end{verbatim}
+
+\subsubsection{Radio Co-Processor (RCP)}
+
+Se requiere un dispositivo 802.15.4 como RCP:
+\begin{itemize}
+    \item \textbf{Opción 1}: Nordic nRF52840 Dongle con firmware OpenThread RCP.
+    \item \textbf{Opción 2}: ESP32-H2 con ot-rcp (soporte Thread 1.3).
+    \item \textbf{Conexión}: USB (\texttt{/dev/ttyUSB0}) mapeado al contenedor.
+\end{itemize}
+
+Verificar RCP:
+\begin{verbatim}
+docker exec -it otbr ot-ctl state
+# Esperado: "disabled" o "detached" (listo para configurar)
+\end{verbatim}
+
+\subsection{Despliegue de ThingsBoard Edge}
+
+\subsubsection{Función de TB Edge}
+
+ThingsBoard Edge permite:
+\begin{itemize}
+    \item \textbf{Edge computing}: Procesamiento local de datos antes de enviar a cloud.
+    \item \textbf{Sincronización bidireccional}: Con servidor ThingsBoard Cloud/PE.
+    \item \textbf{Operación offline}: Caché local de dashboards y reglas durante desconexión.
+    \item \textbf{Reducción de ancho de banda}: Envío agregado y comprimido al cloud.
+\end{itemize}
+
+\subsubsection{Docker Compose para TB Edge}
+
+Archivo \texttt{/mnt/docker/tb-edge/docker-compose.yml}:
+\begin{verbatim}
+version: '3.8'
+services:
+  tb-edge:
+    image: thingsboard/tb-edge:latest
+    container_name: tb-edge
+    ports:
+      - "8080:8080"   # HTTP UI
+      - "1883:1883"   # MQTT
+      - "5683:5683/udp"  # CoAP
+    environment:
+      - CLOUD_ROUTING_KEY=YOUR_EDGE_KEY
+      - CLOUD_ROUTING_SECRET=YOUR_EDGE_SECRET
+      - CLOUD_RPC_HOST=cloud.thingsboard.io
+      - CLOUD_RPC_PORT=7070
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/tb_edge
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=postgres123
+    volumes:
+      - ./tb-edge-data:/data
+      - ./tb-edge-logs:/var/log/thingsboard
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: tb-edge-postgres
+    environment:
+      - POSTGRES_DB=tb_edge
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres123
+    volumes:
+      - ./postgres-data:/var/lib/postgresql/data
+    restart: unless-stopped
+\end{verbatim}
+
+Despliegue:
+\begin{verbatim}
+cd /mnt/docker/tb-edge
+docker-compose up -d
+docker logs -f tb-edge  # Esperar inicio completo (~2 min)
+\end{verbatim}
+
+Acceso web: \texttt{http://<gateway-ip>:8080} (credenciales por defecto: \texttt{tenant@thingsboard.org / tenant})
+
+\subsection{Despliegue de IEEE 2030.5 Server (SEP 2.0)}
+
+\subsubsection{Función del SEP 2.0 Server}
+
+Servidor IEEE 2030.5 para interoperabilidad con utilidades y sistemas DER:
+
+\begin{itemize}
+    \item \textbf{API REST estándar}: Endpoints IEEE 2030.5 (DCAP, TM, MM, MSG, ED).
+    \item \textbf{Formato XML}: Respuestas según XSD schema IEEE 2030.5.
+    \item \textbf{Autenticación TLS mTLS}: Certificados ECC P-256.
+    \item \textbf{Interoperabilidad}: Compatible con clientes SEP 2.0 (utilidades, HEMS, EVSE).
+\end{itemize}
+
+\subsubsection{Docker Compose para SEP 2.0 Server}
+
+Archivo \texttt{/mnt/docker/sep20-server/docker-compose.yml}:
+\begin{verbatim}
+version: '3.8'
+services:
+  sep20-server:
+    build:
+      context: ./sep20-server
+      dockerfile: Dockerfile
+    container_name: sep20-server
+    ports:
+      - "8883:8883"   # HTTPS/TLS
+    environment:
+      - TLS_CERT=/certs/server.crt
+      - TLS_KEY=/certs/server.key
+      - CA_CERT=/certs/ca.crt
+      - TB_EDGE_URL=http://tb-edge:8080
+      - TB_EDGE_TOKEN=YOUR_TB_TOKEN
+    volumes:
+      - ./certs:/certs:ro
+      - ./sep20-data:/data
+    restart: unless-stopped
+\end{verbatim}
+
+\subsubsection{Implementación del SEP 2.0 Server (Python/Flask)}
+
+Archivo \texttt{/mnt/docker/sep20-server/app.py}:
+\begin{verbatim}
+from flask import Flask, Response
+import requests
+import xml.etree.ElementTree as ET
+
+app = Flask(__name__)
+TB_EDGE_URL = "http://tb-edge:8080"
+
+@app.route('/dcap', methods=['GET'])
+def device_capability():
+    """IEEE 2030.5 Device Capability"""
+    xml = '''<?xml version="1.0" encoding="UTF-8"?>
+    <DeviceCapability xmlns="urn:ieee:std:2030.5:ns">
+      <href>/dcap</href>
+      <TimeLink href="/tm"/>
+      <MirrorUsagePointListLink href="/mup"/>
+      <MessagingProgramListLink href="/msg"/>
+      <EndDeviceListLink href="/edev"/>
+    </DeviceCapability>'''
+    return Response(xml, mimetype='application/sep+xml')
+
+@app.route('/tm', methods=['GET'])
+def time_sync():
+    """IEEE 2030.5 Time Synchronization"""
+    import time
+    current_time = int(time.time())
+    xml = f'''<?xml version="1.0" encoding="UTF-8"?>
+    <Time xmlns="urn:ieee:std:2030.5:ns">
+      <currentTime>{current_time}</currentTime>
+      <quality>7</quality>  <!-- 0-7, 7=highest -->
+    </Time>'''
+    return Response(xml, mimetype='application/sep+xml')
+
+@app.route('/mup/<device_id>/MirrorUsagePoint', methods=['GET'])
+def mirror_usage_point(device_id):
+    """IEEE 2030.5 Metering Mirror"""
+    # Consultar TB Edge por telemetría del dispositivo
+    resp = requests.get(
+        f"{TB_EDGE_URL}/api/plugins/telemetry/DEVICE/{device_id}/values/timeseries",
+        headers={"X-Authorization": "Bearer YOUR_TOKEN"}
+    )
+    data = resp.json()
+    
+    energy = data.get('energy_kwh', [{}])[0].get('value', 0)
+    timestamp = data.get('energy_kwh', [{}])[0].get('ts', 0) // 1000
+    
+    xml = f'''<?xml version="1.0" encoding="UTF-8"?>
+    <MirrorUsagePoint xmlns="urn:ieee:std:2030.5:ns">
+      <mRID>{device_id}</mRID>
+      <MirrorMeterReading>
+        <Reading>
+          <value>{int(energy * 1000)}</value>  <!-- Wh -->
+          <timePeriod>
+            <duration>900</duration>  <!-- 15 min -->
+            <start>{timestamp}</start>
+          </timePeriod>
+        </Reading>
+      </MirrorMeterReading>
+    </MirrorUsagePoint>'''
+    return Response(xml, mimetype='application/sep+xml')
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=8883, ssl_context=('server.crt', 'server.key'))
+\end{verbatim}
+
+Despliegue:
+\begin{verbatim}
+cd /mnt/docker/sep20-server
+docker-compose up -d
+docker logs -f sep20-server
+\end{verbatim}
+
+Prueba de endpoint:
+\begin{verbatim}
+curl -k --cert client.crt --key client.key \
+  https://gateway:8883/dcap
+\end{verbatim}
+
+\subsubsection{Configuración de Sincronización con Cloud}
+    volumes:
+      - ./tb-edge-data:/data
+      - ./tb-edge-logs:/var/log/thingsboard
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: tb-edge-postgres
+    environment:
+      - POSTGRES_DB=tb_edge
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres123
+    volumes:
+      - ./postgres-data:/var/lib/postgresql/data
+    restart: unless-stopped
+\end{verbatim}
+
+Despliegue:
+\begin{verbatim}
+cd /mnt/docker/tb-edge
+docker-compose up -d
+docker logs -f tb-edge  # Esperar inicio completo (~2 min)
+\end{verbatim}
+
+Acceso web: \texttt{http://<gateway-ip>:8080} (credenciales por defecto: \texttt{tenant@thingsboard.org / tenant})
+
+\subsubsection{Configuración de Sincronización con Cloud}
+
+En ThingsBoard Cloud:
+\begin{enumerate}
+    \item Crear Edge instance en \textit{Edge Management}.
+    \item Copiar \texttt{Routing Key} y \texttt{Secret}.
+    \item Actualizar variables en \texttt{docker-compose.yml}.
+    \item Reiniciar contenedor: \texttt{docker-compose restart tb-edge}.
+\end{enumerate}
+
+\subsection{Integración OTBR $\leftrightarrow$ ThingsBoard Edge}
+
+\subsubsection{Flujo de Datos}
+
+\begin{enumerate}
+    \item Dispositivos Thread (nodos ESP32C6) publican datos vía CoAP/MQTT sobre Thread.
+    \item OTBR rutea tráfico IPv6 desde Thread a red LAN del gateway.
+    \item Aplicación bridge (Python/Node.js) suscrita a CoAP/MQTT convierte y publica a TB Edge vía MQTT.
+    \item TB Edge procesa localmente (reglas, alarmas) y sincroniza con cloud periódicamente.
+\end{enumerate}
+
+\subsubsection{Script Bridge (Ejemplo Python)}
+
+Archivo \texttt{/mnt/docker/bridge/bridge.py}:
+\begin{verbatim}
+import paho.mqtt.client as mqtt
+import json
+
+# Cliente MQTT para recibir de dispositivos Thread
+thread_client = mqtt.Client()
+thread_client.connect("localhost", 1883)
+
+# Cliente MQTT para publicar a TB Edge
+tb_client = mqtt.Client()
+tb_client.username_pw_set("ACCESS_TOKEN")
+tb_client.connect("localhost", 1883)
+
+def on_message(client, userdata, msg):
+    # Parser de telemetría Thread
+    data = json.loads(msg.payload)
+    
+    # Transformar a formato TB
+    telemetry = {
+        "ts": int(data["timestamp"]) * 1000,
+        "values": {
+            "energy": data["energy_kwh"],
+            "power": data["power_w"],
+            "voltage": data["voltage_v"]
+        }
+    }
+    
+    # Publicar a TB Edge
+    tb_client.publish("v1/devices/me/telemetry", 
+                      json.dumps(telemetry))
+
+thread_client.on_message = on_message
+thread_client.subscribe("thread/telemetry/#")
+thread_client.loop_forever()
+\end{verbatim}
+
+Desplegar como contenedor:
+\begin{verbatim}
+docker build -t thread-tb-bridge .
+docker run -d --name bridge --network host thread-tb-bridge
+\end{verbatim}
+
+\section{Arquitectura de Datos: Kafka y PostgreSQL}
+
+\subsection{Integración de Apache Kafka}
+
+Apache Kafka proporciona una capa de mensajería distribuida de alto rendimiento para desacoplar productores (dispositivos IoT) de consumidores (ThingsBoard Edge, analítica, almacenamiento):
+
+\subsubsection{Rol de Kafka en la Arquitectura}
+
+\begin{itemize}
+    \item \textbf{Message broker}: Intermedia entre bridge (productor) y TB Edge (consumidor).
+    \item \textbf{Buffer distribuido}: Almacena temporalmente mensajes en tópicos persistentes.
+    \item \textbf{Escalabilidad}: Soporta >100k msg/s con múltiples particiones.
+    \item \textbf{Durabilidad}: Retención configurable (7 días default) para replay histórico.
+\end{itemize}
+
+\textbf{Arquitectura con Kafka}:
+\begin{verbatim}
+[DCU/Medidores] --HaLow--> [Gateway] --Bridge--> [Kafka Topics] 
+    |                                               |
+    v                                               v
+[Thread/802.15.4]                          [TB Edge Consumer]
+                                                    |
+                                                    v
+                                           [PostgreSQL + Analytics]
+\end{verbatim}
+
+\subsubsection{Docker Compose para Kafka}
+
+Archivo \texttt{/mnt/ssd/docker/kafka/docker-compose.yml}:
+\begin{verbatim}
+version: '3.8'
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    volumes:
+      - ./zookeeper-data:/var/lib/zookeeper/data
+    restart: unless-stopped
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_LOG_RETENTION_HOURS: 168  # 7 días
+      KAFKA_LOG_SEGMENT_BYTES: 104857600  # 100 MB
+      KAFKA_COMPRESSION_TYPE: gzip
+    volumes:
+      - ./kafka-data:/var/lib/kafka/data
+    restart: unless-stopped
+\end{verbatim}
+
+Crear tópicos:
+\begin{verbatim}
+docker exec -it kafka kafka-topics --create \
+  --bootstrap-server localhost:9092 \
+  --topic telemetry --partitions 3 --replication-factor 1
+
+docker exec -it kafka kafka-topics --create \
+  --bootstrap-server localhost:9092 \
+  --topic alarms --partitions 2 --replication-factor 1
+\end{verbatim}
+
+\subsubsection{Bridge Kafka Producer}
+
+Modificación del bridge para publicar a Kafka:
+\begin{verbatim}
+from kafka import KafkaProducer
+import json
+
+# Kafka producer
+producer = KafkaProducer(
+    bootstrap_servers=['localhost:9092'],
+    value_serializer=lambda v: json.dumps(v).encode('utf-8'),
+    compression_type='gzip'
+)
+
+def on_message(client, userdata, msg):
+    data = json.loads(msg.payload)
+    
+    # Publicar a Kafka topic 'telemetry'
+    producer.send('telemetry', {
+        'device_id': data.get('device_id'),
+        'timestamp': int(time.time() * 1000),
+        'energy_kwh': data['energy_kwh'],
+        'power_w': data['power_w'],
+        'voltage_v': data['voltage_v']
+    })
+    
+    # Flush cada 100 mensajes o 5 segundos
+    if msg_count % 100 == 0:
+        producer.flush()
+\end{verbatim}
+
+\subsubsection{TB Edge Kafka Consumer}
+
+ThingsBoard Edge configurado como consumidor Kafka:
+\begin{verbatim}
+# /mnt/ssd/docker/tb-edge-data/conf/tb-edge.yml
+queue:
+  type: kafka  # Cambiar de 'in-memory' a 'kafka'
+  kafka:
+    bootstrap:
+      servers: 'kafka:9092'
+    topics:
+      telemetry: 'telemetry'
+      alarms: 'alarms'
+    consumer:
+      group_id: 'tb-edge-group'
+      auto_offset_reset: 'earliest'
+    producer:
+      compression_type: 'gzip'
+      acks: 1
+\end{verbatim}
+
+\textbf{Ventajas de Kafka vs in-memory queue}:
+\begin{itemize}
+    \item \textbf{Capacidad}: GB de mensajes vs 100k en memoria.
+    \item \textbf{Replay}: Consumir desde offset histórico para análisis.
+    \item \textbf{Multi-consumidor}: TB Edge + analítica + ML simultáneamente.
+    \item \textbf{Backpressure}: Kafka absorbe picos sin perder mensajes.
+\end{itemize}
+
+\subsection{PostgreSQL: Base de Datos Persistente}
+
+\subsubsection{Rol de PostgreSQL en la Arquitectura}
+
+PostgreSQL almacena:
+\begin{itemize}
+    \item \textbf{Telemetría histórica}: Series temporales con extensión TimescaleDB.
+    \item \textbf{Configuración de dispositivos}: Atributos, credenciales, relaciones.
+    \item \textbf{Alarmas y eventos}: Log persistente para auditoría.
+    \item \textbf{Dashboards y reglas}: Definiciones de Rule Engine TB Edge.
+\end{itemize}
+
+\subsubsection{Optimización para Series Temporales (TimescaleDB)}
+
+TimescaleDB es una extensión de PostgreSQL optimizada para series temporales:
+
+Docker Compose:
+\begin{verbatim}
+  timescaledb:
+    image: timescale/timescaledb:latest-pg15
+    container_name: timescaledb
+    environment:
+      POSTGRES_DB: tb_edge
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres123
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./timescaledb-data:/var/lib/postgresql/data
+    command: ["postgres", "-c", "shared_preload_libraries=timescaledb"]
+    restart: unless-stopped
+\end{verbatim}
+
+Crear hypertable para telemetría:
+\begin{verbatim}
+-- Conectar a PostgreSQL
+psql -h localhost -U postgres -d tb_edge
+
+-- Habilitar TimescaleDB
+CREATE EXTENSION IF NOT EXISTS timescaledb;
+
+-- Crear tabla de telemetría
+CREATE TABLE telemetry (
+    time TIMESTAMPTZ NOT NULL,
+    device_id TEXT NOT NULL,
+    energy_kwh DOUBLE PRECISION,
+    power_w DOUBLE PRECISION,
+    voltage_v DOUBLE PRECISION
+);
+
+-- Convertir a hypertable (particionamiento automático)
+SELECT create_hypertable('telemetry', 'time');
+
+-- Crear índices
+CREATE INDEX idx_device_time ON telemetry (device_id, time DESC);
+
+-- Política de retención: 90 días
+SELECT add_retention_policy('telemetry', INTERVAL '90 days');
+
+-- Compresión automática después de 7 días
+ALTER TABLE telemetry SET (
+  timescaledb.compress,
+  timescaledb.compress_segmentby = 'device_id'
+);
+
+SELECT add_compression_policy('telemetry', INTERVAL '7 days');
+\end{verbatim}
+
+\textbf{Ventajas TimescaleDB}:
+\begin{itemize}
+    \item \textbf{Compresión}: 10-20× reducción en espacio disco.
+    \item \textbf{Queries rápidas}: Particionamiento automático por tiempo.
+    \item \textbf{Agregaciones}: \texttt{time\_bucket} para promedios 15-min/1-hora.
+    \item \textbf{Retención automática}: Elimina datos antiguos sin intervención manual.
+\end{itemize}
+
+Query de ejemplo (consumo promedio por hora):
+\begin{verbatim}
+SELECT 
+  device_id,
+  time_bucket('1 hour', time) AS hour,
+  AVG(energy_kwh) AS avg_energy,
+  MAX(power_w) AS peak_power
+FROM telemetry
+WHERE time > NOW() - INTERVAL '24 hours'
+GROUP BY device_id, hour
+ORDER BY device_id, hour DESC;
+\end{verbatim}
+
+\section{Protocolos de Comunicación IoT}
+
+\subsection{Comparación de Protocolos}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{|l|c|c|c|c|}
+\hline
+\textbf{Característica} & \textbf{MQTT} & \textbf{CoAP} & \textbf{HTTP/REST} & \textbf{LwM2M} \\
+\hline
+Capa OSI & Aplicación & Aplicación & Aplicación & Aplicación \\
+Transporte & TCP & UDP & TCP & UDP (CoAP) \\
+Overhead & 2 bytes & 4 bytes & >100 bytes & 4-20 bytes \\
+QoS niveles & 0, 1, 2 & CON, NON, ACK & N/A & CON, NON \\
+Pub/Sub & Sí & No & No & No \\
+Observación & No & Sí (Observe) & No & Sí (Observe) \\
+Device Mgmt & No & No & No & Sí (objetos) \\
+Seguridad & TLS/mTLS & DTLS & TLS/mTLS & DTLS + PSK \\
+Payload & Binario/JSON & CBOR/JSON & JSON/XML & CBOR/TLV \\
+Uso típico & Telemetría & Sensores low-power & APIs web & Device mgmt \\
+\hline
+\end{tabular}
+\caption{Comparación de protocolos IoT}
+\end{table}
+
+\subsection{MQTT (Message Queuing Telemetry Transport)}
+
+\subsubsection{Características MQTT}
+
+\begin{itemize}
+    \item \textbf{Patrón Pub/Sub}: Desacoplamiento productor/consumidor vía broker.
+    \item \textbf{QoS 0 (At most once)}: Sin confirmación, mínima latencia.
+    \item \textbf{QoS 1 (At least once)}: Con ACK, puede duplicar mensajes.
+    \item \textbf{QoS 2 (Exactly once)}: Handshake 4-way, sin duplicados.
+    \item \textbf{Retained messages}: Último valor almacenado en broker para nuevos suscriptores.
+    \item \textbf{Last Will Testament (LWT)}: Notificación automática de desconexión.
+\end{itemize}
+
+\subsubsection{Uso en Gateway}
+
+\textbf{Topics utilizados}:
+\begin{verbatim}
+# Telemetría uplink (dispositivo → TB Edge)
+v1/devices/me/telemetry         # Formato ThingsBoard
+smartgrid/meter/{id}/energy     # Formato personalizado
+thread/telemetry/{node_id}      # Desde OTBR
+
+# Comandos downlink (TB Edge → dispositivo)
+v1/devices/me/rpc/request/{requestId}
+smartgrid/meter/{id}/command
+
+# LWT (detectar desconexión)
+smartgrid/meter/{id}/status     # "online"/"offline"
+\end{verbatim}
+
+\textbf{Configuración broker Mosquitto en gateway}:
+\begin{verbatim}
+# /etc/mosquitto/mosquitto.conf
+listener 1883           # Puerto MQTT
+listener 8883           # Puerto MQTTS (TLS)
+cafile /etc/mosquitto/ca.crt
+certfile /etc/mosquitto/server.crt
+keyfile /etc/mosquitto/server.key
+require_certificate true
+
+# Persistencia
+persistence true
+persistence_location /mnt/ssd/mosquitto/
+
+# Autenticación
+allow_anonymous false
+password_file /etc/mosquitto/passwd
+
+# QoS máximo
+max_qos 2
+
+# Retención de mensajes
+max_queued_messages 1000
+message_size_limit 8192
+\end{verbatim}
+
+\subsection{CoAP (Constrained Application Protocol)}
+
+\subsubsection{Características CoAP}
+
+\begin{itemize}
+    \item \textbf{Protocolo UDP}: Menor overhead que TCP (4 bytes header vs 20 bytes).
+    \item \textbf{RESTful}: Métodos GET/POST/PUT/DELETE como HTTP.
+    \item \textbf{Observe}: Cliente se suscribe a recurso, servidor notifica cambios.
+    \item \textbf{Block-wise transfer}: Fragmentación para mensajes >1024 bytes.
+    \item \textbf{DTLS}: Seguridad con Pre-Shared Keys (PSK) o certificados.
+\end{itemize}
+
+\subsubsection{Uso en Thread/OpenThread}
+
+OpenThread usa CoAP nativamente para comunicación mesh:
+
+\begin{verbatim}
+# Recurso CoAP en nodo Thread
+coap://[fd00::1234:5678:abcd]/meter/energy
+
+# GET request (cliente OTBR)
+coap-client -m GET coap://[fd00::1234:5678:abcd]/meter/energy
+# Response: {"energy_kwh": 100.5, "power_w": 1200}
+
+# POST command (enviar comando)
+coap-client -m POST coap://[fd00::1234:5678:abcd]/config/interval \
+  -e '{"interval_sec": 300}'
+
+# Observe (suscripción a cambios)
+coap-client -m GET -s 60 coap://[fd00::1234:5678:abcd]/meter/energy
+# Server notifica cada vez que cambia el valor
+\end{verbatim}
+
+\textbf{Bridge CoAP → MQTT}:
+\begin{verbatim}
+import asyncio
+from aiocoap import *
+
+async def coap_to_mqtt_bridge():
+    protocol = await Context.create_client_context()
+    
+    # Observe CoAP resource
+    request = Message(code=GET, 
+                     uri='coap://[fd00::1234]/meter/energy',
+                     observe=0)
+    
+    async for response in protocol.request(request).observation:
+        # Parse CoAP payload
+        data = json.loads(response.payload)
+        
+        # Publish to MQTT
+        mqtt_client.publish('thread/telemetry/1234', 
+                           json.dumps(data))
+\end{verbatim}
+
+\subsection{HTTP/REST}
+
+\subsubsection{Uso en Gateway}
+
+HTTP/REST se usa para:
+\begin{itemize}
+    \item \textbf{APIs de gestión}: TB Edge API, IEEE 2030.5 Server.
+    \item \textbf{Integraciones externas}: Webhooks, consultas a cloud.
+    \item \textbf{Configuración}: LuCI web UI, Ollama API.
+\end{itemize}
+
+\textbf{Ejemplos de APIs}:
+\begin{verbatim}
+# ThingsBoard Edge API
+GET http://gateway:8080/api/tenant/devices
+Authorization: Bearer {token}
+
+# IEEE 2030.5 REST API
+GET https://gateway:8883/dcap
+Client-Cert: meter-001.crt
+
+# Ollama LLM API
+POST http://gateway:11434/api/generate
+Content-Type: application/json
+{"model": "llama3.2:3b", "prompt": "Analiza consumo..."}
+
+# LuCI configuration
+POST http://gateway/cgi-bin/luci/admin/network/wireless
+\end{verbatim}
+
+\subsection{LwM2M (Lightweight M2M)}
+
+\subsubsection{Características LwM2M}
+
+\begin{itemize}
+    \item \textbf{Gestión de dispositivos}: Bootstrap, configuración, firmware OTA.
+    \item \textbf{Modelo de objetos}: Jerarquía Object/Instance/Resource (ej. Device/0/Manufacturer).
+    \item \textbf{Operaciones}: Read, Write, Execute, Observe, Discover.
+    \item \textbf{Transporte}: CoAP sobre UDP (binding U) o SMS/NB-IoT (binding S).
+\end{itemize}
+
+\subsubsection{Objetos LwM2M Estándar (OMA SpecWorks)}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{|l|l|p{5cm}|}
+\hline
+\textbf{Object ID} & \textbf{Nombre} & \textbf{Recursos Clave} \\
+\hline
+0 & Security & Server URI, PSK, Bootstrap \\
+1 & Server & Lifetime, Binding, Registration \\
+3 & Device & Manufacturer, Model, Serial, Battery \\
+4 & Connectivity Monitoring & Network Bearer, IP Address, Signal Strength \\
+5 & Firmware Update & Package URI, Update, State \\
+3303 & Temperature Sensor & Sensor Value, Units, Min/Max \\
+3305 & Power Measurement & Instantaneous Power, Energy, Voltage \\
+\hline
+\end{tabular}
+\caption{Objetos LwM2M estándar para Smart Metering}
+\end{table}
+
+\subsubsection{Integración LwM2M en Gateway}
+
+Desplegar servidor LwM2M (Leshan) en gateway:
+\begin{verbatim}
+# Docker Compose para Leshan LwM2M Server
+services:
+  leshan:
+    image: eclipse/leshan:latest
+    container_name: leshan-server
+    ports:
+      - "8080:8080"   # Web UI
+      - "5683:5683/udp"  # CoAP LwM2M
+      - "5684:5684/udp"  # CoAPS (DTLS)
+    volumes:
+      - ./leshan-data:/data
+    restart: unless-stopped
+\end{verbatim}
+
+\textbf{Cliente LwM2M en DCU/Medidor}:
+\begin{verbatim}
+// Wakaama LwM2M client (C)
+lwm2m_context_t *context = lwm2m_init(NULL);
+
+// Object 3305: Power Measurement
+power_obj = create_power_object();
+lwm2m_add_object(context, power_obj);
+
+// Register to server
+lwm2m_configure(context, "gateway", 5683, "meter-001", 300);
+
+// Update resources periodically
+lwm2m_resource_value_set(power_obj, 5800, &energy_kwh);  // Instantaneous active energy
+lwm2m_resource_value_set(power_obj, 5805, &voltage_v);   // Voltage
+\end{verbatim}
+
+\textbf{Ventajas LwM2M para Smart Metering}:
+\begin{itemize}
+    \item \textbf{Estandarización}: Objetos interoperables (OMA SpecWorks).
+    \item \textbf{Gestión centralizada}: Bootstrap, firmware OTA desde gateway.
+    \item \textbf{Eficiencia}: DTLS+PSK consume menos que TLS+X.509 (clave de 16 bytes vs certificado 2 KB).
+    \item \textbf{Observe}: Notificaciones automáticas sin polling (ahorro energético).
+\end{itemize}
+
+\subsection{Selección de Protocolo por Caso de Uso}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{|p{4cm}|l|p{5cm}|}
+\hline
+\textbf{Caso de Uso} & \textbf{Protocolo} & \textbf{Justificación} \\
+\hline
+Telemetría medidor → Gateway & MQTT QoS 1 & Pub/Sub, QoS garantizado, broker local \\
+Thread mesh intra-nodo & CoAP & UDP eficiente, Observe nativo \\
+Gateway → TB Cloud & MQTT QoS 1 / HTTP & TLS seguro, compresión gzip \\
+Device management (FW OTA) & LwM2M & Objetos estándar, bootstrap \\
+APIs configuración gateway & HTTP/REST & LuCI, TB Edge API \\
+IEEE 2030.5 Smart Energy & HTTP/REST & Estándar mandatorio (SEP 2.0) \\
+Comandos downlink (RPC) & MQTT QoS 1 & Baja latencia, ACK confirmado \\
+Alarmas críticas & MQTT QoS 2 & Exactly-once, sin duplicados \\
+\hline
+\end{tabular}
+\caption{Selección de protocolo por caso de uso}
+\end{table}
+
+\section{Resiliencia y Almacenamiento Persistente (SSD)}
+
+\subsection{Arquitectura de Almacenamiento del Gateway}
+
+El gateway implementa una estrategia de almacenamiento de alta resiliencia:
+
+\begin{itemize}
+    \item \textbf{Flash interna (128 MB)}: Sistema operativo OpenWRT y configuración UCI.
+    \item \textbf{SSD M.2 NVMe (256 GB)}: Datos persistentes Docker, PostgreSQL, cola ThingsBoard Edge.
+    \item \textbf{USB 3.0 (opcional)}: Backups periódicos y recuperación de desastres.
+\end{itemize}
+
+\textbf{Ventajas SSD NVMe vs USB/SD}:
+\begin{itemize}
+    \item \textbf{Durabilidad}: >1M ciclos E/W (vs 10k-100k en SD), MTBF >1.5M horas.
+    \item \textbf{Desempeño}: >3000 IOPS escritura (vs <100 IOPS USB 2.0), latencia <0.1ms.
+    \item \textbf{Fiabilidad}: ECC interno, power-loss protection (PLP), SMART monitoring.
+\end{itemize}
+
+Montaje automático SSD en \texttt{/mnt/ssd}:
+\begin{verbatim}
+# /etc/config/fstab
+config mount
+    option device '/dev/nvme0n1p1'
+    option target '/mnt/ssd'
+    option fstype 'ext4'
+    option options 'rw,relatime,noatime'
+    option enabled '1'
+    option enabled_fsck '1'
+\end{verbatim}
+
+Estructura de directorios:
+\begin{verbatim}
+/mnt/ssd/
+├── docker/              # Volúmenes Docker
+│   ├── tb-edge-data/    # Configuración TB Edge
+│   ├── postgres-data/   # Base de datos PostgreSQL
+│   ├── queue/           # Cola de mensajes offline
+│   ├── otbr-config/     # Configuración Thread
+│   └── bridge-logs/     # Logs del bridge
+├── backups/             # Backups automáticos
+└── tmp/                 # Directorio temporal (tmpfs en RAM)
+\end{verbatim}
+
+\subsection{ThingsBoard Edge Queue: Resiliencia Offline}
+
+\subsubsection{Arquitectura de Cola Persistente}
+
+ThingsBoard Edge implementa una \textbf{cola de mensajes persistente} para garantizar resiliencia ante pérdida de conectividad cloud:
+
+\begin{itemize}
+    \item \textbf{Queue storage}: PostgreSQL + filesystem (\texttt{/mnt/ssd/docker/queue}).
+    \item \textbf{Capacidad}: Hasta 100k mensajes en cola (configurable, ~500 MB con CBOR).
+    \item \textbf{Política FIFO}: Mensajes más antiguos se sincronizan primero al recuperar conectividad.
+    \item \textbf{Priorización}: Alarmas críticas tienen mayor prioridad que telemetría histórica.
+\end{itemize}
+
+\subsubsection{Configuración de Queue en TB Edge}
+
+Archivo \texttt{/mnt/ssd/docker/tb-edge-data/conf/tb-edge.yml}:
+\begin{verbatim}
+queue:
+  type: in-memory  # O 'kafka' para mayor capacidad
+  in_memory:
+    max_elements: 100000
+    max_size_bytes: 524288000  # 500 MB
+  
+cloud_sync:
+  # Intervalo de sincronización con cloud
+  sync_interval: 300  # 5 minutos (online)
+  offline_sync_interval: 3600  # 1 hora (detectado offline, reintentos)
+  
+  # Batch size para sincronización
+  batch_size: 1000  # Mensajes por batch
+  max_batch_size: 5000  # Máximo en condiciones de catch-up
+  
+  # Compresión de datos
+  compression_enabled: true
+  compression_type: gzip  # O 'lz4' para menor CPU
+  
+  # Retry policy
+  max_retries: 10
+  retry_interval: 60  # segundos entre reintentos
+  backoff_multiplier: 2  # Exponential backoff
+
+persistent_queue:
+  path: /data/queue
+  max_disk_usage_mb: 2000  # 2 GB límite en disco
+  write_batch_size: 100
+  flush_interval_ms: 1000
+\end{verbatim}
+
+\subsubsection{Flujo de Operación con Queue}
+
+\textbf{Modo Online (conectividad cloud activa)}:
+\begin{enumerate}
+    \item TB Edge recibe telemetría de dispositivos vía MQTT (puerto 1883).
+    \item Procesa reglas locales (alarmas, transformaciones).
+    \item Encola mensaje en queue in-memory.
+    \item Cada 5 minutos, sincroniza batch de 1000 mensajes con TB Cloud vía gRPC (puerto 7070).
+    \item Al confirmar ACK del cloud, elimina mensajes de la cola.
+\end{enumerate}
+
+\textbf{Modo Offline (sin conectividad cloud)}:
+\begin{enumerate}
+    \item TB Edge detecta pérdida de conexión (timeout gRPC >30s).
+    \item Cambia a modo offline: continúa procesamiento local.
+    \item Mensajes se acumulan en queue persistente (PostgreSQL + filesystem).
+    \item Dashboards locales permanecen funcionales (\texttt{http://<gateway-ip>:8080}).
+    \item Alarmas se ejecutan localmente (email, webhook a sistemas locales).
+    \item Queue crece hasta límite configurado (100k msgs o 2 GB).
+\end{enumerate}
+
+\textbf{Recuperación de Conectividad (catch-up sync)}:
+\begin{enumerate}
+    \item TB Edge detecta reconexión con cloud (gRPC handshake exitoso).
+    \item Inicia sincronización acelerada: batch size aumenta a 5000 mensajes.
+    \item Prioriza alarmas/eventos críticos (priority queue).
+    \item Comprime datos con gzip (40-60\% reducción).
+    \item Sincroniza backlog completo en ~10-15 minutos (100k msgs @ 5000/batch).
+    \item Al terminar, retorna a modo online normal (batch 1000, intervalo 5 min).
+\end{enumerate}
+
+\subsubsection{Protección contra Desbordamiento de Queue}
+
+Política de gestión de capacidad:
+\begin{verbatim}
+# /mnt/ssd/docker/tb-edge-data/scripts/queue-monitor.sh
+#!/bin/sh
+
+QUEUE_SIZE=$(du -sm /mnt/ssd/docker/queue | cut -f1)
+MAX_SIZE=1800  # 1.8 GB (90% del límite de 2 GB)
+
+if [ $QUEUE_SIZE -gt $MAX_SIZE ]; then
+    logger -t TB-EDGE "Queue size critical: ${QUEUE_SIZE}MB"
+    
+    # Estrategia 1: Eliminar telemetría histórica (>7 días)
+    find /mnt/ssd/docker/queue -name "*.telemetry" \
+      -mtime +7 -delete
+    
+    # Estrategia 2: Comprimir eventos no críticos
+    find /mnt/ssd/docker/queue -name "*.event" \
+      -mtime +1 -exec gzip {} \;
+    
+    # Estrategia 3: Notificar operador
+    curl -X POST http://localhost:8080/api/v1/telemetry \
+      -d '{"queue_overflow":true,"size_mb":'$QUEUE_SIZE'}'
+fi
+\end{verbatim}
+
+Ejecutar vía cron cada hora:
+\begin{verbatim}
+# crontab -e
+0 * * * * /mnt/ssd/docker/tb-edge-data/scripts/queue-monitor.sh
+\end{verbatim}
+
+\subsection{Resiliencia Multinivel}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{|l|l|p{5cm}|c|}
+\hline
+\textbf{Nivel} & \textbf{Componente} & \textbf{Mecanismo de Resiliencia} & \textbf{RTO} \\
+\hline
+L1 Hardware & SSD NVMe & ECC, PLP, SMART monitoring & 0s \\
+L2 Filesystem & ext4 & Journaling, fsck automático & <30s \\
+L3 Base de datos & PostgreSQL & WAL, autovacuum, replication slots & <60s \\
+L4 Aplicación & TB Edge Queue & Persistent queue, retry policy, compression & <300s \\
+L5 Red & mwan3 & WAN failover Ethernet/LTE, tracking activo & <30s \\
+L6 Container & Docker + Watchtower & Healthchecks, restart policy, auto-updates & <120s \\
+\hline
+\end{tabular}
+\caption{Niveles de resiliencia en gateway con RTO (Recovery Time Objective)}
+\end{table}
+
+\section{Gestión Remota del Gateway}
+
+\subsection{Feeds de OpenWRT}
+
+\subsubsection{Arquitectura de Feeds}
+
+OpenWRT utiliza \textbf{feeds} (repositorios de paquetes) para extender funcionalidad del sistema base:
+
+\begin{itemize}
+    \item \textbf{Feed base}: Paquetes esenciales incluidos en imagen oficial.
+    \item \textbf{Feed packages}: Paquetes comunitarios adicionales (>10k paquetes).
+    \item \textbf{Feed luci}: Interfaz web LuCI y aplicaciones.
+    \item \textbf{Feed routing}: Protocolos de routing avanzados (batman-adv, olsr).
+    \item \textbf{Feed telephony}: VoIP y telefonía.
+    \item \textbf{Feeds custom}: Repositorios personalizados (enterprise, vendor-specific).
+\end{itemize}
+
+\subsubsection{Configuración de Feeds}
+
+Archivo \texttt{/etc/opkg/distfeeds.conf}:
+\begin{verbatim}
+# Feeds oficiales OpenWRT 23.05
+src/gz openwrt_core https://downloads.openwrt.org/releases/23.05.0/targets/ramips/mt7621/packages
+src/gz openwrt_base https://downloads.openwrt.org/releases/23.05.0/packages/mipsel_24kc/base
+src/gz openwrt_luci https://downloads.openwrt.org/releases/23.05.0/packages/mipsel_24kc/luci
+src/gz openwrt_packages https://downloads.openwrt.org/releases/23.05.0/packages/mipsel_24kc/packages
+src/gz openwrt_routing https://downloads.openwrt.org/releases/23.05.0/packages/mipsel_24kc/routing
+
+# Feed personalizado para Smart Grid (interno empresa)
+src/gz smartgrid_custom https://repo.empresa.com/openwrt/23.05/smartgrid
+option check_signature 1
+\end{verbatim}
+
+\subsubsection{Gestión de Paquetes con opkg}
+
+\textbf{Comandos esenciales}:
+\begin{verbatim}
+# Actualizar lista de paquetes desde feeds
+opkg update
+
+# Buscar paquetes
+opkg find "*halow*"
+opkg find "*docker*"
+
+# Instalar paquete
+opkg install luci-app-dockerman
+opkg install mwan3 luci-app-mwan3
+
+# Listar paquetes instalados
+opkg list-installed | grep docker
+
+# Actualizar paquete específico
+opkg upgrade docker
+
+# Actualizar todos los paquetes
+opkg list-upgradable
+opkg upgrade $(opkg list-upgradable | awk '{print $1}')
+
+# Remover paquete (mantener configuración)
+opkg remove --force-removal-of-dependent-packages docker
+
+# Información de paquete
+opkg info docker
+\end{verbatim}
+
+\subsubsection{Feed Custom para Smart Grid}
+
+Crear feed interno con paquetes personalizados:
+
+\textbf{Estructura del feed}:
+\begin{verbatim}
+smartgrid-feed/
+|-- Makefile
+|-- packages/
+    |-- halow-driver-morse/
+    |   |-- Makefile
+    |   +-- files/
+    |-- tb-edge-connector/
+    |   |-- Makefile
+    |   +-- src/
+    |-- ieee2030-server/
+    |   |-- Makefile
+    |   +-- files/
+    +-- mcp-llm-client/
+        |-- Makefile
+        +-- src/
++-- README.md
+\end{verbatim}
+
+\textbf{Ejemplo Makefile para paquete personalizado}:
+\begin{verbatim}
+# packages/tb-edge-connector/Makefile
+include $(TOPDIR)/rules.mk
+
+PKG_NAME:=tb-edge-connector
+PKG_VERSION:=1.0.0
+PKG_RELEASE:=1
+
+include $(INCLUDE_DIR)/package.mk
+
+define Package/tb-edge-connector
+  SECTION:=smartgrid
+  CATEGORY:=SmartGrid
+  TITLE:=ThingsBoard Edge Connector
+  DEPENDS:=+python3 +python3-paho-mqtt +python3-requests
+endef
+
+define Package/tb-edge-connector/description
+  Connector para integrar dispositivos Thread con TB Edge
+endef
+
+define Build/Compile
+  # Script Python, no requiere compilación
+endef
+
+define Package/tb-edge-connector/install
+  $(INSTALL_DIR) $(1)/usr/bin
+  $(INSTALL_BIN) ./src/tb_connector.py $(1)/usr/bin/
+  $(INSTALL_DIR) $(1)/etc/config
+  $(INSTALL_CONF) ./files/tb-connector.conf $(1)/etc/config/
+  $(INSTALL_DIR) $(1)/etc/init.d
+  $(INSTALL_BIN) ./files/tb-connector.init $(1)/etc/init.d/tb-connector
+endef
+
+$(eval $(call BuildPackage,tb-edge-connector))
+\end{verbatim}
+
+\textbf{Hosting del feed}:
+\begin{verbatim}
+# Generar índice de paquetes
+cd smartgrid-feed
+make package/index
+
+# Servir vía HTTP (nginx)
+server {
+    listen 80;
+    server_name repo.empresa.com;
+    root /var/www/openwrt-feed;
+    
+    location /openwrt/23.05/smartgrid {
+        autoindex on;
+    }
+}
+\end{verbatim}
+
+\subsection{OpenVPN: Acceso Remoto Seguro}
+
+\subsubsection{Rol de OpenVPN en la Arquitectura}
+
+OpenVPN proporciona túnel VPN cifrado para gestión remota del gateway:
+
+\begin{itemize}
+    \item \textbf{Acceso SSH}: Administración CLI segura desde NOC (Network Operations Center).
+    \item \textbf{LuCI web UI}: Acceso a interfaz de configuración sin exponer puerto 80/443 a internet.
+    \item \textbf{Debugging}: Logs remotos, captura de tráfico (tcpdump), análisis de performance.
+    \item \textbf{Túnel permanente}: Gateway se conecta automáticamente a servidor VPN central (hub-spoke).
+\end{itemize}
+
+\subsubsection{Instalación OpenVPN en Gateway}
+
+\begin{verbatim}
+opkg update
+opkg install openvpn-openssl luci-app-openvpn
+\end{verbatim}
+
+\subsubsection{Configuración Cliente OpenVPN}
+
+Archivo \texttt{/etc/openvpn/client.conf}:
+\begin{verbatim}
+client
+dev tun0
+proto udp
+remote vpn.empresa.com 1194
+
+# Certificados PKI
+ca /etc/openvpn/ca.crt
+cert /etc/openvpn/gateway-001.crt
+key /etc/openvpn/gateway-001.key
+tls-auth /etc/openvpn/ta.key 1
+
+# Compresión
+comp-lzo adaptive
+
+# Keepalive (detectar desconexión en 120s)
+keepalive 10 120
+
+# Persistencia de túnel
+persist-key
+persist-tun
+
+# Logging
+verb 3
+log-append /var/log/openvpn.log
+
+# Pull routes desde servidor (acceso a red NOC)
+pull
+
+# Reconexión automática
+resolv-retry infinite
+nobind
+
+# Usuario sin privilegios (seguridad)
+user nobody
+group nogroup
+\end{verbatim}
+
+\textbf{Configuración UCI (OpenWRT native)}:
+\begin{verbatim}
+# /etc/config/openvpn
+config openvpn 'noc_tunnel'
+    option enabled '1'
+    option client '1'
+    option dev 'tun0'
+    option proto 'udp'
+    option remote 'vpn.empresa.com 1194'
+    option ca '/etc/openvpn/ca.crt'
+    option cert '/etc/openvpn/gateway-001.crt'
+    option key '/etc/openvpn/gateway-001.key'
+    option tls_auth '/etc/openvpn/ta.key 1'
+    option comp_lzo 'adaptive'
+    option keepalive '10 120'
+    option persist_key '1'
+    option persist_tun '1'
+    option verb '3'
+\end{verbatim}
+
+Iniciar servicio:
+\begin{verbatim}
+/etc/init.d/openvpn enable
+/etc/init.d/openvpn start
+
+# Verificar túnel
+ifconfig tun0
+# Esperado: inet addr:10.8.0.100
+
+ping 10.8.0.1  # Servidor VPN
+\end{verbatim}
+
+\subsubsection{Servidor OpenVPN Central (NOC)}
+
+Arquitectura hub-spoke:
+\begin{verbatim}
+[NOC Server VPN]---10.8.0.0/24---[Gateway 1: 10.8.0.100]
+       |                          [Gateway 2: 10.8.0.101]
+       |                          [Gateway 3: 10.8.0.102]
+   [Admin PC]                          ...
+  10.8.0.50                       [Gateway N: 10.8.0.199]
+\end{verbatim}
+
+Configuración servidor (\texttt{/etc/openvpn/server.conf}):
+\begin{verbatim}
+port 1194
+proto udp
+dev tun
+server 10.8.0.0 255.255.255.0
+
+# Certificados
+ca ca.crt
+cert server.crt
+key server.key
+dh dh2048.pem
+tls-auth ta.key 0
+
+# Client-to-client (permitir gateways comunicarse entre sí)
+client-to-client
+
+# Push routes a clientes (red NOC)
+push "route 10.10.0.0 255.255.255.0"
+
+# Persistencia
+keepalive 10 120
+persist-key
+persist-tun
+
+# Logging
+status /var/log/openvpn-status.log
+log-append /var/log/openvpn.log
+verb 3
+
+# Client config dir (configuración por cliente)
+client-config-dir /etc/openvpn/ccd
+
+# Compresión
+comp-lzo adaptive
+\end{verbatim}
+
+\textbf{Configuración específica por gateway (CCD)}:
+\begin{verbatim}
+# /etc/openvpn/ccd/gateway-001
+# Asignar IP fija 10.8.0.100
+ifconfig-push 10.8.0.100 10.8.0.101
+
+# Push ruta específica para este gateway (red Thread local)
+push "route 192.168.50.0 255.255.255.0"
+\end{verbatim}
+
+\subsection{OpenWISP: Gestión Centralizada de Gateways}
+
+\subsubsection{Arquitectura OpenWISP}
+
+OpenWISP es una plataforma open-source para gestión masiva de dispositivos OpenWRT:
+
+\begin{itemize}
+    \item \textbf{OpenWISP Controller}: Backend Django para gestión de configuraciones.
+    \item \textbf{OpenWISP Config}: Agente en gateway que aplica configuraciones remotas.
+    \item \textbf{OpenWISP Monitoring}: Colección de métricas (CPU, RAM, tráfico).
+    \item \textbf{OpenWISP Firmware Upgrader}: Actualizaciones OTA masivas.
+    \item \textbf{OpenWISP Network Topology}: Visualización de topología de red.
+\end{itemize}
+
+\textbf{Componentes}:
+\begin{verbatim}
+[OpenWISP Server]---HTTPS/VPN---[Gateway Fleet (100-1000 gateways)]
+    |                                 |
+    |-- Controller (Django)           |-- openwisp-config (agente)
+    |-- PostgreSQL                    |-- openwisp-monitoring
+    |-- Redis                         +-- Actualizacion UCI automatica
+    |-- Celery
+    +-- Web Dashboard
+\end{verbatim}
+
+\subsubsection{Instalación OpenWISP Config en Gateway}
+
+\begin{verbatim}
+opkg update
+opkg install openwisp-config openwisp-monitoring
+
+# Configurar agente
+uci set openwisp.http.url='https://controller.empresa.com'
+uci set openwisp.http.shared_secret='YOUR_SHARED_SECRET'
+uci set openwisp.http.consistent_key='GATEWAY_UUID'
+uci set openwisp.http.verify_ssl='1'
+uci commit openwisp
+
+# Habilitar servicios
+/etc/init.d/openwisp_config enable
+/etc/init.d/openwisp_monitoring enable
+/etc/init.d/openwisp_config start
+/etc/init.d/openwisp_monitoring start
+\end{verbatim}
+
+\subsubsection{Despliegue OpenWISP Controller (Docker)}
+
+\begin{verbatim}
+# docker-compose.yml para OpenWISP Server
+version: '3.8'
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: openwisp_db
+      POSTGRES_USER: openwisp
+      POSTGRES_PASSWORD: changeme
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+
+  openwisp-dashboard:
+    image: openwisp/openwisp-dashboard:latest
+    depends_on:
+      - postgres
+      - redis
+    ports:
+      - "443:443"
+    environment:
+      DB_ENGINE: django.db.backends.postgresql
+      DB_NAME: openwisp_db
+      DB_USER: openwisp
+      DB_PASSWORD: changeme
+      DB_HOST: postgres
+      REDIS_HOST: redis
+      DJANGO_SECRET_KEY: changeme
+      DJANGO_ALLOWED_HOSTS: controller.empresa.com
+    volumes:
+      - openwisp-media:/opt/openwisp/media
+      - openwisp-static:/opt/openwisp/static
+
+  celery:
+    image: openwisp/openwisp-dashboard:latest
+    depends_on:
+      - postgres
+      - redis
+    command: celery -A openwisp worker -l info
+    environment:
+      DB_ENGINE: django.db.backends.postgresql
+      DB_NAME: openwisp_db
+      DB_USER: openwisp
+      DB_PASSWORD: changeme
+      DB_HOST: postgres
+      REDIS_HOST: redis
+\end{verbatim}
+
+\subsubsection{Gestión de Configuraciones}
+
+\textbf{Template UCI en OpenWISP Controller}:
+\begin{verbatim}
+# Template "Smart Grid Gateway Base Config"
+# network.json
+{
+  "network": [
+    {
+      "interface": "wan_eth",
+      "proto": "dhcp",
+      "metric": "10"
+    },
+    {
+      "interface": "wan_lte",
+      "proto": "modemmanager",
+      "device": "/dev/ttyUSB2",
+      "apn": "{{apn}}",
+      "metric": "20"
+    },
+    {
+      "interface": "halow",
+      "proto": "static",
+      "ipaddr": "{{halow_ip}}",
+      "netmask": "255.255.255.0"
+    }
+  ],
+  "wireless": [
+    {
+      "radio": "halow",
+      "channel": "{{halow_channel}}",
+      "mode": "ap",
+      "ssid": "SmartGrid-{{site_id}}",
+      "encryption": "sae",
+      "key": "{{halow_password}}"
+    }
+  ]
+}
+\end{verbatim}
+
+\textbf{Aplicar configuración desde dashboard}:
+\begin{enumerate}
+    \item Crear template con variables (\texttt{\{\{apn\}\}}, \texttt{\{\{halow\_channel\}\}}).
+    \item Asignar template a grupo de gateways (ej. "Zona Norte - 50 gateways").
+    \item Definir variables por gateway o grupo.
+    \item Push configuración: OpenWISP genera UCI y envía a gateways vía HTTPS.
+    \item Agente openwisp-config aplica cambios: \texttt{uci commit \&\& reload\_config}.
+\end{enumerate}
+
+\subsubsection{Firmware Upgrader: Actualización OTA Masiva}
+
+\textbf{Workflow de actualización}:
+\begin{enumerate}
+    \item Subir nueva imagen OpenWRT a OpenWISP Controller.
+    \item Crear \textbf{build} con imagen y checksum SHA256.
+    \item Asignar build a grupo de gateways (ej. "Firmware 23.05.2 - Gateways Zona Sur").
+    \item Programar actualización: inmediata o ventana de mantenimiento (3 AM).
+    \item OpenWISP envía comando a gateways.
+    \item Gateway descarga imagen vía HTTPS, verifica checksum, instala (sysupgrade), reinicia.
+    \item Gateway reporta versión actualizada post-reboot.
+\end{enumerate}
+
+\textbf{Actualización segura (dual-partition)}:
+\begin{itemize}
+    \item \textbf{Partition A}: Firmware actual (activo).
+    \item \textbf{Partition B}: Nueva imagen descargada.
+    \item Escribir en Partition B, reiniciar, bootloader cambia a B.
+    \item Si falla (no boot en 3 reintentos), rollback automático a Partition A.
+\end{itemize}
+
+\subsubsection{Monitoring y Alertas}
+
+OpenWISP Monitoring recolecta métricas:
+\begin{itemize}
+    \item \textbf{Uptime}: Tiempo desde último reinicio.
+    \item \textbf{CPU/RAM}: Load average, memoria disponible.
+    \item \textbf{Storage}: Uso de SSD NVMe (\texttt{df -h /mnt/ssd}).
+    \item \textbf{Interfaces}: Tráfico RX/TX, errores, señal HaLow/LTE.
+    \item \textbf{Conectividad}: Ping a gateway (heartbeat), VPN status.
+    \item \textbf{Docker}: Containers running/stopped, CPU/RAM por container.
+\end{itemize}
+
+\textbf{Configuración alertas}:
+\begin{verbatim}
+# OpenWISP Controller > Alerts
+Alert: Gateway Offline
+  Condition: ping_failed > 5 min
+  Action: Email admin@empresa.com, SMS +57300...
+
+Alert: High CPU Usage
+  Condition: cpu_load_1min > 3.0 for 10 min
+  Action: Email ops@empresa.com, Log to Syslog
+
+Alert: Low Disk Space
+  Condition: disk_usage_percent > 85%
+  Action: Email admin@empresa.com, Trigger cleanup script
+
+Alert: LTE Failover Active
+  Condition: wan_interface = "wwan0" for 30 min
+  Action: Email ops@empresa.com (posible fallo fibra)
+\end{verbatim}
+
+\subsection{Comparación de Herramientas de Gestión}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{|l|c|c|c|}
+\hline
+\textbf{Característica} & \textbf{LuCI (local)} & \textbf{OpenVPN + SSH} & \textbf{OpenWISP} \\
+\hline
+Gestión masiva & No & No (manual) & Sí (100-1000 GWs) \\
+Configuración remota & Manual (web UI) & CLI manual & Automática (templates) \\
+Firmware OTA & Manual (sysupgrade) & SCP + sysupgrade & Automático (schedule) \\
+Monitoreo & No (stats básicas) & Manual (SSH logs) & Automático (dashboard) \\
+Alertas & No & No & Sí (email/SMS/webhook) \\
+Rollback & Manual & Manual & Automático (dual-part) \\
+Zero-touch provisioning & No & No & Sí (bootstrap) \\
+Escalabilidad & 1 gateway & <10 gateways & 100-10,000 gateways \\
+Costo & \$0 & \$0 & \$0 (open-source) \\
+\hline
+\end{tabular}
+\caption{Comparación de herramientas de gestión para gateway OpenWRT}
+\end{table}
+
+\textbf{Recomendación para despliegue Smart Grid}:
+\begin{itemize}
+    \item \textbf{Piloto (<10 gateways)}: LuCI + OpenVPN + SSH.
+    \item \textbf{Producción (10-100 gateways)}: OpenVPN + OpenWISP.
+    \item \textbf{Escala (>100 gateways)}: OpenWISP completo + dual-partition firmware + VPN permanente.
+\end{itemize}
+
+\section{Gestión de Uplink Redundante (Ethernet + LTE)}
+
+\subsection{Política de Failover Automático}
+
+OpenWRT implementa failover basado en métricas de ruta (route metrics):
+
+\begin{verbatim}
+# /etc/config/network
+config interface 'wan_eth'
+    option proto 'dhcp'
+    option ifname 'eth0.2'
+    option metric '10'  # Prioridad alta (menor = mejor)
+
+config interface 'wan_lte'
+    option proto 'modemmanager'
+    option device '/sys/devices/.../usb1/1-1'
+    option apn 'internet.movistar.com.co'
+    option metric '20'  # Prioridad baja (backup)
+\end{verbatim}
+
+\textbf{Comportamiento}:
+\begin{enumerate}
+    \item Kernel selecciona ruta con menor métrica (Ethernet, metric=10).
+    \item Si Ethernet falla (link down), kernel cambia automáticamente a LTE (metric=20).
+    \item Al recuperar Ethernet, kernel restaura la ruta principal.
+    \item Tiempo de conmutación: <30 segundos (incluyendo renegociación TCP).
+\end{enumerate}
+
+\subsection{Monitoreo Activo de Conectividad (mwan3)}
+
+Paquete \texttt{mwan3} proporciona tracking proactivo de enlaces WAN:
+
+\begin{verbatim}
+opkg install mwan3 luci-app-mwan3
+
+# /etc/config/mwan3
+config interface 'wan_eth'
+    option enabled '1'
+    option track_ip '8.8.8.8 1.1.1.1'
+    option track_method 'ping'
+    option reliability '2'  # Fallar tras 2 pings perdidos
+    option count '3'
+    option timeout '2'
+    option interval '5'
+
+config interface 'wan_lte'
+    option enabled '1'
+    option track_ip '8.8.4.4'
+    option reliability '1'
+
+config policy 'balanced'
+    list use_member 'wan_eth_m1_w3'  # 75% tráfico por Ethernet
+    list use_member 'wan_lte_m1_w1'  # 25% tráfico por LTE
+
+config rule 'mqtt_prioritize_eth'
+    option dest_port '8883'
+    option proto 'tcp'
+    option use_policy 'wan_eth_only'  # MQTT solo por Ethernet
+\end{verbatim}
+
+Verificación de estado:
+\begin{verbatim}
+mwan3 status  # Estado de interfaces y tracking
+mwan3 interfaces  # Latencia y pérdida de paquetes por WAN
+\end{verbatim}
+
+\subsection{Optimización de Costos LTE}
+
+Estrategias para minimizar consumo de datos celulares:
+
+\subsubsection{Compresión de Datos}
+
+\begin{itemize}
+    \item \textbf{CBOR vs JSON}: Reducción de 40-60\% en tamaño de payload.
+    \begin{verbatim}
+# JSON: 150 bytes
+{"ts":1730000000000,"values":{"energy_kwh":1234.56,...}}
+
+# CBOR: 85 bytes (43% reducción)
+A2 63 746D70 1B... (formato binario compacto)
+    \end{verbatim}
+    
+    \item \textbf{Batching}: TB Edge acumula 5 minutos de telemetría y envía en un solo paquete HTTP/2.
+    \item \textbf{Compresión gzip}: Activar en cliente MQTT para payloads >1 KB.
+\end{itemize}
+
+\subsubsection{Políticas de Tráfico por WAN}
+
+Script de hotplug para adaptar comportamiento según WAN activa:
+
+\begin{verbatim}
+# /etc/hotplug.d/iface/99-wan-monitor
+#!/bin/sh
+
+if [ "$INTERFACE" = "wan_lte" ] && [ "$ACTION" = "ifup" ]; then
+    logger "LTE activo - modo ahorro de datos"
+    # Detener actualizaciones Docker
+    killall -STOP watchtower
+    # Aumentar intervalo de sincronización TB Edge (1h en lugar de 5 min)
+    docker exec tb-edge sh -c \
+      "sed -i 's/CLOUD_SYNC_INTERVAL=300/CLOUD_SYNC_INTERVAL=3600/' /data/conf/thingsboard.yml"
+    docker restart tb-edge
+fi
+
+if [ "$INTERFACE" = "wan_eth" ] && [ "$ACTION" = "ifup" ]; then
+    logger "Ethernet recuperado - modo normal"
+    killall -CONT watchtower
+    docker exec tb-edge sh -c \
+      "sed -i 's/CLOUD_SYNC_INTERVAL=3600/CLOUD_SYNC_INTERVAL=300/' /data/conf/thingsboard.yml"
+    docker restart tb-edge
+fi
+\end{verbatim}
+
+\subsubsection{Monitoreo de Consumo de Datos}
+
+\begin{verbatim}
+# Instalar vnstat para estadísticas de tráfico
+opkg install vnstat
+
+# Inicializar base de datos para interfaz LTE
+vnstat -u -i wwan0
+
+# Consultar consumo mensual
+vnstat -m -i wwan0
+# Salida:
+#  wwan0  /  monthly
+#       month        rx      |     tx      |    total
+# ------------------------+-------------+-------------
+#   2025-10     2.5 GiB |   1.2 GiB |   3.7 GiB
+\end{verbatim}
+
+Configurar alarma si consumo >10 GB/mes:
+\begin{verbatim}
+# /etc/crontabs/root
+0 0 * * * /usr/bin/check-lte-quota.sh
+
+# /usr/bin/check-lte-quota.sh
+#!/bin/sh
+USAGE=$(vnstat -m -i wwan0 | awk '/2025-10/{print $4}' | sed 's/GiB//')
+if [ $(echo "$USAGE > 10" | bc) -eq 1 ]; then
+    logger -t LTE "Cuota excedida: ${USAGE} GB - deshabilitando LTE"
+    ifdown wan_lte
+    # Enviar alerta a TB Edge
+    curl -X POST http://localhost:8080/api/v1/telemetry \
+      -d '{"lte_quota_exceeded":true,"usage_gb":'$USAGE'}'
+fi
+\end{verbatim}
+
+\section{Gestión y Monitoreo del Gateway}
+
+\subsection{Interfaz de Gestión (LuCI)}
+
+OpenWRT proporciona interfaz web LuCI en \texttt{http://<gateway-ip>:80}:
+
+\begin{itemize}
+    \item \textbf{Network}: Configuración de interfaces WAN/LAN, WiFi, firewall, DHCP.
+    \item \textbf{System}: Estado del sistema (CPU, RAM, storage), logs, backups.
+    \item \textbf{Docker}: Gestión de contenedores (vía luci-app-dockerman): start/stop, logs, stats.
+    \item \textbf{Services}: Configuración de servicios OpenWRT (dnsmasq, dropbear SSH, uhttpd).
+\end{itemize}
+
+\subsection{Monitoreo de Contenedores}
+
+\subsubsection{Docker Stats}
+
+Visualización en tiempo real de recursos por contenedor:
+\begin{verbatim}
+docker stats --no-stream
+CONTAINER    CPU %    MEM USAGE / LIMIT    MEM %    NET I/O
+otbr         2.5%     45MB / 512MB         8.8%     12MB / 8MB
+tb-edge      15.3%    320MB / 512MB        62.5%    50MB / 30MB
+postgres     5.1%     80MB / 512MB         15.6%    5MB / 5MB
+bridge       0.8%     25MB / 512MB         4.9%     8MB / 10MB
+\end{verbatim}
+
+\subsubsection{Healthchecks}
+
+Definir healthchecks en \texttt{docker-compose.yml}:
+\begin{verbatim}
+services:
+  tb-edge:
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+\end{verbatim}
+
+Verificar estado:
+\begin{verbatim}
+docker ps --filter "health=unhealthy"
+\end{verbatim}
+
+\subsection{Logs Centralizados}
+
+\subsubsection{Docker Logs}
+
+Consulta de logs por contenedor:
+\begin{verbatim}
+docker logs -f --tail=100 tb-edge
+docker logs --since 1h otbr | grep ERROR
+\end{verbatim}
+
+\subsubsection{Syslog Integration}
+
+Configurar driver de logging para enviar a syslog remoto:
+\begin{verbatim}
+{
+  "log-driver": "syslog",
+  "log-opts": {
+    "syslog-address": "udp://10.0.0.100:514",
+    "tag": "gateway-{{.Name}}"
+  }
+}
+\end{verbatim}
+
+\subsection{Backups y Recuperación}
+
+\subsubsection{Backup de Configuración OpenWRT}
+
+\begin{verbatim}
+# Backup vía LuCI: System > Backup/Flash Firmware > Generate archive
+# O por CLI:
+sysupgrade -b /tmp/backup-$(date +%Y%m%d).tar.gz
+scp /tmp/backup-*.tar.gz admin@backup-server:/backups/
+\end{verbatim}
+
+\subsubsection{Backup de Volúmenes Docker}
+
+Script de backup diario (\texttt{/etc/crontabs/root}):
+\begin{verbatim}
+#!/bin/sh
+# Backup a las 2 AM
+0 2 * * * /mnt/docker/scripts/backup.sh
+
+# backup.sh:
+DATE=$(date +%Y%m%d)
+tar czf /mnt/docker/backups/volumes-$DATE.tar.gz \
+  /mnt/docker/tb-edge-data \
+  /mnt/docker/postgres-data \
+  /mnt/docker/otbr-config
+
+# Retener solo 7 días
+find /mnt/docker/backups -name "volumes-*.tar.gz" \
+  -mtime +7 -delete
+\end{verbatim}
+
+\subsubsection{Disaster Recovery}
+
+Procedimiento de recuperación completa:
+\begin{enumerate}
+    \item Restaurar OpenWRT: Flash imagen base + restaurar backup de configuración.
+    \item Montar volumen de datos: \texttt{mount /dev/sda1 /mnt/docker}.
+    \item Restaurar volúmenes Docker desde backup si es necesario.
+    \item Desplegar contenedores: \texttt{docker-compose up -d}.
+    \item Verificar healthchecks: \texttt{docker ps}.
+    \item Sincronizar TB Edge con cloud: automático al conectar.
+\end{enumerate}
+
+\section{Pruebas y Validación}
+
+\subsection{Pruebas Funcionales}
+
+\begin{enumerate}
+    \item \textbf{Formación de red Thread}: Verificar que OTBR forma red y acepta dispositivos comisionados.
+    \begin{verbatim}
+docker exec -it otbr ot-ctl state  # Esperado: "leader"
+docker exec -it otbr ot-ctl child table  # Listar nodos conectados
+    \end{verbatim}
+    
+    \item \textbf{Conexión HaLow (Morse Micro)}: Verificar asociación de DCUs al AP HaLow.
+    \begin{verbatim}
+iw dev wlan2 station dump  # Listar estaciones conectadas
+# Esperado: MACs de DCUs con señal >-70 dBm
+
+# Test de throughput HaLow
+iperf3 -s &  # Servidor en gateway
+# En DCU: iperf3 -c <gateway-halow-ip> -t 60
+# Esperado: >20 Mbps promedio
+    \end{verbatim}
+    
+    \item \textbf{Validación Modo AP HaLow}:
+    \begin{verbatim}
+# Verificar AP activo
+iw dev wlan2 info
+# Esperado: type AP, channel 7 (917 MHz), width 8 MHz
+
+# Verificar clientes conectados
+hostapd_cli -i wlan2 all_sta
+# Métricas: signal (dBm), tx_rate (Mbps), rx_rate (Mbps)
+
+# Test QoS: priorizar telemetría (DSCP EF) vs logs (BE)
+tc qdisc show dev wlan2
+    \end{verbatim}
+    
+    \item \textbf{Validación Modo STA HaLow}:
+    \begin{verbatim}
+# Verificar conexión a AP externo
+iw dev wlan2 link
+# Esperado: Connected to <AP-BSSID>, signal -60 dBm
+
+# Test de failover WAN: STA HaLow como uplink primario
+ping -I wlan2 8.8.8.8
+# Desconectar AP externo → verificar failover a LTE
+    \end{verbatim}
+    
+    \item \textbf{Validación Modo 802.11s Mesh}:
+    \begin{verbatim}
+# Verificar mesh formado
+iw dev wlan2 station dump
+# Esperado: peer mesh STAs con plink_state ESTAB
+
+# Ver tabla de rutas mesh (HWMP)
+iw dev wlan2 mpath dump
+# Esperado: rutas a gateways remotos con metric <100
+
+# Test multi-hop: ping desde Gateway A a DCU conectado a Gateway C
+ping6 fd00::dcu30  # 2 hops intermedios
+# Latencia esperada: <150 ms
+
+# Simulación fallo nodo intermedio
+ifdown wlan2  # En Gateway B
+# Verificar reconvergencia HWMP (<10s)
+# Gateway A re-rutea vía Gateway D (ruta alternativa)
+    \end{verbatim}
+    
+    \item \textbf{Validación Modo EasyMesh}:
+    \begin{verbatim}
+# En Controller: verificar topología
+ubus call map.controller dump_topology
+# Esperado: JSON con Agents y backhaul_link=wlan2
+
+# Test roaming: DCU móvil cambia entre Agent 1 y Agent 2
+# Monitorear handoff en Controller
+logread -f | grep map-controller
+# Esperado: "Steering STA <MAC> from Agent1 to Agent2"
+# Latencia handoff <500 ms sin pérdida TCP
+
+# Test band steering: DCU dual-band elige HaLow vs 2.4GHz
+# Controller fuerza HaLow si señal >-65 dBm (mayor alcance)
+    \end{verbatim}
+    
+    \item \textbf{Prueba Arquitectura Mesh Extendida (3 Gateways)}:
+    \begin{verbatim}
+# Topología:
+#   [GW-A (0,0)] ---3km--- [GW-B (3km,0)] ---2.5km--- [GW-C (5.5km,0)]
+#       |                       |                           |
+#   10 DCUs                 10 DCUs                     10 DCUs
+
+# Test alcance total: ping desde DCU@GW-A a DCU@GW-C
+ping6 fd00::dcu25  # 2 hops mesh
+# Latencia esperada: <200 ms
+
+# Test failover mesh: desconectar GW-B
+# Verificar que GW-A y GW-C mantienen DCUs locales
+# pero pierden conectividad inter-gateway (sin ruta alternativa)
+
+# Con 4to gateway (topología redundante):
+#   [GW-A] ---[GW-B]--- [GW-C]
+#      \       /  \      /
+#       [GW-D]-------/
+# Desconectar GW-B → GW-A y GW-C se comunican vía GW-D
+    \end{verbatim}
+    
+    \item \textbf{Failover Ethernet <-> LTE}: Simular falla de WAN Ethernet.
+    \begin{verbatim}
+# Desconectar cable Ethernet WAN
+ifdown wan_eth
+
+# Verificar conmutación a LTE (<30s)
+mwan3 status
+ip route show  # Esperado: default via LTE (wwan0)
+
+# Reconectar Ethernet
+ifup wan_eth
+# Verificar restauración automática
+    \end{verbatim}
+    
+    \item \textbf{Publicación MQTT}: Dispositivo Thread publica telemetría y aparece en dashboard TB Edge.
+    \begin{verbatim}
+# Simular publicación desde bridge
+mosquitto_pub -h localhost -p 1883 -u ACCESS_TOKEN \
+  -t v1/devices/me/telemetry \
+  -m '{"ts":1730000000000,"values":{"energy_kwh":100.5}}'
+    \end{verbatim}
+    
+    \item \textbf{Sincronización cloud}: Verificar que TB Edge envía datos a TB Cloud.
+    \begin{verbatim}
+docker logs tb-edge | grep "Cloud synchronization completed"
+    \end{verbatim}
+    
+    \item \textbf{Comando downlink}: Enviar RPC desde TB Cloud y verificar ejecución en dispositivo.
+\end{enumerate}
+
+\subsection{Pruebas de Desempeño}
+
+\begin{enumerate}
+    \item \textbf{Latencia E2E}: Medir tiempo desde publicación en nodo Thread hasta llegada a TB Edge.
+    \begin{itemize}
+        \item Objetivo: <5 segundos percentil 95.
+        \item Herramienta: timestamps en payload + análisis en TB Edge.
+    \end{itemize}
+    
+    \item \textbf{Throughput HaLow}: Máxima capacidad de backhaul DCUs → Gateway.
+    \begin{itemize}
+        \item Test: 10 DCUs simultáneos @ 2 Mbps c/u = 20 Mbps agregado.
+        \item Métrica: Pérdida de paquetes <0.1\% con señal >-65 dBm.
+        \item Rango: Verificar conectividad a 1 km (línea de vista) y 500 m (NLOS con 1 pared).
+    \end{itemize}
+    
+    \item \textbf{Throughput MQTT}: Máxima tasa de mensajes sin pérdida.
+    \begin{itemize}
+        \item Test: 10 dispositivos publicando cada 15 seg = 40 msg/min.
+        \item Escalar hasta observar pérdida o latencia >5s.
+    \end{itemize}
+    
+    \item \textbf{Consumo energético}: Medición con PoE meter.
+    \begin{itemize}
+        \item Idle: <5W (OTBR + TB Edge sin tráfico, LTE idle).
+        \item Carga media: <12W (40 msg/min, HaLow RX, LTE idle).
+        \item Carga alta: <18W (LTE TX activo, límite PoE+ 25W).
+    \end{itemize}
+    
+    \item \textbf{Resiliencia offline}: Simular pérdida de conectividad WAN (Ethernet + LTE) durante 24 horas.
+    \begin{itemize}
+        \item Verificar que TB Edge continúa operando localmente.
+        \item Buffer local debe almacenar >28k mensajes (300 medidores × 96 lecturas/día).
+        \item Al reconectar, confirmar sincronización completa del backlog en <10 min.
+    \end{itemize}
+    
+    \item \textbf{Tiempo de failover WAN}: Medir latencia de conmutación Ethernet → LTE.
+    \begin{itemize}
+        \item Ping continuo a \texttt{8.8.8.8} durante test.
+        \item Desconectar Ethernet, medir tiempo hasta recuperación de ping vía LTE.
+        \item Objetivo: <30 segundos (incluyendo renegociación TCP).
+    \end{itemize}
+\end{enumerate}
+
+\subsection{Pruebas de Seguridad}
+
+\begin{enumerate}
+    \item \textbf{Firewall}: Escaneo de puertos con nmap desde WAN.
+    \begin{verbatim}
+nmap -sS -p- <gateway-wan-ip>
+# Esperado: Solo puertos explícitamente abiertos (ej. 22 SSH, 443 HTTPS)
+    \end{verbatim}
+    
+    \item \textbf{Seguridad HaLow WPA3-SAE}: Validar que PMF (Protected Management Frames) está activo.
+    \begin{verbatim}
+iw dev wlan2 info | grep "PMF"
+# Esperado: "PMF: required"
+
+# Intentar asociación con estación sin WPA3
+wpa_supplicant -i wlan1 -c /tmp/wpa2-only.conf
+# Esperado: Association rejected (WPA3 required)
+    \end{verbatim}
+    
+    \item \textbf{TLS/mTLS}: Validar certificados con openssl.
+    \begin{verbatim}
+openssl s_client -connect <tb-cloud>:7070 -CAfile ca.crt
+# Verificar: Verify return code: 0 (ok)
+    \end{verbatim}
+    
+    \item \textbf{Inyección MQTT}: Intentar publicar sin autenticación.
+    \begin{verbatim}
+mosquitto_pub -h localhost -p 1883 -t test -m "unauthorized"
+# Esperado: Connection refused o Authentication failed
+    \end{verbatim}
+    
+    \item \textbf{Container escape}: Verificar que contenedores no tienen acceso privilegiado innecesario.
+    \begin{verbatim}
+docker inspect tb-edge | grep '"Privileged": false'
+# Excepto OTBR que requiere host network para RCP
+    \end{verbatim}
+    
+    \item \textbf{LTE APN security}: Validar que credenciales APN no están en logs.
+    \begin{verbatim}
+grep -r "apn.*password" /var/log/
+# Esperado: Sin resultados (credenciales cifradas en uci)
+    \end{verbatim}
+    
+    \item \textbf{Actualizaciones automáticas}: Confirmar que Watchtower actualiza imágenes vulnerables.
+    \begin{verbatim}
+docker logs watchtower | grep "Updated"
+    \end{verbatim}
+\end{enumerate}
+
+\subsection{Pruebas de Integración}
+
+\begin{enumerate}
+    \item \textbf{Comisionado Thread}: Agregar nuevo dispositivo vía OTBR web UI.
+    \item \textbf{Reglas TB Edge}: Crear regla de alarma por consumo >5 kW, verificar activación.
+    \item \textbf{Dashboard en tiempo real}: Visualizar telemetría con latencia <2s en interfaz web.
+    \item \textbf{API REST}: Consultar dispositivos y telemetría vía API de TB Edge.
+    \begin{verbatim}
+curl -X GET http://localhost:8080/api/tenant/devices \
+  -H "X-Authorization: Bearer $TOKEN"
+    \end{verbatim}
+    
+    \item \textbf{Resiliencia offline}: Simular desconexión WAN durante 24h, verificar queue y sincronización.
+    \begin{verbatim}
+# Desconectar WAN
+ifdown wan_eth wan_lte
+
+# Generar telemetría durante 24h (28,800 mensajes @ 1 msg/3s)
+for i in {1..28800}; do
+  mosquitto_pub -h localhost -p 1883 -u TOKEN \
+    -t v1/devices/me/telemetry \
+    -m "{\"ts\":$(date +%s)000,\"values\":{\"energy\":$RANDOM}}"
+  sleep 3
+done
+
+# Verificar queue size
+du -sh /mnt/ssd/docker/queue
+# Esperado: ~150-200 MB con compresión
+
+# Reconectar WAN
+ifup wan_eth
+
+# Monitorear catch-up sync
+docker logs -f tb-edge | grep "Syncing batch"
+# Esperado: 100k msgs sincronizados en <15 min
+    \end{verbatim}
+\end{enumerate}
+
+\section{Integración de Inteligencia Artificial con MCP y LLM}
+
+\subsection{Arquitectura de IA en el Gateway}
+
+El gateway soporta integración de \textbf{modelos de lenguaje (LLM)} y \textbf{Model Context Protocol (MCP)} para análisis avanzado de telemetría y mantenimiento predictivo:
+
+\begin{itemize}
+    \item \textbf{MCP (Model Context Protocol)}: Protocolo estándar para comunicación entre aplicaciones y servicios de IA (Claude, GPT, modelos locales).
+    \item \textbf{LLM local (Ollama)}: Modelos open-source ejecutándose en gateway (Llama 3.2, Mistral, Phi-3).
+    \item \textbf{ThingsBoard Edge + IA}: Integración vía Rule Engine para análisis en tiempo real.
+\end{itemize}
+
+\subsection{Model Context Protocol (MCP)}
+
+\textbf{MCP} es un protocolo abierto desarrollado por Anthropic que permite a aplicaciones:
+\begin{itemize}
+    \item Conectarse a múltiples proveedores de IA (Claude, OpenAI, Azure OpenAI, modelos locales).
+    \item Proporcionar contexto estructurado a modelos (herramientas, datos, prompts).
+    \item Ejecutar acciones en sistemas externos desde respuestas de LLM.
+\end{itemize}
+
+\textbf{Componentes MCP}:
+\begin{enumerate}
+    \item \textbf{MCP Server}: Expone herramientas y recursos al LLM (ej. consultar TB Edge API).
+    \item \textbf{MCP Client}: Aplicación que consume servicios de IA (ej. dashboard analítico).
+    \item \textbf{Protocolo}: JSON-RPC 2.0 sobre stdio/SSE/WebSocket.
+\end{enumerate}
+
+\subsection{Despliegue de Ollama (LLM Local)}
+
+Ollama permite ejecutar modelos LLM localmente sin enviar datos a cloud externo:
+
+\subsubsection{Instalación en Gateway}
+
+Docker Compose para Ollama:
+\begin{verbatim}
+# /mnt/ssd/docker/ollama/docker-compose.yml
+version: '3.8'
+services:
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    ports:
+      - "11434:11434"  # API REST
+    volumes:
+      - ./models:/root/.ollama
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+    restart: unless-stopped
+    # Requiere GPU (opcional) o CPU (8 GB RAM mínimo)
+    deploy:
+      resources:
+        limits:
+          memory: 8G
+\end{verbatim}
+
+Desplegar y descargar modelo:
+\begin{verbatim}
+cd /mnt/ssd/docker/ollama
+docker-compose up -d
+
+# Descargar modelo Llama 3.2 (3B parámetros, 2 GB)
+docker exec -it ollama ollama pull llama3.2:3b
+
+# O modelo Phi-3 (mini, 1.3 GB, optimizado para edge)
+docker exec -it ollama ollama pull phi3:mini
+\end{verbatim}
+
+Prueba de inferencia:
+\begin{verbatim}
+curl http://localhost:11434/api/generate -d '{
+  "model": "llama3.2:3b",
+  "prompt": "Analiza este patrón de consumo: 100 kWh, 120 kWh, 150 kWh, 200 kWh. ¿Es anómalo?",
+  "stream": false
+}'
+\end{verbatim}
+
+\subsection{MCP Server para ThingsBoard Edge}
+
+Implementación de MCP Server que expone API de TB Edge al LLM:
+
+\subsubsection{Código MCP Server (Python)}
+
+Archivo \texttt{/mnt/ssd/docker/mcp-server/tb\_mcp\_server.py}:
+\begin{verbatim}
+#!/usr/bin/env python3
+import json
+import sys
+from typing import Any
+import requests
+
+# MCP Server para TB Edge
+class TBEdgeMCPServer:
+    def __init__(self, tb_url="http://tb-edge:8080", token=""):
+        self.tb_url = tb_url
+        self.token = token
+    
+    def get_device_telemetry(self, device_id: str, keys: str, 
+                             start_ts: int, end_ts: int):
+        """Obtiene telemetría de dispositivo"""
+        url = f"{self.tb_url}/api/plugins/telemetry/DEVICE/{device_id}/values/timeseries"
+        params = {"keys": keys, "startTs": start_ts, "endTs": end_ts}
+        headers = {"X-Authorization": f"Bearer {self.token}"}
+        
+        resp = requests.get(url, params=params, headers=headers)
+        return resp.json()
+    
+    def get_device_alarms(self, device_id: str):
+        """Obtiene alarmas activas de dispositivo"""
+        url = f"{self.tb_url}/api/alarm/DEVICE/{device_id}"
+        headers = {"X-Authorization": f"Bearer {self.token}"}
+        
+        resp = requests.get(url, headers=headers)
+        return resp.json()
+    
+    def handle_mcp_request(self, request: dict) -> dict:
+        """Procesa solicitud MCP JSON-RPC 2.0"""
+        method = request.get("method")
+        params = request.get("params", {})
+        
+        if method == "tools/list":
+            return {
+                "tools": [
+                    {
+                        "name": "get_device_telemetry",
+                        "description": "Obtiene telemetría histórica de dispositivo",
+                        "inputSchema": {
+                            "type": "object",
+                            "properties": {
+                                "device_id": {"type": "string"},
+                                "keys": {"type": "string"},
+                                "start_ts": {"type": "integer"},
+                                "end_ts": {"type": "integer"}
+                            }
+                        }
+                    },
+                    {
+                        "name": "get_device_alarms",
+                        "description": "Obtiene alarmas activas de dispositivo",
+                        "inputSchema": {
+                            "type": "object",
+                            "properties": {
+                                "device_id": {"type": "string"}
+                            }
+                        }
+                    }
+                ]
+            }
+        
+        elif method == "tools/call":
+            tool_name = params.get("name")
+            tool_args = params.get("arguments", {})
+            
+            if tool_name == "get_device_telemetry":
+                result = self.get_device_telemetry(**tool_args)
+                return {"content": [{"type": "text", "text": json.dumps(result)}]}
+            
+            elif tool_name == "get_device_alarms":
+                result = self.get_device_alarms(**tool_args)
+                return {"content": [{"type": "text", "text": json.dumps(result)}]}
+        
+        return {"error": "Unknown method"}
+
+    def run(self):
+        """Loop principal MCP stdio"""
+        for line in sys.stdin:
+            try:
+                request = json.loads(line)
+                response = self.handle_mcp_request(request)
+                response["id"] = request.get("id")
+                print(json.dumps(response), flush=True)
+            except Exception as e:
+                print(json.dumps({"error": str(e)}), file=sys.stderr, flush=True)
+
+if __name__ == "__main__":
+    server = TBEdgeMCPServer(token="YOUR_TB_TOKEN")
+    server.run()
+\end{verbatim}
+
+\subsubsection{Configuración MCP Client}
+
+Archivo de configuración MCP (\texttt{mcp\_config.json}):
+\begin{verbatim}
+{
+  "mcpServers": {
+    "thingsboard-edge": {
+      "command": "python3",
+      "args": ["/mnt/ssd/docker/mcp-server/tb_mcp_server.py"],
+      "env": {
+        "TB_URL": "http://tb-edge:8080",
+        "TB_TOKEN": "YOUR_ACCESS_TOKEN"
+      }
+    }
+  }
+}
+\end{verbatim}
+
+\subsection{Casos de Uso de IA en Gateway}
+
+\subsubsection{Análisis de Anomalías en Consumo}
+
+Prompt al LLM vía MCP:
+\begin{verbatim}
+"Analiza el consumo energético del medidor METER-001 en las últimas 
+24 horas. Identifica patrones anómalos que puedan indicar fraude, 
+falla del medidor o consumo irregular. Proporciona recomendaciones."
+\end{verbatim}
+
+Flujo:
+\begin{enumerate}
+    \item LLM invoca \texttt{get\_device\_telemetry} vía MCP para obtener datos.
+    \item Analiza serie temporal (100 puntos, intervalo 15 min).
+    \item Detecta pico de 500 kWh a las 3 AM (vs promedio 50 kWh).
+    \item Genera respuesta: "Anomalía detectada: consumo 10× superior al promedio. Posible bypass del medidor o falla de CT (transformador de corriente). Recomendar inspección física."
+\end{enumerate}
+
+\subsubsection{Mantenimiento Predictivo}
+
+Prompt:
+\begin{verbatim}
+"Evalúa el estado de los 50 medidores en la zona Norte. Predice 
+cuáles tienen mayor probabilidad de falla en los próximos 30 días 
+basándote en alarmas históricas, lecturas inconsistentes y tiempo 
+de operación."
+\end{verbatim}
+
+LLM:
+\begin{enumerate}
+    \item Consulta alarmas de 50 dispositivos (\texttt{get\_device\_alarms}).
+    \item Identifica 5 medidores con >10 alarmas en 7 días.
+    \item Analiza telemetría: lecturas con alta varianza o valores fuera de rango.
+    \item Genera ranking de prioridad de mantenimiento.
+\end{enumerate}
+
+\subsubsection{Asistente de Operación (Chatbot)}
+
+Dashboard TB Edge con chatbot integrado:
+\begin{verbatim}
+Usuario: "¿Cuántos medidores están offline en este momento?"
+LLM: [Consulta TB Edge API] "Actualmente 3 medidores offline: 
+      METER-042, METER-089, METER-123. Última comunicación hace 
+      2 horas. Posible problema de conectividad Thread."
+
+Usuario: "¿Cuál es el consumo total del edificio hoy?"
+LLM: [Suma telemetría de 50 medidores] "Consumo total: 1,250 kWh 
+      (hasta las 14:30). Proyección diaria: 2,100 kWh, 15% superior 
+      al promedio semanal."
+\end{verbatim}
+
+\subsection{Ventajas de IA Local (Ollama + MCP) vs Cloud}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{|l|c|c|}
+\hline
+\textbf{Característica} & \textbf{IA Local (Gateway)} & \textbf{IA Cloud (GPT-4/Claude)} \\
+\hline
+Latencia & <500 ms & 2-5 segundos \\
+Privacidad datos & Alta (no salen del gateway) & Baja (envío a cloud) \\
+Costo operación & \$0 (hardware local) & \$0.01-0.10/consulta \\
+Disponibilidad offline & 100\% & 0\% (requiere internet) \\
+Modelos disponibles & Open-source (Llama, Phi) & Propietarios (GPT, Claude) \\
+Capacidad análisis & Media (3B-7B params) & Alta (100B+ params) \\
+Consumo energético & +5W (CPU) / +15W (GPU) & N/A \\
+\hline
+\end{tabular}
+\caption{Comparación IA local vs cloud para gateway Smart Energy}
+\end{table}
+
+\textbf{Recomendación}: Usar IA local (Ollama + MCP) para análisis en tiempo real y privacidad, reservar IA cloud para análisis complejos periódicos (tendencias mensuales, optimización de red).
+
+\section{Conclusiones del Capítulo}
+
+El gateway basado en OpenWRT con arquitectura de contenedores Docker y conectividad multiradio (HaLow + LTE) ofrece ventajas significativas para despliegues de telemetría Smart Energy:
+
+\begin{itemize}
+    \item \textbf{Flexibilidad}: Contenedores Docker permiten actualizar, escalar y modificar servicios independientemente sin afectar el sistema base.
+    
+    \item \textbf{Edge Computing}: ThingsBoard Edge procesa datos localmente (reglas, alarmas, dashboards) reduciendo latencia y dependencia del cloud.
+    
+    \item \textbf{Conectividad robusta multimodal (HaLow + LTE)}:
+    \begin{itemize}
+        \item \textbf{802.11ah (Morse Micro MM6108)}: Backhaul de largo alcance (1-3 km) y alta estabilidad para DCUs con throughput de hasta 40 Mbps, consumo <500 mW y certificaciones industriales (-40°C a +85°C).
+        \item \textbf{Modos HaLow avanzados}:
+        \begin{itemize}
+            \item \textbf{AP}: Cobertura centralizada 3 km, topología estrella simple.
+            \item \textbf{STA}: Cliente para backhaul rural sin costo celular recurrente.
+            \item \textbf{802.11s Mesh}: Auto-healing, extensión 6-9 km con 2-3 gateways, routing automático HWMP.
+            \item \textbf{EasyMesh}: Roaming transparente, gestión centralizada, steering inteligente de clientes.
+        \end{itemize}
+        \item \textbf{LTE Cat-6 (M.2)}: Uplink redundante con failover automático <30s, ideal para zonas sin infraestructura fija. Optimización de costos con compresión CBOR (40-60\% reducción) y batching inteligente.
+        \item \textbf{Failover automático}: Política de métricas de ruta (Ethernet metric=10, LTE metric=20) con monitoreo activo vía mwan3.
+    \end{itemize}
+    
+    \item \textbf{Escalabilidad Arquitectónica con Mesh HaLow}:
+    \begin{itemize}
+        \item \textbf{Topología estrella (AP único)}: 10 DCUs × 250 nodos Thread = 2,500 endpoints, cobertura 3 km, latencia <50 ms.
+        \item \textbf{Topología mesh (3 gateways 802.11s)}: 30 DCUs × 250 nodos = 7,500 endpoints, cobertura 9 km, latencia <200 ms, resiliencia ante fallo de gateway.
+        \item \textbf{Topología EasyMesh (1 Controller + 4 Agents)}: 50 DCUs × 250 nodos = 12,500 endpoints, roaming transparente, carga balanceada automática.
+    \end{itemize}
+    
+    \item \textbf{Reducción CAPEX/OPEX con Arquitectura Mesh}:
+    \begin{itemize}
+        \item \textbf{CAPEX}: 3 gateways con mesh HaLow backhaul vs. 9 gateways con uplink dedicado (fibra/LTE) para misma cobertura (9 km) = ahorro 66\% en infraestructura WAN.
+        \item \textbf{OPEX}: Backhaul HaLow sin costo recurrente vs. 9 planes LTE × \$30/mes = ahorro \$3,240/año.
+        \item \textbf{Instalación}: Mesh auto-configura rutas vs. despliegue manual de enlaces backhaul = reducción 40\% tiempo de instalación.
+    \end{itemize}
+    
+    \item \textbf{Interoperabilidad}: OpenThread Border Router gestiona redes Thread mesh con soporte estándar Thread 1.3, compatible con múltiples fabricantes de dispositivos IoT.
+    
+    \item \textbf{Resiliencia}: 
+    \begin{itemize}
+        \item \textbf{SSD NVMe}: Almacenamiento persistente de alta durabilidad (>1M ciclos E/W, >3000 IOPS) para PostgreSQL y queue TB Edge.
+        \item \textbf{Queue persistente}: Hasta 100k mensajes offline (2 GB, ~7 días @ 300 medidores), sincronización acelerada en <15 min (batch 5000 msgs).
+        \item \textbf{Protección multinivel}: 6 capas de resiliencia (hardware, filesystem, DB, aplicación, red, containers) con RTO <5 min.
+        \item \textbf{Compresión inteligente}: gzip/lz4 reduce queue 40-60\%, eliminación automática de telemetría >7 días.
+        \item Redundancia WAN con conmutación transparente para aplicaciones.
+        \item \textbf{Mesh auto-healing}: Reconvergencia HWMP <10s ante fallo de nodo intermediario, eliminando single point of failure.
+    \end{itemize}
+    
+    \item \textbf{Inteligencia Artificial (Roadmap Futuro)}:
+    \begin{itemize}
+        \item \textbf{MCP (Model Context Protocol)}: Estándar abierto Anthropic para integración de LLMs con TB Edge API, permitiendo análisis avanzado de telemetría vía herramientas estructuradas.
+        \item \textbf{Ollama local (planeado)}: Modelos open-source (Llama 3.2 1B, Phi-3 mini) ejecutando en gateway con latencia <500 ms, privacidad 100\% (datos no salen del gateway). Requiere optimización térmica adicional en Raspberry Pi 4 (ventilador activo, heatsink GPU).
+        \item \textbf{Casos de uso potenciales}: Detección de anomalías (fraude, bypass CT), mantenimiento predictivo (ranking de medidores con mayor riesgo de falla), chatbot operacional (consultas en lenguaje natural sobre telemetría).
+        \item \textbf{Limitación actual}: Raspberry Pi 4 con 4 GB RAM solo permite modelos <3 GB (Llama 3.2 1B, Phi-3 mini 1.3 GB) para mantener recursos para PostgreSQL/Kafka/TB Edge. Versión 8 GB recomendada para IA en producción.
+        \item \textbf{Alternativa}: MCP client conectado a Ollama en servidor dedicado (no en gateway) para análisis batch offline de datos históricos exportados desde PostgreSQL.
+    \end{itemize}
+    
+    \item \textbf{Arquitectura de Datos Distribuida}:
+    \begin{itemize}
+        \item \textbf{Apache Kafka}: Message broker distribuido, >100k msg/s, buffer persistente 7 días, multi-consumidor (TB Edge + analítica + ML), compresión gzip, backpressure handling.
+        \item \textbf{PostgreSQL + TimescaleDB}: Series temporales optimizadas, compresión 10-20×, particionamiento automático, retención 90 días, queries agregadas (time\_bucket), hypertables con >3000 IOPS en SSD NVMe.
+        \item \textbf{Ventajas Kafka}: Replay histórico, desacoplamiento productor/consumidor, tolerancia a picos de tráfico (GB de buffer vs 100k msgs in-memory).
+    \end{itemize}
+    
+    \item \textbf{Protocolos de Comunicación IoT Multiprotocolo}:
+    \begin{itemize}
+        \item \textbf{MQTT (QoS 0/1/2)}: Telemetría uplink (medidor→gateway), Pub/Sub desacoplado, LWT para detección de desconexión, retained messages, broker Mosquitto con TLS/mTLS.
+        \item \textbf{CoAP (UDP)}: Thread mesh intra-nodo, 4 bytes overhead vs 100+ HTTP, Observe para suscripciones, DTLS+PSK, block-wise transfer, RESTful methods (GET/POST/PUT/DELETE).
+        \item \textbf{HTTP/REST}: APIs gestión (TB Edge, IEEE 2030.5, LuCI, Ollama), webhooks, integraciones cloud.
+        \item \textbf{LwM2M}: Device management (bootstrap, firmware OTA), objetos estándar OMA (3305 Power Measurement), operaciones Read/Write/Execute/Observe, DTLS eficiente (PSK 16 bytes vs X.509 2 KB).
+        \item \textbf{Selección inteligente}: MQTT QoS 1 para telemetría crítica, CoAP para Thread mesh, LwM2M para firmware OTA, HTTP para IEEE 2030.5 SEP 2.0.
+    \end{itemize}
+    
+    \item \textbf{Seguridad multicapa}:
+    \begin{itemize}
+        \item Firewall nftables a nivel de sistema operativo.
+        \item Aislamiento de contenedores con namespaces de kernel.
+        \item TLS/mTLS para comunicaciones cloud (puerto 7070 gRPC).
+        \item Thread AES-128-CCM para red de campo.
+        \item HaLow WPA3-SAE con PMF obligatorio (Morse Micro), protección mesh con SAE authentication en 802.11s.
+        \item \textbf{OpenVPN}: Túnel VPN permanente para acceso remoto seguro al gateway (SSH, LuCI, logs) desde NOC sin exponer puertos a internet.
+    \end{itemize}
+    
+    \item \textbf{Mantenibilidad y Gestión Centralizada}: 
+    \begin{itemize}
+        \item \textbf{OpenWRT Feeds}: Gestión de paquetes con opkg (update/install/upgrade), feeds oficiales (packages, luci, routing) + custom feed para paquetes Smart Grid propietarios, actualización masiva de dependencias.
+        \item \textbf{OpenVPN}: Acceso remoto seguro vía túnel VPN permanente (hub-spoke architecture), IPs fijas por gateway (10.8.0.100-199), client-to-client para troubleshooting inter-gateway, certificados PKI (CA + client certs), keepalive para detección de desconexión <120s.
+        \item \textbf{OpenWISP}: Plataforma centralizada para gestión masiva (100-1000 gateways), templates UCI con variables (\{\{apn\}\}, \{\{halow\_channel\}\}), push configuración remota vía HTTPS, Firmware OTA scheduler con dual-partition rollback, monitoring (CPU/RAM/Storage/Interfaces/Docker), alertas (email/SMS/webhook), zero-touch provisioning.
+        \item Actualizaciones OTA de contenedores con Watchtower.
+        \item Backups automatizados de configuración y volúmenes Docker.
+        \item Monitoreo centralizado vía logs, healthchecks y vnstat.
+        \item \textbf{EasyMesh}: Configuración remota de todos los Agents desde Controller único.
+    \end{itemize}
+    
+    \item \textbf{Escalabilidad}: Soporta hasta 10 DCUs simultáneos vía HaLow AP (cada DCU con 250 nodos Thread) con agregación en TB Edge antes de enviar al cloud. Mesh y EasyMesh multiplican capacidad 3-5× sin rediseño arquitectónico.
+    
+    \item \textbf{Costo-efectividad}: 
+    \begin{itemize}
+        \item Hardware de propósito general (router OpenWRT + módulos M.2 estándar) reduce CAPEX vs. gateways propietarios.
+        \item Optimización LTE reduce OPEX: 3.7 GB/mes promedio vs. 20-30 GB sin compresión.
+        \item Mesh HaLow elimina necesidad de backhaul dedicado en 60-70\% de nodos.
+    \end{itemize}
+    
+    \item \textbf{Conformidad con Estándares Internacionales}:
+    \begin{itemize}
+        \item \textbf{IEEE 2030.5-2023}: Soporte completo de Function Sets (DCAP, TM, MM, MSG, ED) con API REST XML, autenticación X.509 ECC P-256, LFDI, RBAC.
+        \item \textbf{ISO/IEC 30141:2024}: Arquitectura IoT de referencia con 4 vistas (funcional, información, despliegue, operacional) cubriendo 8 entidades funcionales.
+        \item Cumplimiento regulatorio CREG (Colombia) para medición inteligente y Smart Energy Profile 2.0 para interoperabilidad con utilidades.
+    \end{itemize}
+\end{itemize}
+
+\subsection{Casos de Uso Óptimos por Modo HaLow}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{|l|p{3cm}|p{4cm}|p{4cm}|}
+\hline
+\textbf{Modo} & \textbf{Escenario} & \textbf{Ventajas Clave} & \textbf{Ejemplo Despliegue} \\
+\hline
+AP (Router) & Zona urbana densa & Control total, simplicidad, baja latencia & 1 gateway por edificio (300 medidores, <1 km) \\
+\hline
+AP (Bridge) & Integración con LAN existente & Transparencia L2, DHCP unificado & Campus con switches Ethernet, gateway como AP bridge \\
+\hline
+STA & Zona rural sin fibra/LTE & Ahorro OPEX, throughput alto & Gateway conecta a torre utilidad con HaLow AP (10 km) \\
+\hline
+802.11s Mesh & Área extendida sin infraestructura & Auto-healing, 3× cobertura, CAPEX reducido & 3 gateways mesh en zona rural (9 km, 900 medidores) \\
+\hline
+EasyMesh & Multi-edificio/campus & Roaming, gestión centralizada, QoS & Universidad con 5 edificios, 1 Controller + 4 Agents \\
+\hline
+\end{tabular}
+\caption{Casos de uso óptimos por modo de operación HaLow}
+\end{table}
+
+\subsection{Ventajas de Morse Micro sobre Alternativas HaLow}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|c|c|c|}
+\hline
+\textbf{Característica} & \textbf{Morse Micro MM6108} & \textbf{Newracom NRC7292} & \textbf{Qualcomm QCA8081} \\
+\hline
+Alcance típico & \textbf{3 km} & 1.5 km & 1 km \\
+Throughput máximo & \textbf{40 Mbps} & 32 Mbps & 24 Mbps \\
+Consumo TX & \textbf{<500 mW} & 800 mW & 1 W \\
+Drivers Linux & \textbf{Mainline (ath11k)} & Out-of-tree & Propietario \\
+Temp. operación & \textbf{-40°C a +85°C} & -20°C a +70°C & -10°C a +60°C \\
+Certificaciones & \textbf{FCC/CE/IC} & FCC/CE & FCC \\
+Soporte Mesh 802.11s & \textbf{Sí (ath11k nativo)} & Limitado & No \\
+EasyMesh (IEEE 1905.1) & \textbf{Sí} & Beta & No \\
+Costo (qty 100) & \$12 & \$15 & \$18 \\
+\hline
+\end{tabular}
+\caption{Comparación de soluciones HaLow comerciales (2025)}
+\end{table}
+
+\subsection{Limitaciones y Trabajo Futuro}
+
+\begin{itemize}
+    \item \textbf{Validación de Performance (Pendiente)}:
+    \begin{itemize}
+        \item Mediciones CPU/RAM bajo carga completa (OTBR + TB Edge + PostgreSQL + Kafka) con herramientas como \texttt{htop}, \texttt{docker stats}, \texttt{sysbench}.
+        \item Benchmarks de temperatura operativa (idle vs carga) con ventilador PoE HAT activo, objetivo <75°C bajo carga sostenida.
+        \item Test de throughput E2E: nodo Thread → OTBR → HaLow → TB Edge → PostgreSQL con \texttt{iperf3} y latencia con \texttt{ping6}.
+        \item Stress test: 1000 msg/s durante 24h para validar estabilidad térmica y resiliencia del SSD NVMe.
+    \end{itemize}
+    
+    \item \textbf{Conectividad HaLow vía USB (Roadmap)}:
+    \begin{itemize}
+        \item Morse Micro planea soporte USB 2.0 High-Speed (Q2 2026) para simplificar integración.
+        \item Conexión USB elimina complejidad SPI (IRQ handling, clock sync) y permite hot-plug.
+        \item Validar drivers \texttt{ath11k\_usb} en OpenWRT 24.x cuando estén disponibles.
+    \end{itemize}
+    
+    \item \textbf{Inteligencia Artificial Local}:
+    \begin{itemize}
+        \item Desplegar Ollama con modelo Llama 3.2 1B (2 GB) o Phi-3 mini (1.3 GB) en Raspberry Pi 4 de 8 GB RAM.
+        \item Implementar MCP Server Python para exponer TB Edge API como herramientas estructuradas (\texttt{get\_device\_telemetry}, \texttt{get\_device\_alarms}).
+        \item Validar casos de uso: detección de anomalías (fraude, bypass CT), mantenimiento predictivo (ranking dispositivos con alarmas).
+        \item Alternativa: Ollama en servidor x86 dedicado para análisis batch offline de datos históricos PostgreSQL.
+    \end{itemize}
+    
+    \item \textbf{Rendimiento I/O}: SSD NVMe M.2 (256 GB) proporciona >3000 IOPS medidos, suficiente para PostgreSQL + Kafka. Para >500 dispositivos considerar RAID-1 NVMe para redundancia (requiere Compute Module 4 con dual M.2).
+    
+    \item \textbf{Alta disponibilidad}: Implementar par de gateways Raspberry Pi 4 en activo-pasivo con VRRP/keepalived para redundancia completa. En topología mesh, configurar 2 gateways con uplink LTE como root bridges redundantes con RSTP (Rapid Spanning Tree Protocol).
+    
+    \item \textbf{Raspberry Pi vs Hardware Industrial}:
+    \begin{itemize}
+        \item Evaluar migración a Raspberry Pi Compute Module 4 (CM4) con carrier board industrial (DIN-rail mount, -40°C a +85°C, dual Ethernet, dual M.2 NVMe).
+        \item Ventajas CM4: PCIe nativo (no HAT), más compacto, certificaciones industriales (vibración, EMI/EMC).
+        \item Alternativa: Hardware x86 industrial (Intel Atom, Celeron N5105) con 8 GB RAM, dual NIC, PCIe, pero mayor costo (\$200-300 vs \$55 RPi 4).
+    \end{itemize}
+    
+    \item \textbf{5G RedCap}: Evaluar migración de Quectel BG95 (LTE-M) a módulos 5G Reduced Capability (Quectel RG500U) para menor latencia (<50ms vs 100-300ms) y mayor throughput (100 Mbps vs 375 kbps), crítico para comandos RPC downlink en tiempo real.
+    
+    \item \textbf{Agregación de enlaces}: Implementar MPTCP (Multipath TCP) para utilizar Ethernet + LTE simultáneamente, aumentando throughput y resiliencia con failover <1s sin pérdida de conexiones TCP activas.
+    
+    \item \textbf{Mesh avanzado}: Explorar fastroaming 802.11r en EasyMesh para handoff <50ms (crítico para vehículos eléctricos en movimiento con carga dinámica V2G).
+    
+    \item \textbf{HaLow + LoRaWAN híbrido}: Evaluar integración de LoRaWAN (915 MHz) para sensores ultra-low-power (<10 mW, batería 10 años) con HaLow como backhaul de gateways LoRa concentradores (Semtech SX1302).
+    
+    \item \textbf{Quantum-safe crypto}: Preparar migración a algoritmos post-cuánticos (Kyber-768, Dilithium-3) en certificados X.509 para protección a largo plazo (NIST PQC Round 4, 2025+), especialmente crítico para infraestructura crítica Smart Grid con vida útil >20 años.
+\end{itemize}
+
+\textbf{Próximo capítulo}: Se presentará la arquitectura completa del sistema de telemetría, integrando los nodos Thread (ESP32-C6), DCUs con Thread Border Router, el gateway Raspberry Pi 4 + OpenWRT con HaLow multimodal (AP/STA/Mesh/EasyMesh), Quectel BG95 LTE-M y nRF52840 Thread RCP, y la plataforma cloud ThingsBoard, con un caso de estudio de despliegue real para 900 medidores residenciales en infraestructura colombiana con topología mesh 802.11s (3 gateways × 9 km cobertura).
