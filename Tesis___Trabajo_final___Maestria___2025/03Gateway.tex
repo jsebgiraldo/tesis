@@ -222,7 +222,134 @@ Actividades operacionales según ISO/IEC 30141:
     \item \textbf{RS-GW-009}: WPA3-SAE con PMF obligatorio en interfaz HaLow.
 \end{enumerate}
 
+\section{Arquitectura Jerárquica de 3 Niveles IoT}
+
+La arquitectura propuesta sigue un modelo jerárquico de tres niveles que optimiza la distribución de funciones, consumo energético y capacidad de procesamiento en redes IoT de gran escala. Esta arquitectura, alineada con las implementaciones de referencia de Morse Micro para Wi-Fi HaLow \cite{morse_micro_mm8108_2025}, permite desplegar redes IoT con miles de dispositivos manteniendo eficiencia operativa y escalabilidad.
+
+\subsection{Nivel 1: Nodos IoT (End Devices)}
+
+El primer nivel está compuesto por dispositivos sensores y actuadores de bajo consumo energético, optimizados para operación con baterías durante años. Estos nodos implementan las funciones mínimas necesarias para:
+
+\begin{itemize}
+    \item \textbf{Adquisición de datos}: Sensores de temperatura, humedad, consumo eléctrico, calidad del aire, etc.
+    \item \textbf{Actuación}: Control de válvulas, relés, displays, alarmas.
+    \item \textbf{Conectividad}: Thread (802.15.4) o HaLow 802.11ah en modo cliente (STA).
+    \item \textbf{Protocolos de aplicación}: LwM2M (Lightweight M2M) sobre CoAP, MQTT-SN, IEEE 2030.5 Client.
+\end{itemize}
+
+\subsubsection{Características de Nodos IoT}
+
+\begin{itemize}
+    \item \textbf{Hardware}: Microcontroladores de bajo consumo (Arm Cortex-M4/M33): ESP32-C6, nRF52840, STM32U5, etc.
+    \item \textbf{RAM/Flash}: 256 KB - 1 MB RAM, 1-4 MB Flash.
+    \item \textbf{Modos de ahorro}: Sleep profundo, wake-on-radio, duty cycling < 1\%.
+    \item \textbf{Autonomía}: 5-10 años con batería AA (2600 mAh) en aplicaciones de telemetría con reportes cada 15 min.
+    \item \textbf{Stack de software}: RTOS ligero (FreeRTOS, Zephyr), stack Thread/Matter o driver HaLow STA.
+\end{itemize}
+
+\textbf{Ejemplo de implementación}: Nodo de telemetría de temperatura y humedad basado en ESP32 con ESP-IDF, cliente LwM2M (AVSystems Anjay), conectividad Thread vía nRF52840 RCP. La implementación de referencia se detalla en el Anexo E.
+
+\subsection{Nivel 2: Routers IoT}
+
+El segundo nivel está formado por routers IoT que extienden el alcance de las redes HaLow o Thread, actuando como repetidores inteligentes. Estos dispositivos tienen mayor capacidad que los nodos, pero menor que los gateways, optimizados para:
+
+\begin{itemize}
+    \item \textbf{Routing multi-hop}: Mesh 802.11s, EasyMesh (IEEE 1905.1), Thread Router.
+    \item \textbf{Conectividad}: HaLow en modo AP + STA simultáneo (repetidor), Thread Router.
+    \item \textbf{Funciones limitadas}: Forwarding de paquetes, discovery de vecinos, sin procesamiento de aplicación.
+\end{itemize}
+
+\subsubsection{Características de Routers IoT}
+
+\begin{itemize}
+    \item \textbf{Hardware}: SoC HaLow Morse Micro MM8108 + MPU Linux ligero (MediaTek MT7981B, MT7688).
+    \item \textbf{RAM/Flash}: 128-256 MB RAM, 16-32 MB Flash.
+    \item \textbf{Sistema Operativo}: OpenWRT mínimo, sin Docker ni bases de datos.
+    \item \textbf{Alimentación}: PoE (802.3af/at), DC 12V, ocasionalmente baterías de respaldo.
+    \item \textbf{Ejemplos comerciales}: GLi.net GL-MT3000 con módulo MM8108 (GLi.net GL-MT3000 + MM8108-EKH19 EVK)\cite{morse_micro_mm8108_2025}.
+\end{itemize}
+
+\subsubsection{Diferencias con Gateways}
+
+Los routers IoT \textbf{no} implementan:
+\begin{itemize}
+    \item Border Router completo (sin traducción Thread $\leftrightarrow$ IP externa).
+    \item Procesamiento edge (sin Docker, sin bases de datos).
+    \item Conectividad WAN celular (LTE/5G).
+    \item Interfaces IEEE 2030.5 Server o ThingsBoard Edge.
+\end{itemize}
+
+Su función es puramente de \textbf{extensión de cobertura} y \textbf{densificación de la red}, permitiendo que nodos IoT alejados del gateway alcancen conectividad mediante saltos intermedios.
+
+\subsection{Nivel 3: Gateways IoT (Border Routers Edge)}
+
+El tercer nivel lo constituyen los gateways IoT, dispositivos con capacidades de cómputo significativas que actúan como puntos de agregación, procesamiento edge y puente entre redes IoT locales (Thread, HaLow) y redes WAN (Internet, LTE). Este es el nivel que se desarrolla en profundidad en el presente capítulo.
+
+\subsubsection{Características de Gateways IoT}
+
+\begin{itemize}
+    \item \textbf{Hardware}: Plataformas ARM Cortex-A con múltiples núcleos: Raspberry Pi 4 (BCM2711), Banana Pi, Orange Pi, NanoPi R5S.
+    \item \textbf{RAM/Flash}: 4-8 GB RAM, 64-256 GB NVMe SSD.
+    \item \textbf{Conectividad múltiple}: HaLow AP/Mesh, Thread Border Router, LTE/5G, Ethernet Gigabit, Wi-Fi 6.
+    \item \textbf{Sistema Operativo}: OpenWRT 23.05 con Docker, UCI, kernel completo con módulos NVMe/USB/SPI.
+    \item \textbf{Funciones avanzadas}:
+    \begin{itemize}
+        \item \textbf{Border Routing}: Thread $\leftrightarrow$ IPv6, HaLow $\leftrightarrow$ Ethernet/LTE.
+        \item \textbf{Edge Computing}: ThingsBoard Edge, PostgreSQL, TimescaleDB, reglas locales, dashboards.
+        \item \textbf{Protocolos Smart Energy}: IEEE 2030.5 Server (SEP 2.0), OpenADR, OCPP.
+        \item \textbf{Message Brokers}: Apache Kafka, Mosquitto MQTT, RabbitMQ.
+        \item \textbf{Orquestación}: Docker Compose, actualizaciones OTA de contenedores.
+        \item \textbf{Almacenamiento local}: PostgreSQL + TimescaleDB para series temporales, buffer en caso de desconexión cloud.
+    \end{itemize}
+    \item \textbf{Alimentación}: PoE+ (802.3at/bt, 25-60W), DC 12V/5A.
+\end{itemize}
+
+\subsubsection{Justificación del Modelo de 3 Niveles}
+
+La arquitectura jerárquica ofrece ventajas significativas frente a topologías planas:
+
+\begin{enumerate}
+    \item \textbf{Escalabilidad}: Un gateway puede gestionar 100-200 nodos directamente. Con routers intermedios, la red puede escalar a 1000+ nodos mediante saltos múltiples.
+    \item \textbf{Eficiencia energética}: Los nodos no necesitan potencia de transmisión alta para alcanzar el gateway; pueden comunicarse con routers cercanos en saltos cortos (menor consumo).
+    \item \textbf{Cobertura extendida}: HaLow ofrece >1 km en línea de vista. Con routers mesh, la cobertura puede alcanzar 3-5 km en entornos urbanos.
+    \item \textbf{Resiliencia}: Si un router falla, el protocolo mesh reconfigura rutas automáticamente. El gateway permanece como punto de agregación estable.
+    \item \textbf{Distribución de carga}: El gateway concentra procesamiento pesado (bases de datos, analytics, cloud sync); los routers solo routing; los nodos solo sensing.
+    \item \textbf{Costo optimizado}: Desplegar pocos gateways costosos (RPi4 + NVMe + LTE) y múltiples routers económicos (MM8108 + MediaTek ~\$30 USD) es más rentable que múltiples gateways.
+\end{enumerate}
+
+\subsection{Flujo de Datos en Arquitectura de 3 Niveles}
+
+El flujo típico de telemetría en la arquitectura propuesta sigue la siguiente secuencia:
+
+\begin{enumerate}
+    \item \textbf{Nodo IoT} (Nivel 1): El sensor adquiere temperatura (23.5°C) y la empaqueta en mensaje LwM2M/CoAP o IEEE 2030.5 XML.
+    \item \textbf{Transmisión Thread/HaLow}: El nodo transmite el mensaje al router más cercano (RSSI óptimo) mediante protocolo Thread o HaLow STA.
+    \item \textbf{Router IoT} (Nivel 2): Recibe el mensaje, verifica integridad, y lo reenvía al gateway mediante routing mesh (posiblemente con saltos intermedios adicionales).
+    \item \textbf{Gateway IoT} (Nivel 3): Recibe el mensaje en interfaz Thread (OTBR) o HaLow (wlan-ah0).
+    \item \textbf{Procesamiento Edge}: El gateway ejecuta:
+    \begin{itemize}
+        \item Conversión de protocolo (CoAP → MQTT, IEEE 2030.5 → JSON).
+        \item Validación de datos (rango esperado, detección de anomalías).
+        \item Almacenamiento en PostgreSQL/TimescaleDB.
+        \item Publicación en topic Kafka para analytics locales.
+        \item Envío a ThingsBoard Edge para visualización en dashboard local.
+    \end{itemize}
+    \item \textbf{Sincronización Cloud}: El gateway sincroniza datos con ThingsBoard Cloud vía LTE/Ethernet (cuando hay conectividad). Si no hay WAN, los datos quedan en buffer local hasta recuperar conectividad.
+\end{enumerate}
+
+En sentido inverso (comandos downlink desde cloud), el flujo es:
+
+\begin{enumerate}
+    \item \textbf{ThingsBoard Cloud} envía comando RPC al gateway (ej: apagar actuador).
+    \item \textbf{Gateway} recibe comando, valida permisos (RBAC), y traduce a protocolo del nodo (LwM2M Write, IEEE 2030.5 DER Control).
+    \item \textbf{Router(s)} reenvía(n) el comando al nodo destino mediante mesh.
+    \item \textbf{Nodo} ejecuta acción (apagar relé) y responde con ACK.
+    \item \textbf{Gateway} confirma ejecución a cloud.
+\end{enumerate}
+
 \section{Arquitectura de Software del Gateway}
+
+El presente capítulo se enfoca en el \textbf{Nivel 3 (Gateway IoT)}, desarrollando en profundidad su arquitectura de software, hardware, configuración y despliegue. Los niveles 1 y 2 se referencian cuando sea necesario para contextualizar la integración.
 
 \subsection{Stack de Contenedores}
 

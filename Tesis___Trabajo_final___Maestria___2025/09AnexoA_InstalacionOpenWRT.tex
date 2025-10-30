@@ -1,0 +1,774 @@
+\chapter{Instalación y Configuración del Gateway OpenWRT}
+\label{anexo:instalacion}
+
+Este anexo detalla los procedimientos técnicos de instalación y configuración del gateway IoT basado en Raspberry Pi 4 con OpenWRT 23.05. El contenido está orientado a desarrolladores e integradores de sistemas que requieran replicar la implementación.
+
+\section{Sistema Operativo: OpenWRT 23.05}
+
+\subsection{Especificaciones de la Versión}
+
+\begin{itemize}
+    \item \textbf{Versión OpenWRT}: 23.05.0 (released 2023-10)
+    \item \textbf{Target}: \texttt{bcm27xx/bcm2711} (Raspberry Pi 4 specific)
+    \item \textbf{Subtarget}: \texttt{rpi-4} (64-bit ARMv8 kernel)
+    \item \textbf{Kernel}: Linux 5.15.134 (LTS kernel con patches Raspberry Pi Foundation)
+    \item \textbf{Arquitectura binarios}: \texttt{aarch64\_cortex-a72} (ARM64v8)
+    \item \textbf{Libc}: musl 1.2.4 (lightweight C library)
+    \item \textbf{Bootloader}: Raspberry Pi firmware (start4.elf, bootcode.bin en FAT32 boot partition)
+\end{itemize}
+
+\subsection{Procedimiento de Instalación}
+
+\subsubsection{Descarga de Imagen Oficial}
+
+\begin{verbatim}
+# Descargar imagen oficial desde OpenWRT
+wget https://downloads.openwrt.org/releases/23.05.0/targets/\
+bcm27xx/bcm2711/openwrt-23.05.0-bcm27xx-bcm2711-rpi-4-\
+ext4-factory.img.gz
+
+# Verificar checksum SHA256
+sha256sum openwrt-23.05.0-bcm27xx-bcm2711-rpi-4-ext4-factory.img.gz
+\end{verbatim}
+
+\subsubsection{Escritura en microSD}
+
+\textbf{En sistemas Linux/macOS}:
+\begin{verbatim}
+# Descomprimir imagen
+gunzip openwrt-23.05.0-bcm27xx-bcm2711-rpi-4-ext4-factory.img.gz
+
+# Escribir en microSD (reemplazar /dev/sdX con dispositivo correcto)
+sudo dd if=openwrt-23.05.0-bcm27xx-bcm2711-rpi-4-ext4-factory.img \
+        of=/dev/sdX bs=4M conv=fsync status=progress
+
+# Usar lsblk para identificar dispositivo correcto
+lsblk
+\end{verbatim}
+
+\textbf{En sistemas Windows}:
+\begin{itemize}
+    \item Usar \texttt{Raspberry Pi Imager} o \texttt{balenaEtcher}
+    \item Seleccionar imagen \texttt{.img} descomprimida
+    \item Seleccionar dispositivo microSD target
+    \item Escribir imagen
+\end{itemize}
+
+\subsubsection{Configuración Inicial (First Boot)}
+
+\begin{verbatim}
+# Conectar RPi 4 a red Ethernet (obtiene DHCP automático en eth0)
+# Conectar via SSH (IP por defecto: 192.168.1.1 si no hay DHCP)
+ssh root@192.168.1.1
+# Password inicial: <vacío> (presionar Enter)
+
+# IMPORTANTE: Cambiar password root inmediatamente
+passwd
+# Ingresar contraseña segura
+
+# Configurar hostname del gateway
+uci set system.@system[0].hostname='smartgrid-gateway-001'
+uci commit system
+/etc/init.d/system reload
+
+# Configurar timezone (ejemplo Colombia)
+uci set system.@system[0].timezone='CST6CDT,M3.2.0,M11.1.0'
+uci set system.@system[0].zonename='America/Bogota'
+uci commit system
+/etc/init.d/system reload
+
+# Configurar servidores NTP
+uci set system.ntp.server='0.co.pool.ntp.org'
+uci add_list system.ntp.server='1.co.pool.ntp.org'
+uci add_list system.ntp.server='time.google.com'
+uci commit system
+/etc/init.d/sysntpd restart
+\end{verbatim}
+
+\subsection{Instalación de Paquetes Esenciales}
+
+\begin{verbatim}
+# Actualizar repositorio de paquetes
+opkg update
+
+# Utilidades base del sistema
+opkg install nano htop iperf3 tcpdump curl wget-ssl ca-certificates
+opkg install diffutils findutils coreutils-stat
+
+# Docker y orquestación de contenedores
+opkg install dockerd docker-compose luci-app-dockerman
+opkg install kmod-nf-nat kmod-veth kmod-br-netfilter kmod-nf-conntrack
+
+# ModemManager para módem Quectel BG95 LTE
+opkg install modemmanager libqmi libmbim usb-modeswitch
+opkg install kmod-usb-net-qmi-wwan kmod-usb-serial-option
+
+# OpenThread Border Router
+opkg install wpantund ot-br-posix avahi-daemon avahi-utils
+opkg install kmod-ieee802154 kmod-usb-acm
+
+# Drivers HaLow 802.11ah (ath11k backport para MM6108 SPI)
+opkg install kmod-ath11k kmod-ath11k-ahb wireless-tools iw
+
+# Soporte SPI para Morse Micro MM6108
+opkg install kmod-spi-bcm2835 kmod-spi-dev
+
+# Herramientas de filesystem para NVMe
+opkg install e2fsprogs fdisk blkid parted
+opkg install kmod-usb-storage kmod-fs-ext4 kmod-nvme
+
+# Herramientas de red avanzadas
+opkg install mtr-json nmap-ssl ethtool
+\end{verbatim}
+
+\section{Configuración de Almacenamiento NVMe}
+
+El gateway utiliza un SSD NVMe M.2 conectado via PCIe HAT (Geekworm X1001) para almacenar datos de Docker, PostgreSQL y ThingsBoard Edge. La configuración del almacenamiento es crítica para el rendimiento del sistema.
+
+\subsection{Detección y Particionamiento del SSD}
+
+\begin{verbatim}
+# Verificar detección del dispositivo NVMe
+lsblk
+# Salida esperada:
+# NAME        MAJ:MIN RM   SIZE RO TYPE MOUNTPOINT
+# mmcblk0     179:0    0  29.7G  0 disk 
+# ├─mmcblk0p1 179:1    0   128M  0 part /boot
+# └─mmcblk0p2 179:2    0  29.6G  0 part /
+# nvme0n1     259:0    0 238.5G  0 disk 
+# └─nvme0n1p1 259:1    0 238.5G  0 part
+
+# Si el SSD no está particionado, crear tabla GPT
+fdisk /dev/nvme0n1
+# Comandos interactivos:
+# g - crear nueva tabla de particiones GPT
+# n - crear nueva partición (aceptar defaults para usar todo el disco)
+# w - escribir cambios y salir
+
+# Formatear partición con ext4 y journaling
+mkfs.ext4 -L ssd-data -O has_journal /dev/nvme0n1p1
+
+# Verificar filesystem creado
+blkid /dev/nvme0n1p1
+# Esperado: /dev/nvme0n1p1: LABEL="ssd-data" UUID="..." TYPE="ext4"
+\end{verbatim}
+
+\subsection{Montaje Automático en \texttt{/mnt/ssd}}
+
+\begin{verbatim}
+# Crear punto de montaje
+mkdir -p /mnt/ssd
+
+# Generar configuración automática de montaje
+block detect > /etc/config/fstab
+
+# Habilitar montaje automático
+uci set fstab.@mount[-1].enabled='1'
+uci set fstab.@mount[-1].target='/mnt/ssd'
+uci commit fstab
+
+# Habilitar servicio y montar
+/etc/init.d/fstab enable
+/etc/init.d/fstab start
+
+# Verificar montaje exitoso
+df -h /mnt/ssd
+# Salida esperada:
+# Filesystem      Size  Used Avail Use% Mounted on
+# /dev/nvme0n1p1  234G   60M  222G   1% /mnt/ssd
+
+# Verificar permisos
+ls -la /mnt/ssd
+# Debe ser propiedad de root con permisos 755
+\end{verbatim}
+
+\subsection{Estructura de Directorios para Servicios}
+
+\begin{verbatim}
+# Crear estructura de directorios para servicios Docker
+mkdir -p /mnt/ssd/docker              # Docker data-root
+mkdir -p /mnt/ssd/postgres/data       # PostgreSQL + TimescaleDB
+mkdir -p /mnt/ssd/tb-edge-data        # ThingsBoard Edge persistent data
+mkdir -p /mnt/ssd/tb-edge-logs        # ThingsBoard Edge logs
+mkdir -p /mnt/ssd/kafka/data          # Apache Kafka logs
+mkdir -p /mnt/ssd/zookeeper/data      # Zookeeper data
+mkdir -p /mnt/ssd/backups             # Backups automáticos
+mkdir -p /mnt/ssd/ieee2030_5_certs    # Certificados IEEE 2030.5
+
+# Establecer permisos correctos
+chmod 755 /mnt/ssd/docker
+chmod 700 /mnt/ssd/postgres           # Restringir PostgreSQL
+chmod 755 /mnt/ssd/tb-edge-data
+chmod 755 /mnt/ssd/kafka
+chmod 755 /mnt/ssd/backups
+chmod 700 /mnt/ssd/ieee2030_5_certs   # Certificados sensibles
+
+# Verificar estructura
+tree -L 2 /mnt/ssd
+\end{verbatim}
+
+\subsection{Configuración de Docker para usar SSD}
+
+\begin{verbatim}
+# Crear archivo de configuración Docker daemon
+cat > /etc/docker/daemon.json <<EOF
+{
+  "data-root": "/mnt/ssd/docker",
+  "log-driver": "json-file",
+  "log-opts": {
+    "max-size": "10m",
+    "max-file": "3"
+  },
+  "storage-driver": "overlay2",
+  "default-address-pools": [
+    {"base":"172.17.0.0/16","size":24}
+  ]
+}
+EOF
+
+# Reiniciar servicio Docker
+/etc/init.d/dockerd restart
+
+# Verificar que Docker usa el SSD
+docker info | grep "Docker Root Dir"
+# Salida esperada: Docker Root Dir: /mnt/ssd/docker
+
+# Verificar storage driver
+docker info | grep "Storage Driver"
+# Salida esperada: Storage Driver: overlay2
+\end{verbatim}
+
+\section{Configuración de Periféricos de Conectividad}
+
+\subsection{Thread Border Router con nRF52840 Dongle}
+
+El nRF52840 USB Dongle actúa como Radio Co-Processor (RCP) para el OpenThread Border Router, proporcionando la interfaz física 802.15.4 para la red Thread.
+
+\subsubsection{Flash de Firmware OpenThread RCP}
+
+\textbf{Requisitos previos} (ejecutar en PC de desarrollo, no en Raspberry Pi):
+\begin{itemize}
+    \item nRF Command Line Tools (nrfjprog, mergehex)
+    \item Segger J-Link drivers
+    \item Firmware RCP pre-compilado de OpenThread
+\end{itemize}
+
+\begin{verbatim}
+# Descargar nRF Command Line Tools (Linux x64)
+wget https://www.nordicsemi.com/-/media/Software-and-other-downloads/\
+Desktop-software/nRF-command-line-tools/sw/Versions-10-x-x/\
+10-21-0/nrf-command-line-tools_10.21.0_Linux-amd64.tar.gz
+
+tar -xzf nrf-command-line-tools_10.21.0_Linux-amd64.tar.gz
+cd nrf-command-line-tools/bin
+sudo cp * /usr/local/bin/
+
+# Descargar firmware RCP OpenThread (versión estable)
+wget https://github.com/openthread/ot-nrf528xx/releases/download/\
+thread-reference-20230706/ot-rcp-ot-nrf52840-dongle.hex
+
+# Poner nRF52840 en modo bootloader DFU:
+# 1. Presionar botón RESET en dongle
+# 2. LED debe parpadear en rojo (modo DFU activo)
+
+# Flash firmware RCP
+nrfjprog --program ot-rcp-ot-nrf52840-dongle.hex \
+         --chiperase --verify --reset
+
+# Verificar programación exitosa
+# LED debe cambiar a verde sólido después del reset
+\end{verbatim}
+
+\subsubsection{Configuración de wpantund en Raspberry Pi}
+
+Una vez flasheado el RCP, conectar el nRF52840 Dongle a puerto USB del Raspberry Pi 4 y configurar wpantund:
+
+\begin{verbatim}
+# Verificar detección del dispositivo USB
+lsusb | grep "Nordic"
+# Esperado: Bus 001 Device 003: ID 1915:521f Nordic Semiconductor ASA 
+#           Open Thread RCP
+
+# Verificar interfaz serial
+ls -la /dev/ttyACM*
+# Esperado: /dev/ttyACM0 (puede variar si hay otros dispositivos USB serial)
+
+# Instalar OpenThread Border Router y wpantund
+opkg install ot-br-posix wpantund avahi-daemon
+
+# Crear archivo de configuración wpantund
+cat > /etc/wpantund.conf <<EOF
+Config:NCP:SocketPath "/dev/ttyACM0"
+Config:NCP:SocketBaud 115200
+Config:TUN:InterfaceName wpan0
+Config:IPv6:Prefix fd00::/64
+Config:Daemon:PrivDropToUser nobody
+Config:Daemon:PIDFile /var/run/wpantund.pid
+EOF
+
+# Habilitar y arrancar wpantund
+/etc/init.d/wpantund enable
+/etc/init.d/wpantund start
+
+# Verificar interfaz wpan0 creada
+ip link show wpan0
+# Esperado: 
+# 5: wpan0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1280 qdisc ...
+
+# Verificar status de Thread network
+wpanctl status
+# Esperado mostrar:
+# wpan0 => [
+#   "NCP:State" => "offline"  (estado inicial, sin red Thread activa)
+#   "Daemon:Version" => "0.08.00"
+#   ...
+# ]
+\end{verbatim}
+
+\subsubsection{Configuración de Red Thread}
+
+\begin{verbatim}
+# Formar nueva red Thread (si es gateway principal)
+wpanctl form "SmartGrid-Thread" -c 15 -T router
+
+# O unirse a red Thread existente con credenciales
+wpanctl join "SmartGrid-Thread" -c 15 -T router \
+  --panid 0xABCD --xpanid 0x1234567812345678 \
+  --key 00112233445566778899aabbccddeeff
+
+# Verificar que el gateway es Border Router activo
+wpanctl status
+# Esperado:
+# "NCP:State" => "associated"
+# "Network:Name" => "SmartGrid-Thread"
+# "Network:PANID" => "0xABCD"
+# "Network:NodeType" => "router"
+
+# Habilitar prefix delegation para IPv6
+wpanctl config-gateway -d fd00:1234:5678::/64
+
+# Verificar ruta IPv6
+ip -6 route | grep wpan0
+# Esperado ver ruta fd00::/64 via wpan0
+\end{verbatim}
+
+\subsection{HaLow 802.11ah via SPI (Morse Micro MM6108)}
+
+El módulo Morse Micro MM6108 se conecta via interfaz SPI del GPIO y requiere habilitación de SPI en Device Tree y carga de driver ath11k modificado.
+
+\subsubsection{Habilitación de Interfaz SPI}
+
+\begin{verbatim}
+# Verificar que SPI está habilitado en Device Tree
+ls /dev/spidev*
+# Esperado: /dev/spidev0.0 /dev/spidev0.1
+
+# Si no aparece, habilitar SPI en /boot/config.txt
+echo "dtparam=spi=on" >> /boot/config.txt
+echo "dtoverlay=spi0-1cs" >> /boot/config.txt
+reboot
+
+# Después del reboot, verificar nuevamente
+ls -la /dev/spidev*
+# crw-rw---- 1 root spi 153, 0 Oct 30 10:23 /dev/spidev0.0
+\end{verbatim}
+
+\subsubsection{Configuración de Pines GPIO para MM6108}
+
+El MM6108 requiere varios pines GPIO además de SPI para reset, IRQ y power enable:
+
+\begin{verbatim}
+# Configuración de pines GPIO en /boot/config.txt
+# GPIO 24: MM6108 Reset (output, active low)
+# GPIO 25: MM6108 IRQ (input, falling edge)
+# GPIO 23: MM6108 Power Enable (output, active high)
+
+cat >> /boot/config.txt <<EOF
+# Morse Micro MM6108 HaLow SPI configuration
+gpio=24=op,dl    # Reset pin, output, drive low initially
+gpio=25=ip,pu    # IRQ pin, input, pull-up
+gpio=23=op,dh    # Power enable, output, drive high
+EOF
+
+reboot
+\end{verbatim}
+
+\subsubsection{Carga de Driver ath11k-ahb para MM6108}
+
+\begin{verbatim}
+# Instalar driver ath11k y firmware
+opkg install kmod-ath11k kmod-ath11k-ahb
+opkg install ath11k-firmware-qca6390  # Firmware base, compatible con MM6108
+
+# Descargar firmware específico MM6108 (si disponible de Morse Micro)
+# Este paso depende del soporte de firmware en OpenWRT
+# En caso de no estar disponible, usar firmware genérico QCA6390
+
+# Cargar módulo manualmente para verificar
+modprobe ath11k_ahb
+dmesg | grep ath11k
+# Esperado ver mensajes de inicialización:
+# ath11k_ahb: firmware found
+# ath11k_ahb: successfully initialized hardware
+
+# Verificar interfaz wireless creada
+iw dev
+# Esperado ver interfaz wlan-ah0 o similar para HaLow
+
+# Listar propiedades de la interfaz
+iw phy phy0 info
+# Verificar bandas soportadas:
+# Band 1: (sub-1GHz, 902-928 MHz para región FCC)
+#   Frequencies: 906 MHz, 908 MHz, ... 926 MHz
+\end{verbatim}
+
+\textbf{Nota}: La configuración específica de UCI para modos AP/STA/Mesh de HaLow se detalla en el Anexo D.
+
+\subsection{LTE Modem Quectel BG95-M3}
+
+\subsubsection{Configuración de ModemManager}
+
+\begin{verbatim}
+# Verificar detección del módem USB
+lsusb | grep Quectel
+# Esperado: Bus 001 Device 004: ID 2c7c:0296 Quectel Wireless Solutions
+
+# Verificar interfaces ttyUSB
+ls -la /dev/ttyUSB*
+# /dev/ttyUSB0 - AT commands
+# /dev/ttyUSB1 - PPP dial (no usado en QMI)
+# /dev/ttyUSB2 - NMEA GPS (no usado)
+
+# Verificar interfaz QMI
+ls /sys/class/net/ | grep wwan
+# Esperado: wwan0
+
+# Iniciar ModemManager
+/etc/init.d/modemmanager start
+/etc/init.d/modemmanager enable
+
+# Listar módems detectados
+mmcli -L
+# Esperado: /org/freedesktop/ModemManager1/Modem/0 [Quectel] BG95-M3
+
+# Mostrar detalles del módem
+mmcli -m 0
+# Verificar:
+#   Status -> state: disabled (inicial)
+#   3GPP -> operator-name: <nombre operador>
+#   Signal -> LTE signal strength: X%
+\end{verbatim}
+
+\subsubsection{Activación y Conexión LTE}
+
+\begin{verbatim}
+# Habilitar módem
+mmcli -m 0 --enable
+
+# Esperar detección de red (10-30 segundos)
+mmcli -m 0 | grep "state:"
+# Esperado: state: registered (home network)
+
+# Configurar APN del operador (ejemplo Claro Colombia)
+mmcli -m 0 --simple-connect="apn=internet.comcel.com.co"
+
+# Verificar conexión establecida
+mmcli -m 0 | grep "state:"
+# Esperado: state: connected
+
+# Verificar IP asignada
+mmcli -m 0 --bearer 0 | grep "ip address"
+# Esperado: ip address: 10.x.x.x (IP privada del carrier)
+
+# Configurar interfaz wwan0 con IP dinámica
+uci set network.lte=interface
+uci set network.lte.device='wwan0'
+uci set network.lte.proto='dhcp'
+uci set network.lte.metric='10'  # Prioridad baja vs Ethernet
+uci commit network
+/etc/init.d/network reload
+
+# Verificar ruta por defecto
+ip route show
+# Debe aparecer ruta via wwan0 con metric 10
+\end{verbatim}
+
+\subsubsection{Script de Reconexión Automática}
+
+Crear script para reconectar LTE automáticamente ante pérdida de conexión:
+
+\begin{verbatim}
+# /root/scripts/lte-watchdog.sh
+#!/bin/sh
+
+MODEM="/org/freedesktop/ModemManager1/Modem/0"
+APN="internet.comcel.com.co"
+
+# Verificar conectividad cada 60 segundos
+while true; do
+  STATE=$(mmcli -m 0 | grep "state:" | awk '{print $2}')
+  
+  if [ "$STATE" != "connected" ]; then
+    logger -t lte-watchdog "LTE disconnected, reconnecting..."
+    mmcli -m 0 --simple-connect="apn=$APN"
+  fi
+  
+  sleep 60
+done
+
+# Hacer ejecutable
+chmod +x /root/scripts/lte-watchdog.sh
+
+# Crear servicio init.d
+cat > /etc/init.d/lte-watchdog <<'EOF'
+#!/bin/sh /etc/rc.common
+START=99
+
+start() {
+  /root/scripts/lte-watchdog.sh &
+}
+
+stop() {
+  killall lte-watchdog.sh
+}
+EOF
+
+chmod +x /etc/init.d/lte-watchdog
+/etc/init.d/lte-watchdog enable
+/etc/init.d/lte-watchdog start
+\end{verbatim}
+
+\section{Instalación de Docker y Docker Compose}
+
+\subsection{Instalación de Paquetes Docker}
+
+\begin{verbatim}
+# Instalar Docker daemon y CLI
+opkg install dockerd docker luci-app-dockerman
+
+# Instalar Docker Compose (versión standalone)
+opkg install docker-compose
+
+# Dependencias de red para Docker
+opkg install kmod-nf-nat kmod-veth kmod-br-netfilter \
+             kmod-nf-conntrack kmod-nf-conntrack-netlink
+
+# Verificar versión instalada
+docker --version
+# Docker version 20.10.24
+
+docker-compose --version
+# docker-compose version 1.29.2
+\end{verbatim}
+
+\subsection{Configuración de Docker Daemon}
+
+La configuración \texttt{/etc/docker/daemon.json} ya fue creada en la sección de almacenamiento NVMe. Verificar configuración final:
+
+\begin{verbatim}
+# Contenido de /etc/docker/daemon.json
+cat /etc/docker/daemon.json
+{
+  "data-root": "/mnt/ssd/docker",
+  "log-driver": "json-file",
+  "log-opts": {
+    "max-size": "10m",
+    "max-file": "3"
+  },
+  "storage-driver": "overlay2",
+  "default-address-pools": [
+    {"base":"172.17.0.0/16","size":24}
+  ],
+  "ipv6": false,
+  "live-restore": true
+}
+
+# Habilitar y arrancar Docker
+/etc/init.d/dockerd enable
+/etc/init.d/dockerd start
+
+# Verificar que Docker está corriendo
+docker ps
+# CONTAINER ID   IMAGE     COMMAND   CREATED   STATUS    PORTS     NAMES
+# (vacío inicialmente)
+
+# Verificar conectividad a Docker Hub
+docker pull hello-world
+docker run hello-world
+# Esperado: mensaje "Hello from Docker!"
+\end{verbatim}
+
+\section{Verificación de Instalación Completa}
+
+\subsection{Checklist de Verificación}
+
+\begin{verbatim}
+# 1. Sistema base
+uname -a
+# Linux smartgrid-gateway-001 5.15.134 #0 SMP ... aarch64 GNU/Linux
+
+uptime
+# Verificar que el sistema ha estado estable >10 minutos
+
+# 2. Almacenamiento
+df -h | grep -E "(ssd|nvme)"
+# /dev/nvme0n1p1  234G   XX GB  XXX G   X% /mnt/ssd
+
+# 3. Docker
+docker info | grep -E "(Storage Driver|Docker Root Dir)"
+# Storage Driver: overlay2
+# Docker Root Dir: /mnt/ssd/docker
+
+# 4. Thread (nRF52840)
+wpanctl status | grep "NCP:State"
+# "NCP:State" => "associated" (o "offline" si no hay red Thread activa aún)
+
+ip link show wpan0
+# wpan0: <BROADCAST,MULTICAST,UP,LOWER_UP> ...
+
+# 5. HaLow (MM6108 SPI)
+iw dev | grep Interface
+# Interface wlan-ah0
+
+iw phy phy0 info | grep -A 5 "Band"
+# Verificar banda sub-1GHz presente
+
+# 6. LTE (Quectel BG95)
+mmcli -m 0 | grep "state:"
+# state: connected (o registered si aún no se conectó)
+
+ip link show wwan0
+# wwan0: <BROADCAST,MULTICAST,UP,LOWER_UP> ...
+
+# 7. Conectividad general
+ping -c 3 1.1.1.1
+# 3 packets transmitted, 3 received, 0% packet loss
+
+ping -c 3 mqtt.thingsboard.cloud
+# Verificar resolución DNS y conectividad cloud
+\end{verbatim}
+
+\subsection{Logs de Sistema para Debug}
+
+\begin{verbatim}
+# Logs del kernel (últimos 100 mensajes)
+dmesg | tail -n 100
+
+# Logs de sistema (últimas 50 líneas)
+logread | tail -n 50
+
+# Logs específicos de Docker
+logread | grep docker
+
+# Logs de ModemManager
+logread | grep ModemManager
+
+# Logs de wpantund (Thread)
+logread | grep wpantund
+
+# Monitoreo en tiempo real
+logread -f
+# Ctrl+C para salir
+\end{verbatim}
+
+\section{Troubleshooting Común}
+
+\subsection{Problemas con NVMe SSD}
+
+\textbf{Síntoma}: SSD no detectado (\texttt{lsblk} no muestra \texttt{nvme0n1})
+
+\textbf{Solución}:
+\begin{verbatim}
+# Verificar que el HAT está conectado correctamente al GPIO 40-pin
+# Verificar que el SSD M.2 está firmemente insertado en el slot
+
+# Verificar módulos PCIe cargados
+lsmod | grep nvme
+# Debe aparecer: nvme, nvme_core
+
+# Si no aparecen, cargar manualmente
+modprobe nvme
+
+# Verificar dispositivos PCIe
+lspci | grep -i nvme
+# Debe aparecer: Non-Volatile memory controller: ...
+\end{verbatim}
+
+\subsection{Problemas con Thread nRF52840}
+
+\textbf{Síntoma}: \texttt{wpanctl status} retorna "NCP is not associated with network"
+
+\textbf{Solución}:
+\begin{verbatim}
+# Verificar que el dongle tiene firmware RCP (no aplicación standalone)
+# LED debe ser verde sólido al conectar USB
+
+# Verificar puerto serial correcto
+ls -la /dev/ttyACM*
+
+# Reiniciar wpantund con debug
+/etc/init.d/wpantund stop
+wpantund -o Config:NCP:SocketPath /dev/ttyACM0 -o Config:Daemon:Debug 1
+
+# Si aparecen errores de "NCP reset failed", re-flashear firmware RCP
+\end{verbatim}
+
+\subsection{Problemas con HaLow SPI}
+
+\textbf{Síntoma}: Interfaz \texttt{wlan-ah0} no aparece con \texttt{iw dev}
+
+\textbf{Solución}:
+\begin{verbatim}
+# Verificar que SPI está habilitado
+ls /dev/spidev0.0
+# Si no existe, revisar /boot/config.txt y reiniciar
+
+# Verificar módulo ath11k cargado
+lsmod | grep ath11k
+# Debe aparecer: ath11k_ahb, ath11k
+
+# Ver logs de inicialización del driver
+dmesg | grep ath11k
+# Buscar errores de "firmware load failed" o "SPI init failed"
+
+# Si hay errores de firmware, verificar que está en /lib/firmware/ath11k/
+ls -la /lib/firmware/ath11k/
+\end{verbatim}
+
+\subsection{Problemas con LTE Quectel}
+
+\textbf{Síntoma}: ModemManager no detecta el módem
+
+\textbf{Solución}:
+\begin{verbatim}
+# Verificar dispositivo USB
+lsusb | grep Quectel
+
+# Si no aparece, verificar alimentación USB (>500mA)
+# El BG95 puede requerir hub USB powered
+
+# Verificar que usb-modeswitch cambió el modo del dispositivo
+logread | grep usb_modeswitch
+
+# Reiniciar ModemManager
+/etc/init.d/modemmanager restart
+
+# Verificar con mmcli
+mmcli -L
+\end{verbatim}
+
+\section{Resumen de Configuración}
+
+Al completar este anexo, el gateway debe tener:
+
+\begin{itemize}
+    \item OpenWRT 23.05 instalado y configurado en Raspberry Pi 4
+    \item SSD NVMe 256 GB montado en \texttt{/mnt/ssd} con estructura de directorios
+    \item Docker daemon corriendo con data-root en SSD
+    \item nRF52840 configurado como Thread Border Router con wpantund
+    \item Morse Micro MM6108 inicializado con driver ath11k (interfaz wlan-ah0)
+    \item Módem Quectel BG95 conectado via ModemManager (interfaz wwan0)
+    \item Todos los servicios habilitados para inicio automático en boot
+\end{itemize}
+
+El gateway está ahora listo para el despliegue de contenedores Docker (OpenThread Border Router, ThingsBoard Edge, IEEE 2030.5 Server, Kafka, PostgreSQL), que se detalla en el Anexo B.
