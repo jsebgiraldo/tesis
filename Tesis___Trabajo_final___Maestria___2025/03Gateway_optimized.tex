@@ -1,0 +1,755 @@
+\chapter{Gateway de Telemetría para Smart Energy}
+
+\section{Introducción}
+
+El gateway constituye el componente central de la arquitectura de telemetría propuesta. Este dispositivo actúa como puente entre las redes de campo (802.15.4/Thread) y las redes de área amplia (802.11ah/HaLow), consolidando datos de múltiples medidores inteligentes y transmitiéndolos de manera segura hacia la plataforma IoT en la nube.
+
+\subsection{Función del Gateway en la Arquitectura de Telemetría}
+
+En el contexto de infraestructuras de medición inteligente para Smart Energy, el gateway cumple las siguientes funciones críticas:
+
+\begin{itemize}
+    \item \textbf{Agregación de datos}: Recopila información de múltiples DCUs (Data Concentrator Units) que gestionan clústeres de medidores.
+    \item \textbf{Protocol translation}: Realiza la conversión entre protocolos de red de área local (Thread/802.15.4) y protocolos de aplicación cloud (MQTT/TLS).
+    \item \textbf{Seguridad}: Implementa cifrado end-to-end mediante TLS/mTLS, autenticación mutua y gestión de certificados.
+    \item \textbf{Resiliencia}: Proporciona buffering local, manejo de desconexiones y reintento automático ante fallos de conectividad.
+    \item \textbf{Edge computing}: Permite preprocesamiento local de datos, filtrado y compresión antes de la transmisión.
+\end{itemize}
+
+\section{Conformidad con Estándares Internacionales}
+
+\subsection{IEEE 2030.5-2023 (Smart Energy Profile 2.0)}
+
+El gateway implementa funcionalidades alineadas con IEEE 2030.5 (SEP 2.0), el estándar para aplicaciones de Smart Energy sobre TCP/IP. Este estándar define una arquitectura RESTful para gestión de energía del usuario final, incluyendo respuesta a la demanda, control de carga, precios dinámicos y recursos energéticos distribuidos (DER).
+
+\subsubsection{Function Sets Implementados}
+
+El gateway soporta los siguientes \textit{Function Sets} de IEEE 2030.5:
+
+\begin{enumerate}
+    \item \textbf{Device Capability (DCAP)}: Descubrimiento de capacidades del gateway y endpoints (recurso \texttt{/dcap}).
+    \item \textbf{Time (TM)}: Sincronización horaria NTP/PTP para timestamps precisos, recurso \texttt{/tm}, precisión <100 ms.
+    \item \textbf{Metering Mirror (MM)}: Reflejo de datos de medición para lectura por utilidades. Recurso \texttt{/mup/\{deviceID\}/MirrorUsagePoint} con datos de energía activa (Wh), reactiva (VArh), demanda (W) en granularidad de 15 min (alineado con IEC 62056).
+    \item \textbf{Messaging (MSG)}: Notificaciones y alertas bidireccionales para eventos críticos.
+    \item \textbf{End Device (ED)}: Registro y gestión de dispositivos mediante recurso \texttt{/edev}, identificación con LFDI (Long Form Device Identifier) basado en certificado X.509.
+\end{enumerate}
+
+\subsubsection{Arquitectura RESTful IEEE 2030.5}
+
+El gateway expone una API REST HTTP/TLS compatible con IEEE 2030.5. La arquitectura RESTful permite consultas de telemetría mediante peticiones GET a recursos jerárquicos, con respuestas en formato XML siguiendo los esquemas XSD del estándar. Por ejemplo, la consulta de telemetría de un medidor retorna un objeto \texttt{MirrorUsagePoint} con lecturas en intervalos de 15 minutos.
+
+\textit{Nota}: Los ejemplos completos de respuestas XML IEEE 2030.5 para todos los Function Sets (DCAP, Time, Mirror Usage Point, End Device List, Messaging) se presentan en el Anexo D.
+
+\subsubsection{Seguridad IEEE 2030.5}
+
+La especificación IEEE 2030.5 requiere TLS 1.2/1.3 obligatorio para todas las comunicaciones, certificados X.509 con curvas elípticas (ECC P-256) para autenticación mutua, LFDI derivado del certificado mediante \texttt{SHA-256(SubjectPublicKeyInfo)[0:20]}, y Role-Based Access Control (RBAC) con permisos según rol del cliente (utility, usuario, DER).
+
+\subsection{ISO/IEC 30141:2024 (IoT Reference Architecture)}
+
+ISO/IEC 30141 define una arquitectura de referencia para sistemas IoT con cuatro vistas: funcional, información, despliegue y operacional. El gateway implementa múltiples entidades funcionales de este modelo.
+
+\subsubsection{Vista Funcional del Gateway}
+
+El gateway instancia las siguientes entidades funcionales IoT según ISO/IEC 30141:
+
+\begin{table}[h]
+\centering
+\caption{Entidades funcionales ISO/IEC 30141 en el gateway}
+\begin{tabular}{|l|p{10cm}|}
+\hline
+\textbf{Entidad} & \textbf{Implementación en Gateway} \\ \hline
+Application & Lógica de telemetría (agregación, transformación) \\ \hline
+Service Organization & API REST IEEE 2030.5, broker MQTT \\ \hline
+Virtual Entity & Representación digital de medidores físicos \\ \hline
+IoT Service & Publicación MQTT, consultas REST, almacenamiento TimescaleDB \\ \hline
+Communication & Protocolos Thread (802.15.4), HaLow (802.11ah), LTE \\ \hline
+Security & PKI, TLS/mTLS, autenticación X.509 \\ \hline
+Management & Logging, monitoreo de servicios, configuración UCI \\ \hline
+\end{tabular}
+\end{table}
+
+Esta arquitectura permite interoperabilidad y escalabilidad del sistema según buenas prácticas internacionales.
+
+\section{Requisitos Funcionales y No Funcionales}
+
+\subsection{Requisitos Funcionales}
+
+\begin{enumerate}
+    \item \textbf{RF1 - Lectura de medidores Thread}: El gateway debe leer telemetría de medidores conectados vía Thread/802.15.4 usando protocolo CoAP/LwM2M con frecuencia configurable (1-60 min).
+    \item \textbf{RF2 - Transmisión HaLow}: Los datos agregados deben transmitirse hacia el backend cloud mediante enlaces 802.11ah (HaLow) con soporte para 4 modos de operación (AP, STA, Monitor, Mesh).
+    \item \textbf{RF3 - Respaldo LTE}: En caso de fallo de HaLow, el gateway debe conmutar automáticamente a LTE/4G con latencia de conmutación <30 s.
+    \item \textbf{RF4 - Buffering local}: Almacenar al menos 7 días de telemetría localmente (PostgreSQL + TimescaleDB) para sincronización posterior.
+    \item \textbf{RF5 - API IEEE 2030.5}: Exponer API REST conforme a IEEE 2030.5-2023 para consultas de utilidades y terceros autorizados.
+    \item \textbf{RF6 - Gestión remota}: Permitir configuración remota de parámetros (frecuencia de lectura, filtros, modos de red) vía ThingsBoard Edge.
+    \item \textbf{RF7 - Actuación bidireccional}: Soportar comandos downlink para control de cargas (relés, breakers) mediante LwM2M EXEC.
+\end{enumerate}
+
+\subsection{Requisitos No Funcionales}
+
+\begin{enumerate}
+    \item \textbf{RNF1 - Disponibilidad}: El gateway debe operar 99.5\% del tiempo anual (máximo 43.8 h downtime/año).
+    \item \textbf{RNF2 - Latencia extremo-extremo}: Desde lectura del medidor hasta recepción en cloud <10 s (percentil 95).
+    \item \textbf{RNF3 - Throughput}: Soportar al menos 100 medidores por gateway con lectura cada 15 min (6.7 msg/min promedio, 100 msg/min pico).
+    \item \textbf{RNF4 - Seguridad}: Cifrado TLS 1.3 obligatorio, certificados ECC P-256, rotación de claves cada 90 días.
+    \item \textbf{RNF5 - Consumo energético}: Operación con consumo <15 W promedio para permitir alimentación solar con batería de respaldo.
+    \item \textbf{RNF6 - Temperatura operativa}: Rango de operación -10°C a +60°C (ambiente exterior sin climatización).
+    \item \textbf{RNF7 - Mantenibilidad}: Actualizaciones OTA sin interrupción de servicio (rolling updates con Ansible/Docker).
+\end{enumerate}
+
+\subsection{Requisitos de Seguridad}
+
+\begin{itemize}
+    \item \textbf{Autenticación mutua TLS/mTLS}: Todos los clientes y servicios deben presentar certificados X.509 válidos emitidos por CA interna.
+    \item \textbf{Integridad de datos}: Hash SHA-256 de cada mensaje MQTT/CoAP para detección de manipulación.
+    \item \textbf{No repudio}: Logs firmados digitalmente con timestamp confiable para auditoría regulatoria.
+    \item \textbf{Defensa perimetral}: Firewall iptables con política default-deny, solo puertos esenciales (1883/MQTT, 8883/HTTPS, 5684/CoAP).
+    \item \textbf{Gestión de secretos}: Certificados y claves en almacenamiento cifrado (\texttt{/etc/ssl/private} con permisos 400).
+\end{itemize}
+
+\section{Arquitectura de Tres Niveles}
+
+La arquitectura propuesta sigue un modelo de tres niveles (capas) que separa responsabilidades y facilita escalabilidad:
+
+\subsection{Nivel 1 - Dispositivos de Campo (Edge Tier)}
+
+\textbf{Componentes}:
+\begin{itemize}
+    \item Medidores inteligentes con módulos Thread (nRF52840, ESP32-H2)
+    \item Sensores ambientales (temperatura, humedad)
+    \item Actuadores de control de carga (relés, breakers inteligentes)
+\end{itemize}
+
+\textbf{Protocolos}: CoAP, LwM2M (OMA SpecWorks), Thread/802.15.4
+
+\textbf{Funciones}: Medición, control local, reportes periódicos
+
+\subsection{Nivel 2 - Gateway (Fog Tier)}
+
+\textbf{Componentes}:
+\begin{itemize}
+    \item Raspberry Pi 4 (ARM64, 4 GB RAM)
+    \item Módulo Thread Border Router (nRF52840 USB Dongle)
+    \item Módulo HaLow 802.11ah (ALFA AWUS036AHM con chipset MM6108)
+    \item Módulo LTE/4G (Huawei E3372h-320)
+\end{itemize}
+
+\textbf{Protocolos}: Thread ↔ MQTT, CoAP ↔ HTTP, HaLow, LTE
+
+\textbf{Funciones}: Agregación de datos, protocol translation, buffering, edge analytics, API IEEE 2030.5
+
+\subsection{Nivel 3 - Plataforma Cloud (Cloud Tier)}
+
+\textbf{Componentes}:
+\begin{itemize}
+    \item ThingsBoard Edge (edge platform) + ThingsBoard Cloud (backend)
+    \item PostgreSQL + TimescaleDB (base de datos de series temporales)
+    \item Apache Kafka (message broker para integración)
+\end{itemize}
+
+\textbf{Protocolos}: MQTT/TLS, HTTP/REST, PostgreSQL Wire Protocol
+
+\textbf{Funciones}: Dashboards, analytics avanzado, almacenamiento histórico, integración con sistemas SCADA/AMI
+
+\subsection{Flujos de Datos Extremo a Extremo}
+
+\subsubsection{Flujo Uplink (Medidor → Cloud)}
+
+\begin{enumerate}
+    \item Medidor Thread envía telemetría vía CoAP (puerto 5683) al Border Router cada 15 min.
+    \item Border Router reenvía datos al servicio \texttt{ieee2030-bridge} (Python) escuchando en puerto 5684.
+    \item Bridge convierte CoAP → MQTT y publica en topic \texttt{v1/gateway/telemetry} de ThingsBoard Edge.
+    \item ThingsBoard Edge almacena en PostgreSQL local (TimescaleDB hypertable \texttt{ts\_kv}).
+    \item ThingsBoard Edge sincroniza con ThingsBoard Cloud vía MQTT/TLS (puerto 1883) cada 1 min.
+    \item ThingsBoard Cloud almacena en PostgreSQL central y dispara reglas de procesamiento (alertas, agregaciones).
+\end{enumerate}
+
+\textbf{Latencia típica}: Medidor → Cloud = 8.5 s (Thread 2 s + Gateway 3 s + HaLow 2 s + Cloud 1.5 s).
+
+\subsubsection{Flujo Downlink (Cloud → Actuador)}
+
+\begin{enumerate}
+    \item Operador envía comando desde ThingsBoard Cloud (ej: abrir breaker en medidor 0x1234).
+    \item Comando viaja vía MQTT a ThingsBoard Edge en gateway.
+    \item Edge invoca webhook local al servicio \texttt{ieee2030-server} con payload JSON: \texttt{\{"device": "0x1234", "action": "open\_breaker"\}}.
+    \item Servidor convierte JSON → CoAP POST al recurso LwM2M \texttt{/3312/0/5850} (Digital Output On/Off) del medidor.
+    \item Medidor ejecuta acción y responde con código 2.04 Changed.
+    \item Respuesta se propaga de vuelta a ThingsBoard Cloud para confirmación.
+\end{enumerate}
+
+\textbf{Latencia típica}: Cloud → Actuador = 6.2 s (Cloud 1 s + HaLow 2 s + Gateway 1.5 s + Thread 1.7 s).
+
+\section{Arquitectura de Software}
+
+\subsection{Stack de Software}
+
+El gateway ejecuta los siguientes componentes en contenedores Docker orquestados con Docker Compose:
+
+\begin{table}[h]
+\centering
+\caption{Stack de software del gateway}
+\begin{tabular}{|l|l|p{6cm}|}
+\hline
+\textbf{Componente} & \textbf{Versión} & \textbf{Función} \\ \hline
+OpenWRT & 23.05.5 & Sistema operativo base Linux \\ \hline
+Docker Engine & 27.3.1 & Orquestación de contenedores \\ \hline
+OpenThread Border Router & 2024.10 & Conectividad Thread/802.15.4 \\ \hline
+ThingsBoard Edge & 3.8.1 & Plataforma IoT local \\ \hline
+PostgreSQL + TimescaleDB & 16.4 + 2.17.2 & Base de datos de series temporales \\ \hline
+Apache Kafka & 3.8.0 & Message broker para integración \\ \hline
+IEEE 2030.5 Server & Custom & API REST IEEE 2030.5 (Python/Flask) \\ \hline
+IEEE 2030.5 Bridge & Custom & Protocol translator CoAP ↔ MQTT (Python) \\ \hline
+\end{tabular}
+\end{table}
+
+\subsection{Configuración Docker Compose}
+
+El archivo \texttt{docker-compose.yml} define los servicios con sus dependencias, volúmenes y configuraciones de red. Los servicios principales incluyen:
+
+\begin{itemize}
+    \item \textbf{otbr}: OpenThread Border Router conectado al dongle nRF52840 vía USB (\texttt{/dev/ttyACM0}), expone puerto 8081 para interfaz web.
+    \item \textbf{tb-edge}: ThingsBoard Edge con variables de entorno para conexión a cloud (CLOUD\_ROUTING\_KEY, CLOUD\_RPC\_HOST).
+    \item \textbf{postgres}: PostgreSQL 16 con extensión TimescaleDB para hypertables, volumen persistente en \texttt{/data/postgres}.
+    \item \textbf{kafka}: Apache Kafka en modo single-broker, puerto 9092, usado para integración con sistemas externos.
+    \item \textbf{ieee2030-server}: Servidor Flask en puerto 8883 con certificados TLS montados desde \texttt{/etc/ssl/certs/gateway}.
+    \item \textbf{ieee2030-bridge}: Bridge Python que suscribe a CoAP multicast 224.0.1.187:5684 y publica en MQTT \texttt{localhost:1883}.
+\end{itemize}
+
+\textit{Nota}: El archivo completo \texttt{docker-compose.yml} con todas las variables de entorno, healthchecks, restart policies y configuraciones de red se encuentra en el Anexo B.
+
+\subsection{Scripts de Integración}
+
+Se desarrollaron tres scripts Python para la integración del gateway con los protocolos IEEE 2030.5 y LwM2M:
+
+\begin{enumerate}
+    \item \textbf{ieee2030\_server.py}: Implementa API REST IEEE 2030.5 con endpoints \texttt{/dcap}, \texttt{/tm}, \texttt{/mup}, \texttt{/edev}. Usa Flask, PyOpenSSL para TLS, y genera respuestas XML conformes al XSD del estándar.
+    
+    \item \textbf{ieee2030\_bridge.py}: Traduce mensajes CoAP (del Border Router Thread) a MQTT (hacia ThingsBoard Edge). Usa librerías \texttt{aiocoap} y \texttt{paho-mqtt}. Parsea payloads LwM2M (TLV) y los convierte en JSON para MQTT.
+    
+    \item \textbf{kafka\_publisher.py}: Consume telemetría de ThingsBoard Edge (vía API REST) y la republica en Kafka topic \texttt{smart-energy.telemetry} para integración con sistemas SCADA externos.
+\end{enumerate}
+
+\textit{Nota}: El código fuente completo de los tres scripts Python con sus dependencias (\texttt{requirements.txt}) se presenta en el Anexo C.
+
+\section{Hardware del Gateway}
+
+\subsection{Raspberry Pi 4 Model B}
+
+\textbf{Justificación de selección}:
+\begin{itemize}
+    \item CPU ARM Cortex-A72 64-bit @ 1.5 GHz (quad-core) permite ejecutar Docker + servicios con <60\% CPU bajo carga.
+    \item 4 GB RAM soportan Stack completo (OpenWRT + Docker + servicios) con 1.2 GB libre.
+    \item Conectividad: 2 × USB 3.0, 2 × USB 2.0 (para dongles Thread/LTE), Ethernet Gigabit, GPIO 40-pin.
+    \item Consumo: 7.5 W promedio (ocioso), 12.5 W bajo carga → compatible con alimentación solar.
+    \item Costo: \$55 USD (accessible para despliegues masivos).
+\end{itemize}
+
+\textbf{Alternativas evaluadas}:
+\begin{table}[h]
+\centering
+\caption{Comparación de plataformas de gateway}
+\begin{tabular}{|l|c|c|c|c|}
+\hline
+\textbf{Plataforma} & \textbf{CPU} & \textbf{RAM} & \textbf{Consumo} & \textbf{Costo} \\ \hline
+Raspberry Pi 4 & 4×1.5 GHz & 4 GB & 12.5 W & \$55 \\ \hline
+NVIDIA Jetson Nano & 4×1.43 GHz & 4 GB & 10 W & \$99 \\ \hline
+BeagleBone Black & 1×1 GHz & 512 MB & 2.3 W & \$60 \\ \hline
+Intel NUC i3 & 2×3.0 GHz & 8 GB & 25 W & \$299 \\ \hline
+\end{tabular}
+\end{table}
+
+El Raspberry Pi 4 ofrece el mejor balance costo/rendimiento/consumo para aplicaciones de telemetría Smart Energy.
+
+\subsection{Módulo Thread Border Router (nRF52840)}
+
+\textbf{Hardware}: Nordic Semiconductor nRF52840 USB Dongle (PCA10059)
+
+\textbf{Especificaciones}:
+\begin{itemize}
+    \item SoC nRF52840: ARM Cortex-M4 @ 64 MHz, 256 KB RAM, 1 MB Flash
+    \item Radio IEEE 802.15.4: 2.4 GHz, +8 dBm Tx, -95 dBm sensitivity, 250 kbps
+    \item Soporte Thread 1.3.0, Zigbee 3.0, Bluetooth 5.4
+    \item Interfaz USB 2.0 Full Speed para comunicación con Raspberry Pi
+    \item Consumo: 15 mA Tx, 10 mA Rx, 0.5 µA deep sleep
+\end{itemize}
+
+\textbf{Firmware}: OpenThread RCP (Radio Co-Processor) v2024.10 compilado con Nordic SDK. El dongle opera en modo RCP conectado al servicio \texttt{otbr-agent} en el gateway, delegando funciones de red Thread a la CPU del Raspberry Pi.
+
+\subsection{Módulo HaLow 802.11ah (ALFA AWUS036AHM)}
+
+\textbf{Hardware}: ALFA Network AWUS036AHM USB adapter con chipset MediaTek MT7921AU (compatible MM6108)
+
+\textbf{Especificaciones 802.11ah}:
+\begin{itemize}
+    \item Frecuencia: 902-928 MHz (banda ISM en América)
+    \item Ancho de banda: 1, 2, 4, 8 MHz (configurable)
+    \item Modulación: MCS0-MCS10 (BPSK, QPSK, 16-QAM, 64-QAM, 256-QAM)
+    \item Alcance: Hasta 1 km línea de vista (outdoor, +20 dBm Tx)
+    \item Throughput: 150-347 kbps (MCS2, BW=1 MHz) típico para telemetría
+    \item Soporte RAW (Restricted Access Window) para ahorro energético en sensores
+\end{itemize}
+
+\textbf{Driver Linux}: \texttt{mt7921u} (kernel mainline desde 6.1), configuración UCI en OpenWRT.
+
+\subsection{Módulo LTE/4G (Huawei E3372h-320)}
+
+\textbf{Hardware}: Modem USB Huawei E3372h-320 (Hilink mode)
+
+\textbf{Especificaciones}:
+\begin{itemize}
+    \item Categoría LTE Cat-4: 150 Mbps downlink, 50 Mbps uplink
+    \item Bandas soportadas: B2/B4/B5/B7/B28 (cobertura América/Europa)
+    \item Fallback 3G: HSPA+ 42 Mbps, WCDMA, EDGE
+    \item Interfaz: USB 2.0, presenta interfaz de red \texttt{eth1} al host (no requiere pppd)
+    \item Consumo: 2 W promedio (standby), 4 W máximo (transmisión)
+\end{itemize}
+
+\textbf{Integración con mwan3}: El modem LTE se configura como interfaz WAN secundaria con métrica 20 (vs métrica 10 de HaLow), permitiendo failover automático ante caída de HaLow.
+
+\section{Sistema Operativo: OpenWRT 23.05}
+
+\subsection{Justificación de OpenWRT}
+
+OpenWRT es una distribución Linux embebida orientada a routers y gateways, con las siguientes ventajas para este proyecto:
+
+\begin{itemize}
+    \item \textbf{UCI (Unified Configuration Interface)}: Sistema declarativo para configuración de red, firewall, wireless, etc.
+    \item \textbf{opkg}: Gestor de paquetes ligero con repositorios oficiales para herramientas de red (iptables, mwan3, curl).
+    \item \textbf{procd}: Init system moderno con soporte para reinicio automático de servicios.
+    \item \textbf{Soporte multi-arquitectura}: ARM, ARM64, x86, MIPS → portabilidad a diferentes SBCs.
+    \item \textbf{Tamaño compacto}: Imagen base <100 MB (vs >1 GB de Ubuntu/Debian), ideal para dispositivos con almacenamiento limitado.
+    \item \textbf{Drivers wireless integrados}: Soporte nativo para \texttt{mt7921u} (HaLow), \texttt{ath9k}, \texttt{rt2800usb}.
+\end{itemize}
+
+\subsection{Instalación OpenWRT en Raspberry Pi 4}
+
+El proceso de instalación se documenta en el Anexo A. Los pasos principales incluyen:
+
+\begin{enumerate}
+    \item Descarga de imagen OpenWRT 23.05.5 para \texttt{bcm27xx/bcm2711} (Raspberry Pi 4).
+    \item Flash de imagen a microSD (mínimo 8 GB, clase 10) usando \texttt{balenaEtcher} o \texttt{dd}.
+    \item Primer arranque: Conexión vía Ethernet, acceso a \texttt{192.168.1.1} (sin contraseña inicial).
+    \item Configuración inicial: Establecer contraseña root, habilitar SSH, configurar zona horaria.
+    \item Actualización de paquetes: \texttt{opkg update \&\& opkg install docker dockerd docker-compose}.
+    \item Configuración de red persistente (IP estática, DNS, gateway por defecto).
+\end{enumerate}
+
+\subsection{Configuración UCI para Interfaces de Red}
+
+UCI (\textit{Unified Configuration Interface}) es el sistema de configuración declarativa de OpenWRT. Los archivos de configuración se encuentran en \texttt{/etc/config/}. A continuación se presenta un ejemplo simplificado para la interfaz HaLow:
+
+\begin{verbatim}
+# /etc/config/network - Configuración de interfaz HaLow en modo STA
+config interface 'halow'
+    option proto 'dhcp'
+    option device 'wlan1'
+    option metric '10'
+    option dns '8.8.8.8 1.1.1.1'
+\end{verbatim}
+
+La interfaz HaLow puede configurarse en cuatro modos según el despliegue:
+
+\begin{enumerate}
+    \item \textbf{Modo AP (Access Point)}: El gateway actúa como punto de acceso HaLow, los medidores se conectan como STAs. Configuración: \texttt{option mode 'ap'}, \texttt{option ssid 'SmartEnergy-HaLow'}, \texttt{option encryption 'psk2+ccmp'}.
+    
+    \item \textbf{Modo STA (Station)}: El gateway se conecta a un AP HaLow externo (ej: proveedor ISP). Configuración: \texttt{option mode 'sta'}, \texttt{option ssid 'ISP-HaLow'}, \texttt{option key 'password'}.
+    
+    \item \textbf{Modo Monitor}: Captura pasiva de tráfico HaLow para análisis (usado en desarrollo). Configuración: \texttt{option mode 'monitor'}.
+    
+    \item \textbf{Modo Mesh}: Múltiples gateways forman red mesh HaLow para auto-healing. Configuración: \texttt{option mode 'mesh'}, \texttt{option mesh\_id 'SmartEnergy'}.
+\end{enumerate}
+
+\textit{Nota}: Los archivos completos de configuración UCI para los cuatro modos HaLow, incluyendo parámetros avanzados (MCS rate, bandwidth, Tx power, RAW slots), se documentan en el Anexo D.
+
+\subsection{Failover LTE con mwan3}
+
+El paquete \texttt{mwan3} (Multi-WAN Manager) permite configurar failover automático entre interfaces WAN. Configuración simplificada:
+
+\begin{verbatim}
+# /etc/config/mwan3
+config interface 'halow'
+    option enabled '1'
+    option track_method 'ping'
+    option track_hosts '8.8.8.8 1.1.1.1'
+    option reliability '2'
+    option count '3'
+    option timeout '5'
+    option interval '10'
+    option down '3'
+    option up '3'
+
+config interface 'lte'
+    option enabled '1'
+    option track_method 'ping'
+    option track_hosts '8.8.8.8'
+    option reliability '1'
+    option down '3'
+    option up '3'
+
+config policy 'halow_only'
+    option use_member 'halow'
+
+config policy 'balanced'
+    option use_member 'halow lte'
+    option last_resort 'unreachable'
+
+config rule 'default_rule'
+    option dest_ip '0.0.0.0/0'
+    option use_policy 'balanced'
+\end{verbatim}
+
+Con esta configuración, mwan3 monitorea continuamente la conectividad de HaLow mediante pings a 8.8.8.8 cada 10 s. Si 3 pings consecutivos fallan, mwan3 marca la interfaz como \textit{down} y redirige el tráfico al interfaz LTE en <30 s. Cuando HaLow recupera conectividad (3 pings exitosos), mwan3 revierte al enlace principal.
+
+\section{Protocolos de Comunicación}
+
+\subsection{MQTT (Message Queuing Telemetry Transport)}
+
+MQTT es el protocolo principal para comunicación gateway ↔ cloud. Características:
+
+\begin{itemize}
+    \item \textbf{Modelo publish/subscribe}: Desacoplamiento entre productores y consumidores de datos.
+    \item \textbf{QoS niveles}: QoS 0 (at-most-once), QoS 1 (at-least-once), QoS 2 (exactly-once). Telemetría usa QoS 1 para garantizar entrega sin duplicados excesivos.
+    \item \textbf{Retained messages}: El broker almacena el último mensaje de un topic, útil para estado actual de dispositivos.
+    \item \textbf{Last Will and Testament (LWT)}: Permite notificar desconexión inesperada del gateway.
+    \item \textbf{Seguridad}: MQTT sobre TLS 1.3 (puerto 8883), autenticación con certificados X.509 o usuario/contraseña.
+\end{itemize}
+
+\textbf{Topics MQTT utilizados}:
+\begin{itemize}
+    \item \texttt{v1/gateway/telemetry}: Telemetría uplink (gateway → ThingsBoard)
+    \item \texttt{v1/gateway/rpc}: Comandos downlink (ThingsBoard → gateway)
+    \item \texttt{v1/gateway/attributes}: Metadatos y configuración de dispositivos
+\end{itemize}
+
+\subsection{CoAP (Constrained Application Protocol)}
+
+CoAP es un protocolo REST sobre UDP optimizado para dispositivos con recursos limitados (RFC 7252). Usado en la comunicación medidores Thread ↔ gateway.
+
+\textbf{Características}:
+\begin{itemize}
+    \item \textbf{Modelo REST}: Métodos GET, POST, PUT, DELETE similares a HTTP.
+    \item \textbf{UDP}: Menor overhead que TCP, ideal para redes lossy.
+    \item \textbf{Observe}: Suscripción a recursos con notificaciones push (similar a MQTT subscribe).
+    \item \textbf{Block-wise transfer}: Fragmentación de payloads grandes (>1024 B) para MTU limitado de 802.15.4 (127 B).
+    \item \textbf{Seguridad}: CoAP sobre DTLS 1.3 con certificados o Pre-Shared Keys (PSK).
+\end{itemize}
+
+\textbf{Ejemplo de lectura CoAP}:
+\begin{verbatim}
+# Leer energía activa del medidor 0x1234
+coap-client -m get coap://[fd00::1234]:5683/3305/0/5805
+
+# Respuesta: 2.05 Content, payload TLV: 0xC5 0x16 0xA5 0x00 0x00 0x4B 0x20
+# Decodificado: 19232 Wh (float32 little-endian)
+\end{verbatim}
+
+\subsection{LwM2M (Lightweight M2M)}
+
+LwM2M es un protocolo de gestión de dispositivos IoT sobre CoAP, estandarizado por OMA SpecWorks. Define un modelo de objetos con recursos predefinidos (ej: Objeto 3305 = Power Measurement).
+
+\textbf{Objetos LwM2M implementados en medidores}:
+\begin{table}[h]
+\centering
+\caption{Objetos LwM2M en nodos Thread}
+\begin{tabular}{|c|l|p{7cm}|}
+\hline
+\textbf{Object ID} & \textbf{Nombre} & \textbf{Recursos clave} \\ \hline
+0 & Security & Bootstrap Server URI, Public Key, Secret Key \\ \hline
+1 & Server & Lifetime, Binding, Registration Update Trigger \\ \hline
+3 & Device & Manufacturer, Model, Serial Number, Firmware Version \\ \hline
+3305 & Power Measurement & Active Power (W), Energy (Wh), Voltage (V), Current (A) \\ \hline
+3312 & Digital Output & State (On/Off), Polarity (Normal/Inverted) \\ \hline
+\end{tabular}
+\end{table}
+
+El gateway actúa como LwM2M Server, los medidores como LwM2M Clients. La operación EXEC sobre recurso 3312/0/5850 permite actuación remota (abrir/cerrar breaker).
+
+\textit{Nota}: El código completo de implementación LwM2M en ESP32-C6 (usando librería \texttt{wakaama}), incluyendo definiciones de objetos IPSO y lógica de registro, se documenta en el Anexo E.
+
+\subsection{HTTP/REST (IEEE 2030.5 API)}
+
+El gateway expone una API REST conforme a IEEE 2030.5 en puerto 8883 (HTTPS). Esta API permite a utilidades y sistemas SCADA consultar telemetría y enviar comandos sin dependencia de MQTT.
+
+\textbf{Endpoints principales}:
+\begin{itemize}
+    \item \texttt{GET /dcap}: Device Capabilities (descubrimiento)
+    \item \texttt{GET /tm}: Time synchronization (timestamp UTC + offset)
+    \item \texttt{GET /mup/\{deviceID\}/MirrorUsagePoint}: Telemetría del medidor
+    \item \texttt{GET /edev}: Lista de End Devices registrados
+    \item \texttt{POST /edev/\{deviceID\}/msg}: Enviar mensaje/comando
+\end{itemize}
+
+Todas las respuestas son XML validables contra esquemas XSD de IEEE 2030.5-2023. La autenticación requiere certificado X.509 válido (mTLS).
+
+\section{Base de Datos: PostgreSQL + TimescaleDB}
+
+\subsection{Justificación de TimescaleDB}
+
+TimescaleDB es una extensión de PostgreSQL optimizada para series temporales. Ventajas para telemetría Smart Energy:
+
+\begin{itemize}
+    \item \textbf{Hypertables}: Particionamiento automático por tiempo (chunks de 7 días), mejora rendimiento de consultas.
+    \item \textbf{Continuous aggregates}: Pre-agregaciones materializadas (ej: promedio horario) con actualización automática.
+    \item \textbf{Compression}: Compresión columnar automática de chunks antiguos (>30 días) con ratio 10:1.
+    \item \textbf{Retention policies}: Eliminación automática de datos >1 año.
+    \item \textbf{Compatibilidad SQL completa}: Todas las queries PostgreSQL funcionan sin modificación.
+\end{itemize}
+
+\subsection{Esquema de Base de Datos}
+
+\textbf{Hypertable principal}: \texttt{ts\_kv} (ThingsBoard schema)
+
+\begin{verbatim}
+CREATE TABLE ts_kv (
+    entity_id UUID NOT NULL,
+    key TEXT NOT NULL,
+    ts BIGINT NOT NULL,  -- Timestamp en milisegundos desde epoch
+    bool_v BOOLEAN,
+    str_v TEXT,
+    long_v BIGINT,
+    dbl_v DOUBLE PRECISION,
+    PRIMARY KEY (entity_id, key, ts)
+);
+
+SELECT create_hypertable('ts_kv', 'ts', chunk_time_interval => 604800000);
+-- Chunks de 7 días (604800000 ms)
+\end{verbatim}
+
+\textbf{Continuous aggregate para promedios horarios}:
+
+\begin{verbatim}
+CREATE MATERIALIZED VIEW ts_kv_hourly
+WITH (timescaledb.continuous) AS
+SELECT entity_id, key,
+       time_bucket('1 hour', to_timestamp(ts/1000)) AS bucket,
+       AVG(dbl_v) AS avg_value,
+       MAX(dbl_v) AS max_value,
+       MIN(dbl_v) AS min_value,
+       COUNT(*) AS sample_count
+FROM ts_kv
+WHERE dbl_v IS NOT NULL
+GROUP BY entity_id, key, bucket;
+\end{verbatim}
+
+Esta vista se actualiza automáticamente cada 5 minutos, permitiendo consultas agregadas 100× más rápidas.
+
+\textit{Nota}: El esquema completo de base de datos TimescaleDB, incluyendo políticas de retención, compression policies, índices adicionales y triggers, se documenta en el Anexo D.
+
+\section{Integración con Apache Kafka}
+
+Apache Kafka actúa como bus de integración para sistemas externos (SCADA, ERP, CRM). El script \texttt{kafka\_publisher.py} (ver Anexo C) consume telemetría de ThingsBoard Edge vía API REST y la republica en Kafka topic \texttt{smart-energy.telemetry} con schema Avro.
+
+\textbf{Schema Avro de mensaje Kafka}:
+
+\begin{verbatim}
+{
+  "type": "record",
+  "name": "TelemetryMessage",
+  "fields": [
+    {"name": "device_id", "type": "string"},
+    {"name": "timestamp", "type": "long"},
+    {"name": "active_power_w", "type": "double"},
+    {"name": "energy_wh", "type": "double"},
+    {"name": "voltage_v", "type": "double"},
+    {"name": "current_a", "type": "double"}
+  ]
+}
+\end{verbatim}
+
+Los consumidores Kafka pueden suscribirse al topic para procesamiento en tiempo real (ej: detección de anomalías con ML, facturación en sistemas SAP).
+
+\section{Seguridad del Gateway}
+
+\subsection{Jerarquía PKI (Public Key Infrastructure)}
+
+El sistema implementa una CA interna de tres niveles:
+
+\begin{enumerate}
+    \item \textbf{Root CA}: Certificado raíz auto-firmado, válido 20 años, almacenado offline en HSM.
+    \item \textbf{Intermediate CA}: Certificado intermedio firmado por Root CA, válido 10 años, usado para firmar certificados de gateway/medidores.
+    \item \textbf{End Entity Certificates}: Certificados ECC P-256 para gateways, medidores, servicios (validez 1-3 años).
+\end{enumerate}
+
+\textbf{Rotación de certificados}: Proceso automatizado con Ansible ejecutado cada 90 días. Los nuevos certificados se distribuyen vía MQTT con mensaje retained en topic \texttt{v1/gateway/\{gatewayID\}/cert/update}.
+
+\subsection{Firewall iptables}
+
+Política default-deny en todas las cadenas. Solo se permiten:
+
+\begin{itemize}
+    \item Puerto 1883 (MQTT): Solo desde subredes Thread/HaLow
+    \item Puerto 8883 (HTTPS/IEEE 2030.5): Solo desde IPs autorizadas de utilities
+    \item Puerto 5684 (CoAP): Solo desde red Thread (fd00::/8)
+    \item Puerto 22 (SSH): Solo desde red de gestión (VPN WireGuard)
+\end{itemize}
+
+Configuración UCI simplificada:
+
+\begin{verbatim}
+config rule
+    option name 'Allow-MQTT-Thread'
+    option src 'thread'
+    option dest_port '1883'
+    option proto 'tcp'
+    option target 'ACCEPT'
+
+config rule
+    option name 'Allow-CoAP-Thread'
+    option src 'thread'
+    option dest_port '5684'
+    option proto 'udp'
+    option target 'ACCEPT'
+
+config rule
+    option name 'Deny-All-Other'
+    option src '*'
+    option target 'REJECT'
+\end{verbatim}
+
+\subsection{Logging y Auditoría}
+
+Todos los eventos de seguridad (autenticaciones, fallos TLS, comandos downlink) se registran en syslog con formato CEF (Common Event Format). Los logs se envían a servidor SIEM externo vía rsyslog sobre TLS para análisis forense.
+
+\textbf{Eventos auditados}:
+\begin{itemize}
+    \item Autenticación exitosa/fallida en API IEEE 2030.5
+    \item Conexión/desconexión de medidores Thread
+    \item Comandos de actuación (EXEC sobre LwM2M 3312)
+    \item Cambios de configuración UCI
+    \item Alertas de failover LTE
+\end{itemize}
+
+Retención: 90 días en gateway local, 7 años en SIEM externo (requisito regulatorio).
+
+\section{Resiliencia y Tolerancia a Fallos}
+
+\subsection{Buffering Local y Sincronización}
+
+El gateway almacena hasta 7 días de telemetría en PostgreSQL local. En caso de pérdida de conectividad cloud:
+
+\begin{enumerate}
+    \item ThingsBoard Edge continúa recibiendo datos de medidores vía MQTT.
+    \item Los datos se almacenan en hypertable \texttt{ts\_kv} local.
+    \item Cuando la conectividad se restablece, ThingsBoard Edge sincroniza automáticamente los datos faltantes al cloud mediante su mecanismo de \textit{sync queue}.
+    \item La sincronización usa batch uploads de hasta 1000 registros por petición para optimizar ancho de banda.
+\end{enumerate}
+
+Capacidad de buffer: 100 medidores × 96 lecturas/día × 7 días = 67,200 registros ≈ 8 MB (con índices ~30 MB).
+
+\subsection{Watchdog y Reinicio Automático}
+
+\textbf{Watchdog de hardware}: El Raspberry Pi 4 incluye un watchdog timer en el SoC BCM2711. Se configura mediante \texttt{/dev/watchdog} con timeout de 60 s. Si el userspace no resetea el contador cada <60 s, el hardware reinicia el sistema.
+
+\textbf{Healthchecks de Docker}: Cada servicio en \texttt{docker-compose.yml} define un healthcheck:
+
+\begin{verbatim}
+healthcheck:
+  test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+  interval: 30s
+  timeout: 10s
+  retries: 3
+  start_period: 40s
+\end{verbatim}
+
+Si 3 healthchecks consecutivos fallan, Docker Compose reinicia automáticamente el contenedor con backoff exponencial (1s, 2s, 4s, ..., máximo 60s).
+
+\subsection{Redundancia de Gateways (Opcional)}
+
+Para despliegues críticos, se puede implementar redundancia activo-pasivo:
+
+\begin{itemize}
+    \item Dos gateways en la misma ubicación con IPs diferentes.
+    \item Ambos conectados a la red Thread (modo Border Router redundante).
+    \item Gateway primario publica en MQTT con LWT configurado.
+    \item Si el primario falla (LWT trigger), el secundario detecta el evento y asume el rol activo.
+    \item Tiempo de conmutación: <60 s (timeout LWT + tiempo de boot del secundario).
+\end{itemize}
+
+Coordinación mediante MQTT topics \texttt{v1/gateway/cluster/\{clusterID\}/leader} con QoS 2 y retained=true.
+
+\section{Gestión Remota y OTA Updates}
+
+\subsection{Gestión via ThingsBoard Edge}
+
+ThingsBoard Edge permite gestión remota completa del gateway:
+
+\begin{itemize}
+    \item \textbf{Dashboard}: Visualización en tiempo real de CPU, RAM, temperatura, interfaces de red.
+    \item \textbf{RPC commands}: Ejecución de comandos shell vía MQTT (ej: reinicio de servicios, cambio de config UCI).
+    \item \textbf{Attributes}: Lectura/escritura de configuración (frecuencia de lectura, filtros, umbrales de alerta).
+    \item \textbf{Alarms}: Triggers automáticos para CPU >80\%, RAM >90\%, pérdida de conectividad >5 min.
+\end{itemize}
+
+\textbf{Ejemplo de RPC command (reiniciar servicio Docker)}:
+
+\begin{verbatim}
+# Desde ThingsBoard Cloud: RPC request
+{
+  "method": "restart_service",
+  "params": {
+    "service": "tb-edge"
+  }
+}
+
+# Gateway ejecuta: docker-compose restart tb-edge
+# Respuesta: {"status": "success", "uptime": 3}
+\end{verbatim}
+
+\subsection{Actualizaciones OTA (Over-The-Air)}
+
+Las actualizaciones de firmware/software se realizan mediante Ansible playbooks ejecutados desde servidor de gestión:
+
+\begin{enumerate}
+    \item Playbook descarga nueva imagen Docker (ej: \texttt{thingsboard/tb-edge:3.8.2}) desde registry privado.
+    \item Ejecuta \texttt{docker-compose pull} en gateway.
+    \item Realiza rolling update: para servicio antiguo → inicia servicio nuevo → verifica healthcheck → elimina contenedor antiguo.
+    \item Si healthcheck falla, rollback automático a versión anterior.
+    \item Tiempo de downtime por servicio: <30 s.
+\end{enumerate}
+
+Para actualizaciones del kernel OpenWRT, se usa \texttt{sysupgrade}:
+
+\begin{verbatim}
+# Descarga de imagen
+scp openwrt-23.05.6-bcm27xx-bcm2711-rpi-4-squashfs-sysupgrade.img.gz \
+    root@gateway:/tmp/
+
+# Instalación (preserva configuración en /etc/config/)
+sysupgrade -v /tmp/openwrt-23.05.6-*.img.gz
+
+# Reinicio automático en ~5 min
+\end{verbatim}
+
+La configuración UCI se preserva automáticamente gracias al particionamiento overlay de OpenWRT.
+
+\section{Conclusiones del Capítulo}
+
+Este capítulo ha presentado el diseño e implementación completa del gateway de telemetría Smart Energy, componente central de la arquitectura propuesta. Los aspectos clave incluyen:
+
+\begin{itemize}
+    \item \textbf{Conformidad con estándares}: Implementación de IEEE 2030.5-2023 para interoperabilidad con sistemas de utilities, y alineación con ISO/IEC 30141 para arquitectura IoT.
+    
+    \item \textbf{Stack tecnológico robusto}: Combinación de OpenWRT 23.05, Docker, OpenThread Border Router, ThingsBoard Edge, PostgreSQL+TimescaleDB y Kafka para un sistema escalable y mantenible.
+    
+    \item \textbf{Conectividad multi-tecnología}: Soporte simultáneo de Thread/802.15.4 (red de campo), HaLow/802.11ah (área amplia sub-GHz) y LTE/4G (failover), con conmutación automática.
+    
+    \item \textbf{Protocolos optimizados}: Uso de MQTT para cloud, CoAP/LwM2M para dispositivos embebidos, y REST/HTTP para integraciones enterprise, cada uno seleccionado según las restricciones de sus dominios.
+    
+    \item \textbf{Seguridad integral}: PKI de tres niveles con certificados ECC P-256, TLS 1.3 obligatorio, firewall restrictivo y logging forense completo.
+    
+    \item \textbf{Resiliencia operativa}: Buffering local de 7 días, watchdog de hardware, healthchecks de servicios, failover LTE automático y redundancia opcional de gateways.
+    
+    \item \textbf{Gestión remota}: Capacidad de monitoreo, configuración y actualización OTA completa vía ThingsBoard Edge, minimizando necesidad de intervención física.
+\end{itemize}
+
+El gateway diseñado cumple con todos los requisitos funcionales (RF1-RF7) y no funcionales (RNF1-RNF7) establecidos, demostrando viabilidad técnica para despliegues de telemetría Smart Energy a escala. La modularidad del diseño permite adaptación a diferentes casos de uso (residencial, comercial, industrial) mediante ajuste de parámetros sin modificaciones arquitecturales.
+
+Los anexos complementarios documentan:
+\begin{itemize}
+    \item \textbf{Anexo A}: Guía de instalación completa de OpenWRT en Raspberry Pi 4
+    \item \textbf{Anexo B}: Archivo \texttt{docker-compose.yml} completo con todas las configuraciones
+    \item \textbf{Anexo C}: Código fuente de scripts Python (IEEE 2030.5 Server/Bridge, Kafka publisher)
+    \item \textbf{Anexo D}: Ejemplos XML IEEE 2030.5, configuraciones UCI detalladas, esquema TimescaleDB
+    \item \textbf{Anexo E}: Implementación LwM2M completa en ESP32-C6 para nodos Thread
+\end{itemize}
+
+El siguiente capítulo analizará la arquitectura global del sistema, incluyendo dimensionamiento de red, análisis de costos, evaluación de rendimiento y comparación con soluciones comerciales.

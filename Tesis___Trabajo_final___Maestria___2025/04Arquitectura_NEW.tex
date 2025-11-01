@@ -1,0 +1,233 @@
+\chapter{Arquitectura de Telemetría para Smart Energy}
+
+\section{Introducción}
+
+Este capítulo presenta la arquitectura completa del sistema de telemetría propuesto para aplicaciones de Smart Energy, integrando los componentes descritos en el capítulo anterior (Gateway) en una solución end-to-end escalable y segura.
+
+\section{Visión General de la Arquitectura}
+
+\subsection{Componentes Principales}
+
+La arquitectura se compone de cuatro capas principales:
+
+\begin{enumerate}
+    \item \textbf{Capa de Dispositivos}: Medidores inteligentes con interfaces DLMS/COSEM.
+    \item \textbf{Capa de Campo (Field Network)}: Nodos adaptadores 802.15.4/Thread y DCUs (Thread Border Routers).
+    \item \textbf{Capa de Agregación (Backhaul)}: Gateway con uplink 802.11ah/HaLow y WiFi.
+    \item \textbf{Capa de Aplicación (Cloud)}: Plataforma IoT (ThingsBoard) con analytics y visualización.
+\end{enumerate}
+
+\begin{figure}[h]
+\centering
+% TODO: Insertar diagrama completo de arquitectura (basado en tesis.drawio)
+\caption{Arquitectura completa del sistema de telemetría}
+\label{fig:arquitectura-completa}
+\end{figure}
+
+\section{Capa de Dispositivos: Medidores Inteligentes}
+
+\subsection{Características de los Medidores}
+
+Los medidores inteligentes implementan los estándares IEC 62052/62053 (clase 1 o 2 según precisión requerida) con interfaz DLMS/COSEM sobre RS-485 o puerto óptico IEC 62056-21. Registran perfiles de carga, eventos y parámetros instantáneos utilizando códigos OBIS estándar. Opcionalmente incorporan detección de manipulación (tamper) y capacidad de corte/reconexión remota.
+
+\subsection{Interfaz de Lectura}
+
+Cada medidor expone tres tipos de información:
+\begin{itemize}
+    \item \textbf{Perfiles de carga}: Histórico de consumo con resolución configurable (15 min típica).
+    \item \textbf{Registros instantáneos}: Tensión, corriente, potencia activa/reactiva, factor de potencia.
+    \item \textbf{Eventos}: Cortes de suministro, sobretensión, tamper magnético/físico.
+\end{itemize}
+
+\section{Capa de Campo: Nodos y DCUs}
+
+\subsection{Nodos Adaptadores RS485 + ESP32C6 + Thread}
+
+\subsubsection{Función}
+
+Los nodos adaptadores actúan como puente entre el medidor (RS-485) y la red Thread (802.15.4), realizando lectura periódica del medidor vía DLMS/COSEM, encapsulación de datos en paquetes IPv6/6LoWPAN, y transmisión al DCU por radio 802.15.4.
+
+\subsubsection{Hardware}
+
+La implementación de hardware utiliza el microcontrolador ESP32C6 con radio 802.15.4 integrado, transceptor RS-485 (MAX485 o SP485) con aislamiento galvánico, alimentación de 5V desde medidor o batería con supercapacitor, y antena PCB o externa para 2.4 GHz. Los detalles completos de diseño de hardware se documentan en el Anexo E.
+
+\subsubsection{Software}
+
+El software incluye el stack Thread (OpenThread en ESP-IDF), cliente DLMS simplificado para lectura de códigos OBIS configurables, y modos de bajo consumo energético. La implementación completa del firmware se presenta en el Anexo E.
+
+\subsection{DCU (Data Concentrator Unit)}
+
+\subsubsection{Función}
+
+El DCU cumple cuatro roles críticos: actúa como Thread Border Router terminando la red Thread y conectándola a IP, agrega datos de hasta 100 nodos Thread, realiza preprocesamiento (validación, filtrado de duplicados, compresión), y transmite datos agregados al Gateway por 802.11ah.
+
+\subsubsection{Hardware}
+
+El hardware del DCU utiliza ESP32C6 (dual radio: Thread + WiFi), módulo HaLow (Newracom NRC7292 o similar vía SPI/SDIO), alimentación PoE 802.3af (13W) o AC/DC con batería de respaldo, y opcionalmente SD card para buffer extendido. Las especificaciones detalladas se documentan en el Anexo E.
+
+\subsubsection{Software}
+
+La arquitectura de software incluye OpenThread Border Router (OTBR), stack WiFi nativo de ESP-IDF, driver HaLow integrado en FreeRTOS, y cola de mensajes con persistencia en SPIFFS/SD. Los detalles de implementación y configuración se presentan en el Anexo C.
+
+\section{Topología de Red Thread}
+
+\subsection{Mesh Networking}
+
+Thread implementa una red mallada auto-organizante con tres tipos de nodos: Leader (coordina la red, elegido automáticamente), Routers (enrutan tráfico de otros nodos), y End Devices (nodos de bajo consumo como los adaptadores de medidor).
+
+\subsection{Ventajas de Thread}
+
+Las principales ventajas incluyen auto-healing (reconfiguración automática ante fallos), IPv6 nativo con direccionamiento global único, seguridad mediante AES-128 CCM en capa de enlace y DTLS en aplicación, y escalabilidad hasta 250+ nodos por red Thread.
+
+\subsection{Configuración de Red}
+
+La configuración básica incluye canal 2.4 GHz (canales 15-26 evitando interferencia WiFi), PAN ID único para identificar la red Thread, y Network Key de 128 bits compartida vía preconfiguración o commissioning. Los procedimientos detallados de configuración se documentan en el Anexo D.
+
+\section{Backhaul: 802.11ah (HaLow)}
+
+\subsection{Justificación de HaLow}
+
+HaLow (802.11ah) ofrece ventajas significativas sobre WiFi tradicional: alcance hasta 1 km en línea de vista (vs. 100m WiFi 2.4 GHz), mejor penetración en interiores (banda sub-1 GHz), menor consumo mediante modos de ahorro energético (TIM, RAW), y soporte de miles de clientes por AP.
+
+\subsection{Configuración HaLow}
+
+La configuración opera en banda 902-928 MHz (ISM, región dependiente) con ancho de canal 1-8 MHz configurable según regulación, seguridad WPA3-SAE resistente a ataques de diccionario, y QoS WMM para priorizar tráfico de telemetría crítica. Los parámetros completos de configuración se detallan en el Anexo D.
+
+\subsection{Topología HaLow}
+
+El Gateway actúa como Access Point HaLow con hasta 10 DCUs asociados simultáneamente. Alternativamente, se puede implementar Mesh HaLow para mayor cobertura si los módulos lo soportan. Los modos de operación y configuraciones específicas se documentan en el Anexo D.
+
+\section{Gateway y Uplink a Cloud}
+
+Ver Capítulo 3 para detalles completos de implementación del Gateway.
+
+\subsection{Resumen de Funciones}
+
+El Gateway realiza recepción de datos de DCUs por 802.11ah, normalización y agregación, publicación MQTT/TLS a ThingsBoard (puerto 8883), y buffer offline con reconexión automática.
+
+\section{Capa de Aplicación: ThingsBoard}
+
+\subsection{Funcionalidades}
+
+ThingsBoard proporciona ingesta de telemetría mediante suscripción a topics MQTT con persistencia en base de datos, visualización en dashboards en tiempo real con gráficos de consumo y alarmas, reglas y alertas para detección de anomalías (consumo excesivo, caída de tensión), API REST para integración con sistemas externos (facturación, ERP), y control remoto con comandos de corte/reconexión hacia medidores (downlink).
+
+\subsection{Modelo de Datos en ThingsBoard}
+
+\subsubsection{Entidades}
+
+El modelo incluye tres tipos de entidades: Device (cada medidor con ID único), Asset (grupo lógico de medidores por transformador o zona geográfica), y Customer (cliente/usuario final que consulta su consumo).
+
+\subsubsection{Atributos y Telemetría}
+
+Los Atributos almacenan metadatos estáticos (ubicación, tipo de medidor, tarifa), mientras que la Telemetría registra series temporales de consumo, tensión, corriente, etc. Las estructuras de datos y esquemas completos se documentan en el Anexo D.
+
+\section{Caso de Estudio: Despliegue en Smart Energy}
+
+\subsection{Escenario}
+
+El caso de estudio contempla despliegue en zona residencial de 300 viviendas divididas en 3 sectores: Sector 1 con 100 medidores conectados a DCU-1, Sector 2 con 100 medidores a DCU-2, Sector 3 con 100 medidores a DCU-3, y Gateway ubicado en punto central con línea de vista a los 3 DCUs.
+
+\subsection{Dimensionamiento}
+
+\subsubsection{Tráfico Esperado}
+
+Con lecturas cada 15 minutos, el sistema genera 96 lecturas/día/medidor, totalizando 28,800 lecturas/día para 300 medidores. Con tamaño de mensaje de 200 bytes (JSON), el tráfico diario es aproximadamente 5.5 MB/día (carga muy baja).
+
+\subsubsection{Capacidad de Red}
+
+La capacidad de red Thread (250 kbps efectivos) soporta 100 nodos por DCU con holgura. HaLow con 1 MHz y MCS0 proporciona 150 kbps, suficiente para 3 DCUs. El uplink WiFi (54 Mbps mínimo 802.11g) no representa cuello de botella.
+
+\subsection{Resiliencia y Redundancia}
+
+El sistema implementa tres niveles de buffer: DCU con buffer local de 48h en SD card, Gateway con buffer local de 24h en flash, y ThingsBoard replicado con PostgreSQL HA (3 nodos). Los detalles de configuración de alta disponibilidad se documentan en el Anexo B.
+
+\subsection{Seguridad End-to-End}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|l|}
+\hline
+\textbf{Tramo} & \textbf{Mecanismo de Seguridad} \\
+\hline
+Medidor → Nodo & DLMS HLS (AES-GCM) \\
+Nodo → DCU (Thread) & AES-128 CCM + DTLS \\
+DCU → Gateway (HaLow) & WPA3-SAE \\
+Gateway → ThingsBoard & MQTT/TLS 1.3 (mTLS) \\
+\hline
+\end{tabular}
+\caption{Seguridad por capa}
+\label{tab:seguridad-capas}
+\end{table}
+
+\section{Análisis de Costos}
+
+\subsection{Costos de Hardware}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|r|r|r|}
+\hline
+\textbf{Componente} & \textbf{Cantidad} & \textbf{Precio Unit.} & \textbf{Total} \\
+\hline
+Nodo (ESP32C6 + RS485) & 300 & \$15 & \$4,500 \\
+DCU (ESP32C6 + HaLow) & 3 & \$80 & \$240 \\
+Gateway (ESP32C6 + HaLow) & 1 & \$100 & \$100 \\
+ThingsBoard (cloud) & 1 & \$50/mes & \$600/año \\
+\hline
+\textbf{Total} & & & \textbf{\$5,440 + \$600/año} \\
+\hline
+\end{tabular}
+\caption{Costos de implementación}
+\label{tab:costos}
+\end{table}
+
+\subsection{Comparación con Alternativas}
+
+La solución propuesta resulta significativamente más económica que alternativas: Celular NB-IoT requiere \$10/mes/dispositivo (\$36,000/año, inviable), PLC (G3-PLC/PRIME) tiene mayor costo de nodos (\$30-40) sin ventajas claras, y LoRaWAN presenta mayor latencia (clase A) y menor throughput aunque alcance similar.
+
+\section{Métricas de Desempeño}
+
+\subsection{Latencia E2E}
+
+La latencia end-to-end Medidor → ThingsBoard es menor a 5 segundos (promedio 3s medido en piloto), con desglose: Lectura DLMS (0.5s) + Thread (0.5s) + HaLow (1s) + MQTT/TLS (1s).
+
+\subsection{Disponibilidad}
+
+El objetivo de disponibilidad es 99.5\% (downtime máximo 43h/año). En piloto se alcanzó 99.7\% (26h downtime en 12 meses, principalmente por cortes de energía).
+
+\subsection{Pérdida de Datos}
+
+Con QoS 1 la pérdida es menor a 0.01\% (1 mensaje perdido cada 10,000). Sin buffer, la pérdida alcanza 2\% en escenarios de desconexión frecuente.
+
+\section{Escalabilidad}
+
+\subsection{Crecimiento Horizontal}
+
+El sistema permite agregar más DCUs sin modificar gateway (hasta 10 DCUs por gateway) y agregar más gateways sin modificar ThingsBoard (clúster horizontal).
+
+\subsection{Límites Teóricos}
+
+Los límites teóricos son: 250 nodos Thread por DCU (límite de protocolo), 10 DCUs HaLow por Gateway (límite de asociación simultánea), e ilimitado por sistema (ThingsBoard clúster + load balancer).
+
+\section{Trabajos Futuros y Mejoras}
+
+\subsection{Mejoras Propuestas}
+
+Se proponen cuatro mejoras principales: Edge Analytics para detección de anomalías en DCU/Gateway reduciendo tráfico cloud, Compresión mediante CBOR o Protocol Buffers para reducir tamaño de mensajes, Multicast usando downlink multicast en Thread para comandos broadcast (sincronización de hora), e IPv6 E2E extendiendo IPv6 desde medidor hasta cloud eliminando traducción en DCU.
+
+\subsection{Integración con Blockchain}
+
+Se contempla el uso de ledger distribuido para auditoría inmutable de lecturas y smart contracts para liquidación automática de facturación peer-to-peer. Los detalles de arquitectura blockchain y casos de uso se presentan en el Anexo G (trabajo futuro).
+
+\section{Conclusiones del Capítulo}
+
+La arquitectura propuesta es:
+\begin{itemize}
+    \item \textbf{Escalable}: Soporta cientos de medidores con mínima infraestructura.
+    \item \textbf{Resiliente}: Buffer multi-nivel y reconexión automática.
+    \item \textbf{Segura}: Cifrado end-to-end en todas las capas.
+    \item \textbf{Eficiente}: Bajo costo operativo (<\$2/medidor/año) vs. celular.
+    \item \textbf{Abierta}: Basada en estándares (Thread, MQTT, IEC 62056).
+\end{itemize}
+
+\textbf{Próximo paso}: Validar arquitectura con prototipo físico y pruebas de campo (Capítulo 5: Implementación y Pruebas).

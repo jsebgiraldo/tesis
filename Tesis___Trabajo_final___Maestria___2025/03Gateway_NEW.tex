@@ -1,0 +1,351 @@
+\chapter{Gateway de Telemetría para Smart Energy}
+
+\section{Introducción}
+
+El gateway constituye el componente central de la arquitectura de telemetría propuesta, actuando como puente entre las redes de campo (802.15.4/Thread) y las redes de área amplia (802.11ah/HaLow), consolidando datos de múltiples medidores inteligentes y transmitiéndolos de manera segura hacia la plataforma IoT en la nube. Este capítulo presenta la arquitectura de software y hardware del gateway, enfocándose en los aspectos conceptuales y de diseño. Los detalles técnicos de implementación (configuraciones UCI, docker-compose, scripts) se documentan en los anexos correspondientes.
+
+\subsection{Función del Gateway en la Arquitectura de Telemetría}
+
+En el contexto de infraestructuras de medición inteligente para Smart Energy, el gateway cumple funciones críticas de agregación de datos, traducción de protocolos, seguridad end-to-end, resiliencia mediante buffering local y edge computing para preprocesamiento. El gateway implementa una arquitectura jerárquica de 3 niveles IoT que optimiza la distribución de funciones y capacidad de procesamiento en redes de gran escala.
+
+\section{Conformidad con Estándares Internacionales}
+
+\subsection{IEEE 2030.5-2023 (Smart Energy Profile 2.0)}
+
+El gateway implementa funcionalidades alineadas con IEEE 2030.5 (SEP 2.0), incluyendo los siguientes Function Sets:
+
+\begin{itemize}
+    \item \textbf{Device Capability (DCAP)}: Descubrimiento de capacidades (\texttt{/dcap})
+    \item \textbf{Time (TM)}: Sincronización horaria NTP/PTP (<100 ms)
+    \item \textbf{Metering Mirror (MM)}: Datos de medición con granularidad 15 min
+    \item \textbf{Messaging (MSG)}: Notificaciones y alertas bidireccionales
+    \item \textbf{End Device (ED)}: Registro y gestión de dispositivos
+\end{itemize}
+
+La seguridad IEEE 2030.5 se implementa mediante TLS 1.2/1.3 obligatorio, certificados X.509 ECC (curva P-256), LFDI derivado de certificado y RBAC para control de acceso. Los ejemplos completos de respuestas XML para todos los Function Sets se presentan en el \textbf{Anexo D}.
+
+\subsection{ISO/IEC 30141:2024 (IoT Reference Architecture)}
+
+El gateway implementa múltiples entidades funcionales según la vista funcional de ISO/IEC 30141: Sensing, Actuation, Processing, Storage, Communication, Security, Management y Application Support. La arquitectura cumple con las cuatro vistas del estándar (funcional, información, despliegue y operacional), proporcionando un marco completo para sistemas IoT industriales.
+
+\section{Requisitos del Gateway}
+
+\subsection{Requisitos Funcionales}
+
+El gateway debe cumplir con: recepción de datos de $\geq$10 DCUs simultáneamente mediante 802.11ah, normalización OBIS/DLMS/COSEM a JSON/CBOR, publicación MQTT con QoS 1/2 garantizando entrega, buffer persistente local mínimo 7 días, uplink redundante Ethernet WAN (primario) + LTE M.2 (backup <30s), Access Point HaLow (902-928 MHz) con alcance mínimo 1 km, API REST IEEE 2030.5 compatible y entidades funcionales ISO/IEC 30141 completas.
+
+\subsection{Requisitos No Funcionales}
+
+Latencia E2E <5 segundos, disponibilidad >99.5\% con failover <30 seg, consumo energético <15W (LTE idle), operación -10°C a +50°C (Morse Micro: -40°C a +85°C), throughput HaLow mínimo 20 Mbps agregado, precisión sincronización <100 ms y soporte $\geq$250 EndDevices simultáneos.
+
+\subsection{Requisitos de Seguridad}
+
+Autenticación mutua TLS 1.2/1.3, certificados X.509 con renovación automática, Secure Boot, cifrado de credenciales, OTA segura con validación de firma digital, certificados ECC P-256 para IEEE 2030.5, LFDI derivado de certificado, RBAC para APIs REST y WPA3-SAE con PMF obligatorio en HaLow.
+
+\section{Arquitectura Jerárquica de 3 Niveles IoT}
+
+La arquitectura propuesta sigue un modelo jerárquico que permite desplegar redes IoT con miles de dispositivos manteniendo eficiencia operativa, optimizando la distribución de funciones, consumo energético y capacidad de procesamiento. Esta arquitectura, alineada con las implementaciones de referencia de Morse Micro para Wi-Fi HaLow, permite escalabilidad masiva.
+
+\subsection{Nivel 1: Nodos IoT (End Devices)}
+
+Dispositivos sensores y actuadores de bajo consumo optimizados para operación con baterías durante años. Implementan Thread (802.15.4) o HaLow 802.11ah en modo cliente con protocolos LwM2M sobre CoAP, MQTT-SN o IEEE 2030.5 Client. Características: MCU Cortex-M4/M33 (ESP32-C6, nRF52840), RAM 256 KB - 1 MB, modos sleep profundo, autonomía 5-10 años con batería AA. La implementación de referencia de nodo ESP32-C6 con LwM2M se documenta en el \textbf{Anexo E}.
+
+\subsection{Nivel 2: Routers IoT}
+
+Routers IoT que extienden el alcance de redes HaLow o Thread mediante mesh 802.11s, EasyMesh o Thread Router. Características: SoC MM8108 + MPU Linux, RAM 128-256 MB, OpenWRT mínimo sin Docker, PoE 802.3af/at. Su función es puramente extensión de cobertura y densificación de red, sin procesamiento edge ni gestión de dispositivos.
+
+\subsection{Nivel 3: Gateways IoT (Border Routers Edge)}
+
+Dispositivos con capacidades de cómputo significativas que actúan como agregación, procesamiento edge y puente entre redes IoT locales y WAN. Características: Plataformas ARM Cortex-A multi-core (Raspberry Pi 4), RAM 4-8 GB, NVMe SSD 64-256 GB, conectividad múltiple (HaLow, Thread, LTE/5G, Gigabit Ethernet), OpenWRT 23.05 con Docker, funciones avanzadas de Border Routing, Edge Computing, protocolos Smart Energy (IEEE 2030.5) y orquestación de contenedores.
+
+\subsection{Justificación del Modelo de 3 Niveles}
+
+Ventajas: (1) Escalabilidad - un gateway gestiona 100-200 nodos directamente, escalando a 1000+ con routers intermedios; (2) Eficiencia energética - nodos transmiten en saltos cortos reduciendo potencia; (3) Cobertura extendida - HaLow >1 km con routers mesh alcanza 3-5 km urbano; (4) Resiliencia - mesh reconfigura rutas automáticamente; (5) Distribución de carga optimizada; (6) Costo optimizado versus múltiples gateways costosos.
+
+\section{Arquitectura de Software del Gateway}
+
+\subsection{Stack de Contenedores}
+
+El gateway implementa una arquitectura basada en contenedores Docker con servicios desacoplados: (1) OpenThread Border Router para gestión de red Thread y ruteo IPv6; (2) ThingsBoard Edge como plataforma IoT local; (3) PostgreSQL con extensión TimescaleDB; (4) Bridge Thread-TB para integración OTBR ↔ TB Edge; (5) MQTT Broker Mosquitto; (6) IEEE 2030.5 Server; (7) Apache Kafka como bus de mensajes.
+
+Los archivos \texttt{docker-compose.yml} completos para todos los servicios se presentan en el \textbf{Anexo B}.
+
+\subsection{Stack de Comunicación}
+
+Capa física: 802.15.4/Thread (RCP nRF52840 vía USB), 802.11ah HaLow (Morse Micro MM6108 vía SPI, 902-928 MHz, hasta 3 km, 40 Mbps), 802.11ac/ax WiFi dual-band, LTE Cat-6 M.2 y Ethernet Gigabit. Capa de red: IPv6 Thread (fd00::/64) ruteado por OTBR, IPv4 NAT para WAN. Capa de transporte: TCP/TLS (puerto 7070), MQTT/TLS (1883/8883), CoAP/UDP. Capa de aplicación: MQTT, HTTP/REST, WebSocket, JSON.
+
+Las configuraciones de red UCI completas se documentan en el \textbf{Anexo F}.
+
+\section{Implementación del Gateway con OpenWRT}
+
+\subsection{Justificación de la Plataforma}
+
+OpenWRT se selecciona por flexibilidad (Linux embebido con opkg/UCI), soporte Docker para contenedorización, redes avanzadas (VLAN, nftables, QoS, IPv6), amplio soporte de hardware con expansión de almacenamiento y comunidad activa con actualizaciones frecuentes.
+
+\subsection{Hardware del Gateway}
+
+\subsubsection{Plataforma Base}
+
+Dos opciones: (1) Router industrial: SoC MediaTek MT7621AT (MIPS dual-core 880 MHz), RAM 512 MB DDR3, Flash 16 MB + USB 3.0/NVMe 32 GB, Ethernet 5 puertos Gigabit con PoE+; (2) Raspberry Pi 4 Model B: BCM2711 Cortex-A72 quad-core ARMv8 @ 1.5 GHz, 4 GB RAM, microSD 32 GB + M.2 NVMe SSD 256 GB via PCIe HAT, alimentación PoE+ HAT.
+
+\subsubsection{Conectividad 802.11ah (HaLow) con Morse Micro}
+
+Chipset MM6108 SoC con interfaz PCIe/SDIO/SPI, frecuencia 902-928 MHz con canales 1/2/4/8 MHz, alcance hasta 1-3 km LOS con antena externa 5 dBi, throughput hasta 40 Mbps (MCS10, 8 MHz BW), seguridad WPA3-SAE con PMF obligatorio. Ventajas Morse Micro: operación industrial -40°C a +85°C, drivers Linux mainline (ath11k), consumo <500 mW TX/<50 mW RX, certificaciones FCC/CE.
+
+\textbf{Modos de Operación HaLow}: (1) AP (Access Point) - gateway como punto de acceso central; (2) STA (Station) - gateway como cliente conectado a AP externo; (3) 802.11s Mesh - malla autogestionada entre múltiples gateways con auto-healing; (4) EasyMesh - IEEE 1905.1 con roaming transparente y gestión centralizada.
+
+Las configuraciones UCI completas para los cuatro modos HaLow, incluyendo ejemplos de verificación, pruebas de throughput y troubleshooting, se documentan en el \textbf{Anexo D}.
+
+\section{Implementación en Raspberry Pi 4 con OpenWRT}
+
+\subsection{Hardware de la Implementación Real}
+
+El prototipo se implementó sobre Raspberry Pi 4 Model B por sus capacidades multi-core y memoria RAM esenciales para múltiples contenedores Docker. Justificación vs Router MT7621AT: 4 núcleos Cortex-A72 permiten paralelización sin contención, 4 GB RAM suficientes para PostgreSQL/Kafka/TB Edge, ecosistema ARM64 con imágenes Docker oficiales, PCIe para NVMe con >3000 IOPS crítico para PostgreSQL, GPIO/SPI flexible.
+
+\subsubsection{Periféricos y Módulos de Conectividad}
+
+(1) \textbf{Thread}: Nordic nRF52840 Dongle con firmware OpenThread RCP v1.3, interfaz USB 2.0 (\texttt{/dev/ttyACM0}), potencia TX +8 dBm, sensibilidad -95 dBm; (2) \textbf{HaLow}: Morse Micro MM6108 vía SPI0 (GPIO 8/9/10/11/25), driver \texttt{ath11k} mainline, identificación \texttt{wlan2}; (3) \textbf{LTE}: Quectel BG95-M3 (Cat-M1/NB-IoT + EGPRS), interfaz USB (\texttt{wwan0}), throughput 375 kbps, latencia 100-300 ms; (4) \textbf{Almacenamiento}: Kingston NV2 M.2 NVMe 256 GB via PCIe HAT (350-400 MB/s lectura, 3200-3500 IOPS 4K random); (5) \textbf{Alimentación}: Waveshare PoE HAT IEEE 802.3at (25.5W máx), salida 5V/5A, ventilador PWM (encendido T°>60°C).
+
+La conexión SPI del módulo HaLow, habilitación en OpenWRT y verificación de interfaz se documentan en el \textbf{Anexo F}.
+
+\subsection{Sistema Operativo: OpenWRT 23.05 en Raspberry Pi 4}
+
+OpenWRT 23.05.0, target \texttt{bcm27xx/bcm2711} (ARMv8 64-bit), kernel Linux 5.15.134 LTS, arquitectura binarios \texttt{aarch64\_cortex-a72}, libc musl 1.2.4. Los procedimientos completos de instalación (descarga, escritura en microSD, configuración inicial, actualización de paquetes, configuración de almacenamiento NVMe con \texttt{fstab}, directorios Docker) se documentan en el \textbf{Anexo A}.
+
+\subsection{Configuración de Conectividad}
+
+El gateway integra múltiples interfaces: Thread 802.15.4 (OTBR con nRF52840 RCP formando red SmartGrid-Thread en canal 15), HaLow 802.11ah (MM6108 vía SPI soportando 4 modos: AP Router con NAT, STA Client, Mesh 802.11s con HWMP routing, EasyMesh 1905.1 con Controller/Agent), LTE Cat-M1/NB-IoT (Quectel BG95-M3 con failover automático vía mwan3) y Ethernet Gigabit (WAN primaria).
+
+\textbf{Ejemplo de verificación de interfaces activas}:
+\begin{verbatim}
+# Thread Border Router
+docker exec otbr ot-ctl state  # Esperado: "leader" o "router"
+
+# HaLow 802.11ah
+iw dev wlan2 info  # Esperado: type AP, channel 7 (917 MHz)
+
+# LTE modem
+mmcli -m 0 --simple-status  # Esperado: state: connected
+
+# Ethernet WAN
+cat /sys/class/net/eth0/operstate  # Esperado: up (1000BASE-T)
+\end{verbatim}
+
+Las configuraciones UCI completas para HaLow en sus cuatro modos de operación se presentan en el \textbf{Anexo D}.
+
+\section{Flujo de Datos End-to-End}
+
+\subsection{Flujo Normal de Operación}
+
+Medidor → Nodo Thread (ESP32C6) vía RS-485/DLMS → OTBR (ruteo IPv6 desde \texttt{fd00::/64} a LAN) → Bridge (transformación CoAP/MQTT → formato ThingsBoard JSON) → TB Edge (procesamiento Rule Engine, almacenamiento PostgreSQL, actualización dashboards) → TB Cloud (sincronización gRPC/TLS puerto 7070 cada 5 min) → Visualización dashboards.
+
+El flujo inverso para comandos downlink sigue: TB Cloud → TB Edge (validación permisos RBAC) → Bridge (traducción a protocolo nodo LwM2M Write / IEEE 2030.5 DER Control) → Routers mesh (reenvío) → Nodo (ejecución + ACK).
+
+\subsection{Flujo en Modo Edge (Sin Conectividad Cloud)}
+
+Gateway detecta pérdida WAN (ping a \texttt{8.8.8.8} falla), TB Edge activa modo offline continuando operación local (reglas, dashboards accesibles via LAN), datos se acumulan en queue persistente PostgreSQL + filesystem (límite 100k msgs o 2 GB), al recuperar conectividad sincroniza automáticamente backlog completo en ~10-15 minutos con batch size 5000 y compresión gzip.
+
+\subsection{Flujo de Actualización OTA de Contenedores}
+
+Watchtower container verifica actualizaciones de imágenes Docker cada 24h, si nueva versión disponible descarga imagen, detiene contenedor actual, crea nuevo con misma configuración (volúmenes, redes), si healthcheck OK elimina imagen antigua, si falla rollback automático a imagen anterior. Logs de actualización en \texttt{/mnt/docker/watchtower/watchtower.log}.
+
+\section{Arquitectura de Datos: Kafka y PostgreSQL}
+
+\subsection{Integración de Apache Kafka}
+
+Kafka proporciona message broker distribuido de alto rendimiento: intermedia entre bridge (productor) y TB Edge (consumidor), buffer distribuido con tópicos persistentes (telemetry, alarms), soporta >100k msg/s con múltiples particiones, retención configurable (7 días default). Ventajas vs in-memory queue: capacidad GB vs 100k msgs, replay histórico desde offset específico, multi-consumidor (TB Edge + analítica + ML simultáneamente), backpressure absorption sin pérdida de mensajes.
+
+El docker-compose completo de Kafka (Zookeeper + Kafka broker) y scripts Python para productor/consumidor se documentan en \textbf{Anexo B} y \textbf{Anexo C}.
+
+\subsection{PostgreSQL + TimescaleDB}
+
+PostgreSQL con extensión TimescaleDB almacena: telemetría histórica (series temporales optimizadas con compresión 10-20×, particionamiento automático por tiempo en chunks de 7 días, aggregaciones rápidas con \texttt{time\_bucket}), configuración de dispositivos (atributos, credenciales, relaciones), alarmas/eventos (log persistente para auditoría) y dashboards/reglas de TB Edge. 
+
+El esquema completo de TimescaleDB incluyendo definición de hypertables, políticas de compresión, continuous aggregates (vistas materializadas para agregaciones de 15-min, 1-hora y 1-día), políticas de retención (90 días) y cinco consultas SQL de ejemplo se presenta en el \textbf{Anexo D}.
+
+\section{Protocolos de Comunicación IoT}
+
+El gateway implementa múltiples protocolos según caso de uso:
+
+\begin{itemize}
+    \item \textbf{MQTT (QoS 0/1/2)}: Telemetría uplink (medidor→gateway), patrón Pub/Sub desacoplado, QoS garantizado (QoS 1 at least once, QoS 2 exactly once), Last Will Testament para detección de desconexión, retained messages para último valor, broker Mosquitto local con TLS/mTLS
+    \item \textbf{CoAP (UDP)}: Thread mesh intra-nodo, overhead 4 bytes vs 100+ HTTP, Observe para suscripciones, DTLS+PSK para seguridad, block-wise transfer para mensajes >1024 bytes, métodos RESTful (GET/POST/PUT/DELETE)
+    \item \textbf{HTTP/REST}: APIs gestión (TB Edge puerto 8080, IEEE 2030.5 puerto 8883, LuCI puerto 80, Ollama puerto 11434), webhooks para integraciones, consultas cloud
+    \item \textbf{LwM2M}: Device management (bootstrap, firmware OTA), objetos estándar OMA SpecWorks (Security 0, Server 1, Device 3, Connectivity 4, Firmware Update 5), operaciones Read/Write/Execute/Observe/Discover, transporte CoAP sobre UDP (binding U) o SMS/NB-IoT (binding S), DTLS eficiente (PSK 16 bytes vs X.509 2 KB)
+\end{itemize}
+
+La selección de protocolo por caso de uso se documenta en tabla comparativa en el documento original. La implementación completa de referencia de un nodo IoT ESP32-C6 con cliente LwM2M AVSystems Anjay se documenta en el \textbf{Anexo E}.
+
+\section{Resiliencia y Almacenamiento Persistente}
+
+\subsection{Arquitectura de Almacenamiento}
+
+Estrategia de almacenamiento de alta resiliencia: Flash interna 128 MB (sistema OpenWRT + configuración UCI), SSD M.2 NVMe 256 GB (datos persistentes Docker/PostgreSQL/queue TB Edge), USB 3.0 opcional (backups periódicos). Ventajas SSD NVMe vs microSD/USB: durabilidad >1M ciclos E/W (MTBF >1.5M horas), desempeño >3000 IOPS escritura (latencia <0.1ms vs 5-20ms SD), fiabilidad con ECC interno, power-loss protection (PLP) y SMART monitoring.
+
+\subsection{ThingsBoard Edge Queue: Resiliencia Offline}
+
+TB Edge implementa cola de mensajes persistente garantizando resiliencia ante pérdida de conectividad cloud. Arquitectura: queue storage en PostgreSQL + filesystem (\texttt{/mnt/ssd/docker/queue}), capacidad hasta 100k mensajes (~500 MB CBOR), política FIFO con priorización de alarmas críticas sobre telemetría histórica.
+
+\textbf{Modo Online (conectividad cloud activa)}: TB Edge sincroniza cada 5 minutos batch de 1000 mensajes con TB Cloud vía gRPC (puerto 7070), al confirmar ACK elimina mensajes de la cola.
+
+\textbf{Modo Offline (sin conectividad cloud)}: TB Edge detecta pérdida de conexión (timeout gRPC >30s), cambia a modo offline continuando procesamiento local, mensajes se acumulan en queue persistente, dashboards locales permanecen funcionales (\texttt{http://<gateway-ip>:8080}), alarmas se ejecutan localmente, queue crece hasta límite configurado (100k msgs o 2 GB).
+
+\textbf{Recuperación de Conectividad (catch-up sync)}: TB Edge detecta reconexión (gRPC handshake exitoso), inicia sincronización acelerada con batch size 5000 mensajes, prioriza alarmas/eventos críticos, comprime datos con gzip (40-60\% reducción), sincroniza backlog completo de 100k msgs en ~10-15 minutos, retorna a modo normal (batch 1000, intervalo 5 min).
+
+\textbf{Protección contra Desbordamiento}: Script de monitoreo ejecutado vía cron cada hora elimina telemetría histórica >7 días, comprime eventos no críticos con gzip, notifica operador si queue >1.8 GB (90\% del límite).
+
+La configuración completa de queue (archivo \texttt{tb-edge.yml} con parámetros de sync\_interval, batch\_size, compression, retry\_policy, persistent\_queue) y scripts de monitoreo se documentan en \textbf{Anexo B} y \textbf{Anexo C}.
+
+\subsection{Resiliencia Multinivel}
+
+Seis niveles de resiliencia con Recovery Time Objective (RTO): L1 Hardware (SSD NVMe con ECC/PLP/SMART, RTO 0s), L2 Filesystem (ext4 con journaling/fsck automático, RTO <30s), L3 Base de datos (PostgreSQL WAL/autovacuum/replication slots, RTO <60s), L4 Aplicación (TB Edge Queue con persistent queue/retry policy/compression, RTO <300s), L5 Red (mwan3 WAN failover Ethernet primario/LTE backup con tracking activo, RTO <30s), L6 Container (Docker healthchecks/restart policy/Watchtower auto-updates, RTO <120s).
+
+\section{Gestión Remota del Gateway}
+
+\subsection{Feeds de OpenWRT}
+
+OpenWRT utiliza feeds (repositorios de paquetes) para extender funcionalidad: feeds oficiales (base, packages, luci, routing, telephony con >10k paquetes) + feeds custom para aplicaciones propietarias Smart Grid. Gestión con opkg: \texttt{opkg update}, \texttt{opkg find}, \texttt{opkg install}, \texttt{opkg upgrade}, \texttt{opkg list-installed}.
+
+La configuración de feeds custom incluyendo estructura de directorios, ejemplo de Makefile para paquete personalizado (\texttt{tb-edge-connector}) y hosting vía nginx se documenta en el \textbf{Anexo F}.
+
+\subsection{OpenVPN: Acceso Remoto Seguro}
+
+OpenVPN proporciona túnel VPN cifrado para gestión remota: acceso SSH seguro desde NOC, LuCI web UI sin exponer puerto 80/443 a internet, debugging remoto (logs, tcpdump, análisis performance), túnel permanente hub-spoke. Arquitectura: NOC Server VPN (10.8.0.0/24) → Gateway 1 (10.8.0.100) / Gateway 2 (10.8.0.101) / ... / Gateway N (10.8.0.199) + Admin PC (10.8.0.50).
+
+Configuración cliente OpenVPN: certificados PKI (ca.crt, gateway-001.crt, gateway-001.key, ta.key), compresión lzo adaptive, keepalive 10/120 (detectar desconexión en 120s), persistencia de túnel, logging, pull routes desde servidor, reconexión automática, usuario sin privilegios (nobody/nogroup).
+
+Configuración servidor VPN: puerto 1194 UDP, certificados (ca/server/dh2048), client-to-client (permitir gateways comunicarse), push routes a clientes (red NOC 10.10.0.0/24), keepalive, logging, client-config-dir (CCD) para IPs fijas por gateway y push de rutas específicas.
+
+Las configuraciones completas UCI (\texttt{/etc/config/openvpn}), archivos .conf y CCD se documentan en el \textbf{Anexo F}.
+
+\subsection{OpenWISP: Gestión Centralizada de Gateways}
+
+OpenWISP es plataforma open-source para gestión masiva (100-1000 gateways): Controller Django (backend), Config agente en gateway, Monitoring (colección de métricas CPU/RAM/tráfico), Firmware Upgrader (actualizaciones OTA masivas), Network Topology (visualización). 
+
+Funcionalidades: templates UCI con variables (\texttt{\{\{apn\}\}}, \texttt{\{\{halow\_channel\}\}}), push configuración remota vía HTTPS con aplicación automática (\texttt{uci commit \&\& reload\_config}), actualizaciones OTA programadas (inmediata o ventana de mantenimiento 3 AM) con actualización segura dual-partition (escribir Partition B, reiniciar, si falla rollback automático a Partition A), monitoreo de uptime/CPU/RAM/storage/interfaces/Docker, alertas configurables (email/SMS/webhook) para Gateway Offline, High CPU, Low Disk, LTE Failover.
+
+La instalación completa de OpenWISP Config en gateway, despliegue de OpenWISP Controller en Docker (docker-compose.yml con PostgreSQL/Redis/Dashboard/Celery), gestión de configuraciones con templates JSON, firmware OTA workflow y configuración de alertas se documentan en el \textbf{Anexo F}.
+
+\subsection{Comparación de Herramientas de Gestión}
+
+LuCI (local) para gestión individual sin gestión masiva, OpenVPN+SSH para <10 gateways con CLI manual, OpenWISP completo para 100-10,000 gateways con templates/push automático/Firmware OTA scheduler/monitoring/alertas/zero-touch provisioning, todo open-source (\$0).
+
+\section{Gestión de Uplink Redundante (Ethernet + LTE)}
+
+\subsection{Política de Failover Automático}
+
+OpenWRT implementa failover basado en route metrics: Ethernet WAN metric=10 (prioridad alta), LTE metric=20 (backup). Kernel selecciona ruta con menor métrica (Ethernet), si falla (link down) cambia automáticamente a LTE, al recuperar Ethernet restaura ruta principal, tiempo de conmutación <30 segundos incluyendo renegociación TCP.
+
+Las configuraciones UCI de interfaces \texttt{wan\_eth} y \texttt{wan\_lte} con protocolo dhcp/modemmanager y métricas se documentan en el \textbf{Anexo F}.
+
+\subsection{Monitoreo Activo de Conectividad (mwan3)}
+
+Paquete mwan3 proporciona tracking proactivo de enlaces WAN: ping periódico a \texttt{8.8.8.8} y \texttt{1.1.1.1}, reliability de 2 pings perdidos para declarar fallo (failover), count 3 / timeout 2 / interval 5, políticas de balanceo (75\% Ethernet / 25\% LTE), reglas específicas por servicio (MQTT puerto 8883 solo por Ethernet). Verificación con \texttt{mwan3 status} y \texttt{mwan3 interfaces}.
+
+La configuración completa de mwan3 (\texttt{/etc/config/mwan3} con interfaces, policies, rules) se documenta en el \textbf{Anexo F}.
+
+\subsection{Optimización de Costos LTE}
+
+Estrategias para minimizar consumo celular: (1) Compresión CBOR vs JSON (reducción 40-60\% en tamaño payload); (2) Batching - TB Edge acumula 5 min de telemetría y envía en un solo paquete HTTP/2; (3) Compresión gzip para payloads >1 KB; (4) Políticas de tráfico por WAN - script hotplug \texttt{/etc/hotplug.d/iface/99-wan-monitor} detecta si LTE activo y adapta comportamiento (detener Watchtower, aumentar intervalo sync TB Edge de 5 min a 1h); (5) Monitoreo consumo con vnstat (\texttt{vnstat -m -i wwan0}), alarma si >10 GB/mes deshabilitando LTE y enviando alerta a TB Edge.
+
+Los scripts hotplug \texttt{99-wan-monitor} y \texttt{check-lte-quota.sh} se documentan en el \textbf{Anexo C}.
+
+\section{Gestión y Monitoreo del Gateway}
+
+\subsection{Interfaz de Gestión (LuCI)}
+
+LuCI proporciona interfaz web en \texttt{http://<gateway-ip>:80} con módulos: Network (configuración interfaces WAN/LAN, WiFi, firewall, DHCP), System (estado CPU/RAM/storage, logs, backups), Docker (gestión contenedores vía luci-app-dockerman: start/stop, logs, stats), Services (configuración servicios dnsmasq, dropbear SSH, uhttpd).
+
+\subsection{Monitoreo de Contenedores}
+
+Docker stats para visualización en tiempo real de CPU\%/MEM USAGE/MEM\%/NET I/O por contenedor con \texttt{docker stats --no-stream}. Healthchecks en docker-compose.yml: test (\texttt{curl -f http://localhost:8080/api/health}), interval 30s, timeout 10s, retries 3, start\_period 120s. Verificación con \texttt{docker ps --filter "health=unhealthy"}.
+
+\subsection{Logs Centralizados}
+
+Consulta logs por contenedor con \texttt{docker logs -f --tail=100 tb-edge} o \texttt{docker logs --since 1h otbr | grep ERROR}. Syslog integration: configurar log-driver syslog en \texttt{/etc/docker/daemon.json} para enviar a servidor remoto UDP 514 con tag \texttt{gateway-{{.Name}}}.
+
+\subsection{Backups y Recuperación}
+
+Backup OpenWRT vía LuCI (System > Backup/Flash Firmware > Generate archive) o CLI \texttt{sysupgrade -b /tmp/backup-\$(date +\%Y\%m\%d).tar.gz}. Backup volúmenes Docker con script diario ejecutado vía cron (\texttt{0 2 * * *}): tar czf de \texttt{tb-edge-data}, \texttt{postgres-data}, \texttt{otbr-config}, retención 7 días (find -mtime +7 -delete).
+
+Disaster recovery: restaurar OpenWRT (flash imagen + restaurar backup configuración), montar volumen de datos (\texttt{mount /dev/sda1 /mnt/docker}), restaurar volúmenes desde backup si necesario, desplegar contenedores (\texttt{docker-compose up -d}), verificar healthchecks (\texttt{docker ps}), sincronizar TB Edge con cloud (automático al conectar).
+
+Los scripts de backup automatizado \texttt{backup.sh} se documentan en el \textbf{Anexo C}.
+
+\section{Pruebas y Validación}
+
+\subsection{Pruebas Funcionales}
+
+Validaciones clave: (1) Formación red Thread - verificar OTBR leader/router con \texttt{docker exec otbr ot-ctl state} y \texttt{ot-ctl child table}; (2) Conexión HaLow - asociación DCUs con \texttt{iw dev wlan2 station dump}, señal >-70 dBm, throughput >20 Mbps con iperf3; (3) Validación 4 modos HaLow - AP con \texttt{hostapd\_cli all\_sta}, STA con \texttt{iw link}, Mesh 802.11s con \texttt{iw mpath dump} y test multi-hop ping6, EasyMesh con \texttt{ubus call map.controller dump\_topology} y test roaming/band steering; (4) Failover Ethernet/LTE - \texttt{ifdown wan\_eth}, verificar \texttt{mwan3 status}, reconectar; (5) Publicación MQTT con \texttt{mosquitto\_pub}, sincronización cloud con \texttt{docker logs tb-edge | grep "Cloud synchronization"}, comando downlink.
+
+\subsection{Pruebas de Desempeño}
+
+Latencia E2E objetivo <5s percentil 95 con timestamps en payload + análisis en TB Edge. Throughput HaLow: 10 DCUs @ 2 Mbps = 20 Mbps agregado, pérdida <0.1\% con señal >-65 dBm, rango verificar conectividad 1 km LoS y 500 m NLOS. Throughput MQTT: 10 dispositivos publicando cada 15 seg = 40 msg/min, escalar hasta observar pérdida o latencia >5s. Consumo energético con PoE meter: idle <5W, carga media <12W, carga alta <18W (límite PoE+ 25W). Resiliencia offline: 24h sin WAN, buffer >28k mensajes (300 medidores × 96 lecturas/día), sincronización completa <10 min al reconectar. Tiempo failover WAN: ping continuo a \texttt{8.8.8.8}, objetivo <30 segundos.
+
+\subsection{Pruebas de Seguridad}
+
+Validaciones: (1) Firewall - escaneo \texttt{nmap -sS -p- <gateway-wan-ip>}, esperado solo puertos explícitos (22 SSH, 443 HTTPS); (2) HaLow WPA3-SAE - validar \texttt{iw dev wlan2 info | grep PMF} esperado "PMF: required", intentar asociación con estación WPA2-only rechazada; (3) TLS/mTLS - \texttt{openssl s\_client -connect <tb-cloud>:7070 -CAfile ca.crt}, verificar return code 0; (4) Inyección MQTT - \texttt{mosquitto\_pub -h localhost -p 1883 -t test -m "unauthorized"}, esperado Connection refused; (5) Container escape - \texttt{docker inspect tb-edge | grep '"Privileged": false'} excepto OTBR; (6) LTE APN security - \texttt{grep -r "apn.*password" /var/log/}, esperado sin resultados; (7) Actualizaciones automáticas - \texttt{docker logs watchtower | grep "Updated"}.
+
+\subsection{Pruebas de Integración}
+
+Comisionado Thread vía OTBR web UI, reglas TB Edge con alarmas (crear regla consumo >5 kW, verificar activación), dashboard en tiempo real con latencia <2s, API REST consultas (\texttt{curl -X GET http://localhost:8080/api/tenant/devices -H "X-Authorization: Bearer \$TOKEN"}), resiliencia offline 24h con generación de 28,800 mensajes, verificar queue size ~150-200 MB con compresión, reconectar WAN, monitorear catch-up sync esperando 100k msgs sincronizados en <15 min.
+
+\section{Integración de Inteligencia Artificial con MCP y LLM}
+
+\subsection{Arquitectura de IA en el Gateway}
+
+El gateway soporta integración de modelos de lenguaje (LLM) y Model Context Protocol (MCP) para análisis avanzado de telemetría y mantenimiento predictivo. MCP es protocolo estándar Anthropic para comunicación entre aplicaciones y servicios de IA (Claude, GPT, modelos locales). Ollama permite ejecutar modelos open-source localmente (Llama 3.2, Mistral, Phi-3) sin enviar datos a cloud externo. Integración vía Rule Engine TB Edge para análisis en tiempo real.
+
+\subsection{Model Context Protocol (MCP)}
+
+MCP permite conectarse a múltiples proveedores de IA, proporcionar contexto estructurado a modelos (herramientas, datos, prompts) y ejecutar acciones en sistemas externos desde respuestas de LLM. Componentes: MCP Server (expone herramientas y recursos al LLM, ej. consultar TB Edge API), MCP Client (aplicación que consume servicios de IA, ej. dashboard analítico), protocolo JSON-RPC 2.0 sobre stdio/SSE/WebSocket.
+
+\subsection{Despliegue de Ollama (LLM Local)}
+
+Docker Compose para Ollama: imagen \texttt{ollama/ollama:latest}, puerto 11434 API REST, volumen \texttt{./models:/root/.ollama}, 8 GB RAM mínimo. Descargar modelo Llama 3.2:3b (2 GB) con \texttt{docker exec ollama ollama pull llama3.2:3b} o Phi-3:mini (1.3 GB optimizado edge). Prueba de inferencia con \texttt{curl http://localhost:11434/api/generate -d '\{"model":"llama3.2:3b","prompt":"Analiza consumo..."\}'}.
+
+El docker-compose completo de Ollama se documenta en el \textbf{Anexo B}.
+
+\subsection{MCP Server para ThingsBoard Edge}
+
+Implementación de MCP Server Python que expone API TB Edge al LLM con herramientas \texttt{get\_device\_telemetry} (obtiene telemetría histórica) y \texttt{get\_device\_alarms} (obtiene alarmas activas), procesa solicitudes MCP JSON-RPC 2.0 con métodos \texttt{tools/list} y \texttt{tools/call}, loop stdio principal para comunicación (\texttt{for line in sys.stdin}).
+
+El código completo del MCP Server \texttt{tb\_mcp\_server.py} y configuración MCP Client \texttt{mcp\_config.json} se documentan en el \textbf{Anexo C}.
+
+\subsection{Casos de Uso de IA en Gateway}
+
+(1) \textbf{Análisis de anomalías en consumo}: Prompt "Analiza consumo medidor METER-001 últimas 24h, identifica patrones anómalos (fraude, falla, consumo irregular)", LLM invoca \texttt{get\_device\_telemetry} vía MCP, analiza serie temporal (100 puntos, intervalo 15 min), detecta pico 500 kWh a las 3 AM (vs promedio 50 kWh), genera respuesta "Anomalía detectada: consumo 10× superior, posible bypass medidor o falla CT, recomendar inspección física"; (2) \textbf{Mantenimiento predictivo}: Prompt "Evalúa 50 medidores zona Norte, predice fallas próximos 30 días basándote en alarmas históricas", LLM consulta alarmas de 50 dispositivos, identifica 5 con >10 alarmas en 7 días, analiza telemetría con alta varianza, genera ranking prioridad mantenimiento; (3) \textbf{Asistente de operación (Chatbot)}: Dashboard TB Edge con chatbot integrado responde consultas en lenguaje natural ("¿Cuántos medidores offline?" → LLM consulta TB Edge API → "Actualmente 3 offline: METER-042/089/123, última comunicación hace 2h, posible problema Thread").
+
+\subsection{Ventajas de IA Local vs Cloud}
+
+IA Local (Gateway Ollama): latencia <500 ms, privacidad alta (datos no salen del gateway), costo \$0 (hardware local), disponibilidad offline 100\%, modelos open-source (Llama 3B-7B, Phi-3), capacidad análisis media (3B-7B params), consumo +5W CPU/+15W GPU. IA Cloud (GPT-4/Claude): latencia 2-5s, privacidad baja (envío a cloud), costo \$0.01-0.10/consulta, disponibilidad offline 0\% (requiere internet), modelos propietarios (100B+ params), capacidad análisis alta. 
+
+Recomendación: IA local para análisis en tiempo real y privacidad, reservar IA cloud para análisis complejos periódicos (tendencias mensuales, optimización de red).
+
+\section{Conclusiones del Capítulo}
+
+El gateway basado en OpenWRT con arquitectura de contenedores Docker y conectividad multiradio (HaLow + LTE) ofrece ventajas significativas para despliegues Smart Energy:
+
+\begin{itemize}
+    \item \textbf{Flexibilidad}: Contenedores Docker permiten actualizar/escalar servicios independientemente
+    \item \textbf{Edge Computing}: ThingsBoard Edge procesa datos localmente reduciendo latencia y dependencia cloud
+    \item \textbf{Conectividad robusta multimodal}: HaLow (Morse Micro MM6108) 1-3 km hasta 40 Mbps con 4 modos (AP/STA/Mesh/EasyMesh) + LTE Cat-6 redundante con failover <30s
+    \item \textbf{Escalabilidad Arquitectónica}: Estrella (2,500 endpoints / 3 km), Mesh 802.11s (7,500 endpoints / 9 km auto-healing), EasyMesh (12,500 endpoints / roaming transparente)
+    \item \textbf{Reducción CAPEX/OPEX}: Mesh 66\% ahorro infraestructura WAN, \$3,240/año ahorro planes LTE con backhaul HaLow sin costo recurrente
+    \item \textbf{Interoperabilidad}: OpenThread Border Router con soporte Thread 1.3 multi-vendor compatible
+    \item \textbf{Resiliencia}: SSD NVMe (>1M ciclos E/W, >3000 IOPS, <0.1ms latencia), queue persistente TB Edge (100k msgs, 2 GB, sincronización catch-up <15 min con batch 5000 + gzip), 6 niveles resiliencia hardware/filesystem/DB/aplicación/red/containers (RTO <5 min), mesh auto-healing (<10s reconvergencia HWMP eliminando single point of failure)
+    \item \textbf{Inteligencia Artificial (Roadmap Futuro)}: MCP + Ollama para análisis local (latencia <500 ms, privacidad 100\% datos no salen), requiere optimización térmica RPi 4, alternativa servidor dedicado para análisis batch offline
+    \item \textbf{Arquitectura de Datos Distribuida}: Kafka (>100k msg/s, buffer 7 días, replay histórico, multi-consumidor, backpressure), PostgreSQL+TimescaleDB (compresión 10-20×, particionamiento automático, >3000 IOPS en NVMe, aggregaciones time\_bucket)
+    \item \textbf{Protocolos Multiprotocolo}: MQTT (QoS 0/1/2 Pub/Sub), CoAP (UDP 4 bytes overhead Observe), HTTP/REST (APIs gestión), LwM2M (OTA firmware, objetos OMA estándar, DTLS eficiente PSK 16B vs X.509 2KB)
+    \item \textbf{Seguridad multicapa}: Firewall nftables (puertos explícitos), container isolation (namespaces), TLS/mTLS cloud (puerto 7070 gRPC), Thread AES-128-CCM, HaLow WPA3-SAE+PMF (Morse Micro), OpenVPN (túnel permanente NOC sin exponer puertos internet)
+    \item \textbf{Mantenibilidad}: OpenWRT Feeds (opkg custom packages Smart Grid), OpenVPN (túnel VPN permanente hub-spoke IPs fijas 10.8.0.100-199), OpenWISP (gestión masiva 100-1000 GWs templates UCI push remoto, Firmware OTA scheduler dual-partition rollback, monitoring CPU/RAM/Interfaces/Docker alertas email/SMS), Watchtower (OTA contenedores), backups automatizados cron
+    \item \textbf{Escalabilidad}: 10 DCUs × 250 nodos Thread = 2,500 endpoints AP. Mesh/EasyMesh multiplican 3-5× capacidad sin rediseño arquitectónico
+    \item \textbf{Costo-efectividad}: Hardware propósito general (router OpenWRT + módulos M.2 estándar) reduce CAPEX vs propietarios, optimización LTE 3.7 GB/mes (vs 20-30 GB sin compresión CBOR 40-60\%), Mesh HaLow elimina 60-70\% backhaul dedicado
+    \item \textbf{Conformidad Estándares}: IEEE 2030.5-2023 (Function Sets DCAP/TM/MM/MSG/ED, API REST XML, X.509 ECC P-256, LFDI, RBAC), ISO/IEC 30141:2024 (arquitectura IoT referencia 8 entidades funcionales, 4 vistas funcional/información/despliegue/operacional), cumplimiento regulatorio CREG Colombia para medición inteligente
+\end{itemize}
+
+\subsection{Limitaciones y Trabajo Futuro}
+
+Validación performance (mediciones CPU/RAM bajo carga completa, benchmarks temperatura con ventilador activo objetivo <75°C, test throughput E2E nodo Thread → OTBR → HaLow → TB Edge → PostgreSQL, stress test 1000 msg/s durante 24h validar estabilidad térmica y resiliencia SSD), conectividad HaLow via USB (Morse Micro Q2 2026 USB 2.0 High-Speed simplifica integración elimina complejidad SPI), IA local (Ollama Llama 3.2 1B o Phi-3 mini en RPi 4 8 GB RAM, validar casos uso detección anomalías fraude bypass CT y mantenimiento predictivo ranking dispositivos alarmas, alternativa Ollama servidor x86 para análisis batch offline datos PostgreSQL), rendimiento I/O (RAID-1 NVMe para >500 dispositivos requiere Compute Module 4 dual M.2), alta disponibilidad (par gateways RPi 4 activo-pasivo VRRP/keepalived, en mesh configurar 2 gateways uplink LTE root bridges redundantes RSTP), RPi vs hardware industrial (migración CM4 carrier board DIN-rail -40°C a +85°C dual Ethernet dual M.2 NVMe certificaciones industriales vibración EMI/EMC, alternativa x86 industrial Intel Atom/Celeron N5105 8 GB RAM dual NIC PCIe mayor costo \$200-300 vs \$55 RPi 4), 5G RedCap (Quectel RG500U latencia <50ms vs 100-300ms LTE-M throughput 100 Mbps vs 375 kbps crítico comandos RPC downlink tiempo real), agregación enlaces (MPTCP Ethernet+LTE simultáneos failover <1s sin pérdida TCP), mesh avanzado (802.11r fastroaming <50ms EasyMesh handoff crítico vehículos eléctricos movimiento carga dinámica V2G), HaLow+LoRaWAN híbrido (sensores ultra-low-power <10 mW batería 10 años LoRaWAN 915 MHz con HaLow backhaul gateways LoRa concentradores Semtech SX1302), quantum-safe crypto (algoritmos post-cuánticos Kyber-768 Dilithium-3 en certificados X.509 protección largo plazo NIST PQC Round 4 2025+ crítico infraestructura Smart Grid vida útil >20 años).
+
+\textbf{Próximo capítulo}: Arquitectura completa del sistema integrando nodos Thread (ESP32-C6), DCUs con Thread Border Router, gateway Raspberry Pi 4 + OpenWRT con HaLow multimodal (AP/STA/Mesh/EasyMesh), Quectel BG95 LTE-M y nRF52840 Thread RCP, y plataforma cloud ThingsBoard, con caso de estudio de despliegue real para 900 medidores residenciales en infraestructura colombiana con topología mesh 802.11s (3 gateways × 9 km cobertura × 300 medidores por gateway).

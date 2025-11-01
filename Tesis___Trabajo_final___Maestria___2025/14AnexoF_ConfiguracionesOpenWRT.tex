@@ -1,0 +1,1118 @@
+\chapter{Configuraciones OpenWRT del Gateway}
+\label{anexo:openwrt}
+
+Este anexo documenta las configuraciones completas del sistema operativo OpenWRT en el gateway IoT, incluyendo archivos UCI, reglas de firewall nftables, configuración OpenVPN, despliegue de OpenWISP, y políticas de failover con mwan3.
+
+\section{Configuraciones UCI Base}
+
+\subsection{Network (/etc/config/network)}
+
+Configuración completa de interfaces de red:
+
+\begin{verbatim}
+config interface 'loopback'
+    option device 'lo'
+    option proto 'static'
+    option ipaddr '127.0.0.1'
+    option netmask '255.0.0.0'
+
+config globals 'globals'
+    option ula_prefix 'fd00::/48'
+    option packet_steering '1'
+
+config device
+    option name 'br-lan'
+    option type 'bridge'
+    list ports 'eth0'
+
+config interface 'lan'
+    option device 'br-lan'
+    option proto 'static'
+    option ipaddr '192.168.1.1'
+    option netmask '255.255.255.0'
+    option ip6assign '60'
+    option ip6hint '1'
+
+# Interfaz Ethernet WAN
+config interface 'wan'
+    option device 'eth1'
+    option proto 'dhcp'
+    option peerdns '0'
+    option dns '1.1.1.1 8.8.8.8'
+    option metric '10'
+
+config interface 'wan6'
+    option device 'eth1'
+    option proto 'dhcpv6'
+    option reqaddress 'try'
+    option reqprefix 'auto'
+    option peerdns '0'
+    option dns '2606:4700:4700::1111 2001:4860:4860::8888'
+
+# Interfaz LTE (Quectel BG95-M3)
+config interface 'lte'
+    option device '/dev/ttyUSB2'
+    option proto 'qmi'
+    option apn 'internet.movistar.co'
+    option auth 'none'
+    option delay '10'
+    option metric '20'
+    option peerdns '0'
+    option dns '8.8.8.8 8.8.4.4'
+    option ipv6 'auto'
+
+# HaLow backhaul station
+config interface 'halow_wan'
+    option proto 'dhcp'
+    option metric '15'
+    option peerdns '0'
+    option dns '1.1.1.1'
+
+# Thread Border Router
+config interface 'thread_br'
+    option device 'wpan0'
+    option proto 'static'
+    option ipaddr '192.168.100.1'
+    option netmask '255.255.255.0'
+    option ip6assign '64'
+    option ip6hint '100'
+
+# VPN OpenVPN
+config interface 'vpn0'
+    option proto 'none'
+    option device 'tun0'
+\end{verbatim}
+
+\subsection{Wireless (/etc/config/wireless)}
+
+Configuración WiFi 2.4 GHz y HaLow 802.11ah:
+
+\begin{verbatim}
+# WiFi 2.4 GHz (BCM43455 integrado en RPi4)
+config wifi-device 'radio0'
+    option type 'mac80211'
+    option path 'platform/soc/fe300000.mmcnr/mmc_host/mmc1/mmc1:0001/mmc1:0001:1'
+    option channel '6'
+    option band '2g'
+    option htmode 'HT40'
+    option country 'CO'
+    option txpower '20'
+    option legacy_rates '0'
+    option cell_density '0'
+
+config wifi-iface 'default_radio0'
+    option device 'radio0'
+    option mode 'ap'
+    option network 'lan'
+    option ssid 'SmartGrid-Gateway'
+    option encryption 'sae-mixed'
+    option key '<WIFI-PASSWORD>'
+    option ieee80211w '1'
+    option wpa_disable_eapol_key_retries '1'
+    option max_inactivity '300'
+
+# HaLow 802.11ah (Morse Micro MM6108-EK03 SPI)
+config wifi-device 'halow'
+    option type 'mac80211'
+    option path 'platform/soc/fe204000.spi/spi_master/spi0/spi0.0'
+    option channel '7'
+    option bandwidth '8'
+    option hwmode '11ah'
+    option country 'US'
+    option txpower '20'
+    option legacy_rates '0'
+    option mu_beamformer '0'
+    option mu_beamformee '0'
+    option s1g_long '1'
+    option s1g_short '0'
+
+# HaLow AP para DCUs
+config wifi-iface 'halow_ap'
+    option device 'halow'
+    option mode 'ap'
+    option network 'halow_lan'
+    option ssid 'SmartGrid-HaLow-Backhaul'
+    option encryption 'sae'
+    option key '<HALOW-AP-KEY>'
+    option ieee80211w '2'
+    option sae_pwe '2'
+    option wpa_disable_eapol_key_retries '1'
+    option max_inactivity '600'
+    option disassoc_low_ack '0'
+    option skip_inactivity_poll '0'
+    option max_listen_interval '65535'
+    option dtim_period '10'
+
+# Red virtual HaLow LAN
+config interface 'halow_lan'
+    option proto 'static'
+    option ipaddr '192.168.200.1'
+    option netmask '255.255.255.0'
+    option ip6assign '64'
+    option ip6hint '200'
+\end{verbatim}
+
+\subsection{DHCP y DNS (/etc/config/dhcp)}
+
+\begin{verbatim}
+config dnsmasq
+    option domainneeded '1'
+    option boguspriv '1'
+    option filterwin2k '0'
+    option localise_queries '1'
+    option rebind_protection '1'
+    option rebind_localhost '1'
+    option local '/lan/'
+    option domain 'lan'
+    option expandhosts '1'
+    option nonegcache '0'
+    option cachesize '1000'
+    option authoritative '1'
+    option readethers '1'
+    option leasefile '/tmp/dhcp.leases'
+    option resolvfile '/tmp/resolv.conf.d/resolv.conf.auto'
+    option nonwildcard '1'
+    option localservice '1'
+    option ednspacket_max '1232'
+
+config dhcp 'lan'
+    option interface 'lan'
+    option start '100'
+    option limit '150'
+    option leasetime '12h'
+    option dhcpv4 'server'
+    option dhcpv6 'server'
+    option ra 'server'
+    option ra_slaac '1'
+    list ra_flags 'managed-config'
+    list ra_flags 'other-config'
+
+config dhcp 'wan'
+    option interface 'wan'
+    option ignore '1'
+
+config dhcp 'halow_lan'
+    option interface 'halow_lan'
+    option start '10'
+    option limit '50'
+    option leasetime '24h'
+    option dhcpv4 'server'
+    option dhcpv6 'server'
+    option ra 'server'
+
+config dhcp 'thread_br'
+    option interface 'thread_br'
+    option start '50'
+    option limit '200'
+    option leasetime '12h'
+    option dhcpv4 'server'
+    option dhcpv6 'server'
+    option ra 'server'
+
+# Entradas estáticas para DCUs
+config host
+    option name 'dcu1'
+    option dns '1'
+    option mac 'AA:BB:CC:DD:EE:01'
+    option ip '192.168.200.10'
+
+config host
+    option name 'dcu2'
+    option dns '1'
+    option mac 'AA:BB:CC:DD:EE:02'
+    option ip '192.168.200.11'
+
+config host
+    option name 'dcu3'
+    option dns '1'
+    option mac 'AA:BB:CC:DD:EE:03'
+    option ip '192.168.200.12'
+\end{verbatim}
+
+\section{Firewall nftables}
+
+\subsection{Configuración Base (/etc/config/firewall)}
+
+\begin{verbatim}
+config defaults
+    option input 'REJECT'
+    option output 'ACCEPT'
+    option forward 'REJECT'
+    option synflood_protect '1'
+    option drop_invalid '1'
+    option tcp_syncookies '1'
+    option tcp_ecn '0'
+    option tcp_window_scaling '1'
+    option accept_redirects '0'
+    option accept_source_route '0'
+    option flow_offloading '1'
+    option flow_offloading_hw '0'
+
+# Zona LAN
+config zone
+    option name 'lan'
+    option input 'ACCEPT'
+    option output 'ACCEPT'
+    option forward 'ACCEPT'
+    list network 'lan'
+
+# Zona WAN
+config zone
+    option name 'wan'
+    option input 'REJECT'
+    option output 'ACCEPT'
+    option forward 'REJECT'
+    option masq '1'
+    option mtu_fix '1'
+    list network 'wan'
+    list network 'wan6'
+    list network 'lte'
+    list network 'halow_wan'
+
+# Zona HaLow backhaul
+config zone
+    option name 'halow'
+    option input 'ACCEPT'
+    option output 'ACCEPT'
+    option forward 'ACCEPT'
+    list network 'halow_lan'
+
+# Zona Thread
+config zone
+    option name 'thread'
+    option input 'ACCEPT'
+    option output 'ACCEPT'
+    option forward 'ACCEPT'
+    list network 'thread_br'
+
+# Zona VPN
+config zone
+    option name 'vpn'
+    option input 'ACCEPT'
+    option output 'ACCEPT'
+    option forward 'ACCEPT'
+    option masq '0'
+    list network 'vpn0'
+
+# Forwarding LAN -> WAN
+config forwarding
+    option src 'lan'
+    option dest 'wan'
+
+# Forwarding HaLow -> LAN
+config forwarding
+    option src 'halow'
+    option dest 'lan'
+
+# Forwarding HaLow -> WAN
+config forwarding
+    option src 'halow'
+    option dest 'wan'
+
+# Forwarding Thread -> LAN
+config forwarding
+    option src 'thread'
+    option dest 'lan'
+
+# Forwarding Thread -> WAN
+config forwarding
+    option src 'thread'
+    option dest 'wan'
+
+# Forwarding VPN -> LAN
+config forwarding
+    option src 'vpn'
+    option dest 'lan'
+
+# Forwarding LAN -> VPN
+config forwarding
+    option src 'lan'
+    option dest 'vpn'
+
+# Permitir SSH desde WAN (puerto no estándar)
+config rule
+    option name 'Allow-SSH-WAN'
+    option src 'wan'
+    option proto 'tcp'
+    option dest_port '2222'
+    option target 'ACCEPT'
+
+# Permitir HTTPS Web UI desde WAN
+config rule
+    option name 'Allow-HTTPS-WAN'
+    option src 'wan'
+    option proto 'tcp'
+    option dest_port '443'
+    option target 'ACCEPT'
+
+# Permitir OpenVPN desde WAN
+config rule
+    option name 'Allow-OpenVPN'
+    option src 'wan'
+    option proto 'udp'
+    option dest_port '1194'
+    option target 'ACCEPT'
+
+# Permitir ICMP ping desde WAN (para mwan3 tracking)
+config rule
+    option name 'Allow-Ping-WAN'
+    option src 'wan'
+    option proto 'icmp'
+    option icmp_type 'echo-request'
+    option family 'ipv4'
+    option target 'ACCEPT'
+
+# Rate limit ICMP para prevenir flood
+config rule
+    option name 'Limit-ICMP'
+    option src 'wan'
+    option proto 'icmp'
+    option family 'ipv4'
+    option limit '10/second'
+    option limit_burst '20'
+    option target 'ACCEPT'
+
+# Bloquear acceso directo a Docker desde WAN
+config rule
+    option name 'Block-Docker-WAN'
+    option src 'wan'
+    option dest 'lan'
+    option dest_ip '172.17.0.0/16'
+    option target 'REJECT'
+
+# Permitir LwM2M CoAP desde Thread
+config rule
+    option name 'Allow-LwM2M-Thread'
+    option src 'thread'
+    option proto 'udp'
+    option dest_port '5683 5684'
+    option target 'ACCEPT'
+
+# Permitir MQTT desde HaLow (DCUs)
+config rule
+    option name 'Allow-MQTT-HaLow'
+    option src 'halow'
+    option proto 'tcp'
+    option dest_port '1883 8883'
+    option target 'ACCEPT'
+\end{verbatim}
+
+\subsection{Script nftables Personalizado}
+
+Ubicación: \texttt{/etc/nftables.d/custom\_rules.nft}
+
+\begin{verbatim}
+#!/usr/sbin/nft -f
+# Reglas nftables personalizadas para gateway SmartGrid
+
+table inet smartgrid {
+    # Set de IPs permitidas para administración
+    set admin_ips {
+        type ipv4_addr
+        flags interval
+        elements = { 
+            192.168.1.0/24,
+            10.0.0.0/8,
+            172.16.0.0/12
+        }
+    }
+    
+    # Set de puertos Docker a proteger
+    set docker_ports {
+        type inet_service
+        elements = { 8080, 5432, 9092, 2181, 8883 }
+    }
+    
+    # Rate limiting para conexiones SSH
+    chain ssh_ratelimit {
+        type filter hook input priority filter; policy accept;
+        
+        tcp dport 2222 ct state new \
+            limit rate over 3/minute \
+            counter drop comment "SSH brute-force protection"
+    }
+    
+    # Protección DDoS básica
+    chain ddos_protection {
+        type filter hook input priority filter; policy accept;
+        
+        # SYN flood protection
+        tcp flags syn tcp flags & (fin|syn|rst|ack) == syn \
+            ct state new \
+            limit rate over 100/second burst 150 packets \
+            counter drop comment "SYN flood protection"
+        
+        # Invalid packets
+        ct state invalid counter drop
+        
+        # Fragmentos pequeños (posible ataque)
+        ip frag-off & 0x1fff != 0 \
+            limit rate over 10/second \
+            counter drop comment "IP fragment attack"
+    }
+    
+    # NAT para Docker containers (bypass masquerade)
+    chain postrouting_docker {
+        type nat hook postrouting priority srcnat; policy accept;
+        
+        # No hacer SNAT para tráfico Docker interno
+        oifname "docker0" counter accept
+        
+        # SNAT para containers hacia WAN
+        ip saddr 172.17.0.0/16 oifname { "eth1", "wwan0", "wlan2" } \
+            counter masquerade comment "Docker to WAN"
+    }
+    
+    # Log de intentos de acceso a servicios críticos
+    chain log_critical {
+        type filter hook input priority filter - 1; policy accept;
+        
+        tcp dport @docker_ports ip saddr != @admin_ips \
+            limit rate 1/minute \
+            log prefix "Blocked Docker access: " level warn
+    }
+}
+\end{verbatim}
+
+Para activar:
+
+\begin{verbatim}
+# Cargar reglas personalizadas
+nft -f /etc/nftables.d/custom_rules.nft
+
+# Hacer persistente (agregar a /etc/rc.local)
+echo "nft -f /etc/nftables.d/custom_rules.nft" >> /etc/rc.local
+\end{verbatim}
+
+\section{OpenVPN}
+
+\subsection{Configuración Servidor}
+
+Archivo: \texttt{/etc/openvpn/server.conf}
+
+\begin{verbatim}
+# Puerto y protocolo
+port 1194
+proto udp
+dev tun
+
+# Certificados y llaves (PKI con Easy-RSA)
+ca /etc/openvpn/pki/ca.crt
+cert /etc/openvpn/pki/issued/server.crt
+key /etc/openvpn/pki/private/server.key
+dh /etc/openvpn/pki/dh.pem
+tls-auth /etc/openvpn/pki/ta.key 0
+
+# Cifrado
+cipher AES-256-GCM
+auth SHA256
+tls-version-min 1.2
+tls-cipher TLS-ECDHE-RSA-WITH-AES-256-GCM-SHA384
+
+# Red VPN
+server 10.8.0.0 255.255.255.0
+topology subnet
+ifconfig-pool-persist /tmp/openvpn-ipp.txt
+
+# Rutas hacia LAN y redes Thread/HaLow
+push "route 192.168.1.0 255.255.255.0"
+push "route 192.168.100.0 255.255.255.0"
+push "route 192.168.200.0 255.255.255.0"
+push "route fd00::/48"
+
+# DNS interno
+push "dhcp-option DNS 192.168.1.1"
+push "dhcp-option DOMAIN lan"
+
+# Seguridad
+client-to-client
+keepalive 10 120
+comp-lzo no
+max-clients 10
+user nobody
+group nogroup
+persist-key
+persist-tun
+
+# Logging
+status /tmp/openvpn-status.log
+log-append /var/log/openvpn.log
+verb 3
+mute 20
+\end{verbatim}
+
+\subsection{Generación de Certificados con Easy-RSA}
+
+\begin{verbatim}
+#!/bin/bash
+# Script de inicialización PKI para OpenVPN
+
+cd /etc/openvpn
+
+# Descargar Easy-RSA
+wget https://github.com/OpenVPN/easy-rsa/releases/download/v3.1.7/EasyRSA-3.1.7.tgz
+tar xzf EasyRSA-3.1.7.tgz
+mv EasyRSA-3.1.7 easyrsa
+cd easyrsa
+
+# Inicializar PKI
+./easyrsa init-pki
+
+# Crear CA (ingresar contraseña segura cuando se solicite)
+./easyrsa build-ca
+
+# Generar certificado y llave del servidor
+./easyrsa gen-req server nopass
+./easyrsa sign-req server server
+
+# Generar parámetros Diffie-Hellman (tarda varios minutos)
+./easyrsa gen-dh
+
+# Generar llave TLS-Auth para HMAC
+openvpn --genkey secret pki/ta.key
+
+# Crear certificado para cliente (ej. admin)
+./easyrsa gen-req client1 nopass
+./easyrsa sign-req client client1
+
+# Copiar archivos al directorio OpenVPN
+cp pki/ca.crt pki/issued/server.crt pki/private/server.key \
+   pki/dh.pem pki/ta.key /etc/openvpn/
+
+echo "PKI creada exitosamente en /etc/openvpn/easyrsa/pki"
+\end{verbatim}
+
+\subsection{Configuración Cliente (.ovpn)}
+
+Archivo: \texttt{client1.ovpn} (distribuir a administradores)
+
+\begin{verbatim}
+client
+dev tun
+proto udp
+remote <GATEWAY-PUBLIC-IP> 1194
+
+resolv-retry infinite
+nobind
+persist-key
+persist-tun
+
+# Cifrado (debe coincidir con servidor)
+cipher AES-256-GCM
+auth SHA256
+tls-version-min 1.2
+
+# Compresión
+comp-lzo no
+
+verb 3
+
+<ca>
+-----BEGIN CERTIFICATE-----
+[Contenido de ca.crt]
+-----END CERTIFICATE-----
+</ca>
+
+<cert>
+-----BEGIN CERTIFICATE-----
+[Contenido de client1.crt]
+-----END CERTIFICATE-----
+</cert>
+
+<key>
+-----BEGIN PRIVATE KEY-----
+[Contenido de client1.key]
+-----END PRIVATE KEY-----
+</key>
+
+<tls-auth>
+-----BEGIN OpenVPN Static key V1-----
+[Contenido de ta.key]
+-----END OpenVPN Static key V1-----
+</tls-auth>
+
+key-direction 1
+\end{verbatim}
+
+\section{OpenWISP}
+
+\subsection{Docker Compose OpenWISP Controller}
+
+Archivo: \texttt{/mnt/ssd/docker/openwisP/docker-compose.yml}
+
+\begin{verbatim}
+version: '3.8'
+
+services:
+  postgres:
+    image: postgis/postgis:15-3.3-alpine
+    container_name: openwsp-postgres
+    environment:
+      POSTGRES_DB: openwisP_db
+      POSTGRES_USER: openwisP
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - /mnt/ssd/openwisP/postgres:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U openwisP"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: openwisP-redis
+    command: redis-server --appendonly yes
+    volumes:
+      - /mnt/ssd/openwisP/redis:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  openwisP:
+    image: openwisp/openwisp-dashboard:latest
+    container_name: openwisP-dashboard
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DB_ENGINE: django.contrib.gis.db.backends.postgis
+      DB_NAME: openwisP_db
+      DB_USER: openwisP
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_HOST: postgres
+      DB_PORT: 5432
+      
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
+      DJANGO_ALLOWED_HOSTS: "*"
+      DJANGO_CORS_ORIGIN_WHITELIST: "http://localhost,https://gateway.local"
+      
+      EMAIL_BACKEND: django.core.mail.backends.smtp.EmailBackend
+      EMAIL_HOST: smtp.gmail.com
+      EMAIL_PORT: 587
+      EMAIL_USE_TLS: 1
+      EMAIL_HOST_USER: ${EMAIL_USER}
+      EMAIL_HOST_PASSWORD: ${EMAIL_PASSWORD}
+      
+      OPENWISП_ORGANIZATIОН_UUID: ${ORG_UUID}
+      OPENWISП_SHARED_SECRET: ${SHARED_SECRET}
+    ports:
+      - "8000:8000"
+    volumes:
+      - /mnt/ssd/openwisP/media:/opt/openwisp/media
+      - /mnt/ssd/openwisP/static:/opt/openwisp/static
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  celery:
+    image: openwisp/openwisp-dashboard:latest
+    container_name: openwisP-celery
+    depends_on:
+      - openwisP
+      - redis
+    environment:
+      DB_ENGINE: django.contrib.gis.db.backends.postgis
+      DB_NAME: openwisP_db
+      DB_USER: openwisP
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_HOST: postgres
+      REDIS_HOST: redis
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
+    command: celery -A openwisp worker -l info
+    volumes:
+      - /mnt/ssd/openwisP/media:/opt/openwisp/media
+    restart: unless-stopped
+
+  celery-beat:
+    image: openwisp/openwisp-dashboard:latest
+    container_name: openwisP-celery-beat
+    depends_on:
+      - openwisP
+      - redis
+    environment:
+      DB_ENGINE: django.contrib.gis.db.backends.postgis
+      DB_NAME: openwisP_db
+      DB_USER: openwisP
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_HOST: postgres
+      REDIS_HOST: redis
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
+    command: celery -A openwisp beat -l info
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:alpine
+    container_name: openwisP-nginx
+    depends_on:
+      - openwisP
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - /mnt/ssd/openwisP/static:/opt/openwisp/static:ro
+      - /mnt/ssd/certs:/etc/nginx/certs:ro
+    restart: unless-stopped
+\end{verbatim}
+
+\subsection{Archivo .env para OpenWISP}
+
+Crear: \texttt{/mnt/ssd/docker/openwisP/.env}
+
+\begin{verbatim}
+# PostgreSQL
+POSTGRES_PASSWORD=<SECURE-DB-PASSWORD>
+
+# Django
+DJANGO_SECRET_KEY=<GENERATE-WITH: openssl rand -base64 48>
+EMAIL_USER=noreply@smartgrid.local
+EMAIL_PASSWORD=<APP-PASSWORD>
+
+# OpenWISP
+ORG_UUID=<GENERATE-WITH: uuidgen>
+SHARED_SECRET=<SECURE-SHARED-KEY>
+\end{verbatim}
+
+\subsection{Configuración OpenWISP Agent en Gateway}
+
+Instalar agente en OpenWRT:
+
+\begin{verbatim}
+# Agregar feed OpenWISP
+echo "src/gz openwisP https://downloads.openwisP.io/snapshots/packages/aarch64_cortex-a72/openwisP" \
+  >> /etc/opkg/customfeeds.conf
+
+opkg update
+opkg install openwisP-config openwisP-monitoring
+
+# Configurar agente
+uci set openwisP.http.url='https://openwisP.gateway.local'
+uci set openwisP.http.shared_secret='<SHARED_SECRET>'
+uci set openwisP.http.uuid='<DEVICE_UUID>'
+uci set openwisP.http.key='<DEVICE_KEY>'
+uci set openwisP.http.verify_ssl='1'
+uci set openwisP.http.consistent_key='1'
+
+uci commit openwisP
+/etc/init.d/openwisP enable
+/etc/init.d/openwisP start
+
+# Verificar conexión
+logread | grep openwisP
+\end{verbatim}
+
+\section{mwan3: Multi-WAN Failover}
+
+\subsection{Configuración Base (/etc/config/mwan3)}
+
+\begin{verbatim}
+# Interfaz WAN Ethernet (prioridad 1)
+config interface 'wan'
+    option enabled '1'
+    option family 'ipv4'
+    list track_ip '1.1.1.1'
+    list track_ip '8.8.8.8'
+    option track_method 'ping'
+    option reliability '1'
+    option count '1'
+    option size '56'
+    option max_ttl '60'
+    option timeout '2'
+    option interval '5'
+    option down '3'
+    option up '3'
+
+# Interfaz HaLow backhaul (prioridad 2)
+config interface 'halow_wan'
+    option enabled '1'
+    option family 'ipv4'
+    list track_ip '1.1.1.1'
+    list track_ip '8.8.8.8'
+    option track_method 'ping'
+    option reliability '1'
+    option count '1'
+    option size '56'
+    option max_ttl '60'
+    option timeout '2'
+    option interval '5'
+    option down '3'
+    option up '3'
+
+# Interfaz LTE (prioridad 3, último recurso)
+config interface 'lte'
+    option enabled '1'
+    option family 'ipv4'
+    list track_ip '1.1.1.1'
+    list track_ip '8.8.8.8'
+    option track_method 'ping'
+    option reliability '1'
+    option count '1'
+    option size '56'
+    option max_ttl '60'
+    option timeout '4'
+    option interval '10'
+    option down '3'
+    option up '3'
+
+# Métricas para cada interfaz
+config member 'wan_m1_w3'
+    option interface 'wan'
+    option metric '1'
+    option weight '3'
+
+config member 'halow_m2_w2'
+    option interface 'halow_wan'
+    option metric '2'
+    option weight '2'
+
+config member 'lte_m3_w1'
+    option interface 'lte'
+    option metric '3'
+    option weight '1'
+
+# Política: Failover con prioridad
+config policy 'balanced'
+    option last_resort 'unreachable'
+    list use_member 'wan_m1_w3'
+    list use_member 'halow_m2_w2'
+    list use_member 'lte_m3_w1'
+
+# Política: Solo WAN principal
+config policy 'wan_only'
+    option last_resort 'default'
+    list use_member 'wan_m1_w3'
+
+# Política: Backup HaLow/LTE
+config policy 'backup_only'
+    option last_resort 'default'
+    list use_member 'halow_m2_w2'
+    list use_member 'lte_m3_w1'
+
+# Regla: Tráfico crítico solo por WAN/HaLow
+config rule 'critical'
+    option src_ip '192.168.1.0/24'
+    option dest_ip '0.0.0.0/0'
+    option proto 'tcp'
+    option dest_port '1883 8883 5683'
+    option sticky '1'
+    option timeout '600'
+    option use_policy 'wan_only'
+
+# Regla: Tráfico general con balanceo
+config rule 'default_rule'
+    option dest_ip '0.0.0.0/0'
+    option use_policy 'balanced'
+\end{verbatim}
+
+\subsection{Script de Monitoreo mwan3}
+
+Archivo: \texttt{/usr/local/bin/check-mwan3-status.sh}
+
+\begin{verbatim}
+#!/bin/sh
+# Script de monitoreo de estado mwan3 con alertas
+
+LOG_FILE="/var/log/mwan3-status.log"
+ALERT_THRESHOLD=3  # Número de fallos consecutivos para alertar
+
+# Función de log
+log_msg() {
+    echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" | tee -a "$LOG_FILE"
+}
+
+# Obtener estado de interfaces
+wan_status=$(mwan3 status | grep "interface wan" | awk '{print $NF}')
+halow_status=$(mwan3 status | grep "interface halow_wan" | awk '{print $NF}')
+lte_status=$(mwan3 status | grep "interface lte" | awk '{print $NF}')
+
+log_msg "WAN: $wan_status | HaLow: $halow_status | LTE: $lte_status"
+
+# Contador de fallos (persistente en /tmp)
+WAN_FAILS=$(cat /tmp/mwan3_wan_fails 2>/dev/null || echo 0)
+HALOW_FAILS=$(cat /tmp/mwan3_halow_fails 2>/dev/null || echo 0)
+LTE_FAILS=$(cat /tmp/mwan3_lte_fails 2>/dev/null || echo 0)
+
+# Verificar WAN
+if [ "$wan_status" != "online" ]; then
+    WAN_FAILS=$((WAN_FAILS + 1))
+    echo $WAN_FAILS > /tmp/mwan3_wan_fails
+    
+    if [ $WAN_FAILS -ge $ALERT_THRESHOLD ]; then
+        log_msg "ALERT: WAN offline por $WAN_FAILS checks consecutivos"
+        # Enviar notificación (ej. MQTT alert a ThingsBoard)
+        mosquitto_pub -h localhost -t "gateway/alerts" \
+          -m "{\"alert\":\"WAN_DOWN\",\"fails\":$WAN_FAILS}"
+    fi
+else
+    echo 0 > /tmp/mwan3_wan_fails
+fi
+
+# Verificar HaLow
+if [ "$halow_status" != "online" ] && [ $WAN_FAILS -gt 0 ]; then
+    HALOW_FAILS=$((HALOW_FAILS + 1))
+    echo $HALOW_FAILS > /tmp/mwan3_halow_fails
+    
+    if [ $HALOW_FAILS -ge $ALERT_THRESHOLD ]; then
+        log_msg "ALERT: HaLow offline (WAN también down)"
+    fi
+else
+    echo 0 > /tmp/mwan3_halow_fails
+fi
+
+# Verificar LTE
+if [ "$lte_status" != "online" ] && [ $WAN_FAILS -gt 0 ] && [ $HALOW_FAILS -gt 0 ]; then
+    LTE_FAILS=$((LTE_FAILS + 1))
+    echo $LTE_FAILS > /tmp/mwan3_lte_fails
+    
+    if [ $LTE_FAILS -ge $ALERT_THRESHOLD ]; then
+        log_msg "CRITICAL: ALL UPLINKS DOWN!"
+        mosquitto_pub -h localhost -t "gateway/alerts" \
+          -m "{\"alert\":\"ALL_UPLINKS_DOWN\",\"timestamp\":$(date +%s)}"
+    fi
+else
+    echo 0 > /tmp/mwan3_lte_fails
+fi
+
+# Mostrar tabla de routing mwan3
+mwan3 status | head -20 >> "$LOG_FILE"
+
+exit 0
+\end{verbatim}
+
+Configurar cron para ejecutar cada minuto:
+
+\begin{verbatim}
+# Agregar a /etc/crontabs/root
+* * * * * /usr/local/bin/check-mwan3-status.sh
+\end{verbatim}
+
+\section{Scripts de Mantenimiento}
+
+\subsection{Backup Automatizado de Configuraciones}
+
+Archivo: \texttt{/usr/local/bin/backup-gateway-config.sh}
+
+\begin{verbatim}
+#!/bin/bash
+# Backup completo de configuraciones del gateway
+
+BACKUP_DIR="/mnt/ssd/backups"
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+BACKUP_FILE="$BACKUP_DIR/gateway_config_$TIMESTAMP.tar.gz"
+REMOTE_HOST="backup-server.local"
+REMOTE_USER="backup"
+
+mkdir -p "$BACKUP_DIR"
+
+echo "[$(date)] Starting gateway configuration backup..."
+
+# Crear tar.gz con todas las configuraciones
+tar -czf "$BACKUP_FILE" \
+    /etc/config \
+    /etc/openvpn \
+    /etc/nftables.d \
+    /mnt/ssd/docker/*/docker-compose.yml \
+    /mnt/ssd/docker/*/*.py \
+    /mnt/ssd/docker/*/config \
+    /mnt/ssd/docker/*/certs \
+    /etc/crontabs \
+    /etc/rc.local \
+    2>/dev/null
+
+if [ $? -eq 0 ]; then
+    echo "[$(date)] Backup created: $BACKUP_FILE"
+    ls -lh "$BACKUP_FILE"
+    
+    # Copiar a servidor remoto (opcional)
+    if ping -c 1 "$REMOTE_HOST" >/dev/null 2>&1; then
+        scp "$BACKUP_FILE" "$REMOTE_USER@$REMOTE_HOST:/backups/" && \
+            echo "[$(date)] Backup uploaded to remote server"
+    fi
+    
+    # Mantener solo últimos 7 backups locales
+    ls -t "$BACKUP_DIR"/gateway_config_*.tar.gz | tail -n +8 | xargs rm -f
+    
+    echo "[$(date)] Backup complete"
+else
+    echo "[$(date)] ERROR: Backup failed"
+    exit 1
+fi
+\end{verbatim}
+
+Configurar cron diario:
+
+\begin{verbatim}
+# /etc/crontabs/root
+0 2 * * * /usr/local/bin/backup-gateway-config.sh
+\end{verbatim}
+
+\subsection{Check LTE Quota}
+
+Archivo: \texttt{/usr/local/bin/check-lte-quota.sh}
+
+\begin{verbatim}
+#!/bin/sh
+# Monitoreo de cuota LTE con apagado automático al alcanzar límite
+
+QUOTA_LIMIT_MB=5000  # 5 GB
+CURRENT_USAGE_MB=$(vnstat -i wwan0 --oneline | cut -d';' -f11 | cut -d' ' -f1)
+
+echo "[$(date)] LTE usage: ${CURRENT_USAGE_MB} MB / ${QUOTA_LIMIT_MB} MB"
+
+if [ "$CURRENT_USAGE_MB" -ge "$QUOTA_LIMIT_MB" ]; then
+    echo "[$(date)] QUOTA EXCEEDED! Disabling LTE interface"
+    
+    # Deshabilitar interfaz LTE en mwan3
+    uci set mwan3.lte.enabled='0'
+    uci commit mwan3
+    mwan3 restart
+    
+    # Notificar vía MQTT
+    mosquitto_pub -h localhost -t "gateway/alerts" \
+        -m "{\"alert\":\"LTE_QUOTA_EXCEEDED\",\"usage_mb\":$CURRENT_USAGE_MB}"
+    
+    # Enviar email (si está configurado)
+    echo "LTE quota exceeded: ${CURRENT_USAGE_MB}MB" | \
+        mail -s "Gateway LTE Alert" admin@smartgrid.local
+else
+    REMAINING=$((QUOTA_LIMIT_MB - CURRENT_USAGE_MB))
+    echo "[$(date)] Remaining: ${REMAINING} MB"
+    
+    # Alertar cuando quede menos de 500 MB
+    if [ "$REMAINING" -le 500 ]; then
+        mosquitto_pub -h localhost -t "gateway/alerts" \
+            -m "{\"alert\":\"LTE_QUOTA_LOW\",\"remaining_mb\":$REMAINING}"
+    fi
+fi
+\end{verbatim}
+
+\section{Resumen}
+
+Este anexo ha documentado las configuraciones completas de OpenWRT para el gateway IoT SmartGrid, incluyendo:
+
+\begin{itemize}
+    \item \textbf{UCI}: Configuraciones de red, wireless, DHCP/DNS, firewall
+    \item \textbf{nftables}: Reglas de firewall personalizadas con protección DDoS
+    \item \textbf{OpenVPN}: Servidor VPN con PKI Easy-RSA para acceso remoto seguro
+    \item \textbf{OpenWISP}: Plataforma de gestión centralizada basada en Docker
+    \item \textbf{mwan3}: Políticas de failover multi-WAN con tracking activo
+    \item \textbf{Scripts}: Automatización de backups, monitoreo de cuota LTE, alertas
+\end{itemize}
+
+Todas las configuraciones están optimizadas para el hardware Raspberry Pi 4 con OpenWRT 23.05 y soportan los requisitos de resiliencia y seguridad del sistema de telemetría Smart Energy.
+
+\end{antml:parameter>
+</invoke>
