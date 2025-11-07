@@ -20,6 +20,78 @@ El modelo de referencia NIST para Smart Grid (NIST Framework and Roadmap for Sma
 
 La arquitectura AMI se compone típicamente de: medidores inteligentes (smart meters) instalados en puntos de consumo, concentradores/gateways que agregan datos de decenas o cientos de medidores, y head-end systems en centros de control que procesan millones de registros diarios.
 
+\section{Stack de Protocolos 6LoWPAN para IoT}
+
+Antes de analizar los protocolos individuales, es fundamental comprender la arquitectura completa del stack de comunicación propuesto para redes IoT en Smart Energy. El stack se construye sobre la base de IEEE 802.15.4 y utiliza 6LoWPAN como capa de adaptación para transportar IPv6 sobre redes de sensores con restricciones de recursos.
+
+\subsection{Visión General del Stack}
+
+El stack de protocolos integra múltiples capas del modelo OSI, optimizando cada capa para operar en entornos constrained (dispositivos con <256 KB RAM, <1 MB Flash, batería limitada):
+
+\begin{figure}[h]
+\centering
+\begin{tabular}{|p{3cm}|p{5cm}|p{6cm}|}
+\hline
+\textbf{Capa OSI} & \textbf{Protocolo} & \textbf{Función Principal} \\
+\hline
+\textbf{7. Aplicación} & LwM2M 1.2 & Gestión de dispositivos, objetos IPSO \\
+\hline
+\textbf{6. Presentación} & CBOR/TLV & Serialización eficiente de datos \\
+\hline
+\textbf{5. Sesión} & CoAP (RFC 7252) & Protocolo RESTful para constrained devices \\
+\hline
+\textbf{4. Transporte} & UDP & Transporte no orientado a conexión \\
+\hline
+\textbf{3. Red} & 6LoWPAN (RFC 6282) & Compresión headers IPv6, fragmentación \\
+\hline
+\textbf{3. Red} & IPv6 & Direccionamiento global end-to-end \\
+\hline
+\textbf{2. Enlace (MAC)} & IEEE 802.15.4 MAC & CSMA/CA, ACKs, retransmisiones \\
+\hline
+\textbf{1. Física} & IEEE 802.15.4 PHY & 2.4 GHz OQPSK, 250 kbps \\
+\hline
+\end{tabular}
+\caption{Stack de protocolos 6LoWPAN/CoAP/LwM2M para IoT Smart Energy}
+\label{tab:protocol-stack}
+\end{figure}
+
+\subsection{Flujo de Datos en el Stack}
+
+El flujo de un mensaje de telemetría desde un sensor hasta el servidor sigue la siguiente secuencia de transformaciones:
+
+\textbf{Transmisión (Device → Gateway):}
+\begin{enumerate}
+\item \textbf{Aplicación}: Sensor genera lectura (temperatura 23.5°C, humedad 65\%), LwM2M codifica en TLV binario (~12 bytes).
+\item \textbf{CoAP}: Encapsula payload en mensaje CoAP POST, agrega header (4-10 bytes), marca como NON-confirmable para telemetría no crítica.
+\item \textbf{UDP}: Agrega header UDP (8 bytes) con puertos origen/destino (5683 por defecto para CoAP).
+\item \textbf{IPv6}: Construye header IPv6 completo (40 bytes) con direcciones origen/destino globales.
+\item \textbf{6LoWPAN}: Aplica compresión IPHC reduciendo header IPv6 de 40 bytes a 2-7 bytes, y NHC comprimiendo UDP de 8 bytes a 4 bytes. Total header comprimido: ~6-11 bytes vs 52 bytes sin comprimir (reducción 80-90\%).
+\item \textbf{IEEE 802.15.4}: Fragmenta si payload excede MTU (127 bytes), agrega header MAC (25 bytes), FCS (2 bytes), transmite frame a 250 kbps.
+\end{enumerate}
+
+\textbf{Recepción (Gateway → Device):}
+\begin{enumerate}
+\item \textbf{IEEE 802.15.4}: Valida FCS, envía ACK si frame dirigido a este nodo, reensambl fragmentos.
+\item \textbf{6LoWPAN}: Descomprime headers IPHC/NHC reconstruyendo IPv6+UDP completos.
+\item \textbf{IPv6/UDP}: Routing a socket CoAP (puerto 5683).
+\item \textbf{CoAP}: Parsea request, ejecuta handler de recurso, genera response.
+\item \textbf{LwM2M}: Decodifica TLV, actualiza objeto IPSO en memoria, notifica a observadores si cambio significativo.
+\end{enumerate}
+
+\subsection{Ventajas del Stack 6LoWPAN}
+
+\textbf{Eficiencia de Bandwidth}: Compresión IPHC/NHC reduce overhead de headers de 52 bytes (IPv6+UDP) a ~6-11 bytes, permitiendo payloads útiles de 100-110 bytes en frames 802.15.4 de 127 bytes (eficiencia >75\%).
+
+\textbf{Interoperabilidad IPv6}: Uso de direcciones IPv6 globales permite comunicación directa entre dispositivos IoT y sistemas backend sin traducción de protocolos (NAT-free).
+
+\textbf{Fragmentación Transparente}: 6LoWPAN maneja fragmentación/reensamblado de paquetes IPv6 grandes (>127 bytes) sin requerir soporte en capas superiores.
+
+\textbf{Mesh Routing}: Soporta mesh-under (routing en capa 2) y route-over (routing en capa 3 IPv6) para topologías multi-hop.
+
+\textbf{Seguridad End-to-End}: CoAP sobre DTLS 1.2 proporciona cifrado, autenticación y integridad de mensajes sin depender de seguridad en capa MAC.
+
+Esta arquitectura de stack será la base conceptual para los análisis detallados de cada protocolo en las siguientes secciones.
+
 \section{Protocolos de Comunicación IoT}
 
 \subsection{Thread 802.15.4 - Redes Mesh de Baja Potencia}
@@ -1006,62 +1078,31 @@ Para aplicaciones Smart Energy donde se requiere throughput moderado (kB/s) y la
 
 \textbf{3. Release Assistance Indication (RAI):} El dispositivo señaliza a la red que no espera más tráfico, acelerando liberación de conexión RRC.
 
-\subsection{Análisis de Capa de Enlace IEEE 802.15.4}
+\subsection{Capa de Enlace IEEE 802.15.4}
 
-IEEE 802.15.4 define PHY y MAC para WPANs de baja potencia. Su capa MAC implementa CSMA/CA (Carrier Sense Multiple Access with Collision Avoidance) con características específicas para minimizar colisiones en topologías densas.
+IEEE 802.15.4 define las capas física (PHY) y de control de acceso al medio (MAC) para redes de área personal inalámbricas de baja potencia (LR-WPAN). Esta especificación constituye la base sobre la cual operan protocolos de capa superior como Thread, Zigbee y 6LoWPAN.
 
-\subsubsection{CSMA/CA con Backoff Exponencial}
+\subsubsection{Características Principales de la Capa MAC}
 
-El algoritmo CSMA/CA opera como sigue:
+La capa MAC de IEEE 802.15.4 proporciona servicios fundamentales para comunicación confiable en redes de sensores:
 
-\begin{enumerate}
-\item \textbf{Inicialización}: Backoff Exponent $BE = macMinBE$ (típicamente 3), Number of Backoffs $NB = 0$.
+\textbf{Control de Acceso al Medio}: Implementa CSMA/CA (Carrier Sense Multiple Access with Collision Avoidance) para coordinar el acceso al canal compartido entre múltiples dispositivos. El mecanismo utiliza backoff exponencial para reducir colisiones: antes de transmitir, un nodo espera un tiempo aleatorio proporcional a $2^{BE}$ unidades de tiempo, donde el Backoff Exponent (BE) aumenta con cada intento fallido.
 
-\item \textbf{Delay aleatorio}: Esperar $rand(0, 2^{BE}-1) \times aUnitBackoffPeriod$ (320 µs @ 2.4 GHz).
+\textbf{Confirmación de Recepción}: Frames de datos pueden requerir acknowledgment (ACK) explícito del receptor. Si el ACK no se recibe dentro de un timeout (macAckWaitDuration), el transmisor reintenta la transmisión hasta un máximo de retransmisiones configurables (típicamente 3 intentos).
 
-\item \textbf{CCA (Clear Channel Assessment)}: Medir energía RF durante 8 symbol periods. Si channel idle → transmitir. Si busy → incrementar $BE = \min(BE+1, macMaxBE)$ y $NB = NB+1$.
+\textbf{Estructura de Frame}: Los frames MAC incluyen headers de 9-25 bytes (dependiendo de direccionamiento) que contienen: control de frame (2 bytes), número de secuencia (1 byte), direcciones PAN y dispositivo (2-8 bytes cada una), y Frame Check Sequence (FCS) de 2 bytes para detección de errores.
 
-\item \textbf{Retry limit}: Si $NB > macMaxCSMABackoffs$ (típicamente 4) → reportar channel access failure.
+\textbf{Direccionamiento}: Soporta direccionamiento corto de 16 bits (para redes <65,536 nodos) y direccionamiento extendido IEEE EUI-64 de 64 bits para direccionamiento global único.
 
-\item \textbf{Acknowledgment}: Esperar ACK del receptor durante macAckWaitDuration (54 symbol periods = 864 µs). Si no recibido → retransmitir hasta macMaxFrameRetries (típicamente 3).
-\end{enumerate}
+\textbf{Modos de Operación}: Define dispositivos Full Function Device (FFD) capaces de routing y coordinación, y Reduced Function Device (RFD) simples que solo comunican con un coordinador padre.
 
-Probabilidad de colisión para $n$ nodos concurrentes con misma ventana de contención $W$:
+\subsubsection{Eficiencia y Limitaciones}
 
-\begin{equation}
-P_{collision} = 1 - \left(1 - \frac{1}{W}\right)^{n-1}
-\end{equation}
+El MTU (Maximum Transmission Unit) de IEEE 802.15.4 es de 127 bytes, de los cuales aproximadamente 25 bytes se consumen en headers PHY/MAC y FCS, dejando ~102 bytes disponibles para payload de capas superiores. Esta restricción motiva el uso de mecanismos de compresión como 6LoWPAN IPHC, que reduce headers IPv6+UDP de 48 bytes a ~6 bytes.
 
-Para $W = 2^{BE} = 8$ y $n=10$ nodos:
-\begin{equation}
-P_{collision} = 1 - \left(\frac{7}{8}\right)^9 = 0.659 \quad (66\% \text{ probabilidad de colisión})
-\end{equation}
+En redes con alta densidad de nodos, el algoritmo CSMA/CA puede experimentar degradación de throughput debido a colisiones y retransmisiones. Thread mitiga esto mediante traffic shaping en capa de aplicación y jitter aleatorio para distribuir transmisiones temporalmente.
 
-Eficiencia del canal en función del número de nodos (asumiendo tráfico Poisson con carga ofrecida $\lambda$):
-
-\begin{equation}
-S = \frac{G \cdot e^{-G}}{1 + 2a}
-\end{equation}
-
-donde $G$ es la carga ofrecida normalizada y $a$ es la relación propagation delay / packet transmission time.
-
-\begin{table}[h]
-\centering
-\caption{Eficiencia CSMA/CA vs Número de Nodos (p=0.1)}
-\label{tab:csma-efficiency}
-\begin{tabular}{|c|c|c|c|}
-\hline
-\textbf{Número de Nodos} & \textbf{Throughput (kbps)} & \textbf{Avg Delay (ms)} & \textbf{Collision Rate (\%)} \\
-\hline
-5 & 220 & 12 & 8 \\
-10 & 195 & 28 & 18 \\
-25 & 140 & 85 & 35 \\
-50 & 95 & 220 & 52 \\
-\hline
-\end{tabular}
-\end{table}
-
-Para mitigar colisiones en redes densas, Thread implementa traffic shaping y jitter aleatorio en capa de aplicación.
+El análisis cuantitativo detallado de tiempos de backoff, probabilidades de colisión, y throughput en función del número de nodos se presenta en el Capítulo 3 como parte de la caracterización experimental de la implementación.
 
 \section{Estándares de Interoperabilidad Smart Energy}
 
@@ -1209,7 +1250,7 @@ ISO/IEC 30141 define cuatro vistas complementarias:
 \hline
 \textbf{Entidad Funcional ISO/IEC 30141} & \textbf{Componente Implementado} \\
 \hline
-Sensing FE & Nodos ESP32-C6 Thread + sensores BME280 \\
+Sensing FE & Nodos ESP32-C6 Thread + interfaz RS485 para medidores EMSITECH (protocolo DLMS/COSEM) \\
 \hline
 Communication FE & Thread Border Router (nRF52840 RCP) + HaLow AP (Morse Micro MM6108) + LTE modem (Quectel EG25-G) \\
 \hline

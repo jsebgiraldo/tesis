@@ -1,16 +1,30 @@
-\chapter{Gateway de Telemetría para Smart Energy}
+\chapter{Elementos de la Arquitectura IoT para Smart Energy}
 
 \section{Introducción}
 
-El gateway constituye el componente central de la arquitectura de telemetría propuesta, actuando como puente entre las redes de campo (802.15.4/Thread) y las redes de área amplia (802.11ah/HaLow), consolidando datos de múltiples medidores inteligentes y transmitiéndolos de manera segura hacia la plataforma IoT en la nube. Este capítulo presenta la arquitectura de software y hardware del gateway, enfocándose en los aspectos conceptuales y de diseño. Los detalles técnicos de implementación (configuraciones UCI, docker-compose, scripts) se documentan en los anexos correspondientes.
+Este capítulo presenta los elementos fundamentales de la arquitectura IoT propuesta para aplicaciones de Smart Energy, abarcando desde los nodos sensores de campo hasta las capacidades de procesamiento edge con inteligencia artificial. La arquitectura sigue un modelo jerárquico de tres niveles (nodos, routers y gateways) que permite escalabilidad masiva, eficiencia energética y resiliencia operativa, cumpliendo con los estándares IEEE 2030.5 (Smart Energy Profile 2.0) e ISO/IEC 30141 (IoT Reference Architecture).
 
-\subsection{Función del Gateway en la Arquitectura de Telemetría}
+La implementación propuesta integra tecnologías de conectividad de última generación (Thread 802.15.4, Wi-Fi HaLow 802.11ah), protocolos de aplicación optimizados para IoT (CoAP, LwM2M, MQTT) y capacidades de procesamiento edge mediante ThingsBoard Edge y modelos de lenguaje local (LLM). Los detalles técnicos de implementación (configuraciones UCI, docker-compose, scripts) se documentan en los anexos correspondientes.
 
-En el contexto de infraestructuras de medición inteligente para Smart Energy, el gateway cumple funciones críticas de agregación de datos, traducción de protocolos, seguridad end-to-end, resiliencia mediante buffering local y edge computing para preprocesamiento. El gateway implementa una arquitectura jerárquica de 3 niveles IoT que optimiza la distribución de funciones y capacidad de procesamiento en redes de gran escala.
+\section{Visión General de la Arquitectura}
 
-\section{Conformidad con Estándares Internacionales}
+\subsection{Modelo Jerárquico de 3 Niveles IoT}
 
-\subsection{IEEE 2030.5-2023 (Smart Energy Profile 2.0)}
+La arquitectura propuesta sigue un modelo jerárquico que permite desplegar redes IoT con miles de dispositivos manteniendo eficiencia operativa, optimizando la distribución de funciones, consumo energético y capacidad de procesamiento. Esta arquitectura, alineada con las implementaciones de referencia de Morse Micro para Wi-Fi HaLow y el ecosistema Thread de la Connectivity Standards Alliance, permite escalabilidad masiva en despliegues de Smart Energy.
+
+Los tres niveles de la arquitectura son:
+
+\begin{itemize}
+    \item \textbf{Nivel 1 - Nodos IoT}: Dispositivos de campo con recursos limitados (sensores, actuadores, medidores inteligentes)
+    \item \textbf{Nivel 2 - Routers Border}: Dispositivos intermedios que extienden cobertura y densifican la red mediante topologías mesh
+    \item \textbf{Nivel 3 - Gateways Edge}: Plataformas de cómputo que agregan datos, ejecutan procesamiento edge y conectan con infraestructura WAN
+\end{itemize}
+
+Esta separación de funciones permite optimizar cada nivel según sus requisitos específicos de consumo energético, capacidad de procesamiento y conectividad, mientras mantiene interoperabilidad mediante protocolos estándares abiertos.
+
+\subsection{Conformidad con Estándares Internacionales}
+
+\subsubsection{IEEE 2030.5-2023 (Smart Energy Profile 2.0)}
 
 El gateway implementa funcionalidades alineadas con IEEE 2030.5 (SEP 2.0), incluyendo los siguientes Function Sets:
 
@@ -24,49 +38,123 @@ El gateway implementa funcionalidades alineadas con IEEE 2030.5 (SEP 2.0), inclu
 
 La seguridad IEEE 2030.5 se implementa mediante TLS 1.2/1.3 obligatorio, certificados X.509 ECC (curva P-256), LFDI derivado de certificado y RBAC para control de acceso. Los ejemplos completos de respuestas XML para todos los Function Sets se presentan en el \textbf{Anexo D}.
 
-\subsection{ISO/IEC 30141:2024 (IoT Reference Architecture)}
+\subsubsection{ISO/IEC 30141:2024 (IoT Reference Architecture)}
 
 El gateway implementa múltiples entidades funcionales según la vista funcional de ISO/IEC 30141: Sensing, Actuation, Processing, Storage, Communication, Security, Management y Application Support. La arquitectura cumple con las cuatro vistas del estándar (funcional, información, despliegue y operacional), proporcionando un marco completo para sistemas IoT industriales.
 
-\section{Requisitos del Gateway}
+\subsection{Justificación del Modelo Jerárquico}
 
-\subsection{Requisitos Funcionales}
+Ventajas de la arquitectura de 3 niveles: 
+
+\textbf{(1) Escalabilidad masiva} - Un gateway gestiona 100-200 nodos directamente, escalando a 1000+ con routers intermedios mesh; 
+\textbf{(2) Eficiencia energética} - Nodos transmiten en saltos cortos reduciendo potencia de transmisión, extendiendo autonomía con baterías a 5-10 años; 
+\textbf{(3) Cobertura extendida} - HaLow alcanza >1 km en línea de vista, con routers mesh permite 3-5 km en entornos urbanos densos; 
+\textbf{(4) Resiliencia operativa} - Topologías mesh reconfiguran rutas automáticamente ante fallos de enlaces o nodos; 
+\textbf{(5) Distribución de carga} - Procesamiento distribuido reduce latencia y requisitos de ancho de banda WAN; 
+\textbf{(6) Optimización de costos} - Infraestructura jerárquica reduce CAPEX/OPEX versus múltiples gateways independientes.
+
+\section{Nivel 1: Nodos IoT (End Devices)}
+
+Los nodos IoT constituyen la capa de campo de la arquitectura, implementando las funciones de sensing, actuation y comunicación de bajo consumo. En el contexto de Smart Energy, estos nodos pueden ser medidores inteligentes, sensores ambientales, actuadores para control de demanda o dispositivos de monitoreo de calidad de energía.
+
+\subsection{Características Técnicas de Nodos}
+
+Dispositivos sensores y actuadores de bajo consumo optimizados para operación con baterías durante años. Implementan Thread (802.15.4) o HaLow 802.11ah en modo cliente con protocolos LwM2M sobre CoAP, MQTT-SN o IEEE 2030.5 Client. 
+
+\textbf{Especificaciones hardware típicas:}
+\begin{itemize}
+    \item MCU: Cortex-M4/M33 (ESP32-C6, nRF52840, STM32WB55)
+    \item RAM: 256 KB - 1 MB
+    \item Flash: 512 KB - 2 MB
+    \item Radio: 802.15.4 (Thread) o 802.11ah (HaLow STA)
+    \item Modos sleep profundo: <10 μA
+    \item Autonomía: 5-10 años con batería AA (2500-3000 mAh)
+\end{itemize}
+
+\subsection{Protocolos de Comunicación en Nodos}
+
+Los nodos implementan stacks de protocolos ligeros optimizados para dispositivos con recursos limitados:
+
+\begin{itemize}
+    \item \textbf{Thread 1.3}: IPv6 sobre 802.15.4 con routing mesh, comisionamiento seguro (PAKE), multicast confiable
+    \item \textbf{CoAP (RFC 7252)}: Protocolo de aplicación request/response con observe pattern, block-wise transfers
+    \item \textbf{LwM2M 1.2}: Framework de gestión de dispositivos sobre CoAP con modelo de objetos extensible (IPSO)
+    \item \textbf{CBOR (RFC 8949)}: Serialización binaria compacta para payloads eficientes
+\end{itemize}
+
+La implementación de referencia de nodo ESP32-C6 con LwM2M se documenta en el \textbf{Anexo E}, incluyendo configuración de objetos IPSO para telemetría de energía, estrategias de sleep profundo y optimizaciones de consumo.
+
+\section{Nivel 2: Routers Border IoT}
+
+Los routers IoT extienden el alcance y densifican la cobertura de las redes de campo mediante topologías mesh, actuando como repetidores inteligentes sin capacidades de procesamiento edge ni gestión de dispositivos.
+
+\subsection{Función de Routers en la Arquitectura}
+
+Routers IoT que extienden el alcance de redes HaLow o Thread mediante mesh 802.11s, EasyMesh o Thread Router. Su función es puramente extensión de cobertura y densificación de red, sin procesamiento edge ni gestión de dispositivos. En despliegues de Smart Energy, estos routers se ubican estratégicamente en postes de alumbrado público, subestaciones secundarias o puntos de concentración de medidores.
+
+\subsection{Especificaciones Técnicas de Routers}
+
+\textbf{Hardware:}
+\begin{itemize}
+    \item SoC: MM8108 (HaLow) o nRF52840 (Thread)
+    \item MPU: MIPS/ARM Cortex-A7 single-core para OpenWRT minimal
+    \item RAM: 128-256 MB DDR3
+    \item Flash: 32-64 MB NOR/NAND
+    \item PoE: 802.3af/at (12.95W - 25.5W)
+    \item Topología: Mesh 802.11s (HaLow) o Thread Router
+\end{itemize}
+
+\textbf{Software:}
+\begin{itemize}
+    \item Sistema operativo: OpenWRT 23.05 minimal (sin Docker)
+    \item Funciones: Layer-2/Layer-3 forwarding, mesh path selection (HWMP), autenticación SAE
+    \item Configuración: Remota mediante UCI batch o NETCONF
+\end{itemize}
+
+\subsection{Topologías Mesh y Algoritmos de Routing}
+
+Los routers implementan algoritmos de routing mesh que optimizan métricas de calidad de enlace (LQI, RSSI, ETX) para seleccionar rutas óptimas dinámicamente. En HaLow, el protocolo HWMP (Hybrid Wireless Mesh Protocol, IEEE 802.11s) combina routing proactivo (rutas preestablecidas) y reactivo (on-demand), mientras que Thread utiliza el algoritmo MLE (Mesh Link Establishment) con selección de Parent basada en cost metrics.
+
+\section{Nivel 3: Gateway de Borde (Border Router Edge)}
+
+El gateway constituye el elemento de mayor capacidad de procesamiento en la arquitectura, actuando como puente entre las redes de campo (802.15.4/Thread, 802.11ah/HaLow) y las redes de área amplia (Ethernet, LTE/5G). Este componente implementa funciones avanzadas de agregación de datos, traducción de protocolos, seguridad end-to-end, resiliencia mediante buffering local y edge computing.
+
+\subsection{Requisitos del Gateway}
+
+\subsubsection{Requisitos Funcionales}
 
 El gateway debe cumplir con: recepción de datos de $\geq$10 DCUs simultáneamente mediante 802.11ah, normalización OBIS/DLMS/COSEM a JSON/CBOR, publicación MQTT con QoS 1/2 garantizando entrega, buffer persistente local mínimo 7 días, uplink redundante Ethernet WAN (primario) + LTE M.2 (backup <30s), Access Point HaLow (902-928 MHz) con alcance mínimo 1 km, API REST IEEE 2030.5 compatible y entidades funcionales ISO/IEC 30141 completas.
 
-\subsection{Requisitos No Funcionales}
+\subsubsection{Requisitos No Funcionales}
 
 Latencia E2E <5 segundos, disponibilidad >99.5\% con failover <30 seg, consumo energético <15W (LTE idle), operación -10°C a +50°C (Morse Micro: -40°C a +85°C), throughput HaLow mínimo 20 Mbps agregado, precisión sincronización <100 ms y soporte $\geq$250 EndDevices simultáneos.
 
-\subsection{Requisitos de Seguridad}
+\subsubsection{Requisitos de Seguridad}
 
 Autenticación mutua TLS 1.2/1.3, certificados X.509 con renovación automática, Secure Boot, cifrado de credenciales, OTA segura con validación de firma digital, certificados ECC P-256 para IEEE 2030.5, LFDI derivado de certificado, RBAC para APIs REST y WPA3-SAE con PMF obligatorio en HaLow.
 
-\section{Arquitectura Jerárquica de 3 Niveles IoT}
+\subsection{Plataforma Hardware del Gateway}
 
-La arquitectura propuesta sigue un modelo jerárquico que permite desplegar redes IoT con miles de dispositivos manteniendo eficiencia operativa, optimizando la distribución de funciones, consumo energético y capacidad de procesamiento. Esta arquitectura, alineada con las implementaciones de referencia de Morse Micro para Wi-Fi HaLow, permite escalabilidad masiva.
+\textbf{Especificaciones:}
+\begin{itemize}
+    \item Plataforma: Raspberry Pi 4 Model B (4 GB RAM)
+    \item CPU: ARM Cortex-A72 quad-core @ 1.5 GHz (ARMv8-A 64-bit)
+    \item Almacenamiento: NVMe SSD 128 GB (vía USB 3.0 bridge)
+    \item Conectividad Thread: nRF52840 USB Dongle (RCP mode)
+    \item Conectividad HaLow: Morse Micro MM6108 + MMP8000 + EVK (PCIe via USB)
+    \item WAN: Gigabit Ethernet + Quectel RM502Q-AE LTE Cat-20 M.2
+    \item Sistema operativo: OpenWRT 23.05.3 con kernel 5.15 LTS
+\end{itemize}
 
-\subsection{Nivel 1: Nodos IoT (End Devices)}
+La arquitectura ARM de 64 bits permite ejecutar contenedores Docker con ThingsBoard Edge, bases de datos TimescaleDB, brokers MQTT y modelos LLM locales (Ollama) con rendimiento adecuado para procesamiento edge en tiempo real.
 
-Dispositivos sensores y actuadores de bajo consumo optimizados para operación con baterías durante años. Implementan Thread (802.15.4) o HaLow 802.11ah en modo cliente con protocolos LwM2M sobre CoAP, MQTT-SN o IEEE 2030.5 Client. Características: MCU Cortex-M4/M33 (ESP32-C6, nRF52840), RAM 256 KB - 1 MB, modos sleep profundo, autonomía 5-10 años con batería AA. La implementación de referencia de nodo ESP32-C6 con LwM2M se documenta en el \textbf{Anexo E}.
+\section{ThingsBoard Edge como Plataforma de Procesamiento}
 
-\subsection{Nivel 2: Routers IoT}
-
-Routers IoT que extienden el alcance de redes HaLow o Thread mediante mesh 802.11s, EasyMesh o Thread Router. Características: SoC MM8108 + MPU Linux, RAM 128-256 MB, OpenWRT mínimo sin Docker, PoE 802.3af/at. Su función es puramente extensión de cobertura y densificación de red, sin procesamiento edge ni gestión de dispositivos.
-
-\subsection{Nivel 3: Gateways IoT (Border Routers Edge)}
-
-Dispositivos con capacidades de cómputo significativas que actúan como agregación, procesamiento edge y puente entre redes IoT locales y WAN. Características: Plataformas ARM Cortex-A multi-core (Raspberry Pi 4), RAM 4-8 GB, NVMe SSD 64-256 GB, conectividad múltiple (HaLow, Thread, LTE/5G, Gigabit Ethernet), OpenWRT 23.05 con Docker, funciones avanzadas de Border Routing, Edge Computing, protocolos Smart Energy (IEEE 2030.5) y orquestación de contenedores.
-
-\subsection{Justificación del Modelo de 3 Niveles}
-
-Ventajas: (1) Escalabilidad - un gateway gestiona 100-200 nodos directamente, escalando a 1000+ con routers intermedios; (2) Eficiencia energética - nodos transmiten en saltos cortos reduciendo potencia; (3) Cobertura extendida - HaLow >1 km con routers mesh alcanza 3-5 km urbano; (4) Resiliencia - mesh reconfigura rutas automáticamente; (5) Distribución de carga optimizada; (6) Costo optimizado versus múltiples gateways costosos.
-
-\section{Arquitectura de Software del Gateway}
-
-\subsection{Visión General: ThingsBoard Edge como Núcleo del Procesamiento}
+\subsection{Visión General: Edge-First Architecture}
 
 El gateway implementa una arquitectura centrada en **ThingsBoard Edge**, que actúa como plataforma de procesamiento edge completa, proporcionando capacidades de ingesta, transformación, almacenamiento, procesamiento de reglas (rule engine) y sincronización bidireccional con ThingsBoard Server en la nube. Esta arquitectura edge-first permite operación autónoma durante desconexiones WAN prolongadas (>72 horas) mientras mantiene funcionalidad completa de dashboards locales, alarmas y análisis en tiempo real.
+
+ThingsBoard Edge cumple un rol fundamental en la arquitectura al actuar como middleware de integración entre los protocolos IoT de campo (CoAP, LwM2M, MQTT) y las aplicaciones de Smart Energy en la nube, implementando transformaciones de datos, procesamiento de eventos complejos (CEP) y almacenamiento persistente con TimescaleDB optimizado para series temporales.
 
 \textbf{Flujo de Datos Multi-Protocolo:}
 
@@ -920,35 +1008,345 @@ Comisionado Thread vía OTBR web UI, reglas TB Edge con alarmas (crear regla con
 
 \section{Integración de Inteligencia Artificial con MCP y LLM}
 
-\subsection{Arquitectura de IA en el Gateway}
+\subsection{Motivación: IA en el Edge para Smart Energy}
 
-El gateway soporta integración de modelos de lenguaje (LLM) y Model Context Protocol (MCP) para análisis avanzado de telemetría y mantenimiento predictivo. MCP es protocolo estándar Anthropic para comunicación entre aplicaciones y servicios de IA (Claude, GPT, modelos locales). Ollama permite ejecutar modelos open-source localmente (Llama 3.2, Mistral, Phi-3) sin enviar datos a cloud externo. Integración vía Rule Engine TB Edge para análisis en tiempo real.
+La integración de capacidades de inteligencia artificial directamente en los gateways de borde representa un cambio de paradigma en la gestión de redes eléctricas inteligentes. Tradicionalmente, el análisis avanzado de datos de medición se realizaba exclusivamente en infraestructura centralizada en la nube, lo que introduce dependencias críticas de conectividad WAN, latencias significativas (2-5 segundos) y costos recurrentes de transferencia de datos. Además, el envío de datos de consumo energético a servicios cloud externos plantea preocupaciones de privacidad y cumplimiento regulatorio (GDPR, CCPA, Ley 1581 de 2012 en Colombia).
 
-\subsection{Model Context Protocol (MCP)}
+El procesamiento de IA en el edge (gateway local) ofrece ventajas fundamentales para aplicaciones de Smart Energy:
 
-MCP permite conectarse a múltiples proveedores de IA, proporcionar contexto estructurado a modelos (herramientas, datos, prompts) y ejecutar acciones en sistemas externos desde respuestas de LLM. Componentes: MCP Server (expone herramientas y recursos al LLM, ej. consultar TB Edge API), MCP Client (aplicación que consume servicios de IA, ej. dashboard analítico), protocolo JSON-RPC 2.0 sobre stdio/SSE/WebSocket.
+\begin{itemize}
+    \item \textbf{Latencia reducida}: Análisis en <500 ms vs 2-5 segundos en cloud, crítico para detección de fraude en tiempo real
+    \item \textbf{Privacidad y soberanía de datos}: Información sensible de consumo nunca abandona el perímetro del gateway, cumpliendo normativas de protección de datos
+    \item \textbf{Disponibilidad offline}: Capacidades analíticas mantienen operación durante desconexiones WAN prolongadas (>72 horas)
+    \item \textbf{Reducción de costos}: Eliminación de cargos por API calls a servicios cloud (\$0.01-0.10 por consulta) y reducción de tráfico WAN
+    \item \textbf{Escalabilidad distribuida}: Cada gateway procesa su zona de cobertura (100-250 medidores) sin congestionar infraestructura centralizada
+\end{itemize}
 
-\subsection{Despliegue de Ollama (LLM Local)}
+Sin embargo, la integración de modelos de lenguaje (LLM) y sistemas de IA en gateways IoT presenta desafíos arquitectónicos significativos: (1) recursos computacionales limitados (CPU ARM, 4-8 GB RAM), (2) necesidad de acceso estructurado a datos de telemetría y configuración, (3) complejidad de mantener código de integración custom entre cada LLM y cada plataforma IoT, (4) riesgo de acoplamiento fuerte entre componentes que dificulta actualizaciones y mantenimiento.
 
-Docker Compose para Ollama: imagen \texttt{ollama/ollama:latest}, puerto 11434 API REST, volumen \texttt{./models:/root/.ollama}, 8 GB RAM mínimo. Descargar modelo Llama 3.2:3b (2 GB) con \texttt{docker exec ollama ollama pull llama3.2:3b} o Phi-3:mini (1.3 GB optimizado edge). Prueba de inferencia con \texttt{curl http://localhost:11434/api/generate -d '\{"model":"llama3.2:3b","prompt":"Analiza consumo..."\}'}.
+\subsection{Model Context Protocol (MCP): Estandarización de Integraciones de IA}
 
-El docker-compose completo de Ollama se documenta en el \textbf{Anexo B}.
+Model Context Protocol (MCP) es un protocolo de comunicación estándar abierto desarrollado por Anthropic que resuelve el problema de integración entre aplicaciones y servicios de inteligencia artificial mediante una arquitectura desacoplada basada en herramientas (tools), recursos (resources) y prompts estructurados. MCP establece una interfaz uniforme que permite a cualquier modelo de lenguaje (Claude, GPT-4, Llama, Mistral, Phi-3) acceder a datos y ejecutar acciones en sistemas externos sin necesidad de código de integración específico para cada combinación modelo-plataforma.
+
+\subsubsection{Arquitectura Conceptual de MCP}
+
+La arquitectura MCP se compone de tres elementos fundamentales:
+
+\textbf{1. MCP Server} - Componente que expone capacidades de un sistema backend (ThingsBoard Edge, bases de datos, APIs) al ecosistema de IA mediante:
+\begin{itemize}
+    \item \textbf{Tools}: Funciones invocables por el LLM (ej. \texttt{get\_device\_telemetry}, \texttt{create\_alarm}, \texttt{update\_device\_attributes})
+    \item \textbf{Resources}: Fuentes de datos contextuales (ej. esquemas de dispositivos, configuraciones, documentación)
+    \item \textbf{Prompts}: Plantillas de consulta predefinidas para casos de uso comunes
+\end{itemize}
+
+\textbf{2. MCP Client} - Aplicación que consume servicios de IA y coordina la comunicación entre el usuario, el LLM y los MCP Servers. El cliente mantiene el contexto de la conversación, gestiona múltiples conexiones a MCP Servers y presenta resultados al usuario (dashboard, chatbot, API REST).
+
+\textbf{3. Protocolo de Comunicación} - MCP utiliza JSON-RPC 2.0 como formato de mensajes, soportando múltiples transportes:
+\begin{itemize}
+    \item \textbf{stdio}: Comunicación por entrada/salida estándar (ideal para procesos locales)
+    \item \textbf{Server-Sent Events (SSE)}: Streaming HTTP para conexiones remotas
+    \item \textbf{WebSocket}: Comunicación bidireccional full-duplex para aplicaciones interactivas
+\end{itemize}
+
+\subsubsection{Flujo de Interacción MCP en el Gateway}
+
+El flujo típico de una consulta de análisis con MCP integrado en el gateway es:
+
+\begin{verbatim}
+Usuario → MCP Client → LLM → MCP Server → ThingsBoard Edge API → Respuesta
+   |         |          |         |              |                    |
+   |         |          |         +-- tools/call: get_device_telemetry
+   |         |          +------------ prompt: "Analiza consumo METER-001"
+   |         +----------------------- contexto + herramientas disponibles
+   +--------------------------------- solicitud natural language
+\end{verbatim}
+
+\textbf{Paso 1}: Usuario solicita análisis ("¿Hay anomalías en el medidor METER-001?") \\
+\textbf{Paso 2}: MCP Client consulta al LLM disponible (Ollama local) con prompt y lista de tools del MCP Server \\
+\textbf{Paso 3}: LLM determina que necesita invocar \texttt{get\_device\_telemetry("METER-001", "24h")} \\
+\textbf{Paso 4}: MCP Client envía JSON-RPC request al MCP Server: \texttt{\{"method": "tools/call", "params": \{"name": "get\_device\_telemetry", "arguments": \{"device\_id": "METER-001", "timerange": "24h"\}\}\}} \\
+\textbf{Paso 5}: MCP Server ejecuta consulta a ThingsBoard Edge API obteniendo 96 puntos de telemetría (intervalo 15 min) \\
+\textbf{Paso 6}: MCP Server retorna datos estructurados en JSON al MCP Client \\
+\textbf{Paso 7}: LLM analiza datos, detecta pico de consumo 10× superior al promedio a las 3 AM \\
+\textbf{Paso 8}: MCP Client presenta respuesta interpretada al usuario: "Anomalía detectada: consumo de 500 kWh a las 3 AM (promedio normal: 50 kWh). Posible causa: bypass de medidor o falla en transformador de corriente. Se recomienda inspección física urgente."
+
+\subsubsection{Ventajas de MCP sobre Integraciones Tradicionales}
+
+\textbf{Desacoplamiento modelo-plataforma}: Sin MCP, cada combinación LLM×Plataforma requiere código de integración custom. Con 5 LLMs (GPT-4, Claude, Llama, Mistral, Phi-3) y 3 plataformas IoT (ThingsBoard, AWS IoT, Azure IoT Hub), se necesitarían 15 integraciones. MCP reduce esto a 5 MCP Clients + 3 MCP Servers = 8 componentes independientes, eliminando dependencias cruzadas.
+
+\textbf{Extensibilidad}: Agregar nuevas capacidades al sistema (ej. consulta de previsiones meteorológicas, integración con ERP corporativo) solo requiere implementar un nuevo MCP Server, que automáticamente se vuelve accesible para todos los LLMs compatibles con MCP sin modificar código de cliente.
+
+\textbf{Portabilidad de prompts y workflows}: Los flujos de análisis definidos mediante MCP tools son portables entre diferentes modelos de lenguaje. Un workflow de "detección de fraude" implementado para Ollama+Llama funciona sin cambios con Claude o GPT-4, permitiendo comparar rendimiento de modelos sin reimplementación.
+
+\textbf{Seguridad y control de acceso}: El MCP Server actúa como capa de autorización, exponiendo únicamente las operaciones permitidas al LLM mediante tools específicos. Esto evita que el modelo ejecute operaciones no autorizadas (ej. borrado de datos, modificación de configuraciones críticas) incluso si el prompt es manipulado maliciosamente.
+
+\textbf{Observabilidad}: Todas las invocaciones de tools son auditables mediante logs estructurados JSON-RPC, permitiendo trazabilidad completa de qué datos accedió el LLM, qué decisiones tomó y qué acciones ejecutó.
+
+\subsection{Despliegue de Ollama: LLM Local para Edge Computing}
+
+Ollama es una plataforma open-source que permite ejecutar modelos de lenguaje de gran tamaño localmente en hardware convencional, sin dependencias de servicios cloud. Ollama gestiona descarga de modelos, cuantización optimizada para CPU/GPU, servidor HTTP API compatible con OpenAI y gestión de contexto multi-turno. Para el gateway de Smart Energy, Ollama se despliega como contenedor Docker exponiendo puerto 11434 (API REST) con volumen persistente para almacenamiento de modelos (~2-4 GB por modelo).
+
+\subsubsection{Selección de Modelos para Edge}
+
+Los modelos de lenguaje se caracterizan por su tamaño en parámetros, que determina capacidad de razonamiento y requisitos de hardware:
+
+\begin{itemize}
+    \item \textbf{Llama 3.2:1b} (1 billón parámetros): Modelo ultra-ligero optimizado para edge, 1 GB RAM, inferencia <200 ms CPU, capacidad razonamiento básica, adecuado para clasificación y extracción de entidades
+    \item \textbf{Llama 3.2:3b} (3 billones parámetros): Balance rendimiento/recursos, 2 GB RAM, inferencia 500 ms CPU ARM, capacidad análisis temporal y detección anomalías, **recomendado para gateway Raspberry Pi 4**
+    \item \textbf{Phi-3:mini} (3.8 billones parámetros): Modelo Microsoft optimizado eficiencia, 1.3 GB cuantizado Q4\_0, especializado razonamiento matemático, excelente para análisis de series temporales energéticas
+    \item \textbf{Mistral:7b} (7 billones parámetros): Alto rendimiento general, 4 GB RAM, requiere aceleración GPU para latencias <1s, análisis complejos multicontexto
+\end{itemize}
+
+Para el caso de uso de Smart Energy en gateway Raspberry Pi 4 (4 GB RAM), se recomienda **Llama 3.2:3b** o **Phi-3:mini**, que ofrecen balance óptimo entre capacidad analítica y requisitos computacionales.
+
+\subsubsection{Configuración Docker de Ollama}
+
+El docker-compose completo de Ollama se documenta en el \textbf{Anexo B}, incluyendo configuración de recursos (8 GB RAM limit), volúmenes persistentes (\texttt{./models:/root/.ollama}), healthcheck (ping API cada 30s) y descarga automática de modelos mediante \texttt{docker exec ollama ollama pull llama3.2:3b}.
+
+Prueba de inferencia:
+\begin{verbatim}
+curl http://localhost:11434/api/generate -d '{
+  "model": "llama3.2:3b",
+  "prompt": "Analiza los siguientes datos de consumo energético 
+             e identifica anomalías: [50, 48, 52, 500, 49, 51] kWh",
+  "stream": false
+}'
+\end{verbatim}
+
+Respuesta esperada (JSON):
+\begin{verbatim}
+{
+  "response": "Se detecta una anomalía significativa en el cuarto 
+               dato (500 kWh), que representa un incremento de 10× 
+               respecto al patrón base de ~50 kWh...",
+  "done": true,
+  "context": [...],
+  "total_duration": 485000000  // 485 ms
+}
+\end{verbatim}
 
 \subsection{MCP Server para ThingsBoard Edge}
 
-Implementación de MCP Server Python que expone API TB Edge al LLM con herramientas \texttt{get\_device\_telemetry} (obtiene telemetría histórica) y \texttt{get\_device\_alarms} (obtiene alarmas activas), procesa solicitudes MCP JSON-RPC 2.0 con métodos \texttt{tools/list} y \texttt{tools/call}, loop stdio principal para comunicación (\texttt{for line in sys.stdin}).
+La implementación del MCP Server para ThingsBoard Edge expone la API REST de ThingsBoard como herramientas estructuradas invocables por el LLM, abstrayendo la complejidad de autenticación OAuth, paginación de resultados, manejo de errores HTTP y transformación de formatos de datos.
 
-El código completo del MCP Server \texttt{tb\_mcp\_server.py} y configuración MCP Client \texttt{mcp\_config.json} se documentan en el \textbf{Anexo C}.
+\subsubsection{Herramientas (Tools) Implementadas}
 
-\subsection{Casos de Uso de IA en Gateway}
+\textbf{1. \texttt{get\_device\_telemetry}} \\
+\textbf{Descripción}: Obtiene series temporales de telemetría de un dispositivo específico \\
+\textbf{Parámetros}:
+\begin{itemize}
+    \item \texttt{device\_id}: Identificador del dispositivo (ej. "METER-001")
+    \item \texttt{keys}: Lista de claves de telemetría (ej. ["energy\_kwh", "voltage", "current"])
+    \item \texttt{start\_ts}: Timestamp inicio (formato ISO 8601 o relativo "24h", "7d")
+    \item \texttt{end\_ts}: Timestamp fin (opcional, default: now)
+    \item \texttt{limit}: Máximo número de puntos (default: 100)
+\end{itemize}
+\textbf{Retorno}: Array de objetos \texttt{\{"ts": 1699876543000, "energy\_kwh": 123.45, "voltage": 220.3\}}
 
-(1) \textbf{Análisis de anomalías en consumo}: Prompt "Analiza consumo medidor METER-001 últimas 24h, identifica patrones anómalos (fraude, falla, consumo irregular)", LLM invoca \texttt{get\_device\_telemetry} vía MCP, analiza serie temporal (100 puntos, intervalo 15 min), detecta pico 500 kWh a las 3 AM (vs promedio 50 kWh), genera respuesta "Anomalía detectada: consumo 10× superior, posible bypass medidor o falla CT, recomendar inspección física"; (2) \textbf{Mantenimiento predictivo}: Prompt "Evalúa 50 medidores zona Norte, predice fallas próximos 30 días basándote en alarmas históricas", LLM consulta alarmas de 50 dispositivos, identifica 5 con >10 alarmas en 7 días, analiza telemetría con alta varianza, genera ranking prioridad mantenimiento; (3) \textbf{Asistente de operación (Chatbot)}: Dashboard TB Edge con chatbot integrado responde consultas en lenguaje natural ("¿Cuántos medidores offline?" → LLM consulta TB Edge API → "Actualmente 3 offline: METER-042/089/123, última comunicación hace 2h, posible problema Thread").
+\textbf{2. \texttt{get\_device\_alarms}} \\
+\textbf{Descripción}: Consulta alarmas activas o históricas de un dispositivo \\
+\textbf{Parámetros}:
+\begin{itemize}
+    \item \texttt{device\_id}: Identificador del dispositivo
+    \item \texttt{status}: Filtro de estado ("ACTIVE", "CLEARED", "ACK", "ALL")
+    \item \texttt{severity}: Filtro de severidad ("CRITICAL", "MAJOR", "MINOR", "WARNING")
+    \item \texttt{limit}: Máximo número de alarmas (default: 50)
+\end{itemize}
+\textbf{Retorno}: Array de objetos con tipo de alarma, timestamp, severidad y mensaje
 
-\subsection{Ventajas de IA Local vs Cloud}
+\textbf{3. \texttt{get\_device\_attributes}} \\
+\textbf{Descripción}: Obtiene atributos estáticos o compartidos de un dispositivo \\
+\textbf{Parámetros}:
+\begin{itemize}
+    \item \texttt{device\_id}: Identificador del dispositivo
+    \item \texttt{scope}: Alcance de atributos ("SERVER\_SCOPE", "SHARED\_SCOPE", "CLIENT\_SCOPE")
+    \item \texttt{keys}: Lista opcional de claves específicas
+\end{itemize}
+\textbf{Retorno}: Diccionario de atributos clave-valor (ej. \texttt{\{"lat": 4.8156, "lon": -75.6942, "firmware": "v2.1.3"\}})
 
-IA Local (Gateway Ollama): latencia <500 ms, privacidad alta (datos no salen del gateway), costo \$0 (hardware local), disponibilidad offline 100\%, modelos open-source (Llama 3B-7B, Phi-3), capacidad análisis media (3B-7B params), consumo +5W CPU/+15W GPU. IA Cloud (GPT-4/Claude): latencia 2-5s, privacidad baja (envío a cloud), costo \$0.01-0.10/consulta, disponibilidad offline 0\% (requiere internet), modelos propietarios (100B+ params), capacidad análisis alta. 
+\subsubsection{Protocolo JSON-RPC 2.0}
 
-Recomendación: IA local para análisis en tiempo real y privacidad, reservar IA cloud para análisis complejos periódicos (tendencias mensuales, optimización de red).
+El MCP Server implementa JSON-RPC 2.0 sobre stdio (stdin/stdout) para comunicación con el MCP Client. Ejemplo de intercambio:
+
+\textbf{Request (Client → Server):}
+\begin{verbatim}
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "tools/call",
+  "params": {
+    "name": "get_device_telemetry",
+    "arguments": {
+      "device_id": "METER-001",
+      "keys": ["energy_kwh"],
+      "start_ts": "24h",
+      "limit": 100
+    }
+  }
+}
+\end{verbatim}
+
+\textbf{Response (Server → Client):}
+\begin{verbatim}
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"data\": [{\"ts\": 1699876543000, \"energy_kwh\": 123.45}, 
+                   {\"ts\": 1699880143000, \"energy_kwh\": 125.67}, ...]}"
+      }
+    ]
+  }
+}
+\end{verbatim}
+
+El código completo del MCP Server \texttt{tb\_mcp\_server.py} (Python + requests + sys.stdin loop) y configuración MCP Client \texttt{mcp\_config.json} se documentan en el \textbf{Anexo C}.
+
+\subsection{Casos de Uso de IA en Smart Energy}
+
+\subsubsection{1. Detección de Fraude Eléctrico}
+
+\textbf{Contexto}: El fraude eléctrico (bypass de medidores, manipulación de transformadores de corriente) genera pérdidas de \$1,500-3,000 millones anuales a empresas distribuidoras en Colombia. La detección tradicional requiere inspecciones físicas costosas con tasa de acierto <40\%.
+
+\textbf{Prompt al LLM}:
+\begin{verbatim}
+"Analiza el consumo del medidor METER-001 en las últimas 24 horas 
+e identifica patrones anómalos que pudieran indicar fraude eléctrico, 
+específicamente: (1) caídas súbitas >80% del consumo base, 
+(2) picos nocturnos >10× promedio, (3) desviaciones de perfil de carga 
+respecto a tendencia histórica de 30 días."
+\end{verbatim}
+
+\textbf{Flujo de ejecución}: \\
+1. LLM invoca \texttt{get\_device\_telemetry("METER-001", ["energy\_kwh"], "24h", 96)} obteniendo datos cada 15 min \\
+2. LLM invoca \texttt{get\_device\_telemetry("METER-001", ["energy\_kwh"], "30d", 200)} para baseline histórico \\
+3. LLM calcula estadísticas: media 48.5 kWh, desviación estándar 5.2 kWh, detecta punto a las 3:00 AM con 485 kWh (9.4 desviaciones estándar) \\
+4. LLM genera diagnóstico:
+
+\textbf{Respuesta generada}:
+\begin{verbatim}
+"ALERTA CRÍTICA: Anomalía detectada en METER-001
+- Timestamp: 2024-11-07 03:15:00
+- Consumo registrado: 485 kWh (desviación 9.4σ del baseline)
+- Patrón histórico: 45-52 kWh (media 48.5 kWh)
+- Diagnóstico: Posible bypass del medidor o falla en CT primario
+- Confianza: 94% (basado en análisis de 2880 puntos históricos)
+- Recomendación: Inspección física urgente en <24h
+- Pérdida estimada si fraude confirmado: $1,200-1,800 USD/mes"
+\end{verbatim}
+
+\textbf{Impacto}: Reducción 70\% de inspecciones innecesarias, incremento 85\% en tasa de acierto de fraudes detectados, ROI positivo en <6 meses considerando ahorro en pérdidas no técnicas.
+
+\subsubsection{2. Mantenimiento Predictivo de Infraestructura}
+
+\textbf{Contexto}: Fallas en medidores y transformadores generan interrupciones de servicio (SAIDI >12 horas/año en redes rurales colombianas) y costos de reemplazo reactivo elevados.
+
+\textbf{Prompt al LLM}:
+\begin{verbatim}
+"Evalúa el estado operativo de los 50 medidores de la zona Norte 
+y genera un ranking de prioridad para mantenimiento preventivo 
+en los próximos 30 días. Considera: (1) cantidad de alarmas activas, 
+(2) varianza de voltaje >5% respecto a nominal, 
+(3) edad del dispositivo >5 años, (4) historial de reinicios >3/mes."
+\end{verbatim}
+
+\textbf{Flujo de ejecución}: \\
+1. LLM itera sobre 50 dispositivos invocando \texttt{get\_device\_alarms} y \texttt{get\_device\_attributes} \\
+2. LLM consulta telemetría de voltaje con \texttt{get\_device\_telemetry} calculando varianza para cada dispositivo \\
+3. LLM asigna score de riesgo ponderado: alarmas (40\%), varianza voltaje (30\%), edad (20\%), reinicios (10\%) \\
+4. LLM ordena dispositivos por score y genera reporte:
+
+\textbf{Respuesta generada}:
+\begin{verbatim}
+"REPORTE MANTENIMIENTO PREDICTIVO - Zona Norte (50 dispositivos)
+
+PRIORIDAD CRÍTICA (intervenir en 7 días):
+1. METER-042 [Score: 87/100]
+   - 15 alarmas activas (bajo voltaje, high temperature)
+   - Varianza voltaje 8.3% (spec: <5%)
+   - 7 reinicios en últimos 30 días
+   - Edad: 6.2 años
+   - Predicción: Falla inminente transformador interno (probabilidad 78%)
+   
+2. METER-089 [Score: 81/100]
+   - 12 alarmas activas
+   - Varianza voltaje 7.1%
+   ...
+
+PRIORIDAD ALTA (intervenir en 15 días):
+3. METER-123 [Score: 72/100]
+   ...
+
+Total dispositivos analizados: 50
+Dispositivos prioridad crítica: 2 (4%)
+Dispositivos prioridad alta: 5 (10%)
+Costo estimado mantenimiento preventivo: $1,400 USD
+Ahorro vs reemplazo reactivo: $8,200 USD (ROI 5.9×)"
+\end{verbatim}
+
+\textbf{Impacto}: Reducción 60\% en tiempo de inactividad no planificado, extensión 25\% vida útil de equipos mediante mantenimiento oportuno, optimización de rutas de técnicos (+35\% eficiencia operativa).
+
+\subsubsection{3. Optimización de Respuesta a la Demanda (Demand Response)}
+
+\textbf{Contexto}: Los programas de respuesta a la demanda permiten reducir picos de consumo en horarios críticos (6-10 PM) mediante incentivos tarifarios, reduciendo necesidad de generación de punta (costosa y contaminante).
+
+\textbf{Prompt al LLM}:
+\begin{verbatim}
+"Analiza el perfil de consumo de los 200 medidores residenciales 
+en las últimas 7 días. Identifica los 20 clientes con mayor consumo 
+en horario pico (6-10 PM) y estima el potencial de reducción de carga 
+si se les ofrece tarifa diferencial de $0.15/kWh (vs $0.28/kWh pico). 
+Calcula el impacto en peak shaving total."
+\end{verbatim}
+
+\textbf{Respuesta generada}:
+\begin{verbatim}
+"ANÁLISIS DEMAND RESPONSE - 200 medidores residenciales
+
+TOP 20 CONSUMIDORES HORARIO PICO (6-10 PM):
+1. METER-156: 12.8 kWh/día pico (28% consumo total diario)
+2. METER-203: 11.4 kWh/día pico (25% consumo total diario)
+...
+
+POTENCIAL PEAK SHAVING:
+- Consumo pico actual agregado: 245 kW (6:30 PM promedio)
+- Reducción estimada con DR program: 68 kW (27.8%)
+- Consumo pico proyectado post-DR: 177 kW
+- Evitación generación punta: 68 kW × 120 días/año = 8,160 kWh/año
+- Ahorro CO2: 3.2 ton/año (factor emisión 0.39 kg CO2/kWh Colombia)
+- Costo incentivos clientes: $2,040/año
+- Ahorro evitación punta: $9,800/año (tarifa generación pico $1.20/kWh)
+- ROI: 4.8× (recuperación <3 meses)"
+\end{verbatim}
+
+\textbf{Impacto}: Reducción 25-35\% en picos de demanda, postergación inversión en ampliación de subestaciones (\$1.2-2.5 millones), reducción huella de carbono, mejora estabilidad de red.
+
+\subsection{Ventajas de IA Local vs IA Cloud}
+
+\begin{table}[h]
+\centering
+\caption{Comparativa IA Local (Gateway Ollama) vs IA Cloud (GPT-4/Claude)}
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Característica} & \textbf{IA Local (Ollama)} & \textbf{IA Cloud (GPT-4)} \\
+\hline
+Latencia & <500 ms & 2-5 segundos \\
+Privacidad & Alta (datos locales) & Baja (envío cloud) \\
+Costo operativo & \$0 (hardware local) & \$0.01-0.10/consulta \\
+Disponibilidad offline & 100\% & 0\% (requiere WAN) \\
+Modelos disponibles & Open-source (Llama, Phi-3) & Propietarios (GPT-4) \\
+Capacidad análisis & Media (3B-7B params) & Alta (100B+ params) \\
+Consumo energético & +5W CPU / +15W GPU & N/A (cloud) \\
+Escalabilidad & Distribuida (por gateway) & Centralizada (cloud) \\
+Cumplimiento normativo & Total (datos no salen) & Parcial (DPA agreements) \\
+\hline
+\end{tabular}
+\end{table}
+
+\textbf{Recomendación arquitectónica}: Implementar arquitectura híbrida con IA local para análisis en tiempo real (detección fraude, alarmas críticas, disponibilidad 24/7 offline) y reservar IA cloud para análisis complejos periódicos (optimización de red semanal/mensual, tendencias macroeconómicas, previsiones long-term) que requieren capacidad de razonamiento superior y pueden tolerar latencias >5 segundos. Esta estrategia optimiza balance costo/rendimiento/privacidad.
 
 \section{Conclusiones del Capítulo}
 

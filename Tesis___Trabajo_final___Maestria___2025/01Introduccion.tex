@@ -162,50 +162,72 @@ La arquitectura propuesta reduce latencia end-to-end en 70\% (P50) y 79\% (P99) 
 
 \subsection{Definición del Problema de Investigación}
 
-¿Cómo diseñar e implementar una arquitectura IoT de borde multi-protocolo para aplicaciones Smart Energy que optimice simultáneamente: (1) la eficiencia de comunicación mediante el stack 6LoWPAN/CoAP/LwM2M sobre IEEE 802.15.4 reduciendo latencia y overhead de paquetes; (2) las capacidades de procesamiento en tiempo real mediante edge gateways con IA integrada para gestión inteligente de recursos; y (3) la conectividad de última milla mediante arquitectura basada en IEEE 802.11ah (HaLow) con selección adaptativa de bandwidth (2 MHz para conexiones estables, 4 MHz para gestión balanceada, 8 MHz para alto tráfico con línea de vista), garantizando latencia end-to-end <100 ms, reducción de tráfico WAN >60\%, y disponibilidad >99\% durante desconexiones prolongadas?
+Las redes de telemetría para Smart Energy enfrentan limitaciones críticas en sus arquitecturas de comunicación que comprometen la eficiencia operacional y escalabilidad de los sistemas de gestión energética inteligente. Estas limitaciones se manifiestan en tres dimensiones interrelacionadas:
 
-El problema aborda tres dimensiones técnicas fundamentales:
+\textbf{Problema 1 - Overhead excesivo en protocolos de comunicación}: Las arquitecturas tradicionales de telemetría energética utilizan protocolos no optimizados para dispositivos con restricciones de recursos (MQTT/JSON sobre TCP/IP), generando overhead de paquetes que alcanza 60-80\% del frame total en redes de sensores IEEE 802.15.4 con MTU de 127 bytes. Un paquete típico MQTT/JSON con lectura de consumo energético (payload útil 15-20 bytes) transporta 48 bytes de headers IPv6+UDP+TCP+MQTT, resultando en eficiencia de transmisión <30\%. Este overhead se amplifica en topologías mesh multi-salto, donde cada retransmisión replica headers completos, generando latencias acumuladas de 150-300 ms en rutas de 3-5 saltos y consumo energético excesivo que reduce vida útil de baterías de 5 años proyectados a 18-24 meses reales en nodos alimentados por batería.
 
-\textbf{Dimensión 1 - Optimización del stack de protocolos}: Implementación de 6LoWPAN con compresión de headers IPv6 (de 40 bytes a 2 bytes), CoAP como protocolo de aplicación ligero (overhead 4 bytes vs 100+ bytes HTTP), y LwM2M para gestión eficiente de dispositivos, logrando reducción de latencia >40\% y overhead de paquetes >70\% respecto a stacks tradicionales MQTT/HTTP.
+La ausencia de mecanismos estandarizados de compresión de headers IPv6 y optimización de protocolos de aplicación para redes constrained impide alcanzar los requisitos de eficiencia espectral y latencia determinística exigidos por aplicaciones críticas de gestión de demanda (demand response) y coordinación de recursos energéticos distribuidos (DER), donde ventanas de respuesta de 50-100 ms son mandatorias según estándares IEEE 2030.5 y IEC 61850-90-5.
 
-\textbf{Dimensión 2 - Edge Computing con IA}: Despliegue de gateways edge con capacidades de procesamiento local mediante servicios containerizados (ThingsBoard Edge, TimescaleDB, Kafka), integración de modelos de lenguaje (LLM) locales para análisis en tiempo real de telemetría, detección de anomalías sin dependencia cloud, y gestión inteligente de recursos con adaptación dinámica a condiciones de red.
+\textbf{Problema 2 - Dependencia crítica de conectividad WAN continua}: Las arquitecturas cloud-centric tradicionales (dispositivo → gateway → WAN → cloud) presentan Single Points of Failure en enlaces de área amplia, con disponibilidades reportadas de 94-96\% en conectividad celular LTE en despliegues urbanos (equivalente a 15-22 días de downtime anual). Durante particiones WAN, los sistemas pierden capacidades críticas: visualización de telemetría en tiempo real para operadores, ejecución de reglas de negocio (alarmas, eventos), persistencia de datos históricos, y gestión remota de dispositivos. Esta dependencia genera riesgos operacionales en infraestructuras críticas donde continuidad de servicio es mandatoria.
 
-\textbf{Dimensión 3 - Arquitectura multi-banda IEEE 802.11ah}: Diseño de arquitectura de gateways basada en nodos HaLow con selección estratégica de bandwidth según caso de uso: 2 MHz (sensibilidad -99 dBm, alcance máximo >2 km, conexiones estables en NLOS, ideal para sensores remotos), 4 MHz (balance latencia/alcance, 40 Mbps agregado, gestión de red con throughput moderado), y 8 MHz (throughput >80 Mbps, latencia <20 ms, escenarios de alto tráfico con línea de vista como backhaul de concentradores).
+La arquitectura centralizada introduce además latencias estructurales inherentes (device → gateway: 40 ms Thread, gateway → WAN: 80 ms LTE, WAN → cloud: 50 ms RTT, cloud processing: 30 ms, cloud → DB: 10 ms) que acumulan 210 ms en percentil P50 y >450 ms en P99, excediendo requisitos de aplicaciones de respuesta rápida a la demanda (<100 ms) y coordinación de microrredes (<50 ms). La imposibilidad de procesamiento local durante desconexiones WAN impide implementar estrategias de gestión autónoma de energía en escenarios de islanding de microrredes.
+
+\textbf{Problema 3 - Limitaciones de alcance y throughput en tecnologías de última milla}: Las tecnologías de comunicación predominantes para backhaul de gateways Smart Energy presentan trade-offs desfavorables. LoRaWAN ofrece alcance extendido (5-15 km) pero throughput extremadamente limitado (50 kbps máximo, 0.3-50 kbps típico) y latencias impredecibles (1-5 segundos), inadecuadas para aplicaciones de telemetría de alta frecuencia (lecturas cada 5-15 minutos) y comandos de control en tiempo real. LTE Cat-M1 proporciona throughput superior (1 Mbps) y latencia aceptable (50-100 ms) pero genera costos operacionales recurrentes significativos (\$10-15 USD por nodo por año) que en despliegues de 1,000+ medidores resultan en OPEX prohibitivos (\$150,000 en 5 años solo en conectividad), además de requerir cobertura celular que puede ser intermitente en zonas suburbanas y rurales.
+
+Wi-Fi tradicional 2.4/5 GHz ofrece alto throughput pero alcance limitado (50-100 m) y pobre penetración en entornos NLOS (Non-Line-of-Sight), requiriendo despliegue denso de puntos de acceso con CAPEX elevado. La ausencia de tecnologías que combinen alcance extendido (>1 km), throughput suficiente para agregación de datos (>40 Mbps), latencia determinística (<50 ms), y operación en espectro no licenciado sin costos recurrentes, limita la viabilidad económica de redes de telemetría de gran escala.
+
+\textbf{Impacto del problema}: Estas limitaciones resultan en sistemas de telemetría Smart Energy con eficiencia operacional subóptima, costos de propiedad (TCO) elevados, escalabilidad restringida, y dependencia de conectividad externa que compromete resiliencia ante fallos. La ausencia de estándares abiertos de interoperabilidad agrava el problema, generando lock-in tecnológico y dificultando integración multi-vendor.
 
 \subsection{Delimitación del Problema}
 
-La investigación se delimita a tres pilares técnicos fundamentales:
+El problema de investigación se delimita específicamente al contexto de **redes de telemetría Smart Energy basadas en 6LoWPAN** para monitoreo y gestión de consumo energético en infraestructuras de distribución eléctrica residencial y comercial. La delimitación se estructura en tres dimensiones:
 
-\textbf{Pilar 1 - Stack de Protocolos 6LoWPAN/CoAP/LwM2M}:
+\textbf{Dimensión 1 - Dominio de Aplicación: Smart Energy}
+
+El problema se circunscribe exclusivamente a aplicaciones de **gestión inteligente de energía eléctrica** según estándares IEEE 2030.5 (Smart Energy Profile 2.0) e IEC 61850, enfocándose en:
+
 \begin{itemize}
-\item \textbf{Capa de adaptación}: 6LoWPAN (RFC 6282) sobre IEEE 802.15.4-2020 con compresión de headers IPHC/NHC.
-\item \textbf{Capa de aplicación}: CoAP (RFC 7252) con modos Confirmable (CON) y Non-Confirmable (NON), block-wise transfer (RFC 7959), y Observe (RFC 7641).
-\item \textbf{Gestión de dispositivos}: LwM2M 1.2 (OMA SpecWorks) con objetos estándar (Security 0, Server 1, Device 3, Connectivity Monitoring 4, Firmware Update 5).
-\item \textbf{Métricas de evaluación}: Overhead de headers (bytes), latencia por salto (ms), eficiencia espectral (bits/Hz), tasa de entrega de paquetes (PDR), consumo energético por transmisión (mJ/bit).
+\item \textbf{Telemetría de consumo}: Recolección de datos de medidores inteligentes (smart meters) con frecuencias de muestreo de 5-60 minutos, incluyendo mediciones de potencia activa/reactiva (kW/kVAr), voltaje (V), corriente (A), factor de potencia, y energía acumulada (kWh).
+\item \textbf{Gestión de demanda (Demand Response)}: Comunicación bidireccional para implementación de eventos de respuesta a la demanda (DR) con ventanas de respuesta de 50-100 ms, incluyendo señalización de precios dinámicos, control de cargas, y participación en mercados de flexibilidad.
+\item \textbf{Monitoreo de calidad de energía}: Detección de sags/swells de voltaje, interrupciones, armónicos, y eventos de calidad de potencia según IEC 61000-4-30.
+\item \textbf{Integración de recursos energéticos distribuidos (DER)}: Coordinación de generación solar fotovoltaica, almacenamiento en baterías, vehículos eléctricos, y gestión de microrredes con requisitos de latencia <50 ms para sincronización de fasores.
 \end{itemize}
 
-\textbf{Pilar 2 - Edge Gateway con IA}:
+Se excluyen del alcance: telemetría de agua/gas, monitoreo industrial (no energético), automatización de edificios (HVAC, iluminación no vinculada a gestión energética), y sistemas SCADA de alta tensión en subestaciones (dominio de IEC 61850-3).
+
+\textbf{Dimensión 2 - Stack de Protocolos: 6LoWPAN como Capa de Adaptación}
+
+El problema se enfoca en la **optimización de comunicaciones mediante 6LoWPAN** (RFC 6282, RFC 4944) como capa de adaptación IPv6 para redes de sensores con restricciones de recursos, delimitando:
+
 \begin{itemize}
-\item \textbf{Plataforma hardware}: ARMv8 Cortex-A53 quad-core @ 1.8 GHz (Raspberry Pi 4 o Banana Pi BPI-R4), 4-8 GB RAM, NVMe SSD 256 GB, periféricos M.2 para LTE.
-\item \textbf{Sistema operativo}: OpenWRT 23.05.x con kernel Linux 5.15 LTS + parches PREEMPT\_RT para latencias determinísticas.
-\item \textbf{Stack de servicios}: ThingsBoard Edge 3.6 (procesamiento CEP local), PostgreSQL 15 + TimescaleDB 2.13 (series temporales), Apache Kafka 7.5 (message broker), Ollama + Llama 3.2 3B (inferencia LLM local).
-\item \textbf{Capacidades IA}: Detección de anomalías en consumo energético, mantenimiento predictivo basado en patrones de alarmas, optimización de rutas mesh mediante reinforcement learning, compresión adaptativa de datos según ancho de banda disponible.
-\item \textbf{Métricas de evaluación}: Latencia de inferencia IA (<500 ms objetivo), precisión de detección de anomalías (>95\%), overhead de CPU/RAM bajo carga, tiempo de failover multi-WAN (<30s).
+\item \textbf{Capa física/MAC}: IEEE 802.15.4-2020 banda 2.4 GHz, OQPSK modulation, 250 kbps, MTU 127 bytes, CSMA/CA con backoff exponencial.
+\item \textbf{Capa de adaptación (6LoWPAN)}: Compresión IPHC (IPv6 Header Compression) reduciendo headers de 40 bytes a 2-7 bytes, compresión NHC (Next Header Compression) para UDP/TCP, fragmentación y reensamblado para paquetes >127 bytes, mesh-under routing con headers de encapsulación.
+\item \textbf{Capa de transporte}: UDP predominante (overhead 8 bytes comprimible a 4 bytes con NHC), TCP limitado para aplicaciones que requieren confiabilidad garantizada (ej. firmware updates).
+\item \textbf{Capa de aplicación}: CoAP (Constrained Application Protocol, RFC 7252) como protocolo RESTful ligero con overhead 4-10 bytes, modos CON/NON, Observe (RFC 7641) para subscripciones, block-wise transfer (RFC 7959) para transferencias grandes, y DTLS 1.2 para seguridad.
+\item \textbf{Gestión de dispositivos}: LwM2M 1.2 (Lightweight M2M, OMA SpecWorks) sobre CoAP, con objetos estándar para telemetría energética, firmware OTA, y monitoreo de conectividad.
 \end{itemize}
 
-\textbf{Pilar 3 - Arquitectura Multi-Banda IEEE 802.11ah}:
+El problema se delimita a la evaluación cuantitativa de: (a) reducción de overhead de paquetes mediante compresión 6LoWPAN vs stacks tradicionales MQTT/TCP, (b) latencia por salto en topologías mesh Thread de 3-5 hops, (c) eficiencia energética (mJ/bit) en nodos alimentados por batería, y (d) packet delivery ratio (PDR) en condiciones de interferencia 2.4 GHz.
+
+\textbf{Dimensión 3 - Alcance Geográfico y Escala}
+
 \begin{itemize}
-\item \textbf{Bandwidths evaluados}: 1 MHz (150 kbps, sensibilidad -99 dBm, >2 km NLOS), 2 MHz (300-450 kbps, sensibilidad -96 dBm, 1.5-2 km, óptimo para conexiones estables), 4 MHz (600-900 kbps, sensibilidad -91 dBm, 1-1.5 km, balance throughput/alcance), 8 MHz (1.2-1.8 Mbps, sensibilidad -85 dBm, 0.5-1 km LOS, alto tráfico backhaul).
-\item \textbf{Topologías}: Star (gateway central + nodos finales), Mesh 802.11s (routing HWMP, auto-healing), EasyMesh (IEEE 1905.1, roaming coordinado).
-\item \textbf{Casos de uso específicos}: 2 MHz para sensores remotos baja frecuencia (lecturas horarias, zonas rurales, penetración indoor), 4 MHz para gestión de red balanceada (lecturas 15 min, zonas suburbanas, densidad media), 8 MHz para backhaul de concentradores (agregación de datos, zonas urbanas LOS, latencia crítica <50 ms).
-\item \textbf{Métricas de evaluación}: Link budget por bandwidth, throughput agregado vs número de clientes, latencia P50/P95/P99, tasa de handover en movilidad, cobertura efectiva por MCS.
+\item \textbf{Entorno de despliegue}: Zonas urbanas y suburbanas residenciales/comerciales con densidades de 100-500 medidores por km², excluyendo zonas rurales remotas (baja densidad <20 medidores/km²) y zonas industriales de alta potencia (>1 MW por punto de medición).
+\item \textbf{Escala de red}: Topologías de 10-100 nodos IoT por gateway edge, con validación experimental en prototipo de 10 nodos y extrapolación analítica a 100 nodos. Se excluye la validación empírica de redes >1,000 nodos.
+\item \textbf{Alcance de comunicación}: Redes Thread mesh con alcance efectivo 200-500 m (3-5 hops @ 80 m por hop en entorno urbano con obstrucciones), y backhaul HaLow con alcance 1-2 km en configuración 2 MHz bandwidth.
+\item \textbf{Requisitos temporales}: Latencia end-to-end objetivo <100 ms P95 para telemetría, <50 ms para comandos de control demand response, y disponibilidad >99\% anual (downtime <87 horas/año).
 \end{itemize}
 
-\textbf{Dominio de aplicación}: Redes de telemetría Smart Energy en entornos urbanos/suburbanos con densidad 1,000-10,000 puntos de medición por km², con validación en caso de estudio real de 900 medidores residenciales.
+\textbf{Estándares implementados}:
+\begin{itemize}
+\item \textbf{Smart Energy}: IEEE 2030.5-2023 (Function Sets: DCAP, Time, EndDevice, MirrorUsagePoint, MirrorMeterReading), ISO/IEC 30141:2024 (IoT Reference Architecture).
+\item \textbf{Comunicación 6LoWPAN}: RFC 6282 (IPHC), RFC 4944 (6LoWPAN), RFC 7252 (CoAP), RFC 7641 (Observe), RFC 7959 (Block-wise), OMA LwM2M 1.2.
+\item \textbf{Conectividad}: IEEE 802.15.4-2020 (Thread 1.3.1), IEEE 802.11ah-2016 (HaLow).
+\end{itemize}
 
-\textbf{Estándares implementados}: IEEE 802.15.4-2020, IEEE 802.11ah-2016, IEEE 2030.5-2023, ISO/IEC 30141:2024, OMA LwM2M 1.2, RFC 6282 (6LoWPAN), RFC 7252 (CoAP).
+\textbf{Exclusiones explícitas}: PLC (Power Line Communication G3-PLC/PRIME), protocolos propietarios (Zigbee Smart Energy 1.x), redes celulares 5G/NR-Light, redes de alta tensión con IEC 61850-3 (fuera del dominio Smart Energy residencial/comercial), y blockchain para auditoría de transacciones energéticas (trabajo futuro).
 
-Se excluyen del alcance: implementación de IEC 61850 (subestaciones), PLC (G3-PLC/PRIME), certificación formal Thread/Matter, redes 5G/NR-Light, y blockchain para auditoría (trabajo futuro).
+Esta delimitación asegura que el problema de investigación se mantenga enfocado en la intersección específica de **6LoWPAN como solución de comunicación eficiente** y **Smart Energy como dominio de aplicación crítico**, evitando dispersión en dominios adyacentes que diluirían la contribución técnica.
 
 \subsection{Justificación}
 
