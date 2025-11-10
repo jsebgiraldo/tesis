@@ -28,21 +28,25 @@ Antes de analizar los protocolos individuales, es fundamental comprender la arqu
 
 El stack de protocolos integra múltiples capas del modelo OSI, optimizando cada capa para operar en entornos constrained (dispositivos con <256 KB RAM, <1 MB Flash, batería limitada):
 
-\begin{figure}[h]
+\begin{table}[h]
 \centering
-\begin{tabular}{|p{3cm}|p{5cm}|p{6cm}|}
+\small
+\caption{Stack de protocolos 6LoWPAN/CoAP/LwM2M para IoT Smart Energy}
+\label{tab:protocol-stack}
+\begin{tabular}{|p{2.5cm}|p{3.5cm}|p{6.5cm}|}
 \hline
+\rowcolor{gray!20}
 \textbf{Capa OSI} & \textbf{Protocolo} & \textbf{Función Principal} \\
 \hline
-\textbf{7. Aplicación} & LwM2M 1.2 & Gestión de dispositivos, objetos IPSO \\
+\textbf{7. Aplicación} & \textcolor{blue}{LwM2M 1.2} & Gestión dispositivos, objetos IPSO telemetría \\
 \hline
-\textbf{6. Presentación} & CBOR/TLV & Serialización eficiente de datos \\
+\textbf{6. Presentación} & CBOR/TLV & Serialización eficiente binaria \\
 \hline
-\textbf{5. Sesión} & CoAP (RFC 7252) & Protocolo RESTful para constrained devices \\
+\textbf{5. Sesión} & \textcolor{blue}{CoAP RFC 7252} & RESTful para constrained devices \\
 \hline
-\textbf{4. Transporte} & UDP & Transporte no orientado a conexión \\
+\textbf{4. Transporte} & UDP & No orientado a conexión \\
 \hline
-\textbf{3. Red} & 6LoWPAN (RFC 6282) & Compresión headers IPv6, fragmentación \\
+\textbf{3. Red} & \textcolor{blue}{6LoWPAN RFC 6282} & Compresión IPv6 headers, fragmentación \\
 \hline
 \textbf{3. Red} & IPv6 & Direccionamiento global end-to-end \\
 \hline
@@ -51,9 +55,7 @@ El stack de protocolos integra múltiples capas del modelo OSI, optimizando cada
 \textbf{1. Física} & IEEE 802.15.4 PHY & 2.4 GHz OQPSK, 250 kbps \\
 \hline
 \end{tabular}
-\caption{Stack de protocolos 6LoWPAN/CoAP/LwM2M para IoT Smart Energy}
-\label{tab:protocol-stack}
-\end{figure}
+\end{table}
 
 \subsection{Flujo de Datos en el Stack}
 
@@ -140,16 +142,21 @@ La tabla de routing Thread almacena para cada destino:
 
 \begin{table}[h]
 \centering
-\caption{Ejemplo de Tabla de Routing Thread}
+\small
+\caption{Ejemplo de tabla de routing Thread para Smart Energy}
 \label{tab:thread-routing}
-\begin{tabular}{|c|c|c|c|c|}
+\begin{tabular}{|p{2.8cm}|p{2.5cm}|p{2.2cm}|p{1.8cm}|p{2cm}|}
 \hline
+\rowcolor{gray!20}
 \textbf{Destination} & \textbf{Next Hop} & \textbf{Path Cost} & \textbf{LQI} & \textbf{Age (s)} \\
 \hline
-Router 2 & Direct & 1 & 255 & 0 \\
-Router 5 & Router 2 & 2 & 220 & 5 \\
+Router 2 & Direct & \textcolor{green}{1} & \textcolor{blue}{255} & 0 \\
+\hline
+Router 5 & Router 2 & 2 & \textcolor{blue}{220} & 5 \\
+\hline
 End Device 12 & Router 2 & 2 & 200 & 3 \\
-Leader & Router 2 & 2 & 255 & 1 \\
+\hline
+Leader & Router 2 & 2 & \textcolor{blue}{255} & 1 \\
 \hline
 \end{tabular}
 \end{table}
@@ -166,23 +173,25 @@ Comparativa con otros protocolos mesh 2.4 GHz:
 
 \begin{table}[h]
 \centering
-\caption{Comparación Protocolos Mesh 2.4 GHz}
+\small
+\caption{Comparación de protocolos mesh 2.4 GHz para Smart Energy}
 \label{tab:mesh-protocols-detailed}
-\begin{tabular}{|p{3.5cm}|p{3.5cm}|p{3.5cm}|p{3.5cm}|}
+\begin{tabular}{|p{3.2cm}|p{3.2cm}|p{3.2cm}|p{3.2cm}|}
 \hline
+\rowcolor{gray!20}
 \textbf{Característica} & \textbf{Thread 1.3.1} & \textbf{Zigbee 3.0} & \textbf{Bluetooth Mesh} \\
 \hline
-\textbf{Stack routing} & IPv6 6LoWPAN & Propietario (AODV) & Managed Flooding \\
+\textbf{Stack routing} & \textcolor{blue}{IPv6 6LoWPAN} & \textcolor{red}{Propietario AODV} & \textcolor{red}{Managed Flooding} \\
 \hline
-\textbf{Hop limit} & No limit (típico 3-5) & 30 máximo & 127 máximo \\
+\textbf{Hop limit} & \textcolor{blue}{No limit (3-5 típico)} & 30 máx. & 127 máx. \\
 \hline
-\textbf{Route repair} & Proactive (MLE) & Reactive (AODV RERR) & Flooding redundancy \\
+\textbf{Route repair} & \textcolor{blue}{Proactive MLE} & \textcolor{red}{Reactive AODV RERR} & \textcolor{red}{Flooding redundancy} \\
 \hline
-\textbf{Commissioning} & Out-of-band (PSKd) & Install codes & Provisioning (ECDH) \\
+\textbf{Commissioning} & Out-of-band PSKd & Install codes & Provisioning ECDH \\
 \hline
-\textbf{Border Router} & Estándar (OTBR) & Coordinador específico & Proxy nodes \\
+\textbf{Border Router} & \textcolor{blue}{Estándar OTBR} & \textcolor{red}{Coordinador específico} & \textcolor{red}{Proxy nodes} \\
 \hline
-\textbf{Matter compatibility} & Nativo & Requiere bridge & Requiere bridge \\
+\textbf{Matter compatibility} & \textcolor{blue}{Nativo} & \textcolor{red}{Requiere bridge} & \textcolor{red}{Requiere bridge} \\
 \hline
 \end{tabular}
 \end{table}
