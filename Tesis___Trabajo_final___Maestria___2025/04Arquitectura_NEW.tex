@@ -2,13 +2,13 @@
 
 \section{Introducción}
 
-Este capítulo presenta la arquitectura completa del sistema de telemetría propuesto para aplicaciones de Smart Energy, integrando los componentes descritos en el capítulo anterior (Gateway) en una solución end-to-end escalable y segura.
+Este capítulo presenta la arquitectura completa del sistema de telemetría propuesto para aplicaciones de Smart Energy, integrando los componentes descritos en el capítulo anterior (Gateway) en una solución end-to-end escalable y segura~\cite{alsafranChallengesImplementingIoT2025,velasquezSmartGridsEmpowered2024}.
 
 \section{Visión General de la Arquitectura}
 
 \subsection{Componentes Principales}
 
-La arquitectura se compone de cuatro capas principales:
+La arquitectura se compone de cuatro capas principales~\cite{choudharyInternetThingsComprehensive2024,tangResearchInteroperabilityIoT}:
 
 \begin{enumerate}
     \item \textbf{Capa de Dispositivos}: Medidores inteligentes con interfaces DLMS/COSEM.
@@ -69,15 +69,15 @@ El hardware del DCU utiliza ESP32C6 (dual radio: Thread + WiFi), módulo HaLow (
 
 La arquitectura de software incluye OpenThread Border Router (OTBR), stack WiFi nativo de ESP-IDF, driver HaLow integrado en FreeRTOS, y cola de mensajes con persistencia en SPIFFS/SD. Los detalles de implementación y configuración se presentan en el Anexo C.
 
-\section{Topología de Red Thread}
+\subsection{Topología de Red Thread}
 
 \subsection{Mesh Networking}
 
-Thread implementa una red mallada auto-organizante con tres tipos de nodos: Leader (coordina la red, elegido automáticamente), Routers (enrutan tráfico de otros nodos), y End Devices (nodos de bajo consumo como los adaptadores de medidor).
+Thread implementa una red mallada auto-organizante con tres tipos de nodos: Leader (coordina la red, elegido automáticamente), Routers (enrutan tráfico de otros nodos), y End Devices (nodos de bajo consumo como los adaptadores de medidor)~\cite{abdulsalamOverviewRecentWireless2024,abood6LoWPANTechnicalFeatures2024}.
 
 \subsection{Ventajas de Thread}
 
-Las principales ventajas incluyen auto-healing (reconfiguración automática ante fallos), IPv6 nativo con direccionamiento global único, seguridad mediante AES-128 CCM en capa de enlace y DTLS en aplicación, y escalabilidad hasta 250+ nodos por red Thread.
+Las principales ventajas incluyen auto-healing (reconfiguración automática ante fallos), IPv6 nativo con direccionamiento global único~\cite{saadHeterogeneousIPv6Infrastructure}, seguridad mediante AES-128 CCM en capa de enlace y DTLS en aplicación~\cite{thungonSurvey6LoWPANSecurity2024}, y escalabilidad hasta 250+ nodos por red Thread~\cite{amiriDeploymentArchitecturesMQTT2024}.
 
 \subsection{Configuración de Red}
 
@@ -182,6 +182,48 @@ ThingsBoard (cloud) & 1 & \$50/mes & \$600/año \\
 \end{table}
 
 \subsection{Comparación con Alternativas}
+
+\begin{table}[H]
+\centering
+\caption{Comparación arquitecturas edge gateway para Smart Energy IoT}
+\label{tab:arquitecturas-comparacion}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{|>{\centering\arraybackslash}p{2.8cm}|>{\centering\arraybackslash}p{2.5cm}|>{\centering\arraybackslash}p{2.5cm}|>{\centering\arraybackslash}p{2.5cm}|>{\centering\arraybackslash}p{3cm}|}
+\hline
+\rowcolor{blue!20}
+\textbf{Característica} & \textbf{Propuesta Tesis} & \textbf{Celular NB-IoT} & \textbf{PLC G3-PLC/PRIME} & \textbf{LoRaWAN} \\
+\hline
+\textbf{Costo inicial (300 medidores)} & \textcolor{green}{\textbf{\$5,440}} & \$15,000 & \$12,000-15,000 & \$8,000 \\
+\hline
+\textbf{Costo operativo anual} & \textcolor{green}{\textbf{\$600}} (\$2/med.) & \textcolor{red}{\$36,000} (\$120/med.) & \$3,600 (\$12/med.) & \$1,800 (\$6/med.) \\
+\hline
+\textbf{Alcance típico} & \textcolor{blue}{\textbf{1-3 km}} HaLow & \textbf{5-15 km} & 150-500m (PLC) & \textcolor{green}{\textbf{5-15 km}} \\
+\hline
+\textbf{Latencia E2E} & \textcolor{green}{\textbf{3 segundos}} & 10-30 s & 5-15 s & \textcolor{orange}{30-300 s} (Clase A) \\
+\hline
+\textbf{Throughput por nodo} & \textcolor{blue}{\textbf{150-900 kbps}} & 60-250 kbps & 50-128 kbps & \textcolor{orange}{0.3-50 kbps} \\
+\hline
+\textbf{Seguridad} & \textcolor{green}{\textbf{E2E TLS + WPA3}} & 3GPP security & AES-128 & AES-128 LoRaWAN \\
+\hline
+\textbf{Escalabilidad} & \textcolor{blue}{\textbf{8K devices/AP}} & Unlimited & 500-2000/subnet & 10K/gateway \\
+\hline
+\textbf{Resiliencia offline} & \textcolor{green}{\textbf{7 días buffer}} & No buffer & No buffer & \textcolor{orange}{Limited buffer} \\
+\hline
+\textbf{Edge computing} & \textcolor{green}{\textbf{Sí (Ollama LLM)}} & \textcolor{red}{No disponible} & \textcolor{red}{No} & \textcolor{red}{No} \\
+\hline
+\textbf{Dependencias infraestructura} & \textcolor{green}{\textbf{Mínimas}} & \textcolor{orange}{Torres celulares} & \textcolor{red}{Grid eléctrico} & \textcolor{orange}{Gateways LoRaWAN} \\
+\hline
+\textbf{Flexibilidad protocolo} & \textcolor{green}{\textbf{Multi-protocolo}} & \textcolor{orange}{UDP/TCP} & \textcolor{red}{PLC específico} & \textcolor{orange}{LoRaWAN only} \\
+\hline
+\rowcolor{yellow!20}
+\textbf{Ventaja principal} & \textbf{Costo-eficiencia} + Edge AI & \textbf{Cobertura global} & \textbf{Sin RF} & \textbf{Largo alcance} \\
+\hline
+\rowcolor{red!20}
+\textbf{Limitación principal} & Cobertura local & \textcolor{red}{\textbf{Costo operativo}} & Dependencia grid & \textcolor{red}{\textbf{Latencia alta}} \\
+\hline
+\end{tabular}%
+}
+\end{table}
 
 La solución propuesta resulta significativamente más económica que alternativas: Celular NB-IoT requiere \$10/mes/dispositivo (\$36,000/año, inviable), PLC (G3-PLC/PRIME) tiene mayor costo de nodos (\$30-40) sin ventajas claras, y LoRaWAN presenta mayor latencia (clase A) y menor throughput aunque alcance similar.
 

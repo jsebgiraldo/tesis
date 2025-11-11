@@ -2,15 +2,15 @@
 
 \section{Introducción}
 
-Este capítulo presenta los elementos fundamentales de la arquitectura IoT propuesta para aplicaciones de Smart Energy, abarcando desde los nodos sensores de campo hasta las capacidades de procesamiento edge con inteligencia artificial. La arquitectura sigue un modelo jerárquico de tres niveles (nodos, routers y gateways) que permite escalabilidad masiva, eficiencia energética y resiliencia operativa, cumpliendo con los estándares IEEE 2030.5 (Smart Energy Profile 2.0) e ISO/IEC 30141 (IoT Reference Architecture).
+Este capítulo presenta los elementos fundamentales de la arquitectura IoT propuesta para aplicaciones de Smart Energy, abarcando desde los nodos sensores de campo hasta las capacidades de procesamiento edge con inteligencia artificial~\cite{boonmeerukCostEffectiveIIoTGateway2024,liangReviewEdgeComputing2024}. La arquitectura sigue un modelo jerárquico de tres niveles (nodos, routers y gateways) que permite escalabilidad masiva, eficiencia energética y resiliencia operativa, cumpliendo con los estándares IEEE 2030.5 (Smart Energy Profile 2.0) e ISO/IEC 30141 (IoT Reference Architecture)~\cite{IEEERecommendedPractice,tangResearchInteroperabilityIoT}.
 
-La implementación propuesta integra tecnologías de conectividad de última generación (Thread 802.15.4, Wi-Fi HaLow 802.11ah), protocolos de aplicación optimizados para IoT (CoAP, LwM2M, MQTT) y capacidades de procesamiento edge mediante ThingsBoard Edge y modelos de lenguaje local (LLM). Los detalles técnicos de implementación (configuraciones UCI, docker-compose, scripts) se documentan en los anexos correspondientes.
+La implementación propuesta integra tecnologías de conectividad de última generación (Thread 802.15.4, Wi-Fi HaLow 802.11ah), protocolos de aplicación optimizados para IoT (CoAP, LwM2M, MQTT) y capacidades de procesamiento edge mediante ThingsBoard Edge y modelos de lenguaje local (LLM)~\cite{saidiIoTGatewayPowered2024,zhouGatewayArchitectureSecurity}. Los detalles técnicos de implementación (configuraciones UCI, docker-compose, scripts) se documentan en los anexos correspondientes.
 
 \section{Visión General de la Arquitectura}
 
 \subsection{Modelo Jerárquico de 3 Niveles IoT}
 
-La arquitectura propuesta sigue un modelo jerárquico que permite desplegar redes IoT con miles de dispositivos manteniendo eficiencia operativa, optimizando la distribución de funciones, consumo energético y capacidad de procesamiento. Esta arquitectura, alineada con las implementaciones de referencia de Morse Micro para Wi-Fi HaLow y el ecosistema Thread de la Connectivity Standards Alliance, permite escalabilidad masiva en despliegues de Smart Energy.
+La arquitectura propuesta sigue un modelo jerárquico que permite desplegar redes IoT con miles de dispositivos manteniendo eficiencia operativa, optimizando la distribución de funciones, consumo energético y capacidad de procesamiento~\cite{choudharyInternetThingsComprehensive2024,ashfaqIoTSensorNetworks2024}. Esta arquitectura, alineada con las implementaciones de referencia de Morse Micro para Wi-Fi HaLow y el ecosistema Thread de la Connectivity Standards Alliance, permite escalabilidad masiva en despliegues de Smart Energy~\cite{scharerPushingWiFiHaLow2025}.
 
 Los tres niveles de la arquitectura son:
 
@@ -20,13 +20,13 @@ Los tres niveles de la arquitectura son:
     \item \textbf{Nivel 3 - Gateways Edge}: Plataformas de cómputo que agregan datos, ejecutan procesamiento edge y conectan con infraestructura WAN
 \end{itemize}
 
-Esta separación de funciones permite optimizar cada nivel según sus requisitos específicos de consumo energético, capacidad de procesamiento y conectividad, mientras mantiene interoperabilidad mediante protocolos estándares abiertos.
+Esta separación de funciones permite optimizar cada nivel según sus requisitos específicos de consumo energético, capacidad de procesamiento y conectividad, mientras mantiene interoperabilidad mediante protocolos estándares abiertos~\cite{saadHeterogeneousIPv6Infrastructure,hudda ReviewWSNBased2025}.
 
 \subsection{Conformidad con Estándares Internacionales}
 
 \subsubsection{IEEE 2030.5-2023 (Smart Energy Profile 2.0)}
 
-El gateway implementa funcionalidades alineadas con IEEE 2030.5 (SEP 2.0), incluyendo los siguientes Function Sets:
+El gateway implementa funcionalidades alineadas con IEEE 2030.5 (SEP 2.0), incluyendo los siguientes Function Sets~\cite{IEEERecommendedPractice}:
 
 \begin{itemize}
     \item \textbf{Device Capability (DCAP)}: Descubrimiento de capacidades (\texttt{/dcap})
@@ -77,8 +77,8 @@ Los nodos implementan stacks de protocolos ligeros optimizados para dispositivos
 
 \begin{itemize}
     \item \textbf{Thread 1.3}: IPv6 sobre 802.15.4 con routing mesh, comisionamiento seguro (PAKE), multicast confiable
-    \item \textbf{CoAP (RFC 7252)}: Protocolo de aplicación request/response con observe pattern, block-wise transfers
-    \item \textbf{LwM2M 1.2}: Framework de gestión de dispositivos sobre CoAP con modelo de objetos extensible (IPSO)
+    \item \textbf{CoAP (RFC 7252)}: Protocolo de aplicación request/response con observe pattern, block-wise transfers~\cite{shahinzadehSmartHomeConnectivity2024}
+    \item \textbf{LwM2M 1.2}: Framework de gestión de dispositivos sobre CoAP con modelo de objetos extensible (IPSO)~\cite{haEnablingDynamicLightweight2018}
     \item \textbf{CBOR (RFC 8949)}: Serialización binaria compacta para payloads eficientes
 \end{itemize}
 
