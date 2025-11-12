@@ -1,0 +1,96 @@
+# LaTeX auxiliary files
+*.aux
+*.bbl
+*.blg
+*.log
+*.out
+*.toc
+*.lof
+*.lot
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.synctex.gz(busy)
+*.pdfsync
+*.alg
+*.loa
+*.nav
+*.snm
+*.vrb
+*.dvi
+*.ps
+*.bcf
+*.run.xml
+*.tdo
+*.acn
+*.acr
+*.glg
+*.glo
+*.gls
+*.glsdefs
+*.ist
+*.idx
+*.ilg
+*.ind
+
+# Generated PDFs (comment out if you want to track PDFs)
+*.pdf
+
+# Backup files
+*_backup.tex
+*_compressed.tex
+*_optimized.tex
+*.bak
+*~
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+*.egg-info/
+
+# Scripts temporales
+fix_*.ps1
+fix_*.py
+agregar_citas*.ps1
+agregar_citas*.py
+agregar_citas_log.txt
+actualizar_*.ps1
+organizar_*.ps1
+sync_*.ps1
+verificar_*.ps1
+analizar_*.py
+
+# Documentación temporal
+PLAN_*.md
+ANALISIS_*.md
+ZOTERO_*.md
+ACTUALIZACION_*.md
+RESUMEN_*.md
+INSTRUCCIONES_*.md
+
+# Directorios temporales
+referencias_organizadas/
+temp/
+.vscode/
+
+# Referencias duplicadas/temporales
+Referencias_clean.bib
+Referencias_updated.bib
+Referencias_backup*.bib
+
+# PDFs de referencias (mantener en carpeta ref/ pero no trackear)
+../ref/*.pdf
+
+# Archivos de sistema
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# MiKTeX
+*.minted
+_4A7D1ED414474E4033AC29CCB8653D9B.data.minted

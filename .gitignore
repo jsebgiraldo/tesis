@@ -172,6 +172,34 @@ comment.cut
 # Output PDFs (comentar la siguiente línea si quieres versionar el PDF final)
 # *.pdf
 
+# PDFs de referencias (muy pesados, no trackear)
+ref/*.pdf
+ref/**/*.pdf
+
+# Archivos LaTeX duplicados en raíz
+*Introduccion.tex
+*Gateway*.tex
+*Arquitectura*.tex
+*Conclusiones*.tex
+*MarcoTeorico.tex
+
+# Scripts y documentación temporal
+PLAN_*.md
+ANALISIS_*.md
+ZOTERO_*.md
+ACTUALIZACION_*.md
+RESUMEN_*.md
+INSTRUCCIONES_*.md
+actualizar_*.ps1
+agregar_*.ps1
+agregar_*.py
+fix_*.ps1
+fix_*.py
+organizar_*.ps1
+sync_*.ps1
+verificar_*.ps1
+analizar_*.py
+
 # MiKTeX specific
 *.miktex
 
