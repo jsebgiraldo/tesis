@@ -1,0 +1,314 @@
+\chapter{Niveles 2 y 3: Gateway de Borde y Red de Distribución HaLow}
+\label{chap:gateway-halow}
+
+% ============================================================================
+% PROPÓSITO ÚNICO: Detallar implementación del Gateway (RPi4) y red HaLow.
+% Se agota el tema 802.11ah + OTBR aquí.
+% ============================================================================
+
+\section{Introducción}
+\label{sec:gateway-intro}
+
+% TODO: Introducción al capítulo (200-300 palabras)
+% - Rol del Gateway como puente Thread ↔ IP
+% - Red HaLow como backhaul última milla
+% - Estructura del capítulo
+
+\section{Arquitectura del Gateway Inteligente Raspberry Pi 4}
+\label{sec:gateway-arquitectura}
+
+% TODO: MIGRAR desde 03Arquitectura_REFACTORED.tex §3.4 (Nivel 3)
+% + desde 04Implementacion_NEW.tex §4.3
+% - Hardware: RPi4 Model B (4 GB RAM, Quad-core ARM)
+% - Rol dual:
+%   1. OTBR (OpenThread Border Router)
+%   2. Edge Computing (ThingsBoard Edge + Docker)
+% Longitud estimada: 3-4 páginas
+
+\subsection{Especificaciones del Hardware}
+\label{sec:gateway-hardware}
+
+% TODO: MIGRAR especificaciones RPi4
+% - CPU: Broadcom BCM2711 (Cortex-A72 @ 1.5 GHz)
+% - RAM: 4 GB LPDDR4-3200
+% - Storage: NVMe 256 GB (via USB 3.0)
+% - I/O: USB 3.0 (Thread dongle), Ethernet GbE
+% Tabla: Specs RPi4 vs alternativas (Odroid, Orange Pi)
+
+\subsection{Arquitectura de Software}
+\label{sec:gateway-software}
+
+% TODO: MIGRAR arquitectura Docker
+% - OS: OpenWRT 23.05 (Linux 5.15)
+% - Containers:
+%   1. OTBR (OpenThread)
+%   2. ThingsBoard Edge
+%   3. Mosquitto MQTT broker
+%   4. PostgreSQL + TimescaleDB
+%   5. Prometheus + Grafana
+%   6. Ollama (AI local) - NUEVO
+% Figura: Diagrama arquitectura microservicios
+
+\section{Implementación del OpenThread Border Router (OTBR)}
+\label{sec:gateway-otbr}
+
+% TODO: MIGRAR desde 04Implementacion_NEW.tex §4.3.2
+% + EXPANDIR teoría Thread Border Router (600 palabras NUEVAS)
+% - Rol OTBR: Bridge Thread ↔ IPv6
+% - Interfaces: wpan0 (Thread) + eth0 (Ethernet)
+% - Services: NAT64, DNS64, ND Proxy
+% Longitud estimada: 5-6 páginas
+
+\subsection{Configuración de Interfaces de Red}
+\label{sec:gateway-otbr-interfaces}
+
+% TODO: MIGRAR configuración OpenWRT
+% - wpan0: Thread radio interface (802.15.4)
+% - eth0: Backhaul interface (hacia HaLow)
+% - br-lan: Bridge local
+% Código: /etc/config/network OpenWRT
+
+\subsection{Servicios NAT64 y DNS64}
+\label{sec:gateway-otbr-nat64}
+
+% TODO: NUEVO contenido (500 palabras)
+% - NAT64: Traducción IPv6 ↔ IPv4
+% - Well-known prefix: 64:ff9b::/96
+% - DNS64: Síntesis registros AAAA desde A
+% - Tayga daemon configuration
+
+\subsection{Thread Commissioner y Comisionado de Nodos}
+\label{sec:gateway-otbr-commissioner}
+
+% TODO: MIGRAR y EXPANDIR (400 palabras NUEVAS)
+% - Thread Commissioner role
+% - Joiner credentials: PSKd
+% - otbr-agent CLI: commissioner start/joiner add
+% Código: Script comisionado nodos
+
+\subsection{Validación del OTBR}
+\label{sec:gateway-otbr-validacion}
+
+% TODO: NUEVO contenido (400 palabras)
+% - Ping6 desde nodo Thread → Internet
+% - Wireshark: 6LoWPAN decompression
+% - Thread network diagnostics
+% Figura: Captura ping6 exitoso
+
+\section{Implementación de la Malla HaLow (IEEE 802.11ah)}
+\label{sec:gateway-halow}
+
+% TODO: MIGRAR desde 03Arquitectura_REFACTORED.tex §3.3 (Nivel 2)
+% + desde 04Implementacion_NEW.tex §4.4
+% + EXPANDIR 802.11s Mesh (1000 palabras NUEVAS)
+% - Topología: 3× Tube AHM + 2× Halow-R
+% - IEEE 802.11s: Mesh gate, mesh point, mesh portal
+% Longitud estimada: 8-10 páginas
+
+\subsection{Fundamentos IEEE 802.11ah (Wi-Fi HaLow)}
+\label{sec:gateway-halow-fundamentos}
+
+% TODO: MIGRAR desde 02MarcoTeorico_REFACTORED.tex §2.3.1
+% EXPANDIR con detalles técnicos:
+% - PHY: S1G (sub-1 GHz), canales 1-2 MHz-8 MHz
+% - MCS0-MCS10: BPSK → 256-QAM
+% - RAW (Restricted Access Window): Contención reducida
+% - TWT (Target Wake Time): Power save
+% - Alcance: 1 km LOS
+% Tabla: Comparación 802.11ah vs 802.11n/ac
+
+\subsection{Configuración de Mesh 802.11s}
+\label{sec:gateway-halow-mesh}
+
+% TODO: NUEVO contenido (1200 palabras)
+% - IEEE 802.11s: HWMP (Hybrid Wireless Mesh Protocol)
+% - Path selection: Airtime metric
+% - Mesh gate: Gateway RPi (conexión wired)
+% - Mesh point: Tube AHM intermedios
+% - RSNA (Robust Security Network Association): SAE
+% Longitud crítica: Este es el contenido más NUEVO
+
+\subsubsection{Topología de la Red HaLow}
+\label{sec:gateway-halow-topologia}
+
+% TODO: NUEVO contenido (600 palabras)
+% - 3× Tube AHM MikroTik:
+%   * Tube-01: Mesh gate (conectado RPi4 via Ethernet)
+%   * Tube-02: Mesh point (relay)
+%   * Tube-03: Mesh point (relay)
+% - 2× Halow-R routers: Bridges cableados
+% Figura: Topología física red HaLow (CRÍTICO)
+
+\subsubsection{Protocolo HWMP y Selección de Rutas}
+\label{sec:gateway-halow-hwmp}
+
+% TODO: NUEVO contenido (800 palabras)
+% - HWMP: Hybrid proactive/reactive
+% - PREQ (Path Request): Broadcast route discovery
+% - PREP (Path Reply): Unicast reply
+% - PERR (Path Error): Link break notification
+% - Airtime cost metric: Frame error rate + data rate
+% Figura: HWMP path discovery sequence
+
+\subsubsection{RAW (Restricted Access Window)}
+\label{sec:gateway-halow-raw}
+
+% TODO: NUEVO contenido (500 palabras)
+% - RAW: Divide stations en grupos
+% - Reduce colisiones en redes densas (> 1000 stations)
+% - Configuración: RAW slot duration, RAW group assignment
+% - Mejora throughput 40% vs EDCA puro
+
+\subsection{Configuración del Router MikroTik Tube AHM}
+\label{sec:gateway-halow-mikrotik}
+
+% TODO: MIGRAR desde 04Implementacion_NEW.tex §4.4.3
+% - RouterOS 7.13
+% - Wireless interface: mode=mesh, frequency=902 MHz
+% - Security: WPA3-SAE
+% Código: Script RouterOS configuración mesh
+
+\subsection{Validación de la Red HaLow}
+\label{sec:gateway-halow-validacion}
+
+% TODO: NUEVO contenido (600 palabras)
+% - Prueba throughput: iperf3 TCP
+%   * Resultados: 4 Mbps @ 4 MHz channel, -75 dBm
+% - Latencia: ping RTT 11 ± 3 ms
+% - Alcance: 1.2 km LOS validado (Fresnel zone clear)
+% Figura: Heatmap RSSI deployment
+
+\section{Despliegue de ThingsBoard Edge}
+\label{sec:gateway-tb-edge}
+
+% TODO: MIGRAR desde 04Implementacion_NEW.tex §4.3.3
+% - ThingsBoard Edge 3.6.2
+% - Docker Compose: 7 microservicios
+% - Rol: Pre-procesamiento local + almacenamiento offline
+% Longitud estimada: 6-8 páginas
+
+\subsection{Arquitectura ThingsBoard Edge}
+\label{sec:gateway-tb-edge-arquitectura}
+
+% TODO: MIGRAR contenido TB Edge
+% - Microservicios:
+%   1. tb-edge-core (Java)
+%   2. tb-edge-js-executor (Node.js)
+%   3. postgresql (TimescaleDB)
+%   4. redis (cache)
+%   5. tb-edge-mqtt-transport
+%   6. tb-edge-http-transport
+%   7. tb-edge-coap-transport
+% Figura: Arquitectura TB Edge
+
+\subsection{Configuración Docker Compose}
+\label{sec:gateway-tb-edge-docker}
+
+% TODO: MIGRAR docker-compose.yml
+% - Resource limits: 1.5 CPU cores, 1536 MB RAM
+% - Volumes: PostgreSQL data, logs
+% - Networks: bridge mode
+% Código: docker-compose.yml completo
+
+\subsection{Rule Chains para Pre-Procesamiento}
+\label{sec:gateway-tb-edge-rules}
+
+% TODO: MIGRAR desde 04Implementacion_NEW.tex §4.3.3
+% EXPANDIR con detalles (800 palabras NUEVAS):
+% - Rule Chain 1: Telemetry Filtering
+%   * Aggregate 4× 15min → 1 hourly average
+%   * Reduce WAN traffic 72%
+% - Rule Chain 2: Alarm Detection
+%   * Voltage sag/swell → CRITICAL
+%   * Temperature > 60°C → WARNING
+% - Rule Chain 3: Data Enrichment
+%   * Query Asset attributes (tariff, location)
+%   * Calculate billing: cost_usd = energy_kwh × tariff
+% - Rule Chain 4: Downlink Commands
+%   * RPC validation (HMAC-SHA256)
+%   * Jitter 0-30s (avoid thundering herd)
+% Figura: Rule Chain 1 (Telemetry Filtering) - screenshot
+
+\subsection{Operación Offline y Sincronización}
+\label{sec:gateway-tb-edge-offline}
+
+% TODO: MIGRAR contenido operación offline
+% - Buffer: 7 días (PostgreSQL 128 GB)
+%   * Capacidad: 672K messages @ 15 min interval
+% - Sync mechanism:
+%   * Uplink: MQTT QoS 1, batch 100 msgs
+%   * Downlink: Retained messages
+%   * Conflict resolution: Last-Write-Wins (LWW)
+% Tabla: Capacidad buffer vs interval reporting
+
+\subsection{Validación Operacional ThingsBoard Edge}
+\label{sec:gateway-tb-edge-validacion}
+
+% TODO: MIGRAR métricas validación
+% - Duración: 90 días piloto
+% - Uptime: 99.93% (downtime: 6 horas mantenimiento)
+% - Throughput: 9,600 → 2,640 msgs/day (72% reducción)
+% - Latency P95: 8 ms (local processing)
+% - Resource usage:
+%   * CPU: 35% average
+%   * RAM: 1.2 GB / 1.5 GB
+%   * Disk: 2.4 GB / 128 GB
+% Tabla: Comparación TB Edge vs AWS Greengrass vs Azure IoT Edge
+
+\section{Integración de Agentes IA Locales (Ollama + MCP)}
+\label{sec:gateway-ia}
+
+% TODO: NUEVO contenido (1500 palabras)
+% Este apartado documenta uso experimental de IA local en Gateway
+% - Ollama: LLM inference local (Llama 3.1 8B)
+% - MCP (Model Context Protocol): Integración con TB Edge
+% - Casos de uso:
+%   1. Anomaly detection en series temporales
+%   2. Natural language queries sobre telemetría
+%   3. Predictive maintenance (forecasting)
+% Longitud estimada: 4-5 páginas
+
+\subsection{Arquitectura Ollama en Gateway}
+\label{sec:gateway-ia-ollama}
+
+% TODO: NUEVO contenido (600 palabras)
+% - Ollama 0.3.6: Container Docker adicional
+% - Modelo: Llama 3.1 8B quantized (Q4_K_M, 4.9 GB)
+% - Resource allocation: 2 GB RAM, 1 CPU core
+% - Inference time: 850 ms @ 50 tokens
+% Código: docker-compose.yml Ollama service
+
+\subsection{Protocolo MCP para Integración con ThingsBoard}
+\label{sec:gateway-ia-mcp}
+
+% TODO: NUEVO contenido (900 palabras)
+% - MCP: JSON-RPC 2.0 bridge
+% - Prompts:
+%   * "Detectar anomalías en voltage_v última hora"
+%   * "Forecast energy_kwh próximos 7 días"
+% - Context window: 2K tokens (24 horas telemetría)
+% - Respuesta: JSON structured output
+% Figura: Flujo MCP query → Ollama → TB Edge
+
+\subsection{Casos de Uso Implementados}
+\label{sec:gateway-ia-casos}
+
+% TODO: NUEVO contenido (600 palabras)
+% - Caso 1: Anomaly detection
+%   * Input: voltage_v time series
+%   * Output: Anomaly score (0-1)
+%   * Accuracy: 87% (validated 30 days)
+% - Caso 2: Natural language dashboards
+%   * Query: "Consumo total edificio B hoy"
+%   * Response: "42.3 kWh (8:00-20:00)"
+% Tabla: Benchmarks inference time vs accuracy
+
+\section{Conclusiones del Capítulo}
+\label{sec:gateway-conclusiones}
+
+% TODO: Síntesis del capítulo (300-400 palabras)
+% - Gateway RPi4 + OTBR + HaLow implementado exitosamente
+% - Red HaLow: 4 Mbps throughput, 11 ms latency, 1.2 km alcance
+% - TB Edge: 72% reducción tráfico WAN, 7 días buffer offline
+% - Siguiente capítulo: Plataforma central (Server ThingsBoard)
+
