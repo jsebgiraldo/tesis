@@ -763,7 +763,7 @@ return {msg: msg, metadata: metadata, msgType: "SUCCESS"};
 \section{Conclusiones del Capítulo}
 \label{sec:server-conclusiones}
 
-Este capítulo presentó el despliegue completo de la plataforma ThingsBoard Server sobre infraestructura AWS, consolidando la arquitectura de cuatro niveles propuesta en el Capítulo~\ref{chap:arquitectura}. La implementación integra Apache Kafka como cola de mensajería distribuida para la ingesta masiva de telemetría, PostgreSQL con extensión TimescaleDB para el almacenamiento optimizado de series temporales, y el motor de reglas de ThingsBoard para la lógica de procesamiento de negocio específica del sistema AMI.
+Este capítulo presentó el despliegue completo de la plataforma ThingsBoard Server sobre infraestructura AWS, consolidando la arquitectura de cuatro niveles propuesta en los Capítulos~\ref{chap:nodo-iot} (Nivel 1), \ref{chap:gateway-halow} (Niveles 2-3), y este capítulo (Nivel 4). La implementación integra Apache Kafka como cola de mensajería distribuida para la ingesta masiva de telemetría, PostgreSQL con extensión TimescaleDB para el almacenamiento optimizado de series temporales, y el motor de reglas de ThingsBoard para la lógica de procesamiento de negocio específica del sistema AMI.
 
 \textbf{Contribuciones técnicas del capítulo:}
 

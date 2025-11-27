@@ -9,11 +9,11 @@
 \section{Introducción}
 \label{sec:resultados-intro}
 
-Este capítulo presenta los resultados experimentales del piloto de validación implementado durante el cuarto trimestre de 2024, evaluando la arquitectura de cuatro niveles propuesta en el Capítulo~\ref{chap:arquitectura} e implementada según lo documentado en los Capítulos~\ref{chap:nodo-iot}, \ref{chap:gateway-edge}, y~\ref{chap:server-cloud}.
+Este capítulo presenta los resultados experimentales del piloto de validación implementado durante el cuarto trimestre de 2024, evaluando la arquitectura de cuatro niveles propuesta e implementada según lo documentado en los Capítulos~\ref{chap:nodo-iot} (Nivel 1: Nodo IoT Thread), \ref{chap:gateway-halow} (Niveles 2-3: Gateway HaLow + Edge Processing), y~\ref{chap:server-thingsboard} (Nivel 4: Server Cloud).
 
 El piloto experimental se ejecutó durante 90 días (octubre--diciembre 2024) con 30 medidores inteligentes desplegados en un complejo residencial de 192 apartamentos en San Javier, Medellín, Colombia. Los objetivos de validación abarcaron cuatro dimensiones críticas: (1) latencia end-to-end con procesamiento edge, (2) disponibilidad del sistema bajo condiciones reales de operación, (3) escalabilidad de la arquitectura Thread+HaLow+Edge de 30 a 100+ medidores, y (4) viabilidad económica mediante análisis Total Cost of Ownership (TCO).
 
-Las hipótesis planteadas en el Capítulo~\ref{chap:introduccion} se validan mediante métricas cuantitativas obtenidas de la operación continua del sistema: latencia edge processing <10 ms, reducción tráfico WAN >70\%, TCO <\$60/dispositivo, y disponibilidad >99.5\%. La estructura del capítulo sigue la jerarquía arquitectónica de cuatro niveles: Sección~\ref{sec:resultados-metodologia} describe el setup experimental, Sección~\ref{sec:resultados-latencia} analiza latencia end-to-end, Sección~\ref{sec:resultados-disponibilidad} evalúa disponibilidad y resiliencia, Sección~\ref{sec:resultados-escalabilidad} proyecta escalabilidad técnica y económica, y Sección~\ref{sec:resultados-hipotesis} valida formalmente las hipótesis H1--H8 mediante análisis estadístico.
+Las hipótesis planteadas en el Capítulo~\ref{chap:introduccion} se validan mediante métricas cuantitativas obtenidas de la operación continua del sistema: latencia edge processing <10 ms, reducción tráfico WAN >70\%, TCO <\$60/dispositivo, y disponibilidad >99.5\%. La estructura del capítulo sigue la jerarquía arquitectónica de cuatro niveles: Sección~\ref{sec:resultados-metodologia} describe el setup experimental, Sección~\ref{sec:resultados-latencia} analiza latencia end-to-end, Sección~\ref{sec:resultados-disponibilidad} evalúa disponibilidad y resiliencia, Sección~\ref{sec:resultados-escalabilidad} proyecta escalabilidad técnica y económica, y Sección~\ref{sec:resultados-validacion-hipotesis} valida formalmente las hipótesis H1--H8 mediante análisis estadístico.
 
 \section{Metodología y Escenarios de Prueba}
 \label{sec:resultados-metodologia}
@@ -29,7 +29,7 @@ Las hipótesis planteadas en el Capítulo~\ref{chap:introduccion} se validan med
     \item \textbf{30 medidores:} Itron SL7000 monofásicos (20 unidades) y trifásicos (10 unidades), instalados en cajas metálicas en fachada edificios (muestra representativa del total 192 dispositivos del proyecto completo)
     \item \textbf{30 nodos IoT:} ESP32-C6 con Thread 1.4.0, alimentados desde puerto auxiliar medidor (5V @ 100 mA), conectados RS-485 @ 9600 bps según Capítulo~\ref{chap:nodo-iot}
     \item \textbf{1 Border Router:} ESP32-S3 dual-core con OpenThread Border Router (OTBR), ubicado en poste central (3m altura), cobertura 350m radio, NAT64/DNS64 configurado
-    \item \textbf{1 Gateway:} Raspberry Pi 4 (4GB RAM) con ThingsBoard Edge en Docker (arquitectura Capítulo~\ref{chap:gateway-edge}), NVMe SSD 128GB, UPS Li-ion 12V 20Ah, 7-day buffer local
+    \item \textbf{1 Gateway:} Raspberry Pi 4 (4GB RAM) con ThingsBoard Edge en Docker (arquitectura Capítulo~\ref{chap:gateway-halow} §4.5), NVMe SSD 128GB, UPS Li-ion 12V 20Ah, 7-day buffer local
     \item \textbf{Backhaul:} HaLow 920 MHz @ 2 MHz BW (OTBR → Gateway, enlace 180m LoS, Alfa Network Tube-U4AHM), 4G LTE Claro Colombia (Gateway → ThingsBoard AWS, plan 2 GB/mes)
 \end{itemize}
 
@@ -298,7 +298,7 @@ Edge + Cloud (propuesta) & \textbf{8$\pm$2 ms} & 248 ms & \textbf{98.5\% edge} &
 % Figura: Breakdown latencia (diagrama waterfall)
 
 \subsection{Comparación con Tecnologías Alternativas}
-\label{sec:resultados-latencia-comparacion}
+\label{sec:resultados-latencia-tecnologias}
 
 % TODO: NUEVO contenido (800 palabras)
 % - Arquitectura propuesta: 248 ms
@@ -640,7 +640,7 @@ La disponibilidad del sistema durante el piloto de 90 días (Oct--Dic 2024) se m
 \textbf{Análisis comparativo:}
 
 \begin{itemize}
-    \item \textbf{vs Objetivo diseño (99.5\%):} El sistema superó el target por +0.12 puntos porcentuales, validando las estimaciones conservadoras del modelo de confiabilidad serie presentado en el Capítulo~\ref{chap:arquitectura} (ecuación disponibilidad $A_{sistema} = \prod_{i=1}^{4} A_i$ con márgenes de seguridad).
+    \item \textbf{vs Objetivo diseño (99.5\%):} El sistema superó el target por +0.12 puntos porcentuales, validando las estimaciones conservadoras del modelo de confiabilidad serie presentado en los Capítulos~\ref{chap:nodo-iot}, \ref{chap:gateway-halow}, y~\ref{chap:server-thingsboard} (disponibilidad $A_{sistema} = \prod_{i=1}^{4} A_i$ con márgenes de seguridad).
     
     \item \textbf{vs Modelo teórico (99.05\%):} El piloto superó predicción teórica por +0.57 pp. Discrepancia atribuida a: (1) SLA 4G LTE Claro Colombia entregó 99.93\% real vs 99.5\% contractual (mejor desempeño red celular sector residencial Medellín), (2) HaLow experimentó solo 1 evento interferencia vs 2/mes proyectados (entorno residencial menos congestionado que simulación urbana densa), (3) Eventos operacionales evitables (firmware update manual 120 min downtime) no representativos de deployment producción con OTA automatizado.
     
