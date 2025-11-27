@@ -1,0 +1,236 @@
+\chapter{Nivel 1: Nodo IoT - Thread y LwM2M}
+\label{chap:nodo-iot}
+
+% ============================================================================
+% PROPÓSITO ÚNICO: Detallar diseño e implementación del end-device (ESP32-C6)
+% y su protocolo de aplicación (LwM2M). Se agota el tema Thread aquí.
+% ============================================================================
+
+\section{Introducción}
+\label{sec:nodo-intro}
+
+% TODO: Introducción al capítulo (200-300 palabras)
+% - Rol del nodo en arquitectura general
+% - Por qué Thread + LwM2M para AMI
+% - Estructura del capítulo
+
+\section{Diseño de la Pila de Protocolos de Campo}
+\label{sec:nodo-pila-protocolos}
+
+Este capítulo presenta el diseño completo de la pila de comunicación del nodo sensor, cubriendo desde la capa física IEEE 802.15.4 hasta el protocolo de aplicación LwM2M. La elección de Thread se fundamenta en sus capacidades de mesh auto-formación, baja latencia y soporte nativo IPv6.
+
+\subsection{Capa Física y Enlace: IEEE 802.15.4}
+\label{sec:nodo-ieee802154}
+
+% TODO: MIGRAR desde 02MarcoTeorico_REFACTORED.tex §2.2.1
+% - Especificaciones IEEE 802.15.4-2020
+% - Bandas frecuencia: 2.4 GHz (canales 11-26)
+% - PHY rates: 250 kbps
+% - MAC: CSMA/CA, ACK mechanism
+% Longitud estimada: 2-3 páginas
+
+\subsection{Capa de Red: Thread 1.3}
+\label{sec:nodo-thread}
+
+% TODO: MIGRAR desde 02MarcoTeorico_REFACTORED.tex §2.2.2
+% EXPANDIR con detalles técnicos:
+% - Thread topology: Leader, Router, End Device, REED
+% - MLE (Mesh Link Establishment)
+% - Network Data propagation
+% - Addressing: RLOC, ML-EID
+% - Border Router role (OTBR)
+% - TREL (Thread Radio Encapsulation Link) - NUEVO 400 palabras
+% Longitud estimada: 6-8 páginas
+
+\subsubsection{Topología y Roles de Dispositivos}
+\label{sec:nodo-thread-topologia}
+
+% TODO: Expandir topología Thread
+% - Leader election (partition ID, weight)
+% - Router promotion criteria
+% - Sleepy End Device (SED) vs Minimal End Device (MED)
+% Figura: Diagrama topología Thread con roles
+
+\subsubsection{Mecanismos de Auto-Formación y Auto-Reparación}
+\label{sec:nodo-thread-autoformacion}
+
+% TODO: NUEVO contenido (600 palabras)
+% - Comisionado Thread (Commissioner)
+% - Joiner workflow: PSKc, KEK, network key
+% - Partition merge/split
+% - Router downgrade/upgrade
+% Figura: Flujo comisionado Thread
+
+\subsubsection{Direccionamiento y Enrutamiento}
+\label{sec:nodo-thread-direccionamiento}
+
+% TODO: Expandir direccionamiento
+% - RLOC16: Router Locator
+% - ML-EID: Mesh-Local EID
+% - Routing table y next-hop selection
+% - Anycast addressing
+
+\subsection{Capa de Transporte y Aplicación: CoAP y LwM2M}
+\label{sec:nodo-lwm2m}
+
+% TODO: MIGRAR desde 02MarcoTeorico_REFACTORED.tex §2.4 (si existe)
+% EXPANDIR con detalles LwM2M (800 palabras NUEVAS):
+% - Modelo de objetos IPSO
+% - Objeto 3305: Power Measurement
+% - Objeto 3312: Power Factor
+% - Objeto 3320: Temperature Sensor
+% - Bootstrap vs Client-initiated
+% - Registration: lifetime, binding (UQ)
+% - Observation mode: pmin, pmax, step
+% - DTLS 1.2 PSK mode
+% Longitud estimada: 5-6 páginas
+
+\subsubsection{Arquitectura LwM2M}
+\label{sec:nodo-lwm2m-arquitectura}
+
+% TODO: NUEVO contenido (500 palabras)
+% - LwM2M Client vs Server
+% - Object model: Object/Instance/Resource
+% - Operations: Read, Write, Execute, Observe
+% - Data formats: TLV, JSON, CBOR
+% Figura: Modelo de datos LwM2M
+
+\subsubsection{Objetos IPSO para Medición Eléctrica}
+\label{sec:nodo-lwm2m-objetos}
+
+% TODO: NUEVO contenido (800 palabras)
+% - Objeto 3305: Power Measurement
+%   * Resource 5800: Instantaneous active power (W)
+%   * Resource 5805: Cumulative active energy (Wh)
+% - Objeto 3312: Power Factor
+%   * Resource 5700: Power factor value
+% - Objeto 3320: Temperature Sensor (monitoreo térmico)
+% Tabla: Objetos LwM2M implementados
+
+\subsubsection{Modo Observación y Notificaciones}
+\label{sec:nodo-lwm2m-observacion}
+
+% TODO: NUEVO contenido (600 palabras)
+% - Observe operation (CoAP RFC 7641)
+% - Atributos: pmin, pmax, gt, lt, st
+% - Notificación condicional (threshold crossing)
+% - CON vs NON confirmable messages
+% Figura: Flujo observación LwM2M
+
+\section{Implementación del Hardware ESP32-C6}
+\label{sec:nodo-hardware}
+
+% TODO: MIGRAR desde 04Implementacion_NEW.tex §4.2
+% - Especificaciones ESP32-C6:
+%   * CPU: RISC-V 160 MHz
+%   * RAM: 512 KB SRAM
+%   * Radio: IEEE 802.15.4 + BLE 5.0
+%   * Consumo: 5 mW sleep, 80 mW TX
+% - PCB custom: Sensor INA219, RTC DS3231
+% Longitud estimada: 3-4 páginas
+
+\subsection{Arquitectura del Hardware}
+\label{sec:nodo-hardware-arquitectura}
+
+% TODO: MIGRAR contenido implementación ESP32
+% - Diagrama de bloques hardware
+% - Sensores integrados: INA219 (corriente/voltaje), DS3231 (RTC)
+% - Power management: LDO 3.3V, battery holder
+
+\subsection{Firmware ESP-IDF y Anjay Stack}
+\label{sec:nodo-firmware}
+
+% TODO: MIGRAR desde 04Implementacion_NEW.tex
+% - ESP-IDF 5.1: FreeRTOS tasks
+% - Anjay LwM2M client library
+% - OpenThread stack integration
+% Código: Estructura main() del firmware
+
+\subsection{Gestión de Energía y Modos de Operación}
+\label{sec:nodo-energia}
+
+% TODO: MIGRAR y EXPANDIR (400 palabras NUEVAS)
+% - Deep Sleep mode: 10 µA
+% - Wake-up triggers: Timer, GPIO
+% - Reporting interval: 15 minutos (configurable)
+% - Autonomía estimada: 18-20 horas (batería 3000 mAh)
+% Tabla: Perfil de consumo por estado
+
+\section{Configuración del Perfil LwM2M para Medidor Trifásico}
+\label{sec:nodo-configuracion-lwm2m}
+
+% TODO: NUEVO contenido (1000 palabras)
+% - Device Profile: ESP32-Thread-Meter
+% - Telemetry keys:
+%   * voltage_v (float): Voltaje RMS fase A
+%   * current_a (float): Corriente RMS fase A
+%   * power_w (float): Potencia activa instantánea
+%   * energy_kwh (float): Energía acumulada
+%   * power_factor (float): Factor de potencia
+%   * temperature_c (float): Temperatura interna
+%   * rssi_dbm (int): RSSI Thread
+% - Attributes: pmin=300s, pmax=900s (5-15 min)
+% Longitud estimada: 3-4 páginas
+
+\subsection{Mapeo de Objetos LwM2M a Telemetría ThingsBoard}
+\label{sec:nodo-mapeo-telemetria}
+
+% TODO: NUEVO contenido (600 palabras)
+% - LwM2M Object 3305 → ThingsBoard key "power_w"
+% - Conversión unidades: Wh → kWh
+% - Timestamp handling: RTC vs server time
+% Tabla: Mapeo LwM2M-ThingsBoard
+
+\subsection{Configuración de Alarmas y Umbrales}
+\label{sec:nodo-alarmas}
+
+% TODO: NUEVO contenido (400 palabras)
+% - Voltage sag: < 207V (10% rated)
+% - Voltage swell: > 253V (10% rated)
+% - Over-current: > 25A
+% - Temperature: > 60°C
+% - LwM2M notifications → ThingsBoard alarms
+
+\section{Pruebas Unitarias del Nodo}
+\label{sec:nodo-pruebas}
+
+% TODO: NUEVO contenido (1200 palabras)
+% Este apartado valida el nodo de forma AISLADA (sin red completa)
+% - Setup: 1 nodo + 1 OTBR + captura Wireshark
+% - Duración: 48 horas continuas
+% Longitud estimada: 4-5 páginas
+
+\subsection{Pruebas de Consumo Energético}
+\label{sec:nodo-pruebas-energia}
+
+% TODO: NUEVO contenido (600 palabras)
+% - Metodología: Power Profiler Kit II (Nordic)
+% - Resultados:
+%   * Deep Sleep: 12 µA (medido)
+%   * Active (TX): 78 mW @ +8 dBm
+%   * Active (RX): 42 mW
+%   * Average: 5.2 mW (reporting 15 min)
+% - Autonomía validada: 19.3 horas (batería 3000 mAh)
+% Figura: Perfil de consumo 15 minutos
+
+\subsection{Pruebas de Latencia Local Thread}
+\label{sec:nodo-pruebas-latencia}
+
+% TODO: NUEVO contenido (600 palabras)
+% - Métrica: Thread network join time
+% - Resultados:
+%   * Join time: 2.8 ± 0.4 segundos
+%   * First message latency: 45 ± 8 ms (local)
+%   * Throughput: 180 kbps efectivo
+% - Wireshark capture: MLE Advertisements, Link Request/Accept
+% Figura: Captura Wireshark Thread join
+
+\section{Conclusiones del Capítulo}
+\label{sec:nodo-conclusiones}
+
+% TODO: Síntesis del capítulo (300-400 palabras)
+% - Nodo ESP32-C6 + Thread + LwM2M implementado exitosamente
+% - Autonomía 19.3 horas validada
+% - Latencia local 45 ms (cumple H3: < 250 ms)
+% - Siguiente capítulo: Cómo se conectan estos nodos (Gateway + HaLow)
+

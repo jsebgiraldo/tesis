@@ -363,13 +363,26 @@ Albert Einstein
 %\include{00Intrucciones} % Anular esta linea con comentario de ser necesario
 %%\include{00HipotesisPlanteamiento}
 %%\include{00Objetivos}
-\include{01Introduccion} % Introducción (802.3, 802.11ah, 802.15.4, etc.)
-\include{02MarcoTeorico} % Marco Teórico
-\include{03Arquitectura_REFACTORED} % Arquitectura del Sistema (REFACTORIZADO: 2180→349 líneas, solo diseño)
-\include{04Implementacion_NEW} % Implementación Práctica del Sistema (NUEVO Cap 4)
-\include{05Resultados_NEW} % Resultados Experimentales y Validación (NUEVO Cap 5)
-%\include{04Gateway_NEW} % DEPRECADO - Comentado por itemize sin cerrar, contenido ya migrado a Cap 4/5
-\include{05Conclusiones} % Conclusiones y trabajo futuro
+
+% ============================================================================
+% NUEVA ESTRUCTURA: Enfoque por NIVELES (aprobado por tutor 27/Nov/2025)
+% ============================================================================
+\include{01Introduccion} % Cap 1: Introducción (sin cambios)
+\include{02MarcoTeorico_Rework} % Cap 2: Marco Teórico + Estado del Arte (NUEVO)
+\include{03NodoIoT_Thread_LwM2M} % Cap 3: Nivel 1 - Nodo IoT (Thread + LwM2M) (NUEVO)
+\include{04Gateway_HaLow_Edge} % Cap 4: Niveles 2-3 - Gateway + HaLow (NUEVO)
+\include{05Server_ThingsBoard_Kafka} % Cap 5: Nivel 4 - Server ThingsBoard (NUEVO)
+\include{06Resultados_Validacion} % Cap 6: Resultados End-to-End (CONSOLIDADO)
+\include{05Conclusiones} % Cap 7: Conclusiones y Trabajo Futuro (renumerado)
+
+% ============================================================================
+% ARCHIVOS DEPRECADOS (estructura anterior por fases)
+% ============================================================================
+%\include{02MarcoTeorico} % DEPRECADO - Reemplazado por 02MarcoTeorico_Rework.tex
+%\include{03Arquitectura_REFACTORED} % DEPRECADO - Distribuido en Cap 3-4-5
+%\include{04Implementacion_NEW} % DEPRECADO - Distribuido en Cap 3-4-5
+%\include{05Resultados_NEW} % DEPRECADO - Consolidado en 06Resultados_Validacion.tex
+%\include{04Gateway_NEW} % DEPRECADO - Contenido migrado
 %%\include{06Seccion06}
 %%\include{07Seccion07}
 

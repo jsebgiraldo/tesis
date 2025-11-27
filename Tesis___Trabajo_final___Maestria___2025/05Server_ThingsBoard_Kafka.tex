@@ -1,0 +1,321 @@
+\chapter{Nivel 4: Plataforma Central ThingsBoard y Apache Kafka}
+\label{chap:server-thingsboard}
+
+% ============================================================================
+% PROPÓSITO ÚNICO: Detallar infraestructura de ingesta masiva y lógica de
+% negocio en servidor central. Se agota el tema ThingsBoard Server aquí.
+% ============================================================================
+
+\section{Introducción}
+\label{sec:server-intro}
+
+% TODO: Introducción al capítulo (200-300 palabras)
+% - Rol del servidor central: Gestión masiva dispositivos
+% - ThingsBoard como plataforma IoT multi-tenant
+% - Apache Kafka para streaming de alta concurrencia
+% - Estructura del capítulo
+
+\section{Infraestructura de Ingesta Masiva de Datos}
+\label{sec:server-infraestructura}
+
+% TODO: MIGRAR desde 04Implementacion_NEW.tex §4.5 (si existe)
+% + EXPANDIR con arquitectura Kafka (1500 palabras NUEVAS)
+% - Hardware: PC workstation 16 cores, 32 GB RAM
+% - Kafka: Manejo concurrencia multi-dispositivo
+% Longitud estimada: 6-8 páginas
+
+\subsection{Especificaciones del Hardware}
+\label{sec:server-hardware}
+
+% TODO: NUEVO contenido (500 palabras)
+% - CPU: AMD Ryzen 9 5950X (16 cores @ 3.4 GHz)
+% - RAM: 32 GB DDR4-3200
+% - Storage: NVMe 1 TB (PostgreSQL data)
+% - Network: 10 GbE NIC (WAN connectivity)
+% Tabla: Specs servidor vs alternativas cloud (AWS EC2)
+
+\subsection{Arquitectura Apache Kafka}
+\label{sec:server-kafka}
+
+% TODO: NUEVO contenido (1500 palabras) - CRÍTICO
+% Este es el contenido más NUEVO del capítulo
+% - Kafka: Distributed streaming platform
+% - Componentes:
+%   * Kafka broker (3 replicas, factor 2)
+%   * Zookeeper ensemble (3 nodes)
+%   * Schema Registry (Avro schemas)
+% - Topics:
+%   * tb.mqtt.telemetry (partition 8, retention 7 days)
+%   * tb.rule-engine.main (partition 4)
+%   * tb.notifications (partition 2)
+% Longitud crítica: 4-5 páginas
+
+\subsubsection{Topología de Topics y Particiones}
+\label{sec:server-kafka-topics}
+
+% TODO: NUEVO contenido (800 palabras)
+% - Topic tb.mqtt.telemetry:
+%   * 8 particiones (hash deviceId)
+%   * Replication factor: 2
+%   * Retention: 7 días (168 horas)
+%   * Compression: LZ4
+% - Consumer groups:
+%   * tb-rule-engine-consumer (parallel 8)
+%   * tb-telemetry-processor (parallel 4)
+% Figura: Kafka topic architecture
+
+\subsubsection{Configuración de Producción}
+\label{sec:server-kafka-config}
+
+% TODO: NUEVO contenido (700 palabras)
+% - Broker config:
+%   * log.retention.hours=168
+%   * num.partitions=8
+%   * compression.type=lz4
+%   * min.insync.replicas=1
+% - Producer config (TB Edge):
+%   * acks=1 (leader ack only)
+%   * batch.size=16384
+%   * linger.ms=10 (batching)
+% Código: server.properties Kafka
+
+\subsection{Balanceo de Carga y Rate Limiting}
+\label{sec:server-balanceo}
+
+% TODO: NUEVO contenido (600 palabras)
+% - HAProxy: Load balancer MQTT
+%   * Algoritmo: least-conn
+%   * Health check: TCP port 1883
+% - Rate limiting:
+%   * 100 msgs/sec per device
+%   * 10K msgs/sec total
+% - Kafka throttling: produce.purgatory.purge.interval.requests
+% Figura: Arquitectura load balancing
+
+\section{Despliegue de ThingsBoard Server}
+\label{sec:server-tb-server}
+
+% TODO: MIGRAR desde 04Implementacion_NEW.tex §4.5
+% - ThingsBoard CE 3.6.2
+% - Docker Compose: 12 microservicios
+% - Base de datos: PostgreSQL 14 + TimescaleDB 2.13
+% Longitud estimada: 6-8 páginas
+
+\subsection{Arquitectura de Microservicios}
+\label{sec:server-tb-arquitectura}
+
+% TODO: MIGRAR y EXPANDIR (600 palabras NUEVAS)
+% - Microservicios ThingsBoard:
+%   1. tb-core (8 instances, stateless)
+%   2. tb-rule-engine (4 instances)
+%   3. tb-web-ui (Nginx, 2 instances)
+%   4. tb-js-executor (Node.js, 4 instances)
+%   5. tb-mqtt-transport (2 instances)
+%   6. tb-http-transport (2 instances)
+%   7. tb-coap-transport (1 instance)
+%   8. postgresql (primary + replica)
+%   9. redis (cache + session)
+%   10. kafka (3 brokers)
+%   11. zookeeper (3 nodes)
+%   12. prometheus + grafana (monitoring)
+% Figura: Arquitectura microservicios ThingsBoard
+
+\subsection{Configuración Docker Compose}
+\label{sec:server-tb-docker}
+
+% TODO: MIGRAR docker-compose.yml producción
+% - Networks: tb-network (overlay)
+% - Volumes: postgres-data, kafka-data, redis-data
+% - Resource limits por servicio
+% Código: docker-compose.yml servidor (>300 líneas)
+
+\subsection{Optimización de PostgreSQL + TimescaleDB}
+\label{sec:server-postgresql}
+
+% TODO: NUEVO contenido (1000 palabras) - CRÍTICO
+% - PostgreSQL 14: Relational data (devices, assets, users)
+% - TimescaleDB 2.13: Time-series telemetry
+%   * Hypertable: ts_kv (time-series key-value)
+%   * Chunk interval: 7 días
+%   * Retention policy: 90 días telemetry, 365 días aggregates
+% - Índices optimizados:
+%   * B-tree: entity_id, key
+%   * BRIN: ts (timestamp)
+% - Partitioning: Hash por entity_id (8 partitions)
+% Longitud crítica: 3-4 páginas
+
+\subsubsection{Diseño del Schema de Base de Datos}
+\label{sec:server-postgresql-schema}
+
+% TODO: NUEVO contenido (600 palabras)
+% - Tablas principales:
+%   * device (id, name, type, customer_id)
+%   * ts_kv (entity_id, key, ts, bool_v, str_v, long_v, dbl_v)
+%   * asset (id, name, type, customer_id)
+%   * relation (from_id, to_id, relation_type)
+% Figura: Diagrama ER schema ThingsBoard
+
+\subsubsection{TimescaleDB Hypertables}
+\label{sec:server-postgresql-hypertables}
+
+% TODO: NUEVO contenido (800 palabras)
+% - Hypertable ts_kv:
+%   * Chunk interval: 7 días (168 horas)
+%   * Compression: AFTER 30 days
+%   * Retention: DROP AFTER 90 days
+% - Continuous Aggregates:
+%   * ts_kv_hourly (AVG, MAX, MIN)
+%   * ts_kv_daily (SUM energy_kwh)
+% Código: SQL creación hypertable + continuous aggregate
+
+\subsection{Estrategia de Backup y Recuperación}
+\label{sec:server-backup}
+
+% TODO: NUEVO contenido (500 palabras)
+% - Backup diario: pg_dump comprimido
+% - Backup incremental: WAL archiving
+% - Disaster recovery: RTO 4 horas, RPO 1 hora
+% - Almacenamiento: S3-compatible (MinIO local)
+% Código: Script backup.sh
+
+\section{Lógica de Procesamiento de Negocio}
+\label{sec:server-logica}
+
+% TODO: MIGRAR desde 04Implementacion_NEW.tex §4.5
+% + EXPANDIR Rule Chains (1200 palabras NUEVAS)
+% - Asset Model: Tenant → Customer → Device
+% - Rule Chains: Procesamiento telemetría
+% - Alarm Management: Severidad CRITICAL/MAJOR/MINOR
+% Longitud estimada: 7-9 páginas
+
+\subsection{Modelado de Activos y Dispositivos}
+\label{sec:server-assets}
+
+% TODO: MIGRAR y EXPANDIR (800 palabras)
+% - Asset Hierarchy:
+%   * Tenant: Utility company (root)
+%   * Customer: Building (192 devices)
+%   * Asset: Building floors (3 floors × 64 devices)
+%   * Device: ESP32-Thread-Meter (leaf)
+% - Device Profile:
+%   * Telemetry: 7 keys (voltage_v, current_a, etc.)
+%   * Attributes: tariff_usd_kwh, location, install_date
+%   * Alarms: 5 types (voltage_sag, over_current, etc.)
+% Figura: Árbol de Assets ThingsBoard
+
+\subsection{Diseño de Rule Chains}
+\label{sec:server-rule-chains}
+
+% TODO: NUEVO contenido (1500 palabras) - CRÍTICO
+% Este apartado documenta lógica de negocio central
+% - Rule Chains implementadas:
+%   1. Root Rule Chain (default)
+%   2. Energy Billing Chain
+%   3. Alarm Processing Chain
+%   4. Analytics Chain
+% Longitud crítica: 4-5 páginas
+
+\subsubsection{Root Rule Chain}
+\label{sec:server-rule-chain-root}
+
+% TODO: NUEVO contenido (600 palabras)
+% - Nodes:
+%   1. Message Type Switch (POST_TELEMETRY, POST_ATTRIBUTES)
+%   2. Save Timeseries (write to ts_kv)
+%   3. Route to Energy Billing Chain
+%   4. Route to Alarm Processing Chain
+% Figura: Screenshot Root Rule Chain
+
+\subsubsection{Energy Billing Chain}
+\label{sec:server-rule-chain-billing}
+
+% TODO: NUEVO contenido (700 palabras)
+% - Input: energy_kwh telemetry
+% - Processing:
+%   1. Query Asset attribute: tariff_usd_kwh
+%   2. Script node (JS): cost_usd = energy_kwh × tariff
+%   3. Save calculated attribute: monthly_cost_usd
+%   4. Check threshold: > $100 → Notification
+% - Output: Billing dashboard update
+% Código: JavaScript node billing calculation
+
+\subsubsection{Alarm Processing Chain}
+\label{sec:server-rule-chain-alarms}
+
+% TODO: NUEVO contenido (600 palabras)
+% - Alarm rules:
+%   * voltage_v < 207V OR > 253V → CRITICAL "Voltage Anomaly"
+%   * current_a > 25A → MAJOR "Over-Current"
+%   * temperature_c > 60°C → MINOR "High Temperature"
+% - Actions:
+%   * Create alarm entity
+%   * Send notification (email, Slack webhook)
+%   * Log to alarm_history table
+% Tabla: Alarm types y severidades
+
+\subsection{Gestión de Alarmas}
+\label{sec:server-alarmas}
+
+% TODO: MIGRAR y EXPANDIR (500 palabras)
+% - Alarm lifecycle: NEW → ACTIVE → ACKNOWLEDGED → CLEARED
+% - Alarm propagation: Device → Asset → Customer
+% - Notification channels: Email, SMS, Webhook
+% Figura: Flujo alarma end-to-end
+
+\section{Diseño de Dashboards y Visualización}
+\label{sec:server-dashboards}
+
+% TODO: NUEVO contenido (1200 palabras)
+% - Dashboards implementados:
+%   1. Real-time Monitoring (telemetry widgets)
+%   2. Historical Analytics (time-series charts)
+%   3. Alarm Management (alarm table + map)
+%   4. Energy Billing (bar charts, monthly aggregates)
+% Longitud estimada: 4-5 páginas
+
+\subsection{Dashboard de Monitoreo en Tiempo Real}
+\label{sec:server-dashboard-realtime}
+
+% TODO: NUEVO contenido (600 palabras)
+% - Widgets:
+%   * Gauge: voltage_v (current value)
+%   * Line chart: power_w (last 1 hour)
+%   * Map: Device locations with status color
+%   * Alarm table: Active alarms (auto-refresh 5s)
+% Figura: Screenshot dashboard monitoring
+
+\subsection{Dashboard de Analítica Histórica}
+\label{sec:server-dashboard-analytics}
+
+% TODO: NUEVO contenido (600 palabras)
+% - Widgets:
+%   * Time-series chart: energy_kwh (last 30 days)
+%   * Bar chart: Daily consumption per building
+%   * Heatmap: Consumption by hour of day
+%   * Statistics: Total kWh, Avg power factor
+% Figura: Screenshot dashboard analytics
+
+\section{APIs Programáticas y Webhooks}
+\label{sec:server-apis}
+
+% TODO: NUEVO contenido (800 palabras)
+% - REST API ThingsBoard:
+%   * Authentication: JWT tokens
+%   * Device API: POST /api/device (provisioning)
+%   * Telemetry API: GET /api/plugins/telemetry/DEVICE/{id}/values/timeseries
+%   * Alarm API: GET /api/alarm/{entityType}/{entityId}
+% - Webhooks configurados:
+%   * Billing System: POST daily consumption → CRM
+%   * Slack: POST critical alarms → #ami-alerts channel
+% Código: cURL examples API calls
+
+\section{Conclusiones del Capítulo}
+\label{sec:server-conclusiones}
+
+% TODO: Síntesis del capítulo (300-400 palabras)
+% - Servidor ThingsBoard + Kafka implementado exitosamente
+% - Kafka: 10K msgs/sec throughput validado
+% - PostgreSQL: Query time < 100ms @ 1M registros
+% - Rule Chains: Lógica de negocio compleja (billing, alarmas)
+% - Siguiente capítulo: Validación end-to-end del sistema completo
+

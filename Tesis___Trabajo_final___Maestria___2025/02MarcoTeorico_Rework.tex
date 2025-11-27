@@ -1,0 +1,218 @@
+\chapter{Marco Teórico y Fundamentos}
+\label{chap:marco-teorico}
+
+% ============================================================================
+% PROPÓSITO ÚNICO: Establecer contexto Smart Energy y fundamentos teóricos
+% GENERALES. Detalles técnicos van en capítulos 3-4-5.
+% ============================================================================
+
+\section{Introducción}
+\label{sec:marco-intro}
+
+% TODO: Introducción al capítulo (200-300 palabras)
+% - Objetivo: Contextualizar el problema en Smart Energy
+% - Fundamentos necesarios para entender arquitectura
+% - No se duplica contenido técnico de Cap 3-4-5
+% - Estructura del capítulo
+
+\section{Contexto Smart Energy y la Infraestructura AMI}
+\label{sec:marco-smart-energy}
+
+% TODO: MIGRAR desde 02MarcoTeorico_REFACTORED.tex §2.1
+% MANTENER enfoque contextual (no técnico profundo)
+% - Evolución de redes eléctricas tradicionales → smart grids
+% - AMI (Advanced Metering Infrastructure): Componentes y roles
+% - Tendencias globales: EU Smart Grid Task Force, DOE USA
+% Longitud estimada: 4-5 páginas
+
+\subsection{Evolución hacia Redes Inteligentes}
+\label{sec:marco-smart-energy-evolucion}
+
+% TODO: MIGRAR contenido contexto histórico
+% - Grid tradicional: Medición manual, billing mensual
+% - Smart Grid: Medición tiempo real, demand response
+% - Beneficios: Reducción pérdidas técnicas, detección fraude
+
+\subsection{Estándares de Interoperabilidad}
+\label{sec:marco-smart-energy-estandares}
+
+% TODO: MIGRAR desde 02MarcoTeorico_REFACTORED.tex §2.1.1
+% - IEEE 2030.5 (Smart Energy Profile 2.0)
+%   * Demand response, pricing, metering
+%   * RESTful API sobre CoAP/HTTP
+% - ISO/IEC 30141:2024: IoT Reference Architecture
+%   * 5-layer model: Device, Network, Service, App, Business
+%   * Mapeo a arquitectura propuesta (Capítulo 3)
+% Figura: Arquitectura IEEE 2030.5
+
+\subsection{Desafíos de la Infraestructura AMI}
+\label{sec:marco-smart-energy-desafios}
+
+% TODO: NUEVO contenido (600 palabras)
+% - Última milla: Cobertura vs costo
+% - Escalabilidad: Millones de dispositivos
+% - Latencia: Aplicaciones tiempo real (demand response)
+% - Seguridad: Ataques cibernéticos (Stuxnet, Industroyer)
+% - Costos OPEX: Cloud perpetuo vs Edge
+
+\section{Fundamentos de Computación Distribuida}
+\label{sec:marco-edge-cloud}
+
+% TODO: NUEVO contenido (1200 palabras) - CRÍTICO
+% Este apartado justifica POR QUÉ Edge Computing
+% Longitud estimada: 4-5 páginas
+
+\subsection{Cloud Computing: Arquitectura Centralizada}
+\label{sec:marco-cloud}
+
+% TODO: NUEVO contenido (600 palabras)
+% - Modelo IaaS/PaaS: AWS IoT Core, Azure IoT Hub
+% - Ventajas: Elasticidad, maintenance-free, global scale
+% - Desventajas: Latencia WAN (200-500 ms), costos OPEX perpetuos, dependencia internet
+% Figura: Arquitectura cloud típica IoT
+
+\subsection{Edge Computing: Procesamiento Descentralizado}
+\label{sec:marco-edge}
+
+% TODO: NUEVO contenido (800 palabras)
+% - Definición: Procesamiento cerca del origen de datos
+% - Taxonomía: Cloudlet, Fog computing, Mobile edge
+% - Ventajas: Latencia reducida, autonomía offline, privacidad, reducción WAN
+% - Desventajas: Gestión distribuida, actualizaciones complejas
+% - Casos de uso: Autonomous vehicles, industrial IoT, smart cities
+% Figura: Comparación Cloud vs Edge vs Fog
+
+\subsection{Arquitecturas Híbridas Edge-Cloud}
+\label{sec:marco-hibrido}
+
+% TODO: NUEVO contenido (600 palabras)
+% - Modelo híbrido: Edge para pre-procesamiento, Cloud para analytics
+% - Sincronización bidireccional: Uplink (telemetría batch), Downlink (commands)
+% - Ejemplos comerciales:
+%   * AWS Greengrass (Lambda@Edge)
+%   * Azure IoT Edge (Edge modules)
+%   * ThingsBoard Edge (Rule Chains local)
+% Tabla: Comparación plataformas Edge (AWS vs Azure vs TB)
+
+\section{Fundamentos de Seguridad en Sistemas IoT}
+\label{sec:marco-seguridad}
+
+% TODO: NUEVO contenido (1000 palabras)
+% Enfoque GENERAL (detalles específicos en Cap 3-4)
+% Longitud estimada: 3-4 páginas
+
+\subsection{Amenazas y Vectores de Ataque}
+\label{sec:marco-seguridad-amenazas}
+
+% TODO: NUEVO contenido (500 palabras)
+% - Ataques a dispositivos: Physical tampering, firmware compromise
+% - Ataques a red: Eavesdropping, man-in-the-middle, DoS
+% - Ataques a servidor: SQL injection, credential stuffing
+% - Casos reales: Mirai botnet, Stuxnet, Industroyer
+% Figura: Árbol de ataques IoT
+
+\subsection{Marco de Seguridad NIST Cybersecurity Framework}
+\label{sec:marco-seguridad-nist}
+
+% TODO: NUEVO contenido (700 palabras)
+% - NIST CSF 5 funciones:
+%   1. Identify: Asset inventory, risk assessment
+%   2. Protect: Access control, encryption, secure boot
+%   3. Detect: Anomaly detection, intrusion detection
+%   4. Respond: Incident response plan, forensics
+%   5. Recover: Backup, disaster recovery
+% - Aplicación a AMI: Mapeo funciones NIST a arquitectura (referencia Cap 3)
+% Figura: NIST CSF wheel
+
+\subsection{Mecanismos Criptográficos}
+\label{sec:marco-seguridad-cripto}
+
+% TODO: NUEVO contenido (500 palabras)
+% - Cifrado simétrico: AES-128/256 (throughput vs seguridad)
+% - Cifrado asimétrico: RSA, ECC (key exchange, firma digital)
+% - Hash: SHA-256 (integridad)
+% - TLS/DTLS: Handshake, cipher suites
+% - Nota: Detalles implementación en Cap 3 (DTLS Thread), Cap 4 (TLS MQTT)
+
+\section{Estado del Arte: Arquitecturas IoT para AMI}
+\label{sec:marco-estado-arte}
+
+% TODO: NUEVO contenido (1500 palabras) - CRÍTICO
+% Revisión literatura para justificar brecha
+% Longitud estimada: 5-6 páginas
+
+\subsection{Tecnologías LPWAN para Smart Metering}
+\label{sec:marco-estado-lpwan}
+
+% TODO: NUEVO contenido (800 palabras)
+% - LoRaWAN:
+%   * Ventajas: Alcance 10 km, bajo consumo (3 mW)
+%   * Desventajas: Latencia 2000 ms, duty cycle 1%
+%   * Referencias: [Cite: Mekki et al. 2019, "A comparative study of LPWAN"]
+% - NB-IoT:
+%   * Ventajas: Cobertura celular existente, QoS garantizado
+%   * Desventajas: Latencia 800 ms, OPEX $4.50/dev/mes
+%   * Referencias: [Cite: Ratasuk et al. 2016, "NB-IoT system"]
+% - Sigfox:
+%   * Ventajas: Ultra bajo consumo (1 mW)
+%   * Desventajas: 140 msgs/día limit, downlink restringido
+% Tabla: Comparación LPWAN (LoRaWAN vs NB-IoT vs Sigfox)
+
+\subsection{Arquitecturas Mesh para AMI}
+\label{sec:marco-estado-mesh}
+
+% TODO: NUEVO contenido (700 palabras)
+% - Wi-Fi mesh (802.11s):
+%   * Ejemplo: Silver Spring Networks (deprecated)
+%   * Problema: Coexistencia 2.4 GHz, consumo alto
+%   * Referencias: [Cite: Gungor et al. 2011, "Smart grid communications"]
+% - Zigbee mesh:
+%   * Ejemplo: Itron OpenWay CENTRON
+%   * Problema: Limitado IPv6, 250 kbps max
+%   * Referencias: [Cite: Sauter 2011, "The 3 families of IEC 62591"]
+% - Thread mesh (emergente):
+%   * Ventaja: IPv6 nativo, auto-formación
+%   * Estado: Pocas implementaciones comerciales AMI
+%   * Gap: **AQUÍ ESTÁ TU CONTRIBUCIÓN**
+
+\subsection{Edge Computing en Smart Grids}
+\label{sec:marco-estado-edge}
+
+% TODO: NUEVO contenido (600 palabras)
+% - Referencias:
+%   * [Cite: Zhang et al. 2018, "Edge computing for smart grid"]
+%     → Arquitectura conceptual, sin implementación HaLow
+%   * [Cite: Okay et al. 2020, "Fog computing for smart cities"]
+%     → Usa LTE backhaul (caro, alta latencia)
+%   * [Cite: Liu et al. 2021, "Edge intelligence for IoT"]
+%     → AI local, pero sin validación experimental AMI
+% - Gap identificado:
+%   * Falta arquitectura Thread + HaLow + Edge validada
+%   * Falta análisis TCO detallado Edge vs Cloud
+%   * Falta validación latencia E2E < 250 ms
+
+\subsection{Justificación de la Brecha}
+\label{sec:marco-estado-brecha}
+
+% TODO: NUEVO contenido (500 palabras)
+% - Literatura NO cubre:
+%   1. Thread + HaLow en conjunto (novel combination)
+%   2. Edge computing con ThingsBoard (open-source)
+%   3. Validación experimental 90 días piloto
+%   4. Modelo TCO 10K+ dispositivos
+% - Contribución de esta tesis:
+%   * Arquitectura híbrida Thread-HaLow-Edge (novel)
+%   * Implementación completa open-source
+%   * Validación experimental con métricas reales
+%   * Análisis económico detallado
+
+\section{Conclusiones del Capítulo}
+\label{sec:marco-conclusiones}
+
+% TODO: Síntesis del capítulo (300-400 palabras)
+% - Contexto Smart Energy: Necesidad de AMI escalable y económica
+% - Edge computing: Solución intermedia Cloud vs On-Premise
+% - Seguridad: Marco NIST CSF aplicable
+% - Estado del arte: Brecha identificada (Thread+HaLow+Edge sin validar)
+% - Siguiente capítulo: Diseño del nodo IoT (Thread + LwM2M)
+
