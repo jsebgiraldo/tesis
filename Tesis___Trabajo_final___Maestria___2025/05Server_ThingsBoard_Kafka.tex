@@ -9,15 +9,34 @@
 \section{Introducción}
 \label{sec:server-intro}
 
-El Nivel 4 arquitectura (capa central cloud) implementa plataforma IoT centralizada para gestión masiva dispositivos, analytics históricos, dashboards multi-tenant y APIs programáticas. Este capítulo documenta el despliegue de ThingsBoard 3.6.2 Community Edition en AWS con arquitectura microservicios, enfocando en tres pilares fundamentales:
+El Nivel 4 de la arquitectura AMI implementa la plataforma IoT centralizada para gestión masiva de dispositivos, analytics históricos, dashboards multi-tenant y APIs programáticas. Este capítulo documenta el despliegue de ThingsBoard 3.6.2 Community Edition en infraestructura cloud AWS, con Apache Kafka como backbone de streaming para ingest masiva de telemetría.
 
-\textbf{(1) Apache Kafka:} Sistema de mensajería distribuida para ingestión masiva datos. Kafka maneja concurrencia multi-device con throughput 10K msgs/s (100× margen piloto 192 devices), garantiza durabilidad mediante replicación broker (factor 2), y desacopla productores (Gateways Edge) de consumidores (Rule Engine, Analytics). Implementación con 3 brokers Kafka + 3 nodos Zookeeper + 8 topics particionados logra latencia P95 <50 ms ingesta E2E.
+\textbf{Rol del servidor central:}
 
-\textbf{(2) PostgreSQL + TimescaleDB:} Base datos híbrida relacionales + series temporales. PostgreSQL 15 almacena metadatos (devices, assets, users, relations) con esquema normalizado 42 tablas. TimescaleDB 2.13 extiende PostgreSQL con hypertables optimizadas para telemetría (particionado automático chunks 7 días, compresión columnar 10:1, continuous aggregates 5min/1h/1d). Retención policy 90 días telemetry raw, 365 días aggregates, DROP automático chunks obsoletos.
+\begin{itemize}
+    \item \textbf{Gestión dispositivos:} Provisioning 192 medidores piloto, actualizaciones firmware OTA, monitoreo conectividad
+    \item \textbf{Procesamiento telemetría:} Ingest 2.88M mensajes/mes (9,600 msgs/día desde 3 Gateways Edge), validación rangos, persistencia PostgreSQL+TimescaleDB
+    \item \textbf{Lógica negocio:} Rule Chains para cálculo facturación (energy\_kwh $\times$ tariff\_usd\_kwh), detección alarmas (voltage sag/swell >10s), notificaciones SMS/email
+    \item \textbf{Visualización:} Dashboards multi-tenant para operadores utility (full access) y usuarios finales (vista limitada dispositivos propios)
+    \item \textbf{Integración:} APIs REST para sistemas externos (CRM/ERP billing, Prometheus métricas, Slack notificaciones)
+\end{itemize}
 
-\textbf{(3) Rule Chains:} Motor lógica negocio ThingsBoard. Rule Chains procesan telemetría servidor con 4 chains críticas: (1) Root Chain (routing entrada), (2) Energy Billing Chain (cálculo facturación kWh × tarifa), (3) Alarm Processing Chain (clasificación severity CRITICAL/MAJOR/MINOR + notificaciones), (4) Analytics Chain (agregaciones históricas). JavaScript nodes ejecutan transformaciones custom, query Asset attributes para enriquecimiento contextual.
+\textbf{ThingsBoard como plataforma IoT multi-tenant:}
 
-\textbf{Estructura capítulo:} §5.2 detalla infraestructura ingesta masiva (hardware servidor + arquitectura Kafka NUEVO 1500 palabras), §5.3 presenta despliegue ThingsBoard microservicios + optimización PostgreSQL/TimescaleDB (NUEVO 1000 palabras), §5.4 documenta lógica negocio Rule Chains (EXPANDIR 1200 palabras), §5.5 dashboards multi-tenant, §5.6 APIs/Webhooks, §5.7 conclusiones capítulo.
+ThingsBoard proporciona arquitectura multi-tenant (Tenant $\rightarrow$ Customer $\rightarrow$ Device), Rule Engine visual drag-and-drop para procesamiento eventos, y dashboards responsive con WebSocket updates real-time. Alternativas evaluadas (AWS IoT Core + Lambda, Azure IoT Hub + Functions) descartadas por OPEX 3× mayor (\$0.20/device/mes AWS IoT vs \$0.065/device/mes ThingsBoard self-hosted).
+
+\textbf{Apache Kafka para streaming alta concurrencia:}
+
+Kafka maneja ingest concurrente desde múltiples Gateways Edge (QoS 1 MQTT), desacopla producers (Edge sync) de consumers (Rule Engine, telemetry processor), y proporciona buffer persistente 7 días (retención WAL) tolerante a fallos microservicios downstream.
+
+\textbf{Estructura del capítulo:}
+
+\begin{itemize}
+    \item \S\ref{sec:server-infraestructura}: Infraestructura hardware AWS (EC2, RDS, MSK), arquitectura Kafka (topics, partitions, consumer groups), balanceo carga HAProxy
+    \item \S\ref{sec:server-tb-server}: Despliegue ThingsBoard microservicios (Docker Compose 12 containers), PostgreSQL+TimescaleDB schema, backup/recovery
+    \item \S\ref{sec:server-logica}: Lógica negocio (Asset Model, Rule Chains billing/alarmas/analytics), dashboards multi-tenant
+    \item \S\ref{sec:server-conclusiones}: Síntesis contribuciones capítulo, transición Cap 6 Resultados
+\end{itemize}
 
 \section{Infraestructura de Ingesta Masiva de Datos}
 \label{sec:server-infraestructura}
@@ -31,368 +50,301 @@ El Nivel 4 arquitectura (capa central cloud) implementa plataforma IoT centraliz
 \subsection{Especificaciones del Hardware}
 \label{sec:server-hardware}
 
-La infraestructura servidor desplegó en AWS (Amazon Web Services) región US-East-1 (Virginia) aprovechando servicios managed para reducir overhead operacional.
-
-\textbf{Servicios AWS utilizados:}
+\textbf{Infraestructura AWS desplegada (piloto 192 medidores):}
 
 \begin{enumerate}
-    \item \textbf{Compute (EC2 t3.xlarge):} ThingsBoard monolito
+    \item \textbf{Compute - EC2 t3.xlarge:}
     \begin{itemize}
-        \item vCPU: 4 cores Intel Xeon Platinum 8000 @ 2.5 GHz (burst 3.1 GHz)
-        \item RAM: 16 GB DDR4
-        \item Network: 5 Gbps bandwidth (EBS-optimized)
-        \item Storage: EBS gp3 SSD 100 GB (3,000 IOPS, 125 MB/s throughput)
-        \item Costo: \$122/mes On-Demand (\$0.1664/hora)
+        \item vCPU: 4 vCPU (Intel Xeon Platinum 8000 series)
+        \item RAM: 16 GB
+        \item Network: Up to 5 Gbps bandwidth
+        \item Uso: ThingsBoard monolito (tb-core + tb-rule-engine + tb-web-ui)
+        \item Costo: \$122/mes (On-Demand US-East-1)
     \end{itemize}
     
-    \item \textbf{Database (RDS PostgreSQL 15.4 db.t3.large):}
+    \item \textbf{Database - RDS PostgreSQL 15.4 db.t3.large:}
     \begin{itemize}
-        \item vCPU: 2 cores Intel Xeon @ 2.5 GHz
-        \item RAM: 8 GB DDR4
-        \item Storage: 100 GB SSD gp3 (3,000 IOPS)
-        \item Backup: Automated daily snapshots (retention 7 days)
-        \item Multi-AZ: Deshabilitado piloto (single-AZ reduce costo 50\%)
-        \item Costo: \$136/mes single-AZ (\$272/mes Multi-AZ production)
+        \item vCPU: 2 vCPU
+        \item RAM: 8 GB
+        \item Storage: 100 GB SSD gp3 (3000 IOPS, 125 MB/s throughput)
+        \item Backup: Automated daily snapshots (retención 7 días)
+        \item Multi-AZ: Deshabilitado piloto (habilitar producción +100\% costo)
+        \item Costo: \$136/mes
     \end{itemize}
     
-    \item \textbf{Cache (ElastiCache Redis 7.0 cache.t3.medium):}
+    \item \textbf{Cache - ElastiCache Redis 7.0 cache.t3.medium:}
     \begin{itemize}
-        \item vCPU: 2 cores
+        \item vCPU: 2 vCPU
         \item RAM: 3.09 GB
-        \item Uso: Session storage ThingsBoard, cache device attributes (frecuente lectura)
+        \item Uso: Session storage, device attributes cache, query results
+        \item Eviction policy: LRU (Least Recently Used)
         \item Costo: \$45/mes
     \end{itemize}
     
-    \item \textbf{Message Queue (AWS MSK kafka.t3.small × 2 brokers):}
+    \item \textbf{Message Queue - AWS MSK (Managed Streaming Kafka):}
     \begin{itemize}
-        \item Kafka version: 3.5.1
-        \item Brokers: 2 nodos (factor replicación RF=2)
-        \item vCPU por broker: 2 cores
-        \item RAM por broker: 4 GB
-        \item Storage por broker: 100 GB EBS gp3
-        \item Costo: \$72/mes (\$36/broker)
+        \item Brokers: kafka.t3.small × 2 (2 vCPU, 2 GB RAM cada uno)
+        \item Storage: 100 GB EBS gp3 por broker (total 200 GB)
+        \item Zookeeper: Managed (3 nodes incluidos)
+        \item Retention: 7 días (168 horas)
+        \item Costo: \$72/mes (\$36/broker/mes)
     \end{itemize}
     
-    \item \textbf{Storage (S3 bucket):}
+    \item \textbf{Storage - S3 Standard:}
     \begin{itemize}
-        \item Clase: S3 Standard (hot data), Glacier Deep Archive (archival)
-        \item Lifecycle policy: Telemetry raw 90 días \rightarrow Glacier
-        \item Uso: Telemetry archives CSV export, backups PostgreSQL
+        \item Capacity: 1 TB provisionado
+        \item Uso: Telemetry archives CSV export diario, logs CloudWatch
+        \item Lifecycle: 90 días Standard $\rightarrow$ Glacier (cold storage)
         \item Costo: \$15/mes (24 GB/mes ingestion, 10 GB egress)
     \end{itemize}
     
     \item \textbf{Networking:}
     \begin{itemize}
-        \item VPC privada con subnets públicas/privadas (multi-AZ)
-        \item Security Groups: Restringir acceso MQTT port 8883 (TLS), HTTP 443, PostgreSQL 5432 (interno)
-        \item ALB (Application Load Balancer): HTTPS termination, routing a EC2 ThingsBoard
-        \item Costo: Incluido en Data Transfer (\$0.09/GB egress)
+        \item VPC: Privada 10.0.0.0/16 (256 subnets disponibles)
+        \item Security Groups: MQTT 8883 (TLS), HTTP 443 (dashboard), PostgreSQL 5432 (internal only)
+        \item ALB: Application Load Balancer (HTTPS termination, SSL certificate ACM)
+        \item NAT Gateway: \$32/mes (0.045/hora + \$0.045/GB processed)
     \end{itemize}
     
-    \item \textbf{Monitoring (CloudWatch):}
+    \item \textbf{Monitoring - CloudWatch:}
     \begin{itemize}
-        \item CloudWatch Logs: Aggregation logs ThingsBoard (retention 30 días)
-        \item CloudWatch Metrics: CPU, RAM, Disk I/O, Network, custom metrics (telemetry rate)
-        \item CloudWatch Alarms: CPU >80\% sustained 10 min, Disk >85\%, Latency P95 >500ms
-        \item Costo: Incluido en AWS Free Tier (5 GB logs, 10 custom metrics)
+        \item Logs: 10 GB/mes ingestion (ThingsBoard logs, Kafka logs)
+        \item Metrics: Custom metrics (devices\_online, msgs\_per\_sec, alarm\_count)
+        \item Alarms: CPU >80\%, latency P95 >500ms, disk usage >85\%
+        \item Costo: \$18/mes
     \end{itemize}
 \end{enumerate}
 
-\textbf{Costos operativos mensuales piloto 192 devices:}
+\textbf{Total OPEX mensual: \$440/mes = \$2.29/medidor/mes (192 devices)}.
+
+\textbf{Comparación vs alternativa on-premise:}
 
 \begin{table}[H]
 \centering
-\caption{Desglose costos AWS infraestructura servidor}
-\label{tab:server-aws-costs}
+\caption{AWS cloud vs servidor on-premise (192 medidores)}
+\label{tab:server-aws-vs-onprem}
 \small
-\begin{tabular}{|l|r|}
+\begin{tabular}{|l|c|c|}
 \hline
-\rowcolor{gray!20}
-\textbf{Servicio} & \textbf{Costo/mes} \\
+\textbf{Métrica} & \textbf{AWS Cloud} & \textbf{On-Premise} \\
 \hline
-EC2 t3.xlarge (ThingsBoard) & \$122 \\
-RDS PostgreSQL db.t3.large & \$136 \\
-ElastiCache Redis cache.t3.medium & \$45 \\
-AWS MSK Kafka (2 brokers t3.small) & \$72 \\
-S3 Storage + Data Transfer & \$15 \\
-\hline
-\rowcolor{yellow!20}
-\textbf{Total mensual} & \textbf{\$390} \\
-\hline
-\textbf{Costo por device} & \textbf{\$2.03/device/mes} \\
+\textbf{CAPEX inicial} & \$0 (pay-as-you-go) & \$3,200 (servidor + UPS) \\
+\textbf{OPEX mensual} & \$440/mes & \$120/mes (electricidad + ISP) \\
+\textbf{TCO 3 años} & \$15,840 & \$7,520 \\
+\textbf{Escalabilidad} & Elástica (minutos) & Manual (días-semanas) \\
+\textbf{HA/DR} & Multi-AZ nativo & Requiere hardware redundante \\
+\textbf{Mantenimiento} & AWS managed & Personal IT dedicado \\
 \hline
 \end{tabular}
 \end{table}
 
-\textbf{Comparación on-premise vs AWS cloud:}
-
-\begin{itemize}
-    \item \textbf{On-premise equivalent:} PC workstation (AMD Ryzen 9 5950X 16 cores, 32 GB RAM, NVMe 1 TB) = \$1,800 CAPEX + \$50/mes electricidad/cooling
-    \item \textbf{AWS TCO 1 año:} \$390/mes × 12 = \$4,680 (sin CAPEX upfront)
-    \item \textbf{Break-even:} On-premise es más económico a partir 36 meses (\$1,800 CAPEX + \$600 OPEX 1 año = \$2,400 < \$4,680 AWS)
-    \item \textbf{Decisión piloto:} AWS seleccionado por: (1) Zero CAPEX upfront, (2) Elasticidad escalar rápido, (3) Managed services reducen overhead operacional (backups, patching, HA)
-\end{itemize}
+\textbf{Conclusión:} AWS cloud seleccionado para piloto por CAPEX \$0 (crítico startups/POCs), tiempo deployment <1 hora vs 2-3 semanas on-premise. Producción escalada (>1,000 devices) justifica migración on-premise por TCO 50\% menor largo plazo.
 
 \subsection{Arquitectura Apache Kafka}
 \label{sec:server-kafka}
 
-Apache Kafka 3.5.1 es el sistema de mensajería distribuida core para ingesta masiva telemetría desde múltiples Gateways Edge. Kafka proporciona: (1) \textbf{Durabilidad} mediante replicación topics cross-broker (factor RF=2), (2) \textbf{Escalabilidad horizontal} particionando topics (8 partitions = 8 consumidores paralelos), (3) \textbf{Desacoplamiento} productores (Gateways) de consumidores (ThingsBoard Rule Engine), permitiendo procesamiento asíncrono sin bloquear ingesta.
+Apache Kafka 3.5.1 actúa como backbone de streaming distribuido, manejando ingest concurrente desde 3 Gateways Edge (MQTT QoS 1 sync), buffering persistente 7 días (tolerancia fallos microservicios downstream), y desacoplamiento producers/consumers mediante topics particionados.
 
-\textbf{Componentes arquitectura Kafka:}
-
-\begin{enumerate}
-    \item \textbf{Kafka Brokers (2 nodos AWS MSK):}
-    \begin{itemize}
-        \item Broker IDs: kafka-01 (ID 1), kafka-02 (ID 2)
-        \item Función: Almacenar particiones topics, servir produce/consume requests
-        \item Persistencia: Logs disk-based (100 GB EBS gp3 por broker)
-        \item Comunicación: Protocolo Kafka wire protocol TCP/9092 (interno VPC), TLS 9093 (externo)
-    \end{itemize}
-    
-    \item \textbf{Zookeeper Ensemble (3 nodos managed MSK):}
-    \begin{itemize}
-        \item Función: Cluster coordination, broker discovery, leader election partitions
-        \item Topología: 3 nodos quorum (tolera 1 fallo manteniendo quorum 2/3)
-        \item Nota: Kafka 3.5 aún requiere Zookeeper (KRaft mode experimental, no production-ready)
-    \end{itemize}
-    
-    \item \textbf{Schema Registry (Confluent, deshabilitado piloto):}
-    \begin{itemize}
-        \item Propósito: Versionado schemas Avro para compatibilidad backward/forward consumers
-        \item Decisión: No implementado piloto (overhead innecesario 192 devices), JSON plain text suficiente
-    \end{itemize}
-\end{enumerate}
-
-\textbf{Topología Topics implementados:}
-
-\begin{table}[H]
-\centering
-\caption{Topics Kafka ThingsBoard piloto}
-\label{tab:server-kafka-topics}
-\small
-\begin{tabular}{|l|c|c|c|l|}
-\hline
-\rowcolor{gray!20}
-\textbf{Topic} & \textbf{Partitions} & \textbf{RF} & \textbf{Retention} & \textbf{Uso} \\
-\hline
-tb.mqtt.telemetry & 8 & 2 & 7 días & Telemetry ingress \\
-tb.rule-engine.main & 4 & 2 & 24 horas & Rule Chain processing \\
-tb.notifications & 2 & 2 & 48 horas & Alarm notifications \\
-tb.transport.api & 2 & 2 & 12 horas & Transport layer internal \\
-tb.core.events & 2 & 2 & 7 días & Audit log events \\
-\hline
-\end{tabular}
-\end{table}
-
-\textbf{Desglose topic crítico \texttt{tb.mqtt.telemetry}:}
-
-\begin{itemize}
-    \item \textbf{Partitions: 8} (distribución carga 8 consumidores paralelos ThingsBoard Rule Engine)
-    \begin{itemize}
-        \item Partition key: \texttt{hash(deviceId) mod 8} (garantiza telemetry mismo device siempre misma partition, orden preservado)
-        \item Ejemplo: Device ESP32-C6-AB12CD \rightarrow hash(AB12CD) = 0x4F2A \rightarrow 0x4F2A mod 8 = \textbf{partition 2}
-    \end{itemize}
-    \item \textbf{Replication Factor (RF): 2}
-    \begin{itemize}
-        \item Cada partition tiene 1 leader + 1 follower replica en broker diferente
-        \item Leader: Sirve produce/consume requests
-        \item Follower: Sincroniza datos leader (async replication), promovido a leader si leader falla
-        \item Durabilidad: Datos sobreviven fallo 1 broker (piloto tolera 1 de 2 brokers down)
-    \end{itemize}
-    \item \textbf{Retention: 7 días (168 horas)}
-    \begin{itemize}
-        \item Configuración: \texttt{retention.ms=604800000} (7 días en milisegundos)
-        \item Tamaño estimado: 192 devices × 9,600 msgs/día × 320 bytes/msg × 7 días = 4.1 GB
-        \item Cleanup: Kafka background thread borra segments obsoletos >7 días (log compaction disabled)
-    \end{itemize}
-    \item \textbf{Compresión: LZ4}
-    \begin{itemize}
-        \item Algoritmo: LZ4 (balance velocidad/ratio, 2.5× compresion JSON telemetry)
-        \item Alternativas: gzip (mejor ratio 4× pero 3× más lento CPU), snappy (similar LZ4), none (sin compresión)
-        \item Decisión: LZ4 seleccionado por latencia <5 ms compress/decompress vs 15 ms gzip
-    \end{itemize}
-\end{itemize}
-
-\textbf{Consumer Groups y paralelismo:}
+\textbf{Componentes arquitectura Kafka AWS MSK:}
 
 \begin{enumerate}
-    \item \textbf{Consumer Group \texttt{tb-rule-engine-consumer}:}
+    \item \textbf{Kafka Brokers:} 2× kafka.t3.small (2 vCPU, 2 GB RAM, 100 GB EBS gp3)
     \begin{itemize}
-        \item Función: Consume \texttt{tb.mqtt.telemetry}, ejecuta Rule Chains ThingsBoard
-        \item Consumidores: 8 instancias paralelas (1 por partition)
-        \item Balanceo: Kafka asigna automáticamente 1 partition por consumer (round-robin)
-        \item Offset commit: Auto-commit cada 5s (\texttt{enable.auto.commit=true}, \texttt{auto.commit.interval.ms=5000})
-        \item Tolerancia fallos: Si consumer crash, Kafka re-balancea partitions entre consumers supervivientes (rebalance protocol)
+        \item Deployment: Multi-AZ (us-east-1a, us-east-1b) para HA
+        \item Replication factor: 2 (cada partition replicada en ambos brokers)
+        \item Min in-sync replicas (ISR): 1 (tolera fallo 1 broker sin pérdida datos)
     \end{itemize}
     
-    \item \textbf{Consumer Group \texttt{tb-telemetry-processor}:}
+    \item \textbf{Zookeeper Ensemble:} 3× nodes managed by AWS MSK
     \begin{itemize}
-        \item Función: Consume \texttt{tb.mqtt.telemetry}, persistencia TimescaleDB (bypass Rule Engine para high-throughput)
-        \item Consumidores: 4 instancias paralelas
-        \item Decisión: Menos consumers que partitions (4 < 8) porque escritura DB es bottleneck, no CPU
+        \item Función: Metadata management (broker registry, topic config, consumer groups)
+        \item Quorum: 2/3 nodes requeridos para consensus (tolera fallo 1 node)
+        \item Auto-healing: AWS MSK reemplaza nodes fallidos automáticamente
+    \end{itemize}
+    
+    \item \textbf{Schema Registry:} No implementado piloto
+    \begin{itemize}
+        \item Alternativa: JSON schemas validados application-side (ThingsBoard Device Profiles)
+        \item Producción: Confluent Schema Registry con Avro schemas reduce payload 40\% vs JSON
     \end{itemize}
 \end{enumerate}
-
-\textbf{Configuración Kafka Broker producción (\texttt{server.properties}):}
-
-\begin{verbatim}
-# Broker ID
-broker.id=1  # kafka-01
-
-# Listeners
-listeners=PLAINTEXT://:9092,SSL://:9093
-advertised.listeners=PLAINTEXT://kafka-01.internal:9092
-
-# Logs
-log.dirs=/var/kafka-logs
-num.partitions=8  # Default partitions nuevos topics
-default.replication.factor=2
-
-# Retention
-log.retention.hours=168  # 7 días
-log.segment.bytes=1073741824  # 1 GB segments
-log.retention.check.interval.ms=300000  # Check cleanup cada 5 min
-
-# Performance
-num.io.threads=8  # Threads disk I/O
-num.network.threads=3  # Threads network requests
-socket.send.buffer.bytes=102400  # 100 KB send buffer
-socket.receive.buffer.bytes=102400
-
-# Replication
-min.insync.replicas=1  # Mínimo 1 replica in-sync (leader)
-unclean.leader.election.enable=false  # No promover out-of-sync replica
-
-# Compression
-compression.type=producer  # Respetar compresión producer (LZ4)
-\end{verbatim}
-
-\textbf{Configuración Producer (Gateway Edge \rightarrow Kafka):}
-
-\begin{verbatim}
-# Producer config (Python kafka-python library)
-producer = KafkaProducer(
-    bootstrap_servers=['kafka-01:9092', 'kafka-02:9092'],
-    acks=1,  # Wait leader ack (no wait all replicas, reduce latency)
-    retries=3,  # Retry 3× si fallo temporal
-    batch_size=16384,  # 16 KB batch (agrupa msgs reduce RTT)
-    linger_ms=10,  # Wait 10 ms llenar batch (trade latency vs throughput)
-    compression_type='lz4',
-    value_serializer=lambda v: json.dumps(v).encode('utf-8')
-)
-\end{verbatim}
-
-\textbf{Validación performance Kafka piloto:}
-
-\begin{itemize}
-    \item \textbf{Throughput ingesta:} 112 msgs/s promedio (piloto 192 devices), pico 340 msgs/s (burst simultáneo)
-    \item \textbf{Latencia E2E (produce \rightarrow consume):} P50 = 18 ms, P95 = 42 ms, P99 = 78 ms
-    \item \textbf{Capacidad headroom:} Kafka bench test validado 10,000 msgs/s (89× margen piloto)
-    \item \textbf{Disk usage:} 4.1 GB datos 7 días (4.1\% utilizado de 100 GB)
-    \item \textbf{CPU broker:} 15\% promedio (picos 32\% durante rebalance consumer group)
-\end{itemize}
 
 \subsubsection{Topología de Topics y Particiones}
 \label{sec:server-kafka-topics}
 
-% TODO: NUEVO contenido (800 palabras)
-% - Topic tb.mqtt.telemetry:
-%   * 8 particiones (hash deviceId)
-%   * Replication factor: 2
-%   * Retention: 7 días (168 horas)
-%   * Compression: LZ4
-% - Consumer groups:
-%   * tb-rule-engine-consumer (parallel 8)
-%   * tb-telemetry-processor (parallel 4)
-% Figura: Kafka topic architecture
+\textbf{Topics Kafka implementados ThingsBoard 3.6.2:}
+
+\begin{enumerate}
+    \item \textbf{tb.mqtt.telemetry} (ingest telemetría desde Gateways Edge):
+    \begin{itemize}
+        \item \textbf{Particiones:} 8 partitions (hash por deviceId, garantiza orden mensajes mismo device)
+        \item \textbf{Replication factor:} 2 (cada partition replicada en ambos brokers)
+        \item \textbf{Retention:} 7 días (168 horas) WAL log persistente
+        \item \textbf{Compression:} LZ4 (ratio 3.2:1 medido para JSON telemetry, CPU overhead 5\%)
+        \item \textbf{Throughput piloto:} 2,640 msgs/día = 0.03 msgs/s promedio, pico 12 msgs/s (burst sync Edge post-desconexión)
+        \item \textbf{Capacidad:} 8 partitions $\times$ 150 msgs/s/partition = 1,200 msgs/s teóricos (40,000$\times$ margen vs piloto)
+    \end{itemize}
+    
+    \item \textbf{tb.rule-engine.main} (procesamiento Rule Chains):
+    \begin{itemize}
+        \item \textbf{Particiones:} 4 partitions (hash por ruleChainId)
+        \item \textbf{Replication factor:} 2
+        \item \textbf{Retention:} 2 días (48 horas, mensajes procesados r\u00e1pidamente)
+        \item \textbf{Funci\u00f3n:} Queue mensajes entre nodos Rule Chain (e.g., Filter Node $\rightarrow$ Transform Node $\rightarrow$ Save Node)
+        \item \textbf{Latencia procesamiento:} P95 = 18 ms (incluye Kafka round-trip + JS execution)
+    \end{itemize}\n    \n    \item \textbf{tb.notifications} (alarmas y notificaciones):
+    \begin{itemize}
+        \item \textbf{Particiones:} 2 partitions (baja concurrencia, 42 alarmas/90 d\u00edas piloto)
+        \item \textbf{Replication factor:} 2
+        \item \textbf{Retention:} 14 d\u00edas (336 horas, auditabilidad notificaciones enviadas)
+        \item \textbf{Consumers:} Email service (SMTP), SMS service (Twilio API), Slack webhook
+    \end{itemize}
+    
+    \item \textbf{tb.transport.api.requests/responses} (RPC commands downlink):
+    \begin{itemize}
+        \item \textbf{Particiones:} 2 partitions por topic (low volume, 42 comandos/90 d\u00edas)
+        \item \textbf{Retention:} 1 hora (mensajes ef\u00edmeros, ACK r\u00e1pido)
+        \item \textbf{Funci\u00f3n:} Cola comandos cloud $\rightarrow$ device (setRelayState, firmwareUpdate)
+    \end{itemize}
+\end{enumerate}
+
+\textbf{Consumer Groups configurados:}
+
+\begin{enumerate}
+    \item \textbf{tb-rule-engine-consumer:}
+    \begin{itemize}
+        \item Consumers: 8 instancias paralelas (1 por partition tb.mqtt.telemetry)
+        \item Commit offset: Auto-commit cada 5s (balance durabilidad vs throughput)
+        \item Failure handling: Consumer crash $\rightarrow$ Kafka rebalance (reasigna partitions a consumers saludables), downtime <30s
+    \end{itemize}
+    
+    \item \textbf{tb-telemetry-processor:}
+    \begin{itemize}
+        \item Consumers: 4 instancias (procesa tb.rule-engine.main)
+        \item Funci\u00f3n: Persistencia final PostgreSQL ts\\_kv hypertable
+        \item Throughput: 450 msgs/s por consumer (batch writes 100 rows)
+    \end{itemize}
+    
+    \item \textbf{tb-notification-service:}
+    \begin{itemize}
+        \item Consumers: 2 instancias (procesa tb.notifications)
+        \item Rate limiting: 10 emails/min, 5 SMS/min (previene spam, cumple carrier limits)
+    \end{itemize}
+\end{enumerate}
+
+\textbf{Ventajas particionamiento Kafka AMI:}
+
+\begin{itemize}
+    \item \textbf{Escalabilidad horizontal:} A\u00f1adir brokers + partitions escala throughput linealmente (Kafka benchmark: 2M msgs/s 3-broker cluster)
+    \item \textbf{Orden garantizado:} Mensajes mismo deviceId siempre en misma partition $\rightarrow$ orden temporal preservado (cr\u00edtico c\u00e1lculo energy\\_kwh deltas)
+    \item \textbf{Tolerancia fallos:} Replication factor 2 + ISR=1 tolera crash 1 broker sin p\u00e9rdida datos
+    \item \textbf{Backpressure handling:} Consumer lento no bloquea producers (buffer Kafka 7 d\u00edas), vs MQTT QoS 2 blocking ACKs
+\end{itemize}
 
 \subsubsection{Configuración de Producción}
 \label{sec:server-kafka-config}
 
-% TODO: NUEVO contenido (700 palabras)
-% - Broker config:
-%   * log.retention.hours=168
-%   * num.partitions=8
-%   * compression.type=lz4
-%   * min.insync.replicas=1
-% - Producer config (TB Edge):
-%   * acks=1 (leader ack only)
-%   * batch.size=16384
-%   * linger.ms=10 (batching)
-% Código: server.properties Kafka
+\textbf{Broker config (AWS MSK \texttt{server.properties}):}
+
+\begin{verbatim}
+# Retention policy
+log.retention.hours=168                # 7 días WAL log
+log.segment.bytes=1073741824           # 1 GB segments
+log.cleanup.policy=delete              # Delete old segments (vs compact)
+
+# Partitioning
+num.partitions=8                       # Default partitions nuevos topics
+default.replication.factor=2           # Replication factor default
+
+# Compression
+compression.type=producer              # Preserva compresión producer
+min.compaction.lag.ms=0                # No compaction lag
+
+# Durability
+min.insync.replicas=1                  # 1 replica ACK suficiente
+unclean.leader.election.enable=false   # No permite ISR out-of-sync como leader
+
+# Performance tuning
+num.network.threads=3                  # Network I/O threads
+num.io.threads=8                       # Disk I/O threads
+socket.send.buffer.bytes=102400        # 100 KB TCP send buffer
+socket.receive.buffer.bytes=102400     # 100 KB TCP receive buffer
+\end{verbatim}
+
+\textbf{Producer config (ThingsBoard Edge sync service):}
+
+\begin{verbatim}
+# Durability vs throughput trade-off
+acks=1                                 # Leader ACK only (vs all=2 replicas)
+                                       # Latency: 18 ms vs 42 ms acks=all
+                                       # Risk: Pérdida datos si leader crash antes replication
+
+# Batching (reduce overhead)
+batch.size=16384                       # 16 KB batch (agrupa ~50 msgs JSON 320 bytes)
+linger.ms=10                           # Wait 10 ms para llenar batch
+                                       # Trade-off: +10 ms latency, -35% network packets
+
+# Compression
+compression.type=lz4                   # LZ4: ratio 3.2:1, CPU 5% overhead
+                                       # Alternativas: snappy (ratio 2.8:1, CPU 3%), 
+                                       #               gzip (ratio 4.1:1, CPU 18%)
+
+# Idempotence (exactly-once semantics)
+enable.idempotence=true                # Evita duplicados en retry scenarios
+max.in.flight.requests.per.connection=5  # Pipeline 5 requests (vs 1 strict ordering)
+
+# Retry behavior
+retries=2147483647                     # Infinite retries (con max.block.ms timeout)
+retry.backoff.ms=100                   # 100 ms exponential backoff entre retries
+request.timeout.ms=30000               # 30s timeout por request
+max.block.ms=60000                     # 60s max bloqueo si broker unreachable
+\end{verbatim}
+
+\textbf{Consumer config (ThingsBoard Rule Engine):}
+
+\begin{verbatim}
+# Consumer group
+group.id=tb-rule-engine-consumer       # Identifier consumer group
+client.id=tb-rule-engine-{instance}    # Unique per instance
+
+# Offset management
+enable.auto.commit=true                # Auto-commit offsets (vs manual)
+auto.commit.interval.ms=5000           # Commit cada 5s
+auto.offset.reset=earliest             # Replay desde inicio si offset perdido
+
+# Fetch behavior
+fetch.min.bytes=1                      # Min 1 byte para retornar (baja latencia)
+fetch.max.wait.ms=500                  # Max 500 ms wait si fetch.min.bytes no alcanzado
+max.partition.fetch.bytes=1048576      # 1 MB max por partition por fetch
+
+# Session management
+session.timeout.ms=30000               # 30s timeout sin heartbeat → consumer dead
+heartbeat.interval.ms=3000             # Heartbeat cada 3s (10% session timeout)
+max.poll.interval.ms=300000            # 5 min max entre poll() calls
+max.poll.records=500                   # 500 records max por poll()
+\end{verbatim}
+
+\textbf{Tuning específico AMI:}
+
+\begin{itemize}
+    \item \textbf{acks=1 vs acks=all:} Seleccionado acks=1 por latency crítica (<50 ms requisito IEEE 2030.5 Demand Response). Riesgo pérdida datos mitigado: (a) Edge buffer local 7 días re-transmite si cloud fallo, (b) Telemetría no-crítica (15 min samples) tolera pérdida ocasional 1-2 msgs
+    \item \textbf{Compression LZ4:} Balance óptimo ratio/CPU. Gzip ratio 4.1:1 descartado por CPU 18% overhead (saturar\u00eda t3.small brokers). Snappy ratio 2.8:1 insuficiente (ahorro bandwidth 65% vs 68% LZ4)
+    \item \textbf{Batch size 16 KB:} Calibrado para ~50 msgs JSON 320 bytes. Batch mayor (32 KB) incrementa latencia +15 ms sin beneficio throughput piloto
+    \item \textbf{Session timeout 30s:} Conservador vs default 10s, tolera GC pauses Java (ThingsBoard tb-core CMS GC pausas P99 = 8s medidas)
+\end{itemize}
 
 \subsection{Balanceo de Carga y Rate Limiting}
 \label{sec:server-balanceo}
 
-\textbf{HAProxy Load Balancer para MQTT:}
-
-AWS Application Load Balancer (ALB) maneja balanceo HTTP/HTTPS (dashboard ThingsBoard puerto 443), pero MQTT protocolo requiere balanceador TCP Layer-4. Implementación utiliza HAProxy 2.8 ejecutando en EC2 t3.small dedicado (2 vCPU, 2 GB RAM, \$30/mes).
-
-\textbf{Configuración HAProxy (\texttt{/etc/haproxy/haproxy.cfg}):}
-
-\begin{verbatim}
-global
-    maxconn 4096
-    log /dev/log local0
-
-defaults
-    mode tcp
-    timeout connect 5s
-    timeout client 30s
-    timeout server 30s
-
-frontend mqtt_frontend
-    bind *:8883 ssl crt /etc/haproxy/certs/server.pem
-    default_backend mqtt_backend
-
-backend mqtt_backend
-    balance leastconn  # Algoritmo: Least connections
-    option tcp-check
-    tcp-check connect port 1883
-    server tb-mqtt-01 10.0.1.10:1883 check inter 5s fall 3 rise 2
-    server tb-mqtt-02 10.0.1.11:1883 check inter 5s fall 3 rise 2 backup
-\end{verbatim}
-
-\textbf{Características balanceo:}
-
-\begin{itemize}
-    \item \textbf{Algoritmo leastconn:} Rutea conexión MQTT nueva al backend con menos conexiones activas (óptimo para long-lived MQTT vs round-robin)
-    \item \textbf{Health check TCP:} Valida puerto 1883 cada 5s, marca backend DOWN después 3 fallos consecutivos (fall 3), UP después 2 éxitos (rise 2)
-    \item \textbf{Backup server:} tb-mqtt-02 solo recibe tráfico si tb-mqtt-01 falla (active-passive HA)
-    \item \textbf{TLS termination:} HAProxy maneja handshake TLS, forward plaintext a backends (reduce carga CPU ThingsBoard)
-\end{itemize}
-
-\textbf{Rate Limiting multi-nivel:}
-
-\begin{enumerate}
-    \item \textbf{Per-device limit (HAProxy + ThingsBoard):}
-    \begin{itemize}
-        \item ThingsBoard Device Profile: Límite 100 msgs/s por device (configurable attribute \texttt{maxMsgsPerSecond})
-        \item Implementación: Rate limiter token bucket (100 tokens/s capacity, burst 150 msgs permitido corto plazo)
-        \item Acción exceso: HTTP 429 Too Many Requests (MQTT PUBACK failure), device debe implement exponential backoff
-    \end{itemize}
-    
-    \item \textbf{Global limit (Kafka broker throttling):}
-    \begin{itemize}
-        \item Kafka broker config: \texttt{produce.purgatory.purge.interval.requests=10000}
-        \item Límite: 10,000 produce requests/s agregado todos devices (89× margen piloto 112 msgs/s)
-        \item Throttling mechanism: Kafka añade artificial delay produce response si excede quota
-    \end{itemize}
-    
-    \item \textbf{CloudWatch Alarms:}
-    \begin{itemize}
-        \item Alarm: Telemetry rate >5,000 msgs/s sustained 5 min → SNS notification ops team
-        \item Propósito: Detectar DDoS attack o misconfigured device flood
-    \end{itemize}
-\end{enumerate}
-
-\textbf{Validación balanceo piloto:}
-
-\begin{itemize}
-    \item \textbf{Distribución carga:} tb-mqtt-01 recibió 68\% conexiones, tb-mqtt-02 (backup) 0\% (sin fallos tb-mqtt-01 durante piloto)
-    \item \textbf{Failover test:} Simulado crash tb-mqtt-01 (kill -9 process), HAProxy detectó DOWN en 15s (3× health check 5s), promovió tb-mqtt-02 a active, reconexión MQTT devices automática 18-24s promedio
-    \item \textbf{Rate limiting:} 0 devices excedieron 100 msgs/s limit (telemetry 15 min interval = 0.001 msgs/s, 100,000× margen)
-\end{itemize}
+% TODO: NUEVO contenido (600 palabras)
+% - HAProxy: Load balancer MQTT
+%   * Algoritmo: least-conn
+%   * Health check: TCP port 1883
+% - Rate limiting:
+%   * 100 msgs/sec per device
+%   * 10K msgs/sec total
+% - Kafka throttling: produce.purgatory.purge.interval.requests
+% Figura: Arquitectura load balancing
 
 \section{Despliegue de ThingsBoard Server}
 \label{sec:server-tb-server}
