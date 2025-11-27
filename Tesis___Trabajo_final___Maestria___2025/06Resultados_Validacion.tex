@@ -1,4 +1,4 @@
-\chapter{Resultados Experimentales y Validación End-to-End}
+﻿\chapter{Resultados Experimentales y Validación End-to-End}
 \label{chap:resultados}
 
 % ============================================================================
@@ -316,7 +316,7 @@ Edge + Cloud (propuesta) & \textbf{8$\pm$2 ms} & 248 ms & \textbf{98.5\% edge} &
 % - H3: "La arquitectura Edge + HaLow logra latencia E2E < 250 ms"
 % - Resultado: 248 ± 35 ms (media dentro del objetivo)
 % - P95: 315 ms (5% excede objetivo en WAN congestion)
-% - Conclusión: H3 PARCIALMENTE VALIDADA (95% casos cumple)
+% - Conclusión: H3 PARCIALMENTEVALIDADA (95% casos cumple)
 % Figura: CDF latencia E2E
 
 \section{Pruebas de Escalabilidad y Carga}
@@ -534,7 +534,7 @@ WiFi mesh + Cloud & \$28 & \$320 & \$348 \\
 % TODO: MIGRAR desde 05Resultados_NEW.tex §5.5
 % + INTEGRAR desde temp_cap5_energetico.tex COMPLETO
 % - Perfil de consumo nodos ESP32-C6
-% - Autonomía validada
+% - AutonomíaVALIDADA
 % Longitud estimada: 5-6 páginas
 
 \subsection{Perfil de Consumo del Nodo ESP32-C6}
@@ -566,7 +566,7 @@ WiFi mesh + Cloud & \$28 & \$320 & \$348 \\
 % TODO: NUEVO contenido (400 palabras)
 % - H5: "Nodos con batería 3000 mAh logran autonomía > 12 horas"
 % - Resultado: 18.7 horas (56% superior al objetivo)
-% - Conclusión: H5 VALIDADA
+% - Conclusión: H5VALIDADA
 % Figura: Histograma autonomía 30 ciclos
 
 \section{Análisis de Costos CAPEX/OPEX}
@@ -624,7 +624,7 @@ WiFi mesh + Cloud & \$28 & \$320 & \$348 \\
 % TODO: NUEVO contenido (400 palabras)
 % - H7: "Arquitectura Edge reduce costos > 50% vs cloud a 5 años"
 % - Resultado: 64% ahorro vs AWS IoT Core @ 10K dispositivos
-% - Conclusión: H7 VALIDADA
+% - Conclusión: H7VALIDADA
 % Figura: Bar chart ahorro acumulado por año
 
 \section{Pruebas de Disponibilidad y Confiabilidad}
@@ -737,7 +737,7 @@ Nodos Thread (firmware) & 1 & 2,160h (90 días) & 16 min \\
 % TODO: NUEVO contenido (400 palabras)
 % - H6: "Sistema alcanza disponibilidad > 99% en piloto 90 días"
 % - Resultado: 99.1% (supera objetivo)
-% - Conclusión: H6 VALIDADA
+% - Conclusión: H6VALIDADA
 % Figura: Timeline disponibilidad 90 días
 
 \section{Validación de Casos de Uso Smart Energy}
@@ -800,7 +800,7 @@ Nodos Thread (firmware) & 1 & 2,160h (90 días) & 16 min \\
 % - Edge computing: 72% reducción tráfico WAN
 % - TCO: 64% ahorro vs cloud @ 10K dispositivos
 % - Autonomía: 18.7 horas (56% superior a objetivo)
-% - Escalabilidad: Validada hasta 300 dispositivos
+% - Escalabilidad:VALIDADA hasta 300 dispositivos
 
 \subsection{Limitaciones y Lecciones Aprendidas}
 \label{sec:resultados-discusion-limitaciones}
@@ -850,11 +850,11 @@ Latencia E2E reducción & >70\% & 52\% (520 ms $\rightarrow$ 248 ms) & \cellcolo
 \hline
 Overhead paquetes reducción & >60\% & No medido directamente & \cellcolor{yellow!20} N/A \\
 \hline
-Tráfico WAN reducción & >65\% & 72\% (Edge buffer local) & \cellcolor{green!20} ✅ VALIDADA \\
+Tráfico WAN reducción & >65\% & 72\% (Edge buffer local) & \cellcolor{green!20} ✅VALIDADA \\
 \hline
-Disponibilidad operacional & >99\% & 99.62\% (90 días piloto) & \cellcolor{green!20} ✅ VALIDADA \\
+Disponibilidad operacional & >99\% & 99.62\% (90 días piloto) & \cellcolor{green!20} ✅VALIDADA \\
 \hline
-Procesamiento tiempo real & Edge <10 ms & 8$\pm$2 ms (P95: 10 ms) & \cellcolor{green!20} ✅ VALIDADA \\
+Procesamiento tiempo real & Edge <10 ms & 8$\pm$2 ms (P95: 10 ms) & \cellcolor{green!20} ✅VALIDADA \\
 \hline
 \end{tabular}
 \end{table}
@@ -890,21 +890,21 @@ Aunque la hipótesis general del Cap 1 no desglosó explícitamente H1--H8 (remi
 \rowcolor{gray!20}
 \textbf{ID} & \textbf{Hipótesis} & \textbf{Métrica} & \textbf{Objetivo} & \textbf{Resultado} & \textbf{Estado} \\
 \hline
-\textbf{H1} & Arquitectura 4 niveles es técnicamente viable para AMI & Deployment exitoso & Sí & Sí (90 días) & \cellcolor{green!20} ✅ VALIDADA \\
+\textbf{H1} & Arquitectura 4 niveles es técnicamente viable para AMI & Deployment exitoso & Sí & Sí (90 días) & \cellcolor{green!20} ✅VALIDADA \\
 \hline
-\textbf{H2} & Thread simplifica comisionado vs Zigbee & Tiempo provisioning/nodo & <10 min & 2.8 min (BLE+QR) & \cellcolor{green!20} ✅ VALIDADA \\
+\textbf{H2} & Thread simplifica comisionado vs Zigbee & Tiempo provisioning/nodo & <10 min & 2.8 min (BLE+QR) & \cellcolor{green!20} ✅VALIDADA \\
 \hline
-\textbf{H3} & Latencia Edge <10 ms habilita casos uso tiempo real & Latencia edge P95 & <10 ms & 10 ms (P95) & \cellcolor{green!20} ✅ VALIDADA \\
+\textbf{H3} & Latencia Edge <10 ms habilita casos uso tiempo real & Latencia edge P95 & <10 ms & 10 ms (P95) & \cellcolor{green!20} ✅VALIDADA \\
 \hline
-\textbf{H4} & HaLow alcance >500 m LOS reduce infraestructura & Alcance máximo medido & >500 m & 1,200 m (test rural) & \cellcolor{green!20} ✅ VALIDADA \\
+\textbf{H4} & HaLow alcance >500 m LOS reduce infraestructura & Alcance máximo medido & >500 m & 1,200 m (test rural) & \cellcolor{green!20} ✅VALIDADA \\
 \hline
-\textbf{H5} & Nodos Thread consumo <10 mW permiten autonomía >12h & Consumo promedio & <10 mW & 5.2 mW & \cellcolor{green!20} ✅ VALIDADA \\
+\textbf{H5} & Nodos Thread consumo <10 mW permiten autonomía >12h & Consumo promedio & <10 mW & 5.2 mW & \cellcolor{green!20} ✅VALIDADA \\
 \hline
-\textbf{H6} & Disponibilidad >99\% con buffer Edge + redundancia & Uptime 90 días & >99\% & 99.62\% & \cellcolor{green!20} ✅ VALIDADA \\
+\textbf{H6} & Disponibilidad >99\% con buffer Edge + redundancia & Uptime 90 días & >99\% & 99.62\% & \cellcolor{green!20} ✅VALIDADA \\
 \hline
-\textbf{H7} & TCO <\$200/medidor (5 años) vs NB-IoT \$1,000+ & TCO 100 medidores & <\$200 & \$107 & \cellcolor{green!20} ✅ VALIDADA \\
+\textbf{H7} & TCO <\$200/medidor (5 años) vs NB-IoT \$1,000+ & TCO 100 medidores & <\$200 & \$107 & \cellcolor{green!20} ✅VALIDADA \\
 \hline
-\textbf{H8} & Edge reduce tráfico WAN >70\% & Reducción msgs/día & >70\% & 72\% & \cellcolor{green!20} ✅ VALIDADA \\
+\textbf{H8} & Edge reduce tráfico WAN >70\% & Reducción msgs/día & >70\% & 72\% & \cellcolor{green!20} ✅VALIDADA \\
 \hline
 \end{tabular}
 \end{table}
@@ -918,7 +918,7 @@ Aunque la hipótesis general del Cap 1 no desglosó explícitamente H1--H8 (remi
 \begin{itemize}
     \item \textbf{Lecturas exitosas:} 264,988 de 265,000 esperadas (99.995\% success rate)
     \item \textbf{Disponibilidad E2E:} 99.62\% (vs objetivo 99.5\%)
-    \item \textbf{Escalabilidad validada:} Extrapolación 30 $\rightarrow$ 100 medidores con margen 40\% recursos Gateway (CPU 52\% proyectado, RAM 3.4 GB de 4 GB disponibles)
+    \item \textbf{EscalabilidadVALIDADA:} Extrapolación 30 $\rightarrow$ 100 medidores con margen 40\% recursos Gateway (CPU 52\% proyectado, RAM 3.4 GB de 4 GB disponibles)
     \item \textbf{Interoperabilidad:} Stack Thread (OpenThread) + HaLow (Alfa Network) + Edge (ThingsBoard Docker) + Cloud (AWS RDS) operó sin incompatibilidades protocolos
 \end{itemize}
 
@@ -1026,7 +1026,7 @@ Aunque la hipótesis general del Cap 1 no desglosó explícitamente H1--H8 (remi
 \subsection{Síntesis Validación Hipótesis}
 \label{sec:resultados-sintesis-hipotesis}
 
-\textbf{Resultado final validación:} \textbf{8 de 8 hipótesis específicas VALIDADAS} (100\% éxito). La tabla~\ref{tab:validacion-hipotesis-especificas} resume los resultados cuantitativos:
+\textbf{Resultado final validación:} \textbf{8 de 8 hipótesis específicasVALIDADAS} (100\% éxito). La tabla~\ref{tab:validacion-hipotesis-especificas} resume los resultados cuantitativos:
 
 \begin{itemize}
     \item \textbf{H1 Viabilidad técnica:} Sistema operó 90 días sin fallas críticas, 99.995\% lecturas exitosas
@@ -1041,7 +1041,7 @@ Aunque la hipótesis general del Cap 1 no desglosó explícitamente H1--H8 (remi
 
 \textbf{Significancia estadística:} Todas las hipótesis cumplieron objetivos con márgenes significativos (rango +2pp a +178$\times$ objetivo), validando robustez diseño arquitectónico. Intervalos confianza 95\% (no calculados formalmente por limitación tamaño muestra n=30 piloto) sugieren resultados reproducibles en despliegues escalados 100--1,000 dispositivos.
 
-\textbf{Hipótesis general:} Validada PARCIALMENTE (4 de 5 afirmaciones cuantitativas). Limitación latencia E2E 52\% reducción (vs objetivo >70\%) atribuible a dominancia WAN 4G LTE 85\% tiempo total, no controlable por arquitectura propuesta. Mejora posible con backhaul fibra FTTN (<5 ms vs 210 ms 4G LTE) alcanzaría reducción 93\% E2E (520 ms $\rightarrow$ 38 ms con fibra).
+\textbf{Hipótesis general:}VALIDADA PARCIALMENTE (4 de 5 afirmaciones cuantitativas). Limitación latencia E2E 52\% reducción (vs objetivo >70\%) atribuible a dominancia WAN 4G LTE 85\% tiempo total, no controlable por arquitectura propuesta. Mejora posible con backhaul fibra FTTN (<5 ms vs 210 ms 4G LTE) alcanzaría reducción 93\% E2E (520 ms $\rightarrow$ 38 ms con fibra).
 
 \section{Conclusiones del Capítulo}
 \label{sec:resultados-conclusiones}
@@ -1057,7 +1057,7 @@ Los resultados experimentales validan exitosamente la arquitectura propuesta en 
     
     \item \textbf{Alta disponibilidad:} El sistema demostró 99.62\% disponibilidad durante 90 días de operación continua (2,151.82h uptime / 2,160h totales), superando el target de diseño (99.5\%) y validando la robustez de la arquitectura con redundancia Gateway UPS + buffer local 7 días + reintento automático Thread. Buffer Edge ThingsBoard mitigó 100\% desconexiones WAN 4G LTE (229 min downtime) sin pérdida datos mediante sincronización post-reconexión.
     
-    \item \textbf{Escalabilidad validada:} El análisis de extrapolación 30 $\rightarrow$ 100 medidores confirmó viabilidad técnica para despliegues metropolitanos: Gateway Raspberry Pi 4 soporta 100 medidores con margen 40--50\% recursos (CPU 52\% proyectado, RAM 3.4 GB / 4 GB), prueba estrés 72 horas con throughput 15$\times$ sostenido demostró estabilidad operacional (129,588 lecturas, 99.99\% success rate), y cuellos de botella identificados (HaLow uplink 160 kbps @ 1,000 medidores) tienen mitigaciones conocidas (staggered readings o upgrade 2 MHz BW).
+    \item \textbf{EscalabilidadVALIDADA:} El análisis de extrapolación 30 $\rightarrow$ 100 medidores confirmó viabilidad técnica para despliegues metropolitanos: Gateway Raspberry Pi 4 soporta 100 medidores con margen 40--50\% recursos (CPU 52\% proyectado, RAM 3.4 GB / 4 GB), prueba estrés 72 horas con throughput 15$\times$ sostenido demostró estabilidad operacional (129,588 lecturas, 99.99\% success rate), y cuellos de botella identificados (HaLow uplink 160 kbps @ 1,000 medidores) tienen mitigaciones conocidas (staggered readings o upgrade 2 MHz BW).
     
     \item \textbf{Viabilidad económica:} TCO de \textbf{\$107/medidor} (horizonte 5 años, 100 dispositivos) representa ahorro 90\% vs soluciones comerciales NB-IoT (\$1,065/medidor), validando factibilidad económica para utilities con presupuestos limitados en países en desarrollo. Economías de escala reducen TCO 55\% (100 $\rightarrow$ 1,000 medidores), alcanzando \$48/medidor con amortización Gateway/LTE compartidos.
     
@@ -1066,9 +1066,9 @@ Los resultados experimentales validan exitosamente la arquitectura propuesta en 
 
 \subsection{Validación de Hipótesis}
 
-\textbf{Resultado validación formal:} \textbf{8 de 8 hipótesis específicas VALIDADAS} (100\% éxito), incluyendo viabilidad técnica arquitectura 4 niveles (H1), simplificación comisionado Thread 81\% vs Zigbee (H2), latencia edge <10 ms casos uso tiempo real (H3), alcance HaLow 1,200 m LOS 2.4$\times$ objetivo (H4), consumo energético 5.2 mW 48\% margen (H5), disponibilidad 99.62\% +0.62pp objetivo (H6), TCO \$107 ahorro 90\% vs NB-IoT (H7), y reducción WAN 72\% +2pp objetivo (H8).
+\textbf{Resultado validación formal:} \textbf{8 de 8 hipótesis específicasVALIDADAS} (100\% éxito), incluyendo viabilidad técnica arquitectura 4 niveles (H1), simplificación comisionado Thread 81\% vs Zigbee (H2), latencia edge <10 ms casos uso tiempo real (H3), alcance HaLow 1,200 m LOS 2.4$\times$ objetivo (H4), consumo energético 5.2 mW 48\% margen (H5), disponibilidad 99.62\% +0.62pp objetivo (H6), TCO \$107 ahorro 90\% vs NB-IoT (H7), y reducción WAN 72\% +2pp objetivo (H8).
 
-Hipótesis general validada PARCIALMENTE (4 de 5 afirmaciones cuantitativas cumplidas): Latencia E2E 52\% reducción (vs objetivo >70\%) limitada por dominancia WAN 4G LTE 85\% tiempo total (210 ms de 248 ms E2E), no controlable por arquitectura propuesta. Mejora posible con backhaul fibra FTTN (<5 ms) alcanzaría reducción 93\% E2E (520 ms $\rightarrow$ 38 ms con fibra).
+Hipótesis generalVALIDADA PARCIALMENTE (4 de 5 afirmaciones cuantitativas cumplidas): Latencia E2E 52\% reducción (vs objetivo >70\%) limitada por dominancia WAN 4G LTE 85\% tiempo total (210 ms de 248 ms E2E), no controlable por arquitectura propuesta. Mejora posible con backhaul fibra FTTN (<5 ms) alcanzaría reducción 93\% E2E (520 ms $\rightarrow$ 38 ms con fibra).
 
 \subsection{Comparación con Estado del Arte}
 
@@ -1080,15 +1080,15 @@ La arquitectura propuesta supera alternativas tecnológicas en múltiples dimens
     \item \textbf{vs WiFi mesh + Cloud:} Alcance HaLow 350 m urbano vs WiFi 100 m (3.5$\times$ superior), disponibilidad 99.62\% vs 98.5\% típico WiFi mesh (+1.12pp), TCO \$107 vs \$348 (69\% ahorro)
 \end{itemize}
 
-\subsection{Contribuciones Validadas}
+\subsection{ContribucionesVALIDADAs}
 
-Las principales contribuciones validadas experimentalmente son:
+Las principales contribucionesVALIDADAs experimentalmente son:
 
 \begin{itemize}
     \item \textbf{Latencia sub-10 ms:} Primera implementación documentada de AMI con procesamiento edge <10 ms en arquitectura Thread+HaLow+Edge, habilitando casos uso tiempo real (detección fraude, DER control, alarmas automáticas) no viables en arquitecturas cloud tradicionales
     \item \textbf{Reducción costos 90\%:} TCO \$107 vs \$1,065 NB-IoT mediante estrategia hybrid edge-cloud con hardware COTS (ESP32-C6 \$15, Raspberry Pi 4 \$295, HaLow Alfa Network \$80), democratizando acceso Smart Energy para utilities países en desarrollo
     \item \textbf{Piloto real 90 días:} Validación en condiciones reales (no simulación) con 30 medidores comerciales Itron SL7000 durante trimestre completo, demostrando robustez operacional bajo interferencia RF, blackouts eléctricos, y actualizaciones firmware OTA
-    \item \textbf{Escalabilidad 100+ dispositivos:} Extrapolación validada con margen 40\% recursos Gateway, cuellos botella identificados con mitigaciones (staggered readings, 2 MHz HaLow BW upgrade, 2 OTBRs para 100 medidores)
+    \item \textbf{Escalabilidad 100+ dispositivos:} ExtrapolaciónVALIDADA con margen 40\% recursos Gateway, cuellos botella identificados con mitigaciones (staggered readings, 2 MHz HaLow BW upgrade, 2 OTBRs para 100 medidores)
 \end{itemize}
 
 \subsection{Limitaciones Identificadas}
@@ -1112,4 +1112,5 @@ El estudio presenta las siguientes limitaciones reconocidas:
 Los resultados experimentales posicionan la arquitectura propuesta como \textbf{alternativa viable y económicamente factible} para despliegues AMI en países en desarrollo, con capacidad de soportar aplicaciones críticas en tiempo real mediante procesamiento edge distribuido. Las limitaciones identificadas (escala piloto, duración, condiciones ambientales) establecen la agenda para trabajos futuros orientados a validación a gran escala (1,000+ medidores, múltiples ciudades, 12+ meses operación continua) y estudios longitudinales de confiabilidad (MTBF proyectado 2,160h validado, MTTF 5+ años pendiente).
 
 El capítulo siguiente (Capítulo 7 - Conclusiones Finales y Trabajo Futuro) sintetiza las contribuciones generales de la tesis, evalúa cumplimiento de objetivos, discute implicaciones para la industria Smart Energy, y propone líneas de investigación futura para evolución de la arquitectura hacia redes 100\% autónomas con IA edge distribuida.
+
 
