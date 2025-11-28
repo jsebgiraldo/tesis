@@ -243,3 +243,7 @@ $RECYCLE.BIN/
 # Git specific (no necesario pero por claridad)
 .git/
 .gitattributes
+
+# LaTeX compilation logs
+compile_*.txt
+compile_log*.txt
