@@ -13,14 +13,14 @@ Este capítulo documenta la implementación de los Niveles 2 y 3 de la arquitect
 
 La red HaLow proporciona conectividad de última milla entre el gateway y múltiples Border Routers Thread, aprovechando las ventajas de operación sub-1 GHz: alcance extendido hasta 1.2 km en línea de vista, mejor penetración en interiores respecto a Wi-Fi tradicional 2.4 GHz, y soporte de cientos de clientes con mecanismos RAW (Restricted Access Window) que reducen colisiones en redes densas. La arquitectura HaLow mesh IEEE 802.11s con protocolo HWMP (Hybrid Wireless Mesh Protocol) elimina cableado estructurado punto-a-punto, reduciendo costos de despliegue 60\% comparado con enlaces cableados Ethernet.
 
-El capítulo se estructura en siete secciones principales: §\ref{sec:gateway-arquitectura} presenta la arquitectura hardware Raspberry Pi 4 y el stack de software Docker con 7 microservicios containerizados, §\ref{sec:gateway-otbr} documenta la implementación del OpenThread Border Router con servicios NAT64/DNS64 para interconexión Thread-IPv6, §\ref{sec:gateway-halow} detalla la red HaLow mesh con routers MikroTik Tube AHM y protocolo HWMP, §\ref{sec:gateway-tb-edge} describe el despliegue de ThingsBoard Edge con Rule Chains para procesamiento local y reducción 72\% del tráfico WAN, §\ref{sec:gateway-ia} presenta la integración experimental de agentes de inteligencia artificial local mediante Ollama y Model Context Protocol (MCP), y §\ref{sec:gateway-conclusiones} sintetiza los logros y transiciones al Capítulo 5.
+El capítulo se estructura en cinco secciones principales: §\ref{sec:gateway-arquitectura} presenta la arquitectura hardware Raspberry Pi 4 y el stack de software Docker con 6 microservicios containerizados, §\ref{sec:gateway-otbr} documenta la implementación del OpenThread Border Router con servicios NAT64/DNS64 para interconexión Thread-IPv6, §\ref{sec:gateway-halow} detalla la red HaLow mesh con routers MikroTik Tube AHM y protocolo HWMP, §\ref{sec:gateway-tb-edge} describe el despliegue de ThingsBoard Edge con Rule Chains para procesamiento local y reducción 72\% del tráfico WAN, y §\ref{sec:gateway-conclusiones} sintetiza los logros y transiciones al Capítulo 5.
 
 \section{Arquitectura del Gateway Inteligente Raspberry Pi 4}
 \label{sec:gateway-arquitectura}
 
 El Nivel 3 de la arquitectura implementa inteligencia distribuida mediante gateway edge que ejecuta procesamiento local, almacenamiento persistente y sincronización bidireccional con cloud. La implementación utilizó 3 gateways Raspberry Pi 4 desplegados en ubicaciones estratégicas de alta cota, proporcionando cobertura de 0.8 km² en zona urbana residencial montañosa de Medellín (barrio San Javier, desnivel 180 m entre puntos extremos).
 
-El Gateway desempeña tres roles arquitectónicos críticos: (1) \textbf{Thread Border Router} mediante nRF52840 USB Dongle con stack OpenThread, interconectando red mesh Thread (IEEE 802.15.4, 2.4 GHz) con infraestructura IP tradicional vía servicios NAT64/DNS64, (2) \textbf{Plataforma Edge Computing} ejecutando ThingsBoard Edge 3.6.2 en stack Docker con 7 microservicios para Rule Engine local, agregación temporal TimescaleDB, y buffer offline 72 horas de telemetría, y (3) \textbf{Access Point HaLow} mediante módulo Alfa Tube-AHM (Morse Micro MM6108) operando en banda 902-928 MHz con cobertura 1.2 km hacia múltiples Border Routers Thread distribuidos geográficamente.
+El Gateway desempeña tres roles arquitectónicos críticos: (1) \textbf{Thread Border Router} mediante nRF52840 USB Dongle con stack OpenThread, interconectando red mesh Thread (IEEE 802.15.4, 2.4 GHz) con infraestructura IP tradicional vía servicios NAT64/DNS64, (2) \textbf{Plataforma Edge Computing} ejecutando ThingsBoard Edge 3.6.2 en stack Docker con 6 microservicios para Rule Engine local, agregación temporal TimescaleDB, y buffer offline 72 horas de telemetría, y (3) \textbf{Access Point HaLow} mediante módulo Alfa Tube-AHM (Morse Micro MM6108) operando en banda 902-928 MHz con cobertura 1.2 km hacia múltiples Border Routers Thread distribuidos geográficamente.
 
 \subsection{Especificaciones del Hardware}
 \label{sec:gateway-hardware}
@@ -1186,74 +1186,6 @@ ThingsBoard Edge demostró ser plataforma edge óptima para AMI por combinación
 %   * Disk: 2.4 GB / 128 GB
 % Tabla: Comparación TB Edge vs AWS Greengrass vs Azure IoT Edge
 
-\section{Integración Experimental de IA Local (Ollama)}
-\label{sec:gateway-ia}
-
-Como exploración experimental, el Gateway integra Ollama 0.3.6 para inferencia LLM local, ejecutando modelo Llama 3.1 8B quantized (Q4\_K\_M, 4.9 GB footprint). Esta funcionalidad experimental permite detección de anomalías y consultas lenguaje natural sobre telemetría local sin requerir conectividad cloud.
-
-\subsection{Arquitectura Ollama en Gateway}
-\label{sec:gateway-ia-ollama}
-
-\textbf{Configuración Docker Compose Ollama:}
-
-\begin{verbatim}
-services:
-  ollama:
-    image: ollama/ollama:0.3.6
-    restart: unless-stopped
-    volumes:
-      - ollama-data:/root/.ollama
-    deploy:
-      resources:
-        limits:
-          cpus: '1.0'
-          memory: 2048M
-    command: serve
-
-volumes:
-  ollama-data:
-\end{verbatim}
-
-\textbf{Especificaciones modelo Llama 3.1 8B:}
-
-\begin{itemize}
-    \item \textbf{Quantization:} Q4\_K\_M (4-bit mixed precision), reduce 8.0 GB $\rightarrow$ 4.9 GB (-38\% size)
-    \item \textbf{Context window:} 2048 tokens (aprox. 24 horas telemetría 64 devices)
-    \item \textbf{Inference time:} 850 ms promedio @ 50 tokens generados (Raspberry Pi 4 CPU-only)
-    \item \textbf{Accuracy tradeoff:} Q4 vs FP16 full precision = 2.3\% degradación perplexity (aceptable para casos uso AMI)
-\end{itemize}
-
-\subsection{Casos de Uso Experimentales}
-\label{sec:gateway-ia-casos}
-
-\textbf{Caso 1: Anomaly Detection en Series Temporales}
-
-\begin{itemize}
-    \item \textbf{Input:} Prompt "Analizar voltage\_v última hora, detectar anomalías" + JSON telemetría 60 samples
-    \item \textbf{Procesamiento:} Modelo calcula z-score por ventana deslizante 5 min, threshold $\pm$2.5 std deviations
-    \item \textbf{Output:} JSON \texttt{\{"anomaly\_score": 0.87, "timestamp": "2024-11-20 14:32", "description": "Voltage sag 198V sostenido 12s"\}}
-    \item \textbf{Validación 30 días:} Accuracy 87\% (F1-score 0.84), recall 91\% (detecta 10/11 anomalías ground truth), precision 83\% (2 falsos positivos ruido transitorio)
-\end{itemize}
-
-\textbf{Caso 2: Natural Language Queries sobre Telemetría}
-
-\begin{itemize}
-    \item \textbf{Query:} "Consumo total edificio B hoy"
-    \item \textbf{Procesamiento:} Parse query $\rightarrow$ SQL PostgreSQL \texttt{SELECT SUM(energy\_kwh\_delta) FROM ts\_kv WHERE asset='Building-B' AND ts > '2024-11-20 00:00'}
-    \item \textbf{Response:} "Consumo Building-B hoy: 42.3 kWh (período 8:00-20:00, 64 medidores)"
-    \item \textbf{Latencia:} 1.2s E2E (SQL query 150ms + Ollama inference 900ms + template render 50ms)
-\end{itemize}
-
-\textbf{Limitaciones identificadas:}
-
-\begin{itemize}
-    \item \textbf{Inference time:} 850 ms/query no es real-time (<100 ms requerido Demand Response), útil solo análisis batch offline
-    \item \textbf{Accuracy:} 87\% insuficiente para decisiones críticas (e.g., corte servicio), requiere validación humana operator-in-the-loop
-    \item \textbf{Resource overhead:} +2 GB RAM + 1 CPU core dedicado reduce margen Gateway (viable solo Raspberry Pi 4 4GB+)
-    \item \textbf{Conclusión:} IA local es proof-of-concept experimental, producción requiere offload a cloud GPU para latencia <50 ms y accuracy >95\%
-\end{itemize}
-
-\section{Conclusiones del Capítulo}
 \label{sec:gateway-conclusiones}
 
 Este capítulo presentó la implementación completa del Gateway Inteligente y Red HaLow (Niveles 2-3 arquitectura AMI), demostrando viabilidad técnica y económica de edge computing para infraestructura medición avanzada.
@@ -1261,15 +1193,13 @@ Este capítulo presentó la implementación completa del Gateway Inteligente y R
 \textbf{Contribuciones principales del capítulo:}
 
 \begin{enumerate}
-    \item \textbf{Gateway Raspberry Pi 4 + Docker:} Plataforma edge costo-efectiva (\$120 hardware) ejecutando 7 microservicios (OTBR, ThingsBoard Edge, PostgreSQL+TimescaleDB, Ollama) con consumo energético 8.5W promedio (15W pico). Validación 90 días confirma uptime 99.93\%, CPU 35\% promedio, RAM 3.2 GB / 4 GB utilizados. Alternativa comercial AWS Greengrass Core requiere hardware \$450+ (RPi4 es 73\% más económico).
+    \item \textbf{Gateway Raspberry Pi 4 + Docker:} Plataforma edge costo-efectiva (\$120 hardware) ejecutando 6 microservicios containerizados (OTBR, ThingsBoard Edge, PostgreSQL+TimescaleDB, Kafka, Zookeeper, MQTT Bridge) con consumo energético 8.5W promedio (15W pico). Validación 90 días confirma uptime 99.93\%, CPU 35\% promedio, RAM 3.2 GB / 4 GB utilizados. Alternativa comercial AWS Greengrass Core requiere hardware \$450+ (RPi4 es 73\% más económico).
     
     \item \textbf{OpenThread Border Router (OTBR):} Implementación completa NAT64/DNS64 permite conectividad Thread mesh (Nivel 1 nodos) $\rightarrow$ IPv6/IPv4 internet. Thread Commissioner automatiza comisionado 30 nodos piloto, tiempo promedio 2.8$\pm$0.4s por nodo, tasa éxito 100\% (30/30 first-attempt). OTBR valida latencia Thread $\rightarrow$ Internet 44.7 ms promedio (dentro requisito <500 ms IEC 62056 AMI).
     
     \item \textbf{Red HaLow IEEE 802.11ah (NOVEDAD PRINCIPAL):} Primera implementación documentada malla 802.11s HaLow para AMI en literatura científica. Topología 3× MikroTik Tube AHM (\$267 CAPEX total) logra: (a) Alcance 1.2 km LOS validado (RSSI -93 dBm con 2 dB margen vs sensibilidad MCS3), (b) Throughput 4.2 Mbps @ 4 MHz bandwidth MCS7, (c) Latencia RTT 11.3 ms P50 / 14.2 ms P95 (dentro <20 ms requisito IEEE 2030.5 Demand Response). Protocolo HWMP (Hybrid Wireless Mesh Protocol) con métrica airtime cost optimiza path selection multi-hop. RAW (Restricted Access Window) reduce packet loss 93\% (4.2\% $\rightarrow$ 0.3\%) en burst simultáneo 30 Border Routers vs EDCA puro. Cobertura 92\% área 0.8 km² barrio piloto con RSSI >-85 dBm (suficiente MCS5+ 2 Mbps).
     
     \item \textbf{ThingsBoard Edge:} Plataforma edge open-source (Zero OPEX licencia) logra reducción 72\% tráfico WAN mediante Rule Chains locales (9,600 msgs/día ingreso $\rightarrow$ 2,640 msgs/día sincronización cloud), ahorro 6.8 MB/día datos LTE por Gateway. Buffer offline PostgreSQL 7 días (128 GB SD card capacidad 20M msgs, 626× margen vs 67K msgs piloto) validado durante 3 eventos desconexión WAN (87 min downtime acumulado) con 100\% preservación datos. Dashboards locales permiten operadores campo trabajar sin conectividad internet. Comparativa vs AWS Greengrass (\$2.20/device/mes) y Azure IoT Edge (\$1.50/device/mes) confirma ThingsBoard Edge ahorro 100\% OPEX (open-source) para 192 devices piloto.
-    
-    \item \textbf{IA Local Experimental (Ollama):} Exploración proof-of-concept inferencia LLM local (Llama 3.1 8B Q4\_K\_M, 4.9 GB, 850 ms inference @ 50 tokens) para anomaly detection (87\% accuracy F1=0.84) y natural language queries telemetría. Conclusión: viable solo análisis batch offline, no real-time (<100 ms requerido), producción requiere offload GPU cloud.
 \end{enumerate}
 
 \textbf{Regla de Exclusión aplicada - HaLow y OTBR exhaustados:}

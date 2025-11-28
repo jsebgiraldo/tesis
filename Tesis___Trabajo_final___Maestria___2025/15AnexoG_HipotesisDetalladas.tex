@@ -16,19 +16,21 @@ Este anexo presenta el desglose detallado de las ocho hipótesis específicas qu
 
 \textbf{Validación experimental:} Sección §5.3.1
 
-\section{H2 - Procesamiento Edge con IA}
+\section{H2 - Procesamiento Edge}
 
-\textbf{Enunciado:} El despliegue de servicios containerizados edge (ThingsBoard Edge, TimescaleDB, Kafka) con integración de modelos LLM locales (Ollama + Llama 3.2 3B) permite: (a) reducción de tráfico WAN en >65\% mediante procesamiento local, (b) latencia de inferencia <500 ms para detección de anomalías, (c) disponibilidad de servicios >99\% durante desconexiones WAN >72 horas, y (d) precisión de detección de anomalías >95\% en patrones de consumo energético.
+\textbf{Enunciado:} El despliegue de servicios containerizados edge (ThingsBoard Edge, TimescaleDB, Kafka, MQTT Bridge) permite: (a) reducción de tráfico WAN en >65\% mediante procesamiento local, (b) latencia de procesamiento local <50 ms para agregación y almacenamiento telemetría, (c) disponibilidad de servicios >99\% durante desconexiones WAN >72 horas, manteniendo funcionalidad completa de visualización, alarmas y almacenamiento local.
 
 \textbf{Métricas de validación:}
 \begin{itemize}
 \item Reducción tráfico WAN: (GB\_cloud - GB\_edge) / GB\_cloud × 100\%
-\item Latencia inferencia: timestamp\_request → timestamp\_response para queries LLM
+\item Latencia procesamiento edge: timestamp\_llegada\_gateway → timestamp\_escritura\_DB local
 \item Disponibilidad offline: uptime\_servicios\_locales durante partición WAN 72h+
-\item Precisión anomalías: (true\_positives + true\_negatives) / total\_events × 100\%
+\item Throughput sostenido: mensajes/segundo procesados sin pérdida durante carga pico
 \end{itemize}
 
-\textbf{Validación experimental:} Secciones §5.2.2 (Edge Computing), §5.2.4 (IA Local)
+\textbf{Nota:} Detección de anomalías mediante modelos LLM locales (Ollama + Llama 3.2 3B) documentada en fundamentos teóricos Cap. 2 §2.5 no fue implementada en piloto actual. Integración de IA local es línea de investigación futura L6 (Cap. 7 §7.X) que requiere dataset validación 6-12 meses y upgrade hardware gateway.
+
+\textbf{Validación experimental:} Secciones §4.5 (Gateway Edge Computing), §5.2 (Análisis Latencia)
 
 \section{H3 - Arquitectura Multi-Banda 802.11ah}
 

@@ -4030,3 +4030,31 @@
   abstract = {Novel lightweight authentication protocol designed for LwM2M-based Advanced Metering Infrastructure (AMI) networks addressing computational constraints of smart meter devices (ARM Cortex-M class, 64-256 KB RAM). Protocol leverages elliptic curve cryptography (ECC secp256r1) for public-key operations with significantly lower computational overhead than RSA-2048: ECC-256 signature generation 45 ms vs RSA-2048 280 ms on STM32F4 @ 168 MHz, while providing equivalent 128-bit security level. Three-phase authentication: (1) Bootstrap phase: meter generates ephemeral ECC key pair, derives symmetric AES-128-CCM session key via ECDH (Elliptic Curve Diffie-Hellman) with LwM2M bootstrap server, mutual authentication using pre-installed manufacturer certificates. (2) Registration phase: meter registers with LwM2M device management server using session key, server provisions access credentials for Object 3 (Device), Object 3305 (Power Measurement), Object 10243 (Energy Metering) resources. (3) Operational phase: CoAP requests authenticated using DTLS 1.2 PSK (Pre-Shared Key) derived from registration, HMAC-SHA256 for message integrity. Security analysis demonstrates resistance to: replay attacks (via nonce + timestamp validation), man-in-the-middle attacks (via mutual authentication), impersonation attacks (via certificate chain validation), and denial-of-service (via rate limiting + computational puzzles). Performance evaluation on testbed with 100 simulated meters: average authentication completion time 350 ms (vs 1,200 ms for conventional RSA-based protocols), energy consumption 0.42 mJ per authentication event (enabling >100,000 authentications on 2,500 mAh battery). Overhead analysis: 12-byte authentication header added to CoAP messages (4-byte nonce + 8-byte HMAC truncated), representing <10\% overhead for typical 150-byte metering payloads. Comparison with existing AMI security standards: compatible with NIST IR 7628 Smart Grid cybersecurity guidelines, lighter than ANSI C12.22/IEEE 1703 table-based authentication (reduces memory requirements 60\%).},
   note = {Highly relevant 2024 MDPI paper on LwM2M authentication for smart grid AMI. Demonstrates ECC-256 achieves 6x faster authentication (45 ms vs 280 ms RSA-2048) with equivalent security, consuming only 0.42 mJ per authentication event. Validates thesis security architecture in §4.8 using DTLS 1.2 PSK with LwM2M. Shows <10\% overhead for authentication headers in typical metering payloads. Critical citation for §2.2.5 LwM2M security discussion. Accessed: 2025-11-26}
 }
+
+@article{jiangMistral7B2023,
+  title = {Mistral 7{{B}}},
+  author = {Jiang, Albert Q. and Sablayrolles, Alexandre and Mensch, Arthur and Bamford, Chris and Chaplot, Devendra Singh and de las Casas, Diego and Bressand, Florian and Lengyel, Gianna and Lample, Guillaume and Saulnier, Lucile and others},
+  date = {2023-10},
+  journaltitle = {arXiv preprint arXiv:2310.06825},
+  url = {https://arxiv.org/abs/2310.06825},
+  abstract = {We introduce Mistral 7B, a 7-billion-parameter language model engineered for superior performance and efficiency. Mistral 7B outperforms the best open 13B model (Llama 2) across all evaluated benchmarks, and the best released 34B model (Llama 1) in reasoning, mathematics, and code generation.},
+  keywords = {LLM, Edge Computing, Quantization}
+}
+
+@misc{espressifESP32C62023,
+  title = {{{ESP32-C6 Series Datasheet}}},
+  author = {{Espressif Systems}},
+  date = {2023},
+  url = {https://www.espressif.com/sites/default/files/documentation/esp32-c6_datasheet_en.pdf},
+  note = {ESP32-C6 Wi-Fi 6, Bluetooth 5 (LE) and IEEE 802.15.4 SoC. Datasheet Version 1.2. Accessed: 2025-11-28}
+}
+
+@misc{anthropicModelContextProtocol2024,
+  title = {Introducing the {{Model Context Protocol}}},
+  author = {{Anthropic}},
+  date = {2024-11-25},
+  url = {https://www.anthropic.com/news/model-context-protocol},
+  abstract = {A new open standard that enables developers to build secure, two-way connections between their data sources and AI-powered tools},
+  note = {Accessed: 2025-11-28}
+}
+

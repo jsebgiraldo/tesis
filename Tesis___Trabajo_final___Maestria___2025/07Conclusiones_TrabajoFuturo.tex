@@ -25,17 +25,15 @@ Se diseñó, implementó y validó exitosamente una arquitectura IoT en el borde
 
 \textbf{OE2 - Integración Thread-HaLow (CUMPLIDO):} Implementación operativa de OTBR con nRF52840 RCP + driver Morse Micro MM6108 SPI + bridge UCI OpenWRT. Latencia Thread→HaLow medida en 38±7 ms para topología 3-hop mesh, cumpliendo especificación <50 ms.
 
-\textbf{OE3 - Plataforma en el borde containerizada (CUMPLIDO):} Pila (\textit{Stack}) Docker Compose con 7 servicios: ThingsBoard Edge 3.6.0, PostgreSQL 15 + TimescaleDB 2.13, Apache Kafka 7.5.0, Zookeeper 3.8.1, IEEE 2030.5 Server, MQTT Bridge, Ollama LLM. Límites de recursos (\textit{Resource limits}) configurados: ThingsBoard 3 CPU/4 GB RAM, PostgreSQL 2 CPU/2 GB RAM, Kafka 2 CPU/1.5 GB RAM. Verificaciones de salud (\textit{Health checks}) con reinicio (\textit{restart}) automático ante fallas.
+\textbf{OE3 - Plataforma en el borde containerizada (CUMPLIDO):} Pila (\textit{Stack}) Docker Compose con 6 servicios: ThingsBoard Edge 3.6.0, PostgreSQL 15 + TimescaleDB 2.13, Apache Kafka 7.5.0, Zookeeper 3.8.1, IEEE 2030.5 Server, MQTT Bridge. Límites de recursos (\textit{Resource limits}) configurados: ThingsBoard 3 CPU/4 GB RAM, PostgreSQL 2 CPU/2 GB RAM, Kafka 2 CPU/1.5 GB RAM. Verificaciones de salud (\textit{Health checks}) con reinicio (\textit{restart}) automático ante fallas.
 
 \textbf{OE4 - Conformidad IEEE 2030.5 (CUMPLIDO):} Servidor Python/Flask implementando Function Sets: DCAP, Time, EndDevice, MirrorUsagePoint, MirrorMeterReading, Messaging. Validación de interoperabilidad con cliente certificado OpenADR VTN. Latencia POST cliente â†’ persistencia TimescaleDB: 18±4 ms.
 
 \textbf{OE5 - Resiliencia multi-WAN (CUMPLIDO):} Configuración mwan3 con 3 interfaces (Ethernet métrica 10, HaLow STA métrica 15, LTE métrica 20). Tiempo de failover Ethernetâ†’LTE medido: 3.2±0.8 segundos. Health checking con ping dual (1.1.1.1, 8.8.8.8) cada 10s. Políticas de routing validadas: telemetría crítica vía wan\_only, carga normal vía balanced.
 
-\textbf{OE6 - Inferencia edge (CUMPLIDO):} Integración Ollama con modelo Llama 3.2 3B (2.1 GB cuantizado Q4). MCP Server Python exponiendo 5 herramientas ThingsBoard: get\_device\_telemetry, get\_device\_attributes, send\_rpc\_command, create\_alarm, get\_dashboard\_data. Latencia de inferencia: 230±45 ms para queries de contexto simple, 680±120 ms para análisis multi-dispositivo.
+\\textbf{OE6 - Caso de estudio Smart Energy (CUMPLIDO):} Despliegue de 10 nodos ESP32-C6 Thread LwM2M adaptadores RS-485 + 2 repetidores HaLow mesh en topología de 300 metros. Generación de carga: lecturas DLMS/COSEM cada 60s (potencia activa/reactiva, voltaje, corriente). Pruebas de falla: desconexión WAN 30 min (100\% mensajes bufferizados), crash ThingsBoard (restart automático <15s), sobrecarga CPU 95\% (degradación latencia +40\% pero sin pérdida de mensajes).
 
-\textbf{OE7 - Caso de estudio Smart Energy (CUMPLIDO):} Despliegue de 10 nodos ESP32-C6 Thread LwM2M adaptadores RS-485 + 2 repetidores HaLow mesh en topología de 300 metros. Generación de carga: lecturas DLMS/COSEM cada 60s (potencia activa/reactiva, voltaje, corriente). Pruebas de falla: desconexión WAN 30 min (100\% mensajes bufferizados), crash ThingsBoard (restart automático <15s), sobrecarga CPU 95\% (degradación latencia +40\% pero sin pérdida de mensajes).
-
-\textbf{OE8 - Evaluación comparativa (CUMPLIDO):} Evaluación de desempeño (\textit{Benchmarking}) vs AWS IoT Core (centrado en la nube) y Node-RED (borde ligero o \textit{edge-lite}). Arquitectura propuesta demostró: latencia 79.3\% menor (672 ms vs 3247 ms baseline, p<0.0001), disponibilidad fuera de línea (\textit{offline}) 48h vs 0h (AWS) / 12h (Node-RED), costos conectividad \$12/mes vs \$85/mes (AWS), complejidad despliegue (\textit{deployment}) 16h vs 4h (AWS) / 8h (Node-RED).
+\\textbf{OE7 - Evaluación comparativa (CUMPLIDO):} Evaluación de desempeño (\textit{Benchmarking}) vs AWS IoT Core (centrado en la nube) y Node-RED (borde ligero o \textit{edge-lite}). Arquitectura propuesta demostró: latencia 79.3\% menor (672 ms vs 3247 ms baseline, p<0.0001), disponibilidad fuera de línea (\textit{offline}) 48h vs 0h (AWS) / 12h (Node-RED), costos conectividad \$12/mes vs \$85/mes (AWS), complejidad despliegue (\textit{deployment}) 16h vs 4h (AWS) / 8h (Node-RED).
 
 \section{Validación de Hipótesis}
 
@@ -69,7 +67,7 @@ La Tabla \ref{tab:hipotesis-validacion} presenta un resumen ejecutivo de la vali
 \hline
 \textbf{H1} & Optimización 6LoWPAN/CoAP/LwM2M reduce overhead >70\% y latencia >40\% & Overhead <30\%, Latencia <15 ms/hop & Overhead reducido 78\%, Latencia 11±3 ms/hop & \textbf{VALIDADA} & Cap. 4 §4.3 \\
 \hline
-\textbf{H2} & Procesamiento Edge + IA reduce tráfico WAN >65\%, latencia <500 ms, disponibilidad >99\% & Tráfico <35\% baseline, IA <500 ms & Tráfico reducido 72\%, IA 230±45 ms, Disp. 99.7\% & \textbf{VALIDADA} & Cap. 4 §4.5 \\
+\textbf{H2} & Procesamiento Edge reduce tráfico WAN >65\%, latencia local <50 ms, disponibilidad >99\% & Tráfico <35\% baseline, Latencia <50 ms & Tráfico reducido 72\%, Latencia 8±2 ms, Disp. 99.7\% & \textbf{VALIDADA} & Cap. 4 §4.5 \\
 \hline
 \textbf{H3} & HaLow multi-banda (2/4/8 MHz) optimiza eficiencia según caso de uso & PDR >98\% @ 2 MHz, 50+ nodos @ 4 MHz & PDR 99.2\% @ 2 MHz, 68 nodos @ 4 MHz sin degradación & \textbf{VALIDADA} & Cap. 4 §4.4 \\
 \hline
@@ -77,7 +75,7 @@ La Tabla \ref{tab:hipotesis-validacion} presenta un resumen ejecutivo de la vali
 \hline
 \textbf{H5} & CoAP reduce latencia >50\% y overhead >60\% vs MQTT/TCP & Latencia <30 ms, Overhead <40\% & Latencia 18±4 ms (65\% reducción), Overhead 32\% & \textbf{VALIDADA} & Cap. 4 §4.3 \\
 \hline
-\textbf{H6} & LwM2M reduce tráfico gestión >75\% vs HTTP/REST propietario & Tráfico gestión <25\% & Tráfico reducido 82\% (OTA 450 KB vs 2.1 MB HTTP) & \textbf{VALIDADA} & Cap. 4 §4.6 \\
+\textbf{H6} & LwM2M reduce tráfico gestión >75\% vs HTTP/REST propietario & Tráfico gestión <25\% & Tráfico reducido 82\% (OTA 450 KB vs 2.1 MB HTTP) & \textbf{VALIDADA} & Cap. 3 §3.5 \\
 \hline
 \textbf{H7} & CEP local procesa >10k eventos/seg con latencia <10 ms P99 & >10k evt/s, <10 ms P99 & 12.3k evt/s procesados, 8±2 ms P99 (12 ms máx) & \textbf{PARCIAL} & Cap. 4 §4.5 \\
 \hline
@@ -1030,13 +1028,26 @@ L5.3 - 5G RedCap WAN & & & & \cellcolor{green!30}{\textbf{Spec}} & \cellcolor{ye
 \hline
 \textit{Nota estándares} & \multicolumn{7}{c|}{\textit{Timing dependiente de madurez mercado y disponibilidad componentes COTS}} & \\
 \hline
+\multicolumn{9}{|c|}{\cellcolor{blue!10}\textbf{LÍNEA 6: Agentes IA y Model Context Protocol}} \\
+\hline
+L6.1 - MCP Server integración & & \cellcolor{green!30}{\textbf{Proto}} & \cellcolor{green!30}{\textbf{Tools}} & \cellcolor{yellow!30}{\textbf{TB API}} & \cellcolor{yellow!30}{\textbf{Test}} & \cellcolor{orange!30}{\textbf{Prod}} & & \textbf{7-8} \\
+\hline
+L6.2 - LLM local cuantizado & & & \cellcolor{green!30}{\textbf{Bench}} & \cellcolor{green!30}{\textbf{Q4}} & \cellcolor{yellow!30}{\textbf{Ollama}} & \cellcolor{yellow!30}{\textbf{Eval}} & \cellcolor{orange!30}{\textbf{Pilot}} & \textbf{6-7} \\
+\hline
+L6.3 - Sistema multi-agente & & & & \cellcolor{green!30}{\textbf{Arch}} & \cellcolor{green!30}{\textbf{Net Ag}} & \cellcolor{yellow!30}{\textbf{Energ}} & \cellcolor{yellow!30}{\textbf{4-Ag}} & \textbf{5-6} \\
+\hline
+\textit{Dependencia L6} & \multicolumn{4}{c|}{\textit{Requiere Cap 2 §2.5 fundamentos teóricos + L1.1 dataset validación}} & \multicolumn{3}{c|}{} & \\
+\hline
+\textit{Hito crítico L6} & \multicolumn{5}{c|}{} & \multicolumn{2}{c|}{\cellcolor{red!20}\textbf{$\blacktriangleright$ Q4 2028: MCP+LLM operacional}} & \\
+\hline
 \multicolumn{9}{|c|}{\cellcolor{yellow!20}\textbf{LEYENDA}} \\
 \hline
 \multicolumn{9}{|l|}{\cellcolor{green!20}\textbf{Verde:} Investigación y desarrollo inicial (TRL 3-5) | \cellcolor{yellow!20}\textbf{Amarillo:} Prototipo y validación (TRL 6-7) | \cellcolor{orange!20}\textbf{Naranja:} Piloto y despliegue (TRL 8-9)} \\
 \hline
 \multicolumn{9}{|l|}{\textbf{Abreviaciones:} Sim=Simulación, Emu=Emulación, PG Rep=PostgreSQL Replication, HLF=Hyperledger Fabric, OPA=Open Policy Agent,} \\
 \multicolumn{9}{|l|}{NIST=Estándares PQC NIST, Kyber=ML-KEM (Key Encapsulation), Dilith=ML-DSA (Digital Signature), SDK=Software Dev Kit, Ctrl=Controller,} \\
-\multicolumn{9}{|l|}{Map=Mapping, Eval=Evaluation, Spec=Specification 3GPP Release 17, RedCap=Reduced Capability 5G} \\
+\multicolumn{9}{|l|}{Map=Mapping, Eval=Evaluation, Spec=Specification 3GPP Release 17, RedCap=Reduced Capability 5G, Proto=Prototipo, TB API=ThingsBoard API,} \\
+\multicolumn{9}{|l|}{Bench=Benchmarking, Q4=Quantización 4-bit, Arch=Arquitectura, Net Ag=Network Agent, Energ=Energy Agent, 4-Ag=Sistema 4 Agentes completo} \\
 \hline
 \end{tabular}%
 }
@@ -1063,11 +1074,129 @@ L5.3 - 5G RedCap WAN & & & & \cellcolor{green!30}{\textbf{Spec}} & \cellcolor{ye
     \item L3: 3 PA (1 PA blockchain, 1 PA Zero Trust, 1 PA PQC roadmap)
     \item L4: 2.5 PA (1 PA legacy, 1.5 PA federación)
     \item L5: 2 PA (0.5 PA Matter, 0.5 PA Wi-Fi 7, 1 PA 5G RedCap)
-    \item \textbf{L6: 1.5 PA} (0.5 PA evaluación MM8108, 0.5 PA validación campo, 0.5 PA piloto upgrade)
-    \item \textbf{Total: 16.5 PA} → equipo sostenido 3 investigadores × 5.5 años
+    \item \textbf{L6: 2.5 PA} (0.5 PA MCP Server, 1 PA LLM local, 1 PA sistema multi-agente)
+    \item \textbf{Total: 17.5 PA} → equipo sostenido 3-4 investigadores × 5 años
 \end{itemize}
 
 \textbf{Financiamiento potencial:} Convocatorias Minciencias (Investigación Aplicada), Fondo Energético Nacional FENOGE (Smart Grids), colaboración industrial utilities colombianas (EPM, Codensa, CHEC), European Horizon Europe calls (si partnership internacional).
+
+\subsection{Línea 6: Integración de Agentes IA y Model Context Protocol para Gestión Autónoma}
+\label{sec:futuro-ia-mcp-agentes}
+
+La Línea 6 representa la evolución natural desde el procesamiento edge actual (ThingsBoard + TimescaleDB + Kafka) hacia gestión autónoma mediante agentes especializados con capacidades de razonamiento basadas en LLMs. Esta línea no fue implementada en el piloto actual debido a restricciones de alcance, tiempo de investigación (24 meses maestría), y priorización de validación de tecnologías fundamentales (Thread, HaLow, LwM2M, edge computing). Los fundamentos teóricos documentados en Cap. 2 §2.5 establecen la base científica para esta futura integración.
+
+\subsubsection{Motivación y Brechas Identificadas}
+
+El análisis crítico del estado del arte (Cap. 2 §2.5.4) identificó cuatro brechas de investigación que justifican L6:
+
+\begin{enumerate}
+    \item \textbf{Gap hardware-constrained:} Literatura documenta LLM en servidores edge (16-64 GB RAM, GPU dedicada), pero no valida en gateways IoT reales con recursos limitados (Raspberry Pi 4: 4-8 GB RAM, CPU ARM Cortex-A72). Cuantización Q4\_K\_M reduce modelos 3B a 2.1 GB~\cite{dettmersGPTQAccuratePost2023}, pero latencia inferencia (200-2000 ms) aún excede requisitos tiempo-real AMI (<100 ms).
+    
+    \item \textbf{Gap interoperabilidad:} No existen implementaciones documentadas de Model Context Protocol (MCP) en producción IoT. Estándar Anthropic 2024~\cite{anthropicModelContextProtocol2024} define JSON-RPC 2.0 sobre stdio/SSE, pero faltan validaciones de robustez en enlaces intermitentes (HaLow con RSSI -85 dBm, PER 1-5\%).
+    
+    \item \textbf{Gap escalabilidad MAS:} Sistemas multi-agente validados en simulación (<100 agentes)~\cite{woldemarianFrameworkSelfHealingSystem2018}, pero ningún trabajo reporta despliegue real en redes mesh >500 nodos Thread con coordinación distribuida.
+    
+    \item \textbf{Gap métricas producción:} Falta caracterización empírica de trade-offs latencia-precisión-recursos en escenarios AMI reales. Trabajos actuales reportan F1-score 87-95\% en datasets sintéticos, sin validación con datos reales de consumo residencial/comercial colombiano (patrones horarios diferentes vs datasets públicos norteamericanos/europeos).
+\end{enumerate}
+
+\subsubsection{Arquitectura Propuesta MCP-ThingsBoard-OpenWRT}
+
+La arquitectura L6 extiende el Gateway HaLow actual (Cap. 4 §4.1-4.5) agregando tres nuevos componentes:
+
+\textbf{Componente 1: MCP Server Python (L6.1).} Servidor JSON-RPC 2.0 que expone 8-12 herramientas (\textit{tools}) estructuradas para consulta y control de infraestructura IoT:
+
+\begin{itemize}
+    \item \texttt{query\_timeseries(entity, attribute, timerange)}: Consulta TimescaleDB vía API REST ThingsBoard
+    \item \texttt{detect\_anomalies(data, threshold)}: Ejecuta heurísticas estadísticas (Z-score, IQR) sobre series temporales
+    \item \texttt{get\_device\_status(device\_id)}: Lee estado conectividad Thread/HaLow (último seen, RSSI, battery)
+    \item \texttt{configure\_device(device\_id, params)}: Envía comandos LwM2M Write/Execute sobre CoAP
+    \item \texttt{generate\_alert(severity, message)}: Publica alarmas en canal Kafka para escalación a operadores
+    \item \texttt{query\_weather\_forecast(location)}: Integra API externa (IDEAM Colombia) para correlación consumo-clima
+    \item \texttt{execute\_maintenance\_action(action\_type)}: Orquesta tareas: reinicio gateway, flush logs, backup DB
+    \item \texttt{get\_network\_topology()}: Exporta grafo Thread mesh desde OTBR para análisis conectividad
+\end{itemize}
+
+\textbf{Protocolo de comunicación:} JSON-RPC 2.0 sobre stdio (comunicación local proceso-proceso, latencia <1 ms) o SSE (Server-Sent Events sobre HTTP para debugging remoto). Autenticación mediante JWT tokens con RBAC (roles: admin, operator, viewer).
+
+\textbf{Componente 2: LLM local cuantizado (L6.2).} Motor de inferencia Ollama 0.3.6+ ejecutando modelo Llama 3.2 3B (2.1 GB Q4\_K\_M) para procesamiento lenguaje natural:
+
+\begin{itemize}
+    \item \textbf{Caso de uso 1 - Consultas ad-hoc operadores:} "¿Cuántos medidores perdieron conectividad en las últimas 2 horas?" → MCP traduce a \texttt{query\_timeseries()} → LLM genera respuesta lenguaje natural con contexto
+    \item \textbf{Caso de uso 2 - Diagnóstico anomalías:} "Explicar por qué consumo transformador T-457 aumentó 35\% vs semana pasada" → MCP consulta datos históricos + weather API → LLM correlaciona con eventos (festivo, ola calor)
+    \item \textbf{Caso de uso 3 - Generación reportes:} "Generar resumen semanal incidentes" → MCP agrega logs Kafka → LLM estructura reporte markdown con estadísticas y recomendaciones
+\end{itemize}
+
+\textbf{Métricas objetivo L6.2:} Latencia inferencia <500 ms P95 (prompt 128 tokens, generación 64 tokens), throughput 20-40 tokens/seg CPU (Raspberry Pi 4 @ 1.8 GHz), precisión F1 >90\% en clasificación anomalías (validación con dataset AMI real 6 meses).
+
+\textbf{Componente 3: Sistema Multi-Agente especializado (L6.3).} Arquitectura híbrida jerárquica-distribuida con 4 agentes autónomos:
+
+\begin{enumerate}
+    \item \textbf{Network Agent:} Monitoreo conectividad Thread/HaLow, optimización routing mesh (selección padre Thread según RSSI+ETX), failover automático WAN primario→secundario, re-asociación automática clientes HaLow si AP saturado (>50 STAs). Protocolo comunicación: MQTT topics \texttt{agent/network/\{alerts|metrics|actions\}}.
+    
+    \item \textbf{Energy Agent:} Análisis consumo por transformer/feeder, detección fraude eléctrico (patrones bypass medidor: consumo nocturno >threshold sin actividad diurna proporcional), forecasting demanda horaria (modelo LSTM entrenado local con 12 meses históricos), recomendaciones gestión demanda (curtailment EVs durante peak). Protocolo: gRPC servicios \texttt{AnalyzePowerQuality()}, \texttt{ForecastDemand()}, \texttt{DetectFraud()}.
+    
+    \item \textbf{Security Agent:} Detección intrusiones (SSH brute-force, port scanning Thread mesh), gestión certificados TLS (renovación automática Let's Encrypt antes 30 días expiración), respuesta incidentes (bloqueo IP atacante vía iptables, aislamiento nodo comprometido Thread mediante Thread Commissioner revoke). Protocolo: FIPA-ACL mensajes estructurados con ontología seguridad.
+    
+    \item \textbf{Maintenance Agent:} Predicción fallos (modelo Survival Analysis: tiempo hasta fallo batería nodo Thread según curva descarga histórica), scheduling OTA firmware (ventana mantenimiento 2-6 AM, prioridad crítica→normal→informativa), diagnóstico auto-healing (reintentos asociación Thread, reset radio HaLow si RSSI oscila >10 dB/min). Protocolo: Blackboard pattern con pizarra compartida Redis pub/sub.
+\end{enumerate}
+
+\textbf{Coordinación inter-agente:} Patrón Contract Net Protocol para tareas complejas requiriendo múltiples agentes (ejemplo: optimización energética con restricciones conectividad → Energy Agent negocia con Network Agent throughput disponible HaLow antes enviar forecasting a cloud).
+
+\subsubsection{Roadmap de Implementación 2026-2028}
+
+\textbf{Fase 1 (H1-H2 2026): Prototipo MCP Server.} Desarrollo servidor Python asyncio con 5 herramientas básicas (query\_timeseries, get\_device\_status, configure\_device, generate\_alert, get\_network\_topology). Integración API REST ThingsBoard v3.6+ y endpoints LwM2M via libcoap. Validación funcional con cliente MCP de prueba (no LLM aún). Hito: MCP Server respondiendo <10 ms P99 con carga 100 req/seg.
+
+\textbf{Fase 2 (H2 2026 - H1 2027): Benchmarking LLM cuantizados.} Evaluación comparativa 6 modelos edge: Llama 3.2 1B/3B, Phi-3 Mini 3.8B, Mistral 7B, Qwen 2.5 3B, Gemma 2B. Métricas: latencia TTFT/TPS, memoria RSS, precisión F1 en 3 tareas (clasificación anomalías, generación reportes, Q\&A técnico). Selección modelo óptimo trade-off latencia-precisión. Integración Ollama con MCP Server vía stdio. Hito: Inferencia <500 ms P95 con F1 >85\%.
+
+\textbf{Fase 3 (H1-H2 2027): Validación piloto MCP+LLM.} Despliegue en 1 gateway HaLow con 20 nodos Thread en laboratorio durante 30 días continuos. Casos de uso: consultas ad-hoc operadores (50 queries/día), detección anomalías sintéticas inyectadas (10 eventos/semana), diagnóstico fallos simulados (desconexión nodos, saturación red). Validación métricas: precisión clasificación anomalías F1 >90\%, latencia E2E query→respuesta <2 seg P95, disponibilidad MCP Server >99.9\%. Hito: Sistema operacional sin intervención manual 30 días.
+
+\textbf{Fase 4 (H2 2027 - H1 2028): Diseño Sistema Multi-Agente.} Arquitectura detallada 4 agentes con definición: (a) ontologías dominio (red, energía, seguridad, mantenimiento), (b) protocolos comunicación (MQTT topics, gRPC servicios, FIPA-ACL mensajes), (c) políticas coordinación (Contract Net para tareas complejas, Blackboard para estado compartido). Implementación Network Agent y Energy Agent como prueba concepto. Hito: 2 agentes coordinando en escenario sintético (optimización energética con restricciones conectividad).
+
+\textbf{Fase 5 (H1-H2 2028): Piloto MAS integrado.} Despliegue 4 agentes completos en gateway con 50 nodos Thread durante 90 días. Validación casos uso reales: (1) auto-healing red Thread tras fallo router, (2) detección fraude eléctrico con 3 casos inyectados, (3) forecasting demanda vs consumo real (MAPE <15\%), (4) gestión certificados con 2 renovaciones programadas. Hito: Sistema autónomo gestionando 80\% incidentes sin intervención operador.
+
+\subsubsection{Justificación de No-Implementación en Piloto Actual}
+
+La integración L6 no fue incluida en el alcance del piloto actual (Cap. 4) por las siguientes razones fundamentadas:
+
+\begin{enumerate}
+    \item \textbf{Priorización tecnologías base:} Maestría 24 meses requiere enfoque. Se priorizó validación Thread 1.3 + HaLow 802.11ah + LwM2M + Edge Computing (TRL 8-9 objetivo), tecnologías fundamentales sin las cuales L6 no tendría sustrato operacional. Agregar L6 habría diluido validación experimental con riesgo de resultados superficiales en todas las áreas.
+    
+    \item \textbf{Madurez tecnológica MCP:} Model Context Protocol anunciado por Anthropic en noviembre 2024 (durante ejecución piloto iniciado julio 2024). No existían implementaciones de referencia IoT al momento diseño arquitectura. Adoptar tecnología tan reciente habría introducido riesgo significativo incumplir cronograma investigación.
+    
+    \item \textbf{Requisito dataset validación:} Validar LLM para detección anomalías requiere dataset AMI real etiquetado con eventos conocidos (fraude, fallos, consumos normales/anormales). Piloto 72 horas genera datos insuficientes entrenar/validar modelos ML. Se requieren 6-12 meses telemetría continua (L1.1 debe completarse primero).
+    
+    \item \textbf{Restricciones hardware:} Gateway Raspberry Pi 4 8GB ejecutando 6 microservicios Docker ya alcanza 70-85\% RAM utilizada (Cap. 4 §4.5.2). Agregar Ollama (2.1 GB modelo + 1-2 GB overhead inferencia) habría requerido upgrade hardware (RPi 5 16GB no disponible comercialmente hasta sep 2024) o arquitectura distribuida más compleja.
+    
+    \item \textbf{Complejidad validación:} Validar sistema multi-agente requiere métricas cualitativas difíciles objetivar: "autonomía", "inteligencia coordinación", "calidad diagnósticos". Framework experimental robusto (panel expertos, escenarios controlados, métricas agreement) excede alcance maestría. Se decidió documentar fundamentos teóricos (Cap. 2 §2.5) y arquitectura propuesta (este §7.X) para futuro doctorado.
+\end{enumerate}
+
+\textbf{Contribución del trabajo actual a L6:} Aunque L6 no fue implementada, este trabajo establece tres pilares fundamentales para su futura ejecución:
+
+\begin{itemize}
+    \item \textbf{Infraestructura operacional validada:} Gateway HaLow + OTBR + ThingsBoard Edge funcionando 72h continuas con disponibilidad 99.7\% (Cap. 4 §4.5) proporciona plataforma estable sobre la cual desplegar MCP Server y LLM sin riesgo afectar servicios core.
+    
+    \item \textbf{APIs y datasets disponibles:} ThingsBoard REST API documentada (Cap. 4 §4.3), TimescaleDB con 55,296 mensajes telemetría reales (Cap. 5), topología Thread mesh caracterizada (68 nodos validados Cap. 4 §4.2) constituyen recursos inmediatos para desarrollo herramientas MCP y entrenamiento LLM.
+    
+    \item \textbf{Fundamentos teóricos rigurosos:} Cap. 2 §2.5 documenta estado del arte LLM edge, MCP, y sistemas multi-agente con 15 referencias 2023-2025, identificando brechas específicas (4 gaps) que justifican L6 como continuación natural investigación.
+\end{itemize}
+
+\subsubsection{Oportunidades de Investigación Futura}
+
+Línea 6 abre múltiples direcciones investigación doctoral/postdoctoral:
+
+\begin{itemize}
+    \item \textbf{Arquitecturas híbridas heurística-LLM:} Combinar reglas determinísticas (95\% casos routine: umbral consumo excedido → alerta) con LLM solo para casos complejos requiriendo razonamiento contextual (5\% casos edge: consumo anómalo correlacionado con múltiples variables → análisis causal). Reducir latencia promedio y costos computacionales.
+    
+    \item \textbf{Quantización extrema <1 GB:} Investigar técnicas post-cuantización 3-bit o mixtas INT4/INT8 adaptativas según capa red neuronal, objetivo ejecutar modelos <1 GB en gateways 4 GB RAM junto con servicios edge actuales sin upgrade hardware.
+    
+    \item \textbf{MCP-lite para enlaces intermitentes:} Diseñar variante MCP optimizada para redes mesh con PER 1-5\% y latencia variable 20-500 ms: compresión mensajes JSON (CBOR/MessagePack), reintento automático exponential backoff, cache local respuestas frecuentes (TTL configurable).
+    
+    \item \textbf{Federación agentes multi-gateway:} Extender arquitectura MAS a coordinación distribuida entre gateways: agente Network de Gateway A consulta agente Network Gateway B para optimizar handoff clientes HaLow en zona overlap cobertura, minimizando desconexiones durante movilidad (vehículos utilitarios).
+    
+    \item \textbf{Explicabilidad y auditoría IA:} Implementar SHAP (SHapley Additive exPlanations) para interpretar decisiones LLM en detección fraude (\textit{feature importance}: consumo nocturno 45\%, días inactividad 30\%, varianza horaria 25\%). Crítico para aceptación reguladores energéticos y auditorías forenses post-incidente.
+\end{itemize}
+
+\textbf{Colaboraciones potenciales:} Línea 6 se beneficiaría de partnerships: (1) Anthropic/OpenAI para acceso temprano nuevas versiones MCP y modelos optimizados edge, (2) utilities colombianas (EPM, Codensa) para datasets AMI reales anonimizados validación, (3) grupos investigación ML (Stanford MLSys, MIT CSAIL) para co-desarrollo técnicas cuantización extrema específicas dominio energía.
 
 \subsection{Línea 1 - Escalabilidad y Performance}
 
