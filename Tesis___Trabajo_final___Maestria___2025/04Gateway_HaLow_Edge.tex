@@ -556,7 +556,7 @@ HWMP combina routing proactivo (tree-based hacia root Mesh Gate) con reactivo (o
 
 \begin{enumerate}
     \item Mesh Gate (Tube-01) transmite \textbf{RANN (Root Announcement)} periódico (interval 2 segundos) broadcast con Sequence Number incremental y Metric=0.
-    \item Mesh Points (Tube-02, Tube-03) reciben RANN, actualizan tabla routing: entry [Root=Tube-01, NextHop=transmisor, Metric=costo_acumulado, SeqNum].
+    \item Mesh Points (Tube-02, Tube-03) reciben RANN, actualizan tabla routing: entry [Root=Tube-01, NextHop=transmisor, Metric=costo\_acumulado, SeqNum].
     \item Mesh Points re-transmiten RANN con Metric incrementado por Airtime Cost del link entrante, propagando hacia nodos downstream.
     \item Resultado: Todos Mesh Points mantienen ruta pre-computada hacia Root sin delay discovery, optimiza latency uplink AMI telemetry (crítico).
 \end{enumerate}
