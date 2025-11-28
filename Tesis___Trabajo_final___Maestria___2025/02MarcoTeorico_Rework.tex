@@ -191,28 +191,13 @@
 %   * Falta análisis TCO detallado Edge vs Cloud
 %   * Falta validación latencia E2E < 250 ms
 
-\subsection{Justificación de la Brecha}
-\label{sec:marco-estado-brecha}
+\subsection{Inteligencia Artificial en Edge para IoT}
+\label{sec:marco-estado-ia-edge}
 
-% TODO: NUEVO contenido (500 palabras)
-% - Literatura NO cubre:
-%   1. Thread + HaLow en conjunto (novel combination)
-%   2. Edge computing con ThingsBoard (open-source)
-%   3. Validación experimental 90 días piloto
-%   4. Modelo TCO 10K+ dispositivos
-% - Contribución de esta tesis:
-%   * Arquitectura híbrida Thread-HaLow-Edge (novel)
-%   * Implementación completa open-source
-%   * Validación experimental con métricas reales
-%   * Análisis económico detallado
+La integración de capacidades de inteligencia artificial en dispositivos edge representa una tendencia emergente en sistemas IoT, particularmente relevante para aplicaciones Smart Energy que requieren análisis en tiempo real y toma de decisiones autónoma. Esta subsección presenta los fundamentos teóricos de IA en edge, Model Context Protocol (MCP) y sistemas multi-agente aplicados a gestión de infraestructura IoT.
 
-\section{Inteligencia Artificial en Dispositivos Edge para IoT}
-\label{sec:marco-ia-edge}
-
-La integración de capacidades de inteligencia artificial en dispositivos edge representa una tendencia emergente en sistemas IoT, particularmente relevante para aplicaciones Smart Energy que requieren análisis en tiempo real y toma de decisiones autónoma. Esta sección presenta los fundamentos teóricos de IA en edge, Model Context Protocol (MCP) y sistemas multi-agente aplicados a gestión de infraestructura IoT.
-
-\subsection{Fundamentos de IA Edge: LLMs y Quantización}
-\label{sec:marco-ia-edge-fundamentos}
+\subsubsection{Fundamentos de IA Edge: LLMs y Quantización}
+\label{sec:marco-estado-ia-fundamentos}
 
 Los Modelos de Lenguaje Grande (\textit{Large Language Models}, LLMs) han demostrado capacidades de razonamiento y generación de lenguaje natural que pueden aplicarse a la gestión inteligente de sistemas IoT. Sin embargo, su despliegue en dispositivos edge enfrenta limitaciones de recursos computacionales (CPU/RAM) y energía que requieren técnicas de optimización.
 
@@ -222,8 +207,8 @@ Los Modelos de Lenguaje Grande (\textit{Large Language Models}, LLMs) han demost
 
 \textbf{Latencia y throughput:} La inferencia LLM en dispositivos edge típicamente alcanza 10-50 tokens/segundo en CPU (Raspberry Pi 4, ARM Cortex-A72 @ 1.5 GHz) y 100-500 tokens/segundo con aceleración GPU/NPU. La latencia TTFT (\textit{Time To First Token}) crítica para aplicaciones interactivas oscila entre 200-2000 ms dependiendo del tamaño del modelo y prompt~\cite{zhaoTurningAILargeScale2024}.
 
-\subsection{Model Context Protocol (MCP)}
-\label{sec:marco-mcp}
+\subsubsection{Model Context Protocol (MCP)}
+\label{sec:marco-estado-mcp}
 
 Model Context Protocol es un estándar abierto desarrollado por Anthropic (2024) que define una arquitectura cliente-servidor para conectar aplicaciones con modelos de lenguaje, proporcionando acceso estructurado a herramientas, datos y contexto externo mediante protocolo JSON-RPC 2.0~\cite{anthropicModelContextProtocol2024}.
 
@@ -233,8 +218,8 @@ Model Context Protocol es un estándar abierto desarrollado por Anthropic (2024)
 
 \textbf{Ventajas vs APIs REST tradicionales:} MCP proporciona: (1) Negociación automática de capabilities entre cliente y servidor, (2) Schema validation mediante JSON Schema de inputs/outputs, (3) Streaming de respuestas para latencias reducidas, (4) Gestión de contexto multi-turno con state management.
 
-\subsection{Sistemas Multi-Agente para Gestión de Redes IoT}
-\label{sec:marco-multiagente}
+\subsubsection{Sistemas Multi-Agente para Gestión de Redes IoT}
+\label{sec:marco-estado-multiagente}
 
 Los sistemas multi-agente (\textit{Multi-Agent Systems}, MAS) distribuyen tareas complejas de gestión entre agentes especializados que colaboran para lograr objetivos del sistema. Aplicados a infraestructura IoT, permiten gestión autónoma de red, optimización de recursos y auto-healing~\cite{woldemarianFrameworkSelfHealingSystem2018}.
 
@@ -244,8 +229,8 @@ Los sistemas multi-agente (\textit{Multi-Agent Systems}, MAS) distribuyen tareas
 
 \textbf{Comunicación inter-agente:} Protocolos de comunicación incluyen: (1) FIPA-ACL (Agent Communication Language) para mensajes estructurados, (2) MQTT para event-driven messaging IoT, (3) gRPC para RPC de baja latencia entre agentes co-ubicados. La coordinación puede implementarse mediante: (a) Blackboard pattern (pizarra compartida), (b) Contract Net Protocol (negociación basada en subastas), (c) BDI (Belief-Desire-Intention) para agentes con razonamiento explícito~\cite{macasReviewMultiAgentSystems2018}.
 
-\subsection{Estado del Arte y Limitaciones Actuales}
-\label{sec:marco-ia-edge-limitaciones}
+\subsubsection{Limitaciones y Brechas de Investigación}
+\label{sec:marco-estado-ia-limitaciones}
 
 La literatura reciente (2023-2025) documenta implementaciones experimentales de IA en edge para Smart Grids, pero identifica brechas críticas en validación de sistemas integrados~\cite{ayaUnleashingIntelligenceEdge2024,huangDataProcessingEnhancement2025}:
 
@@ -259,6 +244,22 @@ La literatura reciente (2023-2025) documenta implementaciones experimentales de 
 
 \textbf{Oportunidades de investigación:} (1) Arquitecturas híbridas heurísticas-LLM para decisiones real-time con explicabilidad offline, (2) Técnicas de compresión agresiva (3-bit quantization, pruning estructurado) para modelos <1 GB ejecutables en gateways AMI, (3) Protocolos MCP-lite optimizados para enlaces intermitentes y alta latencia WAN, (4) Frameworks multi-agente con coordinación descentralizada resiliente a particiones de red.
 
+\subsection{Justificación de la Brecha y Contribución de esta Investigación}y Contribución de esta Investigación}
+\label{sec:marco-estado-brecha}
+
+% TODO: NUEVO contenido (500 palabras)
+% - Literatura NO cubre:
+%   1. Thread + HaLow en conjunto (novel combination)
+%   2. Edge computing con ThingsBoard (open-source)
+%   3. Validación experimental 90 días piloto
+%   4. Modelo TCO 10K+ dispositivos
+% - Contribución de esta tesis:
+%   * Arquitectura híbrida Thread-HaLow-Edge (novel)
+%   * Implementación completa open-source
+%   * Validación experimental con métricas reales
+%   * Análisis económico detallado
+%   * Fundamentos teóricos IA/MCP/Agentes (§2.4.4) establecen base para trabajo futuro Línea 6
+
 \section{Conclusiones del Capítulo}
 \label{sec:marco-conclusiones}
 
@@ -270,9 +271,7 @@ Este capítulo presentó los fundamentos teóricos que sustentan la arquitectura
 
 \textbf{Seguridad IoT:} Marco NIST CSF (Identify-Protect-Detect-Respond-Recover) aplicado a AMI requiere: autenticación mutual TLS dispositivos-gateway, segregación de redes (Thread mesh aislada de WAN), monitoreo de anomalías (CEP local), y resiliencia multi-WAN (failover LTE <5 segundos).
 
-\textbf{Estado del arte:} La revisión de literatura (230+ papers 2018-2025) no identificó implementaciones que integren simultáneamente: Thread 1.3 mesh, HaLow 802.11ah long-range, edge computing ThingsBoard, y LwM2M device management. Trabajos previos documentan subconjuntos (Thread+edge~\cite{shahryarSolutionSmartHome2020}, HaLow+AMI~\cite{sunHaLowBasedWirelessCommunication2019}), pero ninguno valida arquitectura completa con métricas de producción.
-
-\textbf{Inteligencia artificial edge:} LLMs quantizados (Q4, 3-7B parámetros) y Model Context Protocol habilitan análisis inteligente local, pero enfrentan limitaciones de latencia (500-2000 ms vs <100 ms requerido real-time) y recursos computacionales (4-8 GB RAM footprint). Sistemas multi-agente para gestión autónoma de redes IoT presentan potencial significativo pero carecen de validaciones en infraestructura AMI real a escala.
+\textbf{Estado del arte:} La revisión de literatura (230+ papers 2018-2025) no identificó implementaciones que integren simultáneamente: Thread 1.3 mesh, HaLow 802.11ah long-range, edge computing ThingsBoard, y LwM2M device management. Trabajos previos documentan subconjuntos (Thread+edge~\cite{shahryarSolutionSmartHome2020}, HaLow+AMI~\cite{sunHaLowBasedWirelessCommunication2019}), pero ninguno valida arquitectura completa con métricas de producción. El análisis del estado del arte en inteligencia artificial edge (§2.4.4) identifica cuatro brechas críticas: integración hardware-constrained, latencia real-time <100 ms, MCP en producción IoT, y escalabilidad de sistemas multi-agente >100 nodos. Estas brechas justifican la Línea 6 de trabajo futuro (Cap. 7), donde LLMs quantizados, Model Context Protocol y arquitecturas multi-agente se proponen como evolución natural de la arquitectura validada en esta tesis.
 
 \textbf{Transición al Capítulo 3:} Con el marco teórico establecido, el Capítulo 3 documenta la implementación del Nivel 1 de la arquitectura: nodos IoT con stack Thread + LwM2M ejecutando en microcontrolador ESP32-C6, validando consumo energético, latencia mesh, y gestión remota mediante Leshan LwM2M server.
 
