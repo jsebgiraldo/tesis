@@ -822,7 +822,7 @@ ThingsBoard Edge 3.6.2 es la plataforma de procesamiento edge ejecutada en el Ga
     
     \item \textbf{PostgreSQL 15 + TimescaleDB 2.13:}
     \begin{itemize}
-        \item Esquema: 42 tablas (devices, assets, telemetry hypertables, alarms, rule\_chains)
+        \item Esquema: 42 tablas (devices, assets, telemetry hypertables, alarms, \texttt{rule\_chains})
         \item Hypertables: \texttt{ts\_kv} particionada por tiempo (chunks 7 días), compresión columnar 10:1
         \item Recursos: CPU 1.5 cores limit, RAM 1536 MB limit, storage 128 GB (SD card)
         \item Retención: 90 días telemetría, 365 días alarmas
@@ -836,7 +836,7 @@ ThingsBoard Edge 3.6.2 es la plataforma de procesamiento edge ejecutada en el Ga
     
     \item \textbf{Mosquitto 2.0 MQTT Broker:}
     \begin{itemize}
-        \item Configuración: QoS 1 (At Least Once), 100K messages max\_queued
+        \item Configuración: QoS 1 (At Least Once), 100K messages \texttt{max\_queued}
         \item Autenticación: Device token-based (20 chars alfanumérico)
         \item Recursos: CPU 0.5 core, RAM 256 MB limit
     \end{itemize}
@@ -1072,10 +1072,10 @@ return {msg: msg, metadata: metadata, msgType: 'SUCCESS'};
     \item \textbf{Telemetría:} Persistencia PostgreSQL con retención 7 días configurada
     \begin{itemize}
         \item Capacidad almacenamiento: 128 GB SD card
-        \item Throughput piloto: 9,600 msgs/día \times 7 días = 67,200 msgs buffered
+        \item Throughput piloto: 9,600 msgs/día $\times$ 7 días = 67,200 msgs buffered
         \item Tamaño promedio mensaje: 320 bytes (JSON telemetry + metadata)
-        \item Espacio requerido: 67,200 \times 320 bytes = 21.5 MB (0.017\% capacidad SD card)
-        \item Margen disponible: Soporta hasta 2.88M msgs/mes \times 7 días = 20M msgs (626\times capacidad piloto)
+        \item Espacio requerido: 67,200 $\times$ 320 bytes = 21.5 MB (0.017\% capacidad SD card)
+        \item Margen disponible: Soporta hasta 2.88M msgs/mes $\times$ 7 días = 20M msgs (626$\times$ capacidad piloto)
     \end{itemize}
     \item \textbf{Alarmas:} Notificación diferida, marca \texttt{acknowledged=false} hasta sync cloud exitoso
     \item \textbf{Dashboards locales:} Visualización continúa operativa sin cloud (queries a PostgreSQL local)
@@ -1129,7 +1129,7 @@ Durante piloto 90 días ocurrieron 3 eventos desconexión WAN:
     \item \textbf{Uptime:} 99.93\% (40 min downtime total por actualización planificada v3.6.1 $\rightarrow$ v3.6.2)
     \item \textbf{Throughput procesamiento:}
     \begin{itemize}
-        \item Ingreso edge: 9,600 msgs/día (64 devices \times 150 msgs/día por device)
+        \item Ingreso edge: 9,600 msgs/día (64 devices $\times$ 150 msgs/día por device)
         \item Sincronización cloud: 2,640 msgs/día post-agregación
         \item \textbf{Reducción WAN: 72.5\%} (ahorro 6.8 MB/día datos LTE por Gateway)
     \end{itemize}

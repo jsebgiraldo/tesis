@@ -189,22 +189,24 @@ Apache Kafka 3.5.1 actúa como backbone de streaming distribuido, manejando inge
     \begin{itemize}
         \item \textbf{Particiones:} 4 partitions (hash por ruleChainId)
         \item \textbf{Replication factor:} 2
-        \item \textbf{Retention:} 2 días (48 horas, mensajes procesados r\u00e1pidamente)
-        \item \textbf{Funci\u00f3n:} Queue mensajes entre nodos Rule Chain (e.g., Filter Node $\rightarrow$ Transform Node $\rightarrow$ Save Node)
+        \item \textbf{Retention:} 2 días (48 horas, mensajes procesados rápidamente)
+        \item \textbf{Función:} Queue mensajes entre nodos Rule Chain (e.g., Filter Node $\rightarrow$ Transform Node $\rightarrow$ Save Node)
         \item \textbf{Latencia procesamiento:} P95 = 18 ms (incluye Kafka round-trip + JS execution)
-    \end{itemize}\n    \n    \item \textbf{tb.notifications} (alarmas y notificaciones):
+    \end{itemize}
+    
+    \item \textbf{tb.notifications} (alarmas y notificaciones):
     \begin{itemize}
-        \item \textbf{Particiones:} 2 partitions (baja concurrencia, 42 alarmas/90 d\u00edas piloto)
+        \item \textbf{Particiones:} 2 partitions (baja concurrencia, 42 alarmas/90 días piloto)
         \item \textbf{Replication factor:} 2
-        \item \textbf{Retention:} 14 d\u00edas (336 horas, auditabilidad notificaciones enviadas)
+        \item \textbf{Retention:} 14 días (336 horas, auditabilidad notificaciones enviadas)
         \item \textbf{Consumers:} Email service (SMTP), SMS service (Twilio API), Slack webhook
     \end{itemize}
     
     \item \textbf{tb.transport.api.requests/responses} (RPC commands downlink):
     \begin{itemize}
-        \item \textbf{Particiones:} 2 partitions por topic (low volume, 42 comandos/90 d\u00edas)
-        \item \textbf{Retention:} 1 hora (mensajes ef\u00edmeros, ACK r\u00e1pido)
-        \item \textbf{Funci\u00f3n:} Cola comandos cloud $\rightarrow$ device (setRelayState, firmwareUpdate)
+        \item \textbf{Particiones:} 2 partitions por topic (low volume, 42 comandos/90 días)
+        \item \textbf{Retention:} 1 hora (mensajes efímeros, ACK rápido)
+        \item \textbf{Función:} Cola comandos cloud $\rightarrow$ device (setRelayState, firmwareUpdate)
     \end{itemize}
 \end{enumerate}
 
@@ -221,7 +223,7 @@ Apache Kafka 3.5.1 actúa como backbone de streaming distribuido, manejando inge
     \item \textbf{tb-telemetry-processor:}
     \begin{itemize}
         \item Consumers: 4 instancias (procesa tb.rule-engine.main)
-        \item Funci\u00f3n: Persistencia final PostgreSQL ts\\_kv hypertable
+        \item Función: Persistencia final PostgreSQL \texttt{ts\_kv} hypertable
         \item Throughput: 450 msgs/s por consumer (batch writes 100 rows)
     \end{itemize}
     
@@ -235,10 +237,10 @@ Apache Kafka 3.5.1 actúa como backbone de streaming distribuido, manejando inge
 \textbf{Ventajas particionamiento Kafka AMI:}
 
 \begin{itemize}
-    \item \textbf{Escalabilidad horizontal:} A\u00f1adir brokers + partitions escala throughput linealmente (Kafka benchmark: 2M msgs/s 3-broker cluster)
-    \item \textbf{Orden garantizado:} Mensajes mismo deviceId siempre en misma partition $\rightarrow$ orden temporal preservado (cr\u00edtico c\u00e1lculo energy\\_kwh deltas)
-    \item \textbf{Tolerancia fallos:} Replication factor 2 + ISR=1 tolera crash 1 broker sin p\u00e9rdida datos
-    \item \textbf{Backpressure handling:} Consumer lento no bloquea producers (buffer Kafka 7 d\u00edas), vs MQTT QoS 2 blocking ACKs
+    \item \textbf{Escalabilidad horizontal:} Añadir brokers + partitions escala throughput linealmente (Kafka benchmark: 2M msgs/s 3-broker cluster)
+    \item \textbf{Orden garantizado:} Mensajes mismo deviceId siempre en misma partition $\rightarrow$ orden temporal preservado (crítico cálculo \texttt{energy\_kwh} deltas)
+    \item \textbf{Tolerancia fallos:} Replication factor 2 + ISR=1 tolera crash 1 broker sin pérdida datos
+    \item \textbf{Backpressure handling:} Consumer lento no bloquea producers (buffer Kafka 7 días), vs MQTT QoS 2 blocking ACKs
 \end{itemize}
 
 \subsubsection{Configuración de Producción}
@@ -318,7 +320,7 @@ fetch.max.wait.ms=500                  # Max 500 ms wait si fetch.min.bytes no a
 max.partition.fetch.bytes=1048576      # 1 MB max por partition por fetch
 
 # Session management
-session.timeout.ms=30000               # 30s timeout sin heartbeat → consumer dead
+session.timeout.ms=30000               # 30s timeout sin heartbeat -> consumer dead
 heartbeat.interval.ms=3000             # Heartbeat cada 3s (10% session timeout)
 max.poll.interval.ms=300000            # 5 min max entre poll() calls
 max.poll.records=500                   # 500 records max por poll()
@@ -328,7 +330,7 @@ max.poll.records=500                   # 500 records max por poll()
 
 \begin{itemize}
     \item \textbf{acks=1 vs acks=all:} Seleccionado acks=1 por latency crítica (<50 ms requisito IEEE 2030.5 Demand Response). Riesgo pérdida datos mitigado: (a) Edge buffer local 7 días re-transmite si cloud fallo, (b) Telemetría no-crítica (15 min samples) tolera pérdida ocasional 1-2 msgs
-    \item \textbf{Compression LZ4:} Balance óptimo ratio/CPU. Gzip ratio 4.1:1 descartado por CPU 18% overhead (saturar\u00eda t3.small brokers). Snappy ratio 2.8:1 insuficiente (ahorro bandwidth 65% vs 68% LZ4)
+    \item \textbf{Compression LZ4:} Balance óptimo ratio/CPU. Gzip ratio 4.1:1 descartado por CPU 18% overhead (saturaría t3.small brokers). Snappy ratio 2.8:1 insuficiente (ahorro bandwidth 65% vs 68% LZ4)
     \item \textbf{Batch size 16 KB:} Calibrado para ~50 msgs JSON 320 bytes. Batch mayor (32 KB) incrementa latencia +15 ms sin beneficio throughput piloto
     \item \textbf{Session timeout 30s:} Conservador vs default 10s, tolera GC pauses Java (ThingsBoard tb-core CMS GC pausas P99 = 8s medidas)
 \end{itemize}
@@ -610,20 +612,20 @@ Simulación fallo catastrófico RDS primary:
 
 \begin{verbatim}
 Tenant: "AMI-Utility-Pilot"
-  ├── Customer: "Building-A" (64 devices)
-  │   ├── Asset: "Floor-1" (22 devices)
-  │   ├── Asset: "Floor-2" (21 devices)
-  │   └── Asset: "Floor-3" (21 devices)
-  ├── Customer: "Building-B" (64 devices)
-  └── Customer: "Building-C" (64 devices)
+  |-- Customer: "Building-A" (64 devices)
+  |   |-- Asset: "Floor-1" (22 devices)
+  |   |-- Asset: "Floor-2" (21 devices)
+  |   \-- Asset: "Floor-3" (21 devices)
+  |-- Customer: "Building-B" (64 devices)
+  \-- Customer: "Building-C" (64 devices)
 
 Device: ESP32-Thread-Meter-001 (leaf node)
-  ├── Type: "energy-meter"
-  ├── Telemetry keys: voltage_v, current_a, energy_kwh, power_w, 
-  │                   power_factor, temperature_c, rssi_thread
-  ├── Attributes: firmware_version, commissioning_date, meter_serial,
-  │               tariff_usd_kwh (0.12), location (lat/lon)
-  └── Relations: belongsTo → Asset "Floor-1"
+  |-- Type: "energy-meter"
+  |-- Telemetry keys: voltage_v, current_a, energy_kwh, power_w, 
+  |                   power_factor, temperature_c, rssi_thread
+  |-- Attributes: firmware_version, commissioning_date, meter_serial,
+  |               tariff_usd_kwh (0.12), location (lat/lon)
+  \-- Relations: belongsTo -> Asset "Floor-1"
 \end{verbatim}
 
 \textbf{Device Profile ESP32-Thread-Meter:}
@@ -675,8 +677,8 @@ if (costUsd > 100) {
 }
 return {msg: msg, metadata: metadata, msgType: "SUCCESS"};
         \end{verbatim}
-        \item \textbf{Output:} Attribute monthly\_cost\_usd actualizado, notificación email si >\\$100/mes
-        \item \textbf{Validación piloto:} 42 notificaciones enviadas (22\\% devices excedieron \\$100/mes, consumo >833 kWh/mes @ \\$0.12/kWh)
+        \item \textbf{Output:} Attribute monthly\_cost\_usd actualizado, notificación email si >\$100/mes
+        \item \textbf{Validación piloto:} 42 notificaciones enviadas (22\% devices excedieron \$100/mes, consumo >833 kWh/mes @ \$0.12/kWh)
     \end{itemize}
     
     \item \textbf{Alarm Processing Chain:}
@@ -706,7 +708,7 @@ return {msg: msg, metadata: metadata, msgType: "SUCCESS"};
         \item \textbf{Schedule:} Cron diario 02:00 UTC
         \item \textbf{Query:} SELECT * FROM ts\_kv\_daily WHERE bucket >= NOW() - INTERVAL '1 day'
         \item \textbf{Output:} CSV file uploaded S3 bucket s3://ami-exports/daily/YYYYMMDD.csv
-        \item \textbf{Uso:} Integraci\u00f3n CRM/ERP facturaci\u00f3n mensual, analytics externo (Tableau, Power BI)
+        \item \textbf{Uso:} Integración CRM/ERP facturación mensual, analytics externo (Tableau, Power BI)
     \end{itemize}
 \end{enumerate}
 
@@ -743,7 +745,7 @@ return {msg: msg, metadata: metadata, msgType: "SUCCESS"};
 \begin{itemize}
     \item \textbf{Billing System:} POST daily consumption CSV a CRM/ERP externo (cron 02:00 UTC)
     \item \textbf{Slack Notifications:} POST critical alarms a canal \#ami-alerts (latencia <2s)
-    \item \textbf{Prometheus Exporter:} GET /api/metrics (m\u00e9tricas custom: devices\_online, msgs\_per\_sec, alarm\_count) $\rightarrow$ Grafana Cloud
+    \item \textbf{Prometheus Exporter:} GET /api/metrics (métricas custom: devices\_online, msgs\_per\_sec, alarm\_count) $\rightarrow$ Grafana Cloud
 \end{itemize}
 
 \section{APIs Programáticas y Webhooks}
@@ -756,8 +758,8 @@ return {msg: msg, metadata: metadata, msgType: "SUCCESS"};
 %   * Telemetry API: GET /api/plugins/telemetry/DEVICE/{id}/values/timeseries
 %   * Alarm API: GET /api/alarm/{entityType}/{entityId}
 % - Webhooks configurados:
-%   * Billing System: POST daily consumption → CRM
-%   * Slack: POST critical alarms → #ami-alerts channel
+%   * Billing System: POST daily consumption -> CRM
+%   * Slack: POST critical alarms -> #ami-alerts channel
 % Código: cURL examples API calls
 
 \section{Conclusiones del Capítulo}

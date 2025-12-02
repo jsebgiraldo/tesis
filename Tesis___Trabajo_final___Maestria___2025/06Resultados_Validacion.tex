@@ -89,22 +89,29 @@ El piloto evaluó cuatro escenarios operacionales que cubren condiciones normale
 
 La validación del sistema se basó en seis métricas cuantitativas con objetivos de diseño derivados del Capítulo~\ref{chap:introduccion}:
 
-\begin{table}[htbp]
+\begin{table}[H]
 \centering
 \caption{Definición de métricas y objetivos de validación piloto}
 \label{tab:metricas-kpis}
-\begin{tabular}{@{}lllp{5cm}@{}}
-\toprule
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{|l|l|l|l|}
+\hline
+\rowcolor{gray!20}
 \textbf{Métrica} & \textbf{Objetivo} & \textbf{Método} & \textbf{Justificación Objetivo} \\
-\midrule
+\hline
 Latencia Edge & <10 ms & Timestamp CoAP send/ACK & IEEE 2030.5 Demand Response <50 ms \\
+\hline
 Latencia E2E & <300 ms & Timestamp NTP send/receive Cloud & Requisito billing tiempo real ANSI C12.19 \\
+\hline
 Disponibilidad & >99.5\% & Health checks 60s & SLA típico utilities 99.9\% (margen 0.4\%) \\
+\hline
 PDR (Packet Delivery Ratio) & >95\% & Wireshark capture análisis & Requisito confiabilidad AMI IEEE 1702 \\
-Consumo energético & <10 mW & Fluke 87V datalogger & Batería 3000 mAh → 10 años vida útil \\
+\hline
+Consumo energético & <10 mW & Fluke 87V datalogger & Batería 3000 mAh $\rightarrow$ 10 años vida útil \\
+\hline
 TCO & <\$60/dispositivo & CAPEX+OPEX 3 años & Benchmark soluciones comerciales \$1,000+ \\
-\bottomrule
-\end{tabular}
+\hline
+\end{tabular}}
 \end{table}
 
 \textbf{Definición de métricas:}
@@ -150,10 +157,10 @@ df = pd.read_sql("SELECT node_id, ts_send, ts_ack FROM telemetry_log WHERE date 
 # Calcular latencia edge (ms)
 df['latency_ms'] = (df['ts_ack'] - df['ts_send']) / 1000.0
 
-# Estadísticas por nodo
+# Estadisticas por nodo
 stats_by_node = df.groupby('node_id')['latency_ms'].describe(percentiles=[0.5, 0.95, 0.99])
 
-# Test Shapiro-Wilk normalidad (H0: distribución normal)
+# Test Shapiro-Wilk normalidad (H0: distribucion normal)
 for node in df['node_id'].unique():
     latencies = df[df['node_id'] == node]['latency_ms']
     w_stat, p_value = stats.shapiro(latencies)
@@ -194,7 +201,8 @@ Las mediciones se realizaron con timestamping NTP sincronizado (precisión $\pm$
 \centering
 \caption{Distribución de latencia edge processing (n=2,000 transacciones, 30 días)}
 \label{tab:latencia-edge-percentiles}
-\begin{tabular}{|l|c|p{7cm}|}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{|l|l|l|}
 \hline
 \rowcolor{gray!20}
 \textbf{Percentil} & \textbf{Latencia} & \textbf{Interpretación} \\
@@ -210,7 +218,7 @@ p99 & 14 ms & 99\% transacciones (outliers) completadas en $\leq$14 ms \\
 \rowcolor{green!20}
 \textbf{Media} & \textbf{8$\pm$2 ms} & Desviación estándar: $\pm$2 ms (varianza baja) \\
 \hline
-\end{tabular}
+\end{tabular}}
 \end{table}
 
 \textbf{Análisis de resultados:}
@@ -238,7 +246,8 @@ La latencia end-to-end (E2E) mide el tiempo total desde envío de lectura en nod
 \centering
 \caption{Breakdown latencia E2E por segmento arquitectura}
 \label{tab:latencia-e2e-breakdown}
-\begin{tabular}{|l|c|p{6cm}|}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{|l|l|l|}
 \hline
 \rowcolor{gray!20}
 \textbf{Segmento} & \textbf{Latencia} & \textbf{Método medición} \\
@@ -258,7 +267,7 @@ ThingsBoard Cloud processing & 12 ms & Timestamp MQTT receive (broker log) vs Po
 \rowcolor{yellow!20}
 \textbf{Total E2E} & \textbf{248 ms} & Suma teórica: $8+4+6+8+210+12 = 248$ ms (coincide con medición) \\
 \hline
-\end{tabular}
+\end{tabular}}
 \end{table}
 
 \textbf{Análisis crítico:}
@@ -280,7 +289,8 @@ Para cuantificar la mejora de la arquitectura propuesta, se comparó latencia ed
 \centering
 \caption{Comparación latencia arquitectura propuesta vs alternativas cloud}
 \label{tab:latencia-comparacion}
-\begin{tabular}{|l|c|c|c|p{4cm}|}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{|l|l|l|l|l|}
 \hline
 \rowcolor{gray!20}
 \textbf{Arquitectura} & \textbf{Latencia Edge} & \textbf{Latencia E2E} & \textbf{Mejora} & \textbf{Casos de uso habilitados} \\
@@ -290,7 +300,7 @@ Cloud-only (baseline) & -- & 520 ms & -- & Billing mensual, reportes históricos
 Edge + Cloud (propuesta) & \textbf{8$\pm$2 ms} & 248 ms & \textbf{98.5\% edge} & Detección fraude <10 ms, DER control, alarmas tiempo real \\
 & & & 52\% E2E & \\
 \hline
-\end{tabular}
+\end{tabular}}
 \end{table}
 
 \textbf{Baseline cloud-only:} Medido desactivando buffer local Gateway (bypass PostgreSQL Edge) y enviando telemetría directa a AWS vía 4G LTE. Latencia promedio 520 ms atribuible a: 210 ms uplink + 280 ms procesamiento cloud (ingesta Kafka + Rule Engine + TimescaleDB sin cache local) + 30 ms downlink ACK.
@@ -335,7 +345,8 @@ El piloto de 30 medidores validó viabilidad técnica a pequeña escala. Esta se
 \centering
 \caption{Extrapolación recursos Gateway (30 $\rightarrow$ 100 medidores)}
 \label{tab:escalabilidad-gateway}
-\begin{tabular}{|l|c|c|p{5cm}|}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{|l|l|l|l|}
 \hline
 \rowcolor{gray!20}
 \textbf{Recurso} & \textbf{30 med} & \textbf{100 med} & \textbf{Análisis} \\
@@ -350,7 +361,7 @@ El piloto de 30 medidores validó viabilidad técnica a pequeña escala. Esta se
 \hline
 \textbf{MQTT pub/s} & 2.8 & 9.3 & Throughput promedio: $\frac{100 \times 96}{24 \times 3600} = 0.11$ msg/s promedio, 9.3 msg/s pico (burst 100 med @ 1 min). Capacidad Mosquitto: 5,000 msg/s. \\
 \hline
-\end{tabular}
+\end{tabular}}
 \end{table}
 
 \textbf{Conclusión recursos:} Gateway Raspberry Pi 4 soporta 100 medidores con margen 40--50\% en CPU/RAM. Limitante identificado: CPU pico 87\% durante bursts simultáneos, mitigable con staggered readings (reducción a 65\%).
@@ -401,7 +412,8 @@ Para validar estabilidad de la arquitectura bajo carga sostenida, se ejecutó pr
 \centering
 \caption{Resultados prueba de estrés 72 horas (30 medidores @ 60s polling)}
 \label{tab:stress-test-72h}
-\begin{tabular}{|l|c|c|p{5cm}|}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{|l|c|c|l|}
 \hline
 \rowcolor{gray!20}
 \textbf{Métrica} & \textbf{Valor} & \textbf{Baseline normal} & \textbf{Observaciones} \\
@@ -418,7 +430,7 @@ Para validar estabilidad de la arquitectura bajo carga sostenida, se ejecutó pr
 \hline
 \textbf{Throughput Thread} & 8 kbps & 0.5 kbps & Uso 3.2\% capacidad 250 kbps Thread \\
 \hline
-\end{tabular}
+\end{tabular}}
 \end{table}
 
 \textbf{Conclusión prueba estrés:} Sistema demostró estabilidad operacional con throughput 15$\times$ sostenido durante 72 horas, validando margen escalabilidad Gateway para 100+ medidores. Pérdida paquetes 0.009\% (12 de 129,600) atribuible a retransmisiones Thread fallidas (RSSI <-90 dBm), no a saturación recursos Gateway.
@@ -656,8 +668,8 @@ La tabla~\ref{tab:res-downtime-events-pilot} documenta los 5 eventos de downtime
 \centering
 \caption{Eventos downtime piloto 90 días (Oct--Dic 2024)}
 \label{tab:res-downtime-events-pilot}
-\small
-\begin{tabular}{|p{3.5cm}|r|p{4.5cm}|p{3.5cm}|}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{|l|r|l|l|}
 \hline
 \rowcolor{gray!20}
 \textbf{Evento} & \textbf{Duración} & \textbf{Causa raíz} & \textbf{Mitigación aplicada} \\
@@ -673,10 +685,10 @@ Reinicio Gateway & 120 min & Actualización firmware manual (no automatizada aú
 Fallo Thread mesh & 16 min & Nodo ESP32-C6 \#23 agotó batería UPS (no detectado por alarma low-battery, threshold 20\% no calibrado) & Alertas proactivas <20\% SOC implementadas Dic 2024 \\
 \hline
 \rowcolor{yellow!20}
-\textbf{Total} & \textbf{490 min} & \multicolumn{2}{p{8cm}|}{\textbf{Disponibilidad piloto: $(2160 \times 60 - 490) / (2160 \times 60) = 99.62\%$}} \\
-& (8.2h) & \multicolumn{2}{p{8cm}|}{Anualizado ($\times$4 trimestres): $490 \times 4 = 1,960$ min/año = 32.7h/año = \textbf{99.63\% anual}} \\
+\textbf{Total} & \textbf{490 min} & \multicolumn{2}{l|}{\textbf{Disponibilidad piloto: $(2160 \times 60 - 490) / (2160 \times 60) = 99.62\%$}} \\
+& (8.2h) & \multicolumn{2}{l|}{Anualizado ($\times$4 trimestres): $490 \times 4 = 1,960$ min/año = 32.7h/año = \textbf{99.63\% anual}} \\
 \hline
-\end{tabular}
+\end{tabular}}
 \end{table}
 
 \textbf{Clasificación de eventos por tipo:}
@@ -850,11 +862,11 @@ Latencia E2E reducción & >70\% & 52\% (520 ms $\rightarrow$ 248 ms) & \cellcolo
 \hline
 Overhead paquetes reducción & >60\% & No medido directamente & \cellcolor{yellow!20} N/A \\
 \hline
-Tráfico WAN reducción & >65\% & 72\% (Edge buffer local) & \cellcolor{green!20} ✅VALIDADA \\
+Tráfico WAN reducción & >65\% & 72\% (Edge buffer local) & \cellcolor{green!20} VALIDADA \\
 \hline
-Disponibilidad operacional & >99\% & 99.62\% (90 días piloto) & \cellcolor{green!20} ✅VALIDADA \\
+Disponibilidad operacional & >99\% & 99.62\% (90 días piloto) & \cellcolor{green!20} VALIDADA \\
 \hline
-Procesamiento tiempo real & Edge <10 ms & 8$\pm$2 ms (P95: 10 ms) & \cellcolor{green!20} ✅VALIDADA \\
+Procesamiento tiempo real & Edge <10 ms & 8$\pm$2 ms (P95: 10 ms) & \cellcolor{green!20} VALIDADA \\
 \hline
 \end{tabular}
 \end{table}
@@ -884,29 +896,29 @@ Aunque la hipótesis general del Cap 1 no desglosó explícitamente H1--H8 (remi
 \centering
 \caption{Validación hipótesis específicas H1--H8 (inferidas de objetivos diseño)}
 \label{tab:validacion-hipotesis-especificas}
-\small
-\begin{tabular}{|c|p{4.5cm}|p{2.5cm}|c|c|c|}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{|c|l|l|c|c|c|}
 \hline
 \rowcolor{gray!20}
 \textbf{ID} & \textbf{Hipótesis} & \textbf{Métrica} & \textbf{Objetivo} & \textbf{Resultado} & \textbf{Estado} \\
 \hline
-\textbf{H1} & Arquitectura 4 niveles es técnicamente viable para AMI & Deployment exitoso & Sí & Sí (90 días) & \cellcolor{green!20} ✅VALIDADA \\
+\textbf{H1} & Arquitectura 4 niveles es técnicamente viable para AMI & Deployment exitoso & Sí & Sí (90 días) & \cellcolor{green!20} VALIDADA \\
 \hline
-\textbf{H2} & Thread simplifica comisionado vs Zigbee & Tiempo provisioning/nodo & <10 min & 2.8 min (BLE+QR) & \cellcolor{green!20} ✅VALIDADA \\
+\textbf{H2} & Thread simplifica comisionado vs Zigbee & Tiempo provisioning/nodo & <10 min & 2.8 min (BLE+QR) & \cellcolor{green!20} VALIDADA \\
 \hline
-\textbf{H3} & Latencia Edge <10 ms habilita casos uso tiempo real & Latencia edge P95 & <10 ms & 10 ms (P95) & \cellcolor{green!20} ✅VALIDADA \\
+\textbf{H3} & Latencia Edge <10 ms habilita casos uso tiempo real & Latencia edge P95 & <10 ms & 10 ms (P95) & \cellcolor{green!20} VALIDADA \\
 \hline
-\textbf{H4} & HaLow alcance >500 m LOS reduce infraestructura & Alcance máximo medido & >500 m & 1,200 m (test rural) & \cellcolor{green!20} ✅VALIDADA \\
+\textbf{H4} & HaLow alcance >500 m LOS reduce infraestructura & Alcance máximo medido & >500 m & 1,200 m (test rural) & \cellcolor{green!20} VALIDADA \\
 \hline
-\textbf{H5} & Nodos Thread consumo <10 mW permiten autonomía >12h & Consumo promedio & <10 mW & 5.2 mW & \cellcolor{green!20} ✅VALIDADA \\
+\textbf{H5} & Nodos Thread consumo <10 mW permiten autonomía >12h & Consumo promedio & <10 mW & 5.2 mW & \cellcolor{green!20} VALIDADA \\
 \hline
-\textbf{H6} & Disponibilidad >99\% con buffer Edge + redundancia & Uptime 90 días & >99\% & 99.62\% & \cellcolor{green!20} ✅VALIDADA \\
+\textbf{H6} & Disponibilidad >99\% con buffer Edge + redundancia & Uptime 90 días & >99\% & 99.62\% & \cellcolor{green!20} VALIDADA \\
 \hline
-\textbf{H7} & TCO <\$200/medidor (5 años) vs NB-IoT \$1,000+ & TCO 100 medidores & <\$200 & \$107 & \cellcolor{green!20} ✅VALIDADA \\
+\textbf{H7} & TCO <\$200/medidor (5 años) vs NB-IoT \$1,000+ & TCO 100 medidores & <\$200 & \$107 & \cellcolor{green!20} VALIDADA \\
 \hline
-\textbf{H8} & Edge reduce tráfico WAN >70\% & Reducción msgs/día & >70\% & 72\% & \cellcolor{green!20} ✅VALIDADA \\
+\textbf{H8} & Edge reduce tráfico WAN >70\% & Reducción msgs/día & >70\% & 72\% & \cellcolor{green!20} VALIDADA \\
 \hline
-\end{tabular}
+\end{tabular}}
 \end{table}
 
 \subsubsection{H1: Viabilidad Técnica Arquitectura 4 Niveles}

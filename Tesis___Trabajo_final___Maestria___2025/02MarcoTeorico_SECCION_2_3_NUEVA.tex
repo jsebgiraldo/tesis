@@ -91,31 +91,32 @@ Andriulo et al. (2024)~\cite{andriuloEdgeComputingCloud2024} destacan que arquit
 \centering
 \caption{Distribución Óptima de Workloads Edge vs Cloud para Smart Energy}
 \label{tab:edge-cloud-workload-distribution}
-\footnotesize
-\begin{tabular}{|p{3cm}|p{1.8cm}|p{1.8cm}|p{3.5cm}|}
+\small
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{|l|l|l|l|}
 \hline
-\rowcolor{blue!20}
-\textbf{Workload} & \textbf{Latencia Req.} & \textbf{Tier Óptimo} & \textbf{Justificación} \\
+\rowcolor{gray!20}
+\textbf{Workload} & \textbf{Latencia Req.} & \textbf{Tier} & \textbf{Justificación} \\
 \hline
-\textbf{DER control (disconnect)} & <100 ms & \textcolor{green}{\textbf{Edge}} & Latencia cloud 50-200 ms insuficiente \\
+DER control (disconnect) & <100 ms & Edge & Latencia cloud 50-200 ms insuficiente \\
 \hline
-\textbf{Power quality monitoring} & <10 ms & \textcolor{green}{\textbf{Edge}} & Detección sag/swell requiere <1 ciclo AC \\
+Power quality monitoring & <10 ms & Edge & Detección sag/swell requiere <1 ciclo AC \\
 \hline
-\textbf{Waveform compression} & <50 ms & \textcolor{green}{\textbf{Edge}} & Reduce bandwidth 90\% antes upload \\
+Waveform compression & <50 ms & Edge & Reduce bandwidth 90\% antes upload \\
 \hline
-\textbf{Anomaly detection local} & <1 s & \textcolor{green}{\textbf{Edge}} & Alertas inmediatas sin WAN dependency \\
+Anomaly detection local & <1 s & Edge & Alertas inmediatas sin WAN dependency \\
 \hline
-\textbf{Dashboards locales} & <2 s & \textcolor{green}{\textbf{Edge}} & Operación durante outages WAN \\
+Dashboards locales & <2 s & Edge & Operación durante outages WAN \\
 \hline
-\textbf{Consumption forecasting} & 1-10 min & \textcolor{blue}{\textbf{Cloud}} & Requiere ML models pesados + históricos \\
+Consumption forecasting & 1-10 min & Cloud & Requiere ML models pesados + históricos \\
 \hline
-\textbf{Analytics multi-utility} & 10-60 min & \textcolor{blue}{\textbf{Cloud}} & Agregación millones medidores cross-region \\
+Analytics multi-utility & 10-60 min & Cloud & Agregación millones medidores cross-region \\
 \hline
-\textbf{Billing generation} & Daily batch & \textcolor{blue}{\textbf{Cloud}} & Integration ERP/CRM enterprise systems \\
+Billing generation & Daily batch & Cloud & Integration ERP/CRM enterprise systems \\
 \hline
-\textbf{Long-term storage (5 años)} & N/A & \textcolor{blue}{\textbf{Cloud}} & S3/Glacier lifecycle policies cost-effective \\
+Long-term storage (5 años) & N/A & Cloud & S3/Glacier lifecycle policies cost-effective \\
 \hline
-\end{tabular}
+\end{tabular}}
 \end{table}
 
 \subsubsection{Contexto Smart Grid: Electricidad Mundial y Edge Computing}
@@ -140,13 +141,14 @@ La Tabla~\ref{tab:edge-cloud-latency-comparison} consolida métricas cuantitativ
 \centering
 \caption{Comparación Cuantitativa Latencia: Edge vs Cloud Computing}
 \label{tab:edge-cloud-latency-comparison}
-\footnotesize
-\begin{tabular}{|p{3cm}|p{2.2cm}|p{2.2cm}|p{3cm}|}
+\small
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{|l|l|l|l|}
 \hline
 \rowcolor{gray!20}
-\textbf{Componente Latencia} & \textbf{Edge Computing} & \textbf{Cloud Computing} & \textbf{Referencia} \\
+\textbf{Componente Latencia} & \textbf{Edge} & \textbf{Cloud} & \textbf{Referencia} \\
 \hline
-\textbf{Uplink device → processor} & 1-5 ms & 20-80 ms & \cite{andriuloEdgeComputingCloud2024} \\
+\textbf{Uplink device $\rightarrow$ processor} & 1-5 ms & 20-80 ms & \cite{andriuloEdgeComputingCloud2024} \\
  & (Thread/HaLow local) & (LTE WAN) & \\
 \hline
 \textbf{Processing time} & 2-5 ms & 10-30 ms & \cite{andriuloEdgeComputingCloud2024} \\
@@ -166,7 +168,7 @@ La Tabla~\ref{tab:edge-cloud-latency-comparison} consolida métricas cuantitativ
 \textbf{Power quality (<10 ms)} & \textcolor{green}{\checkmark} & \textcolor{red}{\xmark} & \cite{minhEdgeComputingIoTEnabled2022} \\
  & Viable & No viable & \\
 \hline
-\end{tabular}
+\end{tabular}}
 \end{table}
 
 \textbf{Factor de Mejora Latencia:} Edge computing reduce latencia end-to-end por factor \textbf{5-20×} vs cloud computing (1-10 ms vs 50-200 ms). Esta reducción no es incremental sino \textbf{cualitativa}, habilitando categorías completas de aplicaciones control tiempo real imposibles con arquitectura cloud-only.

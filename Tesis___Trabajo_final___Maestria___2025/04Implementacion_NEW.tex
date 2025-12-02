@@ -920,10 +920,9 @@ El deployment de 30 nodos en piloto (Oct-Dic 2024, barrio Medellín) siguió pro
     \item \textbf{Issue \#1:} 3 nodos (10\%) fallaron join Thread. Root cause: Channel 25 interferencia WiFi vecino canal 11 (overlap 2.472-2.484 GHz). Solución: Re-provision a Channel 20 (2.450 GHz) sin overlap.
     \item \textbf{Issue \#2:} 1 nodo lectura DLMS timeout. Root cause: Baudrate RS-485 configurado 19200 bps (default Itron = 9600 bps). Solución: AT command \texttt{AT+DLMSBAUD=9600}.
     \item \textbf{Issue \#3:} Reed switch tamper false positives (5 alarmas/día). Root cause: Vibración puerta medidor. Solución: Debounce firmware 5 segundos (reduce false positive 95\%).
-\end{itemize}
     \item Verificación conectividad: ICMP ping a DCU (fe80::dcdc:dcdc:dcdc:0001)
     \item Test lectura DLMS: Código OBIS 1-0:1.8.0.255 (energía activa)
-\end{enumerate}
+\end{itemize}
 
 Tiempo promedio instalación por nodo: 15 minutos (técnico experimentado).
 

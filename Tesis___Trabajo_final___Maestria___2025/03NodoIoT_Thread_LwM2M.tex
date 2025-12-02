@@ -190,7 +190,8 @@ Define recursos para medición de potencia instantánea y energía acumulada. Es
 \centering
 \caption{Recursos implementados en Objeto 3305 (Power Measurement)}
 \label{tab:lwm2m-obj-3305}
-\begin{tabular}{|l|l|l|p{5cm}|}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{|l|l|l|l|}
 \hline
 \rowcolor{gray!20}
 \textbf{Resource ID} & \textbf{Tipo} & \textbf{Permisos} & \textbf{Descripción} \\
@@ -207,7 +208,7 @@ Define recursos para medición de potencia instantánea y energía acumulada. Es
 \hline
 5518 & Time & R & Timestamp de última lectura (Unix epoch) \\
 \hline
-\end{tabular}
+\end{tabular}}
 \end{table}
 
 Lectura típica: \texttt{GET /3305/0/5800} → Response: \texttt{2300.5} (2.3 kW). Client actualiza resource cada 15 segundos leyendo pin ADC conectado a sensor INA219 (shunt resistor 0.1Ω, rango 0-26V, 0-3.2A).
