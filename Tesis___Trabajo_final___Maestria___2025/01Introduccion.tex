@@ -30,7 +30,7 @@ A continuación, se presenta una comparativa técnica de las principales tecnolo
 \begin{tabular}{|l|l|l|l|}
 \hline
 \rowcolor{gray!20}
-\textbf{Característica} & \textbf{Thread 1.3.1}\footnote{El piloto se implementó con Thread 1.3.0 (ESP32-C6 OpenThread stack, ESP-IDF 5.1). Thread 1.4.0, publicado en octubre 2024, incorpora mejoras de seguridad y eficiencia energética recomendadas para despliegue productivo (véase §4.4).} & \textbf{Zigbee 3.0} & \textbf{Bluetooth Mesh} \\
+\textbf{Característica} & \textbf{Thread 1.3}\footnotemark & \textbf{Zigbee 3.0} & \textbf{Bluetooth Mesh} \\
 \hline
 \textbf{Capa física} & IEEE 802.15.4 & IEEE 802.15.4 & Bluetooth 5.3 LE \\
 \hline
@@ -53,6 +53,7 @@ A continuación, se presenta una comparativa técnica de las principales tecnolo
 \textbf{Seguridad} & TLS/DTLS 1.2 & AES-128 CCM & AES-CCM \\
 \hline
 \end{tabular}}
+\footnotetext{El piloto se implementó con Thread 1.3.0 (ESP32-C6 OpenThread stack, ESP-IDF 5.1). Thread 1.4.0, publicado en octubre 2024, incorpora mejoras de seguridad y eficiencia energética recomendadas para despliegue productivo. Detalles técnicos en §\ref{sec:nodo-thread}.}
 \end{table}
 
 Como se observa en la Tabla \ref{tab:mesh-comparison}, Thread emerge como el protocolo preferencial para redes de campo en aplicaciones de Energía Inteligente (\textit{Smart Energy}) debido a tres ventajas fundamentales. En primer lugar, su enrutamiento IPv6 nativo (\textit{native IPv6 routing}) facilita la integración con infraestructuras IP existentes, eliminando la necesidad de pasarelas de traducción (\textit{gateways}) de protocolo propietarios. En segundo lugar, cuenta con una estandarización completa bajo Thread Group (miembro de la Connectivity Standards Alliance), lo que garantiza interoperabilidad entre fabricantes. Finalmente, ofrece soporte multi-proveedor certificado (\textit{multi-vendor}) mediante el programa de certificación Thread 1.3.1, reduciendo el riesgo de dependencia de proveedor (\textit{vendor lock-in}) en proyectos de largo plazo.
