@@ -121,7 +121,8 @@ La Tabla~\ref{tab:lpwan-comparative-analysis} consolida las métricas cuantitati
 \caption{Comparación Cuantitativa de Tecnologías LPWAN para Smart Metering}
 \label{tab:lpwan-comparative-analysis}
 \footnotesize
-\begin{tabular}{|p{2.5cm}|p{2cm}|p{2cm}|p{2cm}|p{2cm}|}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{|l|l|l|l|l|}
 \hline
 \rowcolor{blue!20}
 \textbf{Criterio} & \textbf{LoRaWAN} & \textbf{NB-IoT} & \textbf{Wi-Fi HaLow} & \textbf{Referencia} \\
@@ -146,7 +147,8 @@ La Tabla~\ref{tab:lpwan-comparative-analysis} consolida las métricas cuantitati
 \hline
 \textbf{Despliegue documentado} & Millones (utilities EU/US) & Millones (telecom carriers) & \textcolor{blue}{\textbf{600M meters China}} & \cite{zhengPerformancePowerConsumption2018} \\
 \hline
-\end{tabular}
+\end{tabular}%
+}
 \end{table}
 
 \textbf{Leyenda símbolos:} \textcolor{green}{\checkmark} Cumple requisito, \textcolor{red}{\xmark} No cumple, \textcolor{orange}{$\triangle$} Cumple marginalmente, \textcolor{green}{\textbf{Bold}} Mejor valor de criterio.

@@ -138,35 +138,70 @@ La selección de algoritmos criptográficos en sistemas IoT energy-constrained r
 \subsection{Arquitecturas Mesh para AMI}
 \label{sec:marco-estado-mesh}
 
-% TODO: NUEVO contenido (700 palabras)
-% - Wi-Fi mesh (802.11s):
-%   * Ejemplo: Silver Spring Networks (deprecated)
-%   * Problema: Coexistencia 2.4 GHz, consumo alto
-%   * Referencias: [Cite: Gungor et al. 2011, "Smart grid communications"]
-% - Zigbee mesh:
-%   * Ejemplo: Itron OpenWay CENTRON
-%   * Problema: Limitado IPv6, 250 kbps max
-%   * Referencias: [Cite: Sauter 2011, "The 3 families of IEC 62591"]
-% - Thread mesh (emergente):
-%   * Ventaja: IPv6 nativo, auto-formación
-%   * Estado: Pocas implementaciones comerciales AMI
-%   * Gap: **AQUÍ ESTÁ TU CONTRIBUCIÓN**
+Las topologías mesh permiten que cada nodo actúe simultáneamente como endpoint y router, formando redes auto-organizadas con múltiples rutas redundantes hacia el destino. Esta arquitectura es crítica para infraestructuras AMI distribuidas donde la pérdida de un único nodo no debe comprometer conectividad de vecinos~\cite{choudharyInternetThingsComprehensive2024}.
+
+\subsubsection{ZigBee Pro: Mesh Clásico para Smart Energy}
+
+ZigBee Pro (IEEE 802.15.4 @ 2.4 GHz) ha sido ampliamente desplegado en AMI desde 2010, soportando hasta 65,000 nodos teóricos y 30 saltos máximos mediante protocolo de routing AODV (Ad-hoc On-Demand Distance Vector)~\cite{zigbeealliance2018}. ZigBee Coordinator inicia la red, Routers mantienen tabla de enrutamiento, y End Devices duermen 99\% del tiempo comunicándose solo con su parent router.
+
+\textbf{Limitaciones arquitectónicas:} Ausencia de IPv6 nativo requiere gateways application-layer (ALG) que traducen ZigBee Cluster Library (ZCL) a protocolos IP, introduciendo latencia adicional (50-150 ms) y punto único de falla. Stack propietario dificulta interoperabilidad multi-vendor sin certificación ZigBee Alliance~\cite{abdulsalamOverviewRecentWireless2024}.
+
+\subsubsection{Thread: IPv6 Mesh Emergente}
+
+Thread (Thread Group Specification 1.3) implementa IPv6 end-to-end sobre IEEE 802.15.4 mediante 6LoWPAN, eliminando necesidad de gateways ALG~\cite{threadMatterConvergence2024}. Thread Border Router (OTBR) actúa como router IP estándar, permitiendo que dispositivos Thread sean alcanzables directamente desde cualquier red IP sin proxies intermedios.
+
+\textbf{Routing mesh adaptativo:} Thread utiliza MLE (Mesh Link Establishment) para formar red automáticamente, eligiendo Thread Leader mediante ID más bajo. Routers intercambian Link Quality Indicator (LQI) cada 32 segundos, recalculando path cost según ecuación:
+
+\begin{equation}
+\text{Path Cost} = \sum_{i=1}^{n} \frac{255 - \text{LQI}_i}{255} \times 10
+\end{equation}
+
+Convergencia típica <5 segundos tras falla de router, vs 30-60 segundos en ZigBee AODV~\cite{openthread2024}.
+
+\textbf{Escalabilidad limitada:} Thread Specification 1.3 documenta límite práctico de 250 nodos por partición, aunque topologías multi-partición con múltiples Border Routers pueden escalar a miles de dispositivos. Para AMI con >500 medidores por gateway, requiere desplegar múltiples redes Thread independientes o emplear HaLow como backhaul agregador~\cite{abdulsalamOverviewRecentWireless2024}.
+
+\subsubsection{Bluetooth Mesh: Flooding vs Routing}
+
+Bluetooth Mesh Profile 1.0 (Bluetooth SIG, 2019) implementa topología mesh mediante flooding (managed flooding): cada mensaje se retransmite por todos los nodos hasta alcanzar TTL=0~\cite{bluetoothsig2019}. Ventajas incluyen simplicidad (sin tablas de enrutamiento) y resiliencia (múltiples rutas simultáneas).
+
+\textbf{Ineficiencia en redes densas:} Flooding genera tráfico $O(n^2)$ en redes con $n$ nodos, saturando canal 2.4 GHz en despliegues >100 dispositivos. Para AMI con transmisiones periódicas cada 15 minutos, genera colisiones excesivas. Thread routing es preferible para aplicaciones Smart Energy~\cite{choudharyInternetThingsComprehensive2024}.
 
 \subsection{Edge Computing en Smart Grids}
 \label{sec:marco-estado-edge}
 
-% TODO: NUEVO contenido (600 palabras)
-% - Referencias:
-%   * [Cite: Zhang et al. 2018, "Edge computing for smart grid"]
-%     → Arquitectura conceptual, sin implementación HaLow
-%   * [Cite: Okay et al. 2020, "Fog computing for smart cities"]
-%     → Usa LTE backhaul (caro, alta latencia)
-%   * [Cite: Liu et al. 2021, "Edge intelligence for IoT"]
-%     → AI local, pero sin validación experimental AMI
-% - Gap identificado:
-%   * Falta arquitectura Thread + HaLow + Edge validada
-%   * Falta análisis TCO detallado Edge vs Cloud
-%   * Falta validación latencia E2E < 250 ms
+Edge Computing traslada capacidades de procesamiento, almacenamiento y análisis desde centros de datos centralizados hacia gateways en el borde de la red, minimizando latencia y reduciendo tráfico WAN~\cite{liangReviewEdgeComputing2024}. Para Smart Grids, edge permite implementar funciones críticas como detección de anomalías en tiempo real, Volt-VAR optimization (VVO) local, y auto-recuperación de fallas sin dependencia de conectividad cloud.
+
+\subsubsection{Modelos de Despliegue: Edge vs Fog vs Cloud}
+
+La literatura distingue tres paradigmas de computación distribuida con características diferenciadas~\cite{liangReviewEdgeComputing2024}:
+
+\textbf{Edge Computing:} Procesamiento en gateways inmediatamente adyacentes a dispositivos IoT (1-2 saltos). Latencia típica 1-10 ms, capacidad limitada (4-16 GB RAM, 4-8 cores ARM/x86), implementa reglas CEP (Complex Event Processing) simples y buffering local.
+
+\textbf{Fog Computing:} Capa intermedia distribuida en estaciones base, subestaciones eléctricas o PoPs regionales. Latencia 10-50 ms, recursos moderados (32-128 GB RAM, GPU opcional), ejecuta analytics avanzados (ML inference, data fusion multi-sensor).
+
+\textbf{Cloud Computing:} Centros de datos centralizados con recursos virtualmente ilimitados. Latencia 50-200 ms (100-400 ms para Latinoamérica), ejecuta entrenamiento de modelos ML, business intelligence, almacenamiento histórico multi-año.
+
+\textbf{Arquitectura híbrida propuesta:} Esta tesis implementa modelo edge-first con cloud backup: procesamiento primario en Raspberry Pi 4 gateways (Nivel 3), sincronización diferida con instancia cloud ThingsBoard para BI y auditoría. Datos críticos permanecen 7 días en edge (TimescaleDB local), luego se comprimen y transfieren a cloud para retención 5 años según regulación~\cite{alsafranChallengesImplementingIoT2025}.
+
+\subsubsection{Plataformas Edge para AMI}
+
+Despliegues documentados de edge computing en Smart Grids típicamente emplean hardware industrial costoso (Cisco IR829 \$2,500-4,000, Dell Edge Gateway 3000 \$1,200-2,000) con software propietario. Alternativas open-source emergen como viables:
+
+\textbf{ThingsBoard Edge:} Replica funcionalidad completa de plataforma IoT en gateways locales, sincronizando entidades (devices, dashboards, rule chains) bidireccionalmente con instancia cloud mediante gRPC comprimido~\cite{gartnerMagicQuadrantIoT2024}. Ventajas incluyen dashboards locales sin internet, offline buffering automático (>100K mensajes), y rule engine CEP completo (filtros, transformaciones, alarmas).
+
+\textbf{AWS IoT Greengrass:} Framework de AWS para ejecutar funciones Lambda en edge devices, con sincronización automática hacia AWS IoT Core. Requiere Amazon Linux 2 y conectividad periódica para deployment de funciones.
+
+\textbf{Azure IoT Edge:} Containers Docker orquestados con módulos de runtime Azure, permitiendo ejecutar Azure Stream Analytics y ML models (ONNX) localmente.
+
+\subsubsection{Brechas en Literatura AMI Edge}
+
+Revisión sistemática revela tres gaps principales:
+
+\textbf{Gap 1 - Backhaul sub-óptimo:} Zhang et al. (2018) y Okay et al. (2020) proponen arquitecturas edge conceptuales pero emplean LTE/4G como backhaul, introduciendo OPEX mensual (\$15-50/gateway) y latencia adicional (30-80 ms). Wi-Fi HaLow elimina costo recurrente con throughput superior~\cite{alsafranChallengesImplementingIoT2025}.
+
+\textbf{Gap 2 - Validación experimental limitada:} Liu et al. (2021) describen edge intelligence para IoT pero sin mediciones empíricas de latencia end-to-end Thread → Gateway → Cloud bajo carga realista (500 medidores @ 15 min intervals).
+
+\textbf{Gap 3 - TCO no documentado:} Ningún trabajo compara Total Cost of Ownership (CAPEX + 5 años OPEX) de arquitectura edge open-source vs soluciones comerciales, crítico para adopción en utilities Latinoamericanas con presupuestos limitados.
 
 \subsection{Inteligencia Artificial en Edge para IoT}
 \label{sec:marco-estado-ia-edge}
