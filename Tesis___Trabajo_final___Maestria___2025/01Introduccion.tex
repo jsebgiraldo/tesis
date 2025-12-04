@@ -113,7 +113,7 @@ Esta autonomía offline ilimitada resulta especialmente relevante en el contexto
 \hline
 \textbf{Frecuencia} & 902-928 MHz (US) & 868/915 MHz & LTE Bands & 2.4/5 GHz \\
 \hline
-\textbf{Alcance típico} & \textcolor{blue}{1-1.5 km} outdoor & 5-15 km & 10-35 km & \textcolor{red}{50-100 m} \\
+\textbf{Alcance típico} & \textcolor{blue}{1 km} urbano, \textcolor{blue}{3-5 km} outdoor LoS & 5-15 km & 10-35 km & \textcolor{red}{50-100 m} \\
 \hline
 \textbf{Throughput máx.} & \textcolor{blue}{43.3 Mbps} @ 8 MHz & \textcolor{red}{50 kbps} & 1 Mbps & 9.6 Gbps \\
 \hline
@@ -134,7 +134,7 @@ Esta autonomía offline ilimitada resulta especialmente relevante en el contexto
 \end{tabular}}
 \end{table}
 
-Como se evidencia en la Tabla \ref{tab:lastmile-comparison}, Wi-Fi HaLow (IEEE 802.11ah) combina las ventajas de diferentes tecnologías de última milla en un único estándar. Frente a LoRaWAN, ofrece un throughput superior (43.3 Mbps @ 8 MHz vs 50 kbps), lo que permite la transmisión de datos agregados de múltiples medidores sin congestión. Comparado con LTE Cat-M1, proporciona latencia determinística menor (10-30 ms vs 50-100 ms) y elimina los costos recurrentes de suscripción a operadores móviles (MVNO, \textit{Mobile Virtual Network Operator}). Por otra parte, supera significativamente al Wi-Fi 6 convencional en alcance (1-1.5 km outdoor vs 50-100 m) gracias a su operación en banda ISM 902-928 MHz (US) con mayor capacidad de penetración en edificaciones (~15-20 dB menor path loss vs 2.4 GHz).
+Como se evidencia en la Tabla \ref{tab:lastmile-comparison}, Wi-Fi HaLow (IEEE 802.11ah) combina las ventajas de diferentes tecnologías de última milla en un único estándar. Frente a LoRaWAN, ofrece un throughput superior (43.3 Mbps @ 8 MHz vs 50 kbps), lo que permite la transmisión de datos agregados de múltiples medidores sin congestión. Comparado con LTE Cat-M1, proporciona latencia determinística menor (10-30 ms vs 50-100 ms) y elimina los costos recurrentes de suscripción a operadores móviles (MVNO, \textit{Mobile Virtual Network Operator}). Por otra parte, supera significativamente al Wi-Fi 6 convencional en alcance (1 km urbano NLoS, hasta 3-5 km outdoor LoS con equipos comerciales como Alfa Networks AHPI7292S vs 50-100 m Wi-Fi 6) gracias a su operación en banda ISM 902-928 MHz (US) con mayor capacidad de penetración en edificaciones (~15-20 dB menor path loss vs 2.4 GHz).
 
 Adicionalmente, HaLow opera en espectro no licenciado ISM (\textit{Industrial, Scientific and Medical}), permitiendo despliegues privados controlados por el operador de la red eléctrica sin dependencia de infraestructura de terceros. Esta característica posiciona a Wi-Fi HaLow como la tecnología óptima para el backhaul de gateways Smart Energy en zonas urbanas y suburbanas de densidad media-alta, donde se requiere un balance entre alcance, capacidad y autonomía operativa.
 
@@ -308,12 +308,17 @@ La investigación sigue un enfoque mixto que combina Design Science Research (DS
 
 \textbf{Actividades:}
 \begin{enumerate}
-\item Configuración plataforma hardware: Banana Pi BPI-R4 (4x Cortex-A53 @ 1.8 GHz, 4 GB RAM) + nRF52840 RCP (Thread) + Morse Micro MM6108 (HaLow) + Quectel EG25-G (LTE).
-\item Instalación y configuración OpenWRT 23.05.x con kernel real-time patches (PREEMPT\_RT).
-\item Despliegue stack Docker Compose: ThingsBoard Edge 3.6.0, PostgreSQL 15 + TimescaleDB 2.13, Apache Kafka 7.5.0, IEEE 2030.5 Server (Python/Flask), Ollama LLM (Llama 3.2 3B).
-\item Implementación IEEE 2030.5 Function Sets: DCAP, Time, EndDevice, MirrorUsagePoint, MirrorMeterReading, Messaging (XML schemas según estándar).
-\item Configuración mwan3 para failover multi-WAN (Ethernet métrica 10, HaLow STA métrica 15, LTE métrica 20).
-\item Desarrollo nodos IoT: ESP32-C6 Thread LwM2M + adaptador RS-485 DLMS/COSEM para lectura de medidores inteligentes.
+\item \textbf{Servidor ThingsBoard on-premise:} Instalación y configuración ThingsBoard Professional Edition 3.6.0 en servidor dedicado (Ubuntu Server 22.04 LTS) con PostgreSQL 15 + TimescaleDB 2.13, Apache Kafka 7.5.0 para procesamiento de telemetría, configuración de reglas de alarmas y dashboards de visualización.
+
+\item \textbf{Routers Wi-Fi HaLow outdoor:} Configuración routers Alfa Networks AHPI7292S (Morse Micro MM6108 chipset) con OpenWRT, establecimiento de topología mesh 802.11s para backhaul extendido (3-5 km), configuración WPA3-SAE y bandwidths adaptativos (2/4/8 MHz).
+
+\item \textbf{Gateway Edge personalizado:} Desarrollo imagen OpenWRT custom para Raspberry Pi 4 Model B integrando: (a) OpenThread Border Router (OTBR) con nRF52840 RCP vía USB, (b) Docker Engine para servicios containerizados, (c) ThingsBoard Edge 3.6.0 para procesamiento local y buffer de telemetría, (d) mwan3 para failover multi-WAN (Ethernet/HaLow/LTE).
+
+\item \textbf{Nodos IoT Thread:} Programación ESP32-C6 (Thread 1.3.0) con stack LwM2M (Leshan/Wakaama) para telemetría de sensores, desarrollo adaptador RS-485 para lectura de medidores inteligentes mediante protocolo DLMS/COSEM (IEC 62056), implementación de objetos LwM2M personalizados para mapeo de registros OBIS.
+
+\item \textbf{Integración IEEE 2030.5:} Implementación servidor IEEE 2030.5 (Python/Flask) con Function Sets: DCAP, Time, EndDevice, MirrorUsagePoint, MirrorMeterReading, Messaging. Validación de XML schemas según estándar y sincronización con ThingsBoard vía API REST.
+
+\item \textbf{Validación end-to-end:} Pruebas de integración completa desde nodo IoT → Gateway Edge → Router HaLow → Servidor ThingsBoard, verificación de latencias, persistencia de datos en TimescaleDB, y funcionamiento de alarmas/dashboards.
 \end{enumerate}
 
 \textbf{Entregables:} Documentación de instalación (Anexo A), archivos docker-compose.yml (Anexo B), scripts de integración (Anexo C), código fuente nodos IoT (Anexo E).
@@ -439,9 +444,9 @@ Diseñar, implementar y validar una arquitectura IoT centrada en edge gateways p
 \item Diseñar arquitectura de red basada en gateways edge con nodos HaLow (Morse Micro MM6108) soportando topologías Star (simple), Mesh 802.11s (auto-healing HWMP), y EasyMesh (IEEE 1905.1 roaming coordinado), validando escalabilidad a 50+ nodos por gateway sin degradación >10\% de latencia.
 \item Caracterizar empíricamente desempeño por bandwidth:
   \begin{itemize}
-  \item \textbf{2 MHz}: Sensibilidad -96 dBm, alcance >2 km NLOS, throughput 300-450 kbps, MCS 1-2, latencia <100 ms P95, PDR >98\% con SNR 8-12 dB. Caso de uso: sensores remotos rurales, lecturas horarias, penetración indoor.
-  \item \textbf{4 MHz}: Sensibilidad -91 dBm, alcance 1-1.5 km, throughput ~10 Mbps (MCS7-8), latencia <50 ms P95, soporte 50+ nodos concurrentes. Caso de uso: gestión balanceada zonas suburbanas, lecturas cada 15 min.
-  \item \textbf{8 MHz}: Sensibilidad -85 dBm, alcance 0.5-1 km LOS, throughput >80 Mbps, MCS 5-7, latencia <20 ms P99. Caso de uso: backhaul de concentradores en zonas urbanas con línea de vista, agregación de 100+ dispositivos.
+  \item \textbf{2 MHz}: Sensibilidad -96 dBm, alcance >2 km NLOS urbano, 4-5 km LoS outdoor, throughput 300-450 kbps, MCS 1-2, latencia <100 ms P95, PDR >98\% con SNR 8-12 dB. Caso de uso: sensores remotos rurales, lecturas horarias, penetración indoor.
+  \item \textbf{4 MHz}: Sensibilidad -91 dBm, alcance 1-2 km urbano, 3-4 km LoS outdoor, throughput ~10 Mbps (MCS7-8), latencia <50 ms P95, soporte 50+ nodos concurrentes. Caso de uso: gestión balanceada zonas suburbanas, lecturas cada 15 min.
+  \item \textbf{8 MHz}: Sensibilidad -85 dBm, alcance 0.5-1 km urbano denso, 2-3 km LoS outdoor, throughput >80 Mbps, MCS 5-7, latencia <20 ms P99. Caso de uso: backhaul de concentradores en zonas urbanas con línea de vista, agregación de 100+ dispositivos.
   \end{itemize}
 \item Implementar algoritmo de selección adaptativa de bandwidth basado en: (a) condiciones de propagación (RSSI, SNR, PDR histórico), (b) requisitos de aplicación (latencia, throughput, prioridad), y (c) densidad de red (número de nodos activos, carga agregada).
 \item Evaluar escalabilidad arquitectónica: topología Star (2,500 endpoints, 3 km), Mesh 802.11s (7,500 endpoints, 9 km, auto-healing <10s), EasyMesh (12,500 endpoints, roaming transparente, band steering 2/4/8 MHz).
@@ -468,7 +473,7 @@ Diseñar, implementar y validar una arquitectura IoT centrada en edge gateways p
 \begin{enumerate}
 \item \textbf{Diseño arquitectónico}: Especificación completa de arquitectura multi-capa con definición de componentes, interfaces y flujos de datos, mapeo a vistas ISO/IEC 30141 (funcional, información, despliegue, operacional).
 
-\item \textbf{Implementación prototipo}: Gateway funcional basado en Banana Pi BPI-R4 con integración Thread (nRF52840 RCP), HaLow (Morse Micro MM6108), LTE (Quectel EG25-G), OpenWRT 23.05.x y stack Docker Compose con 7 servicios.
+\item \textbf{Implementación prototipo}: Gateway funcional basado en Raspberry Pi 4 Model B con integración Thread (nRF52840 RCP), HaLow (Morse Micro MM6108), LTE (Quectel EG25-G), OpenWRT 23.05.x y stack Docker Compose con 7 servicios.
 
 \item \textbf{Conformidad estándares}: Implementación de IEEE 2030.5-2018 Function Sets (DCAP, Time, EndDevice, MirrorUsagePoint, MirrorMeterReading, Messaging) y mapeo ISO/IEC 30141:2024.
 
@@ -543,17 +548,21 @@ Diseñar, implementar y validar una arquitectura IoT centrada en edge gateways p
 
 El presente documento se estructura en los siguientes capítulos:
 
-\textbf{Capítulo 1 - Introducción}: Contextualización del problema, estado actual de tecnologías IoT, brechas identificadas, planteamiento del problema, hipótesis, objetivos, metodología, alcances y contribuciones esperadas.
+\textbf{Capítulo 1 - Introducción}: Contextualización del problema de telemetría Smart Energy, análisis comparativo de tecnologías IoT (Thread, Zigbee, BLE Mesh para redes de campo; LoRaWAN, HaLow, LTE para backhaul), justificación técnica y económica de la arquitectura propuesta, planteamiento de hipótesis cuantificables, objetivos generales y específicos, metodología de investigación en tres fases (diseño, implementación, validación), alcance del trabajo y contribuciones esperadas.
 
-\textbf{Capítulo 2 - Marco Teórico}: Fundamentos de redes Smart Energy, protocolos de comunicación IoT (Thread, HaLow, LTE Cat-M1), estándares de interoperabilidad (IEEE 2030.5, ISO/IEC 30141, IEC 61850), tecnologías de edge computing (Docker, TimescaleDB, Kafka), plataformas IoT (ThingsBoard), seguridad en sistemas IoT, y estado del arte de arquitecturas edge heterogéneas.
+\textbf{Capítulo 2 - Marco Teórico y Estado del Arte}: Fundamentos de comunicaciones IoT (6LoWPAN, CoAP, MQTT), protocolos Thread 1.3.0 y LwM2M, especificaciones técnicas IEEE 802.11ah (Wi-Fi HaLow) con análisis de link budget y throughput, estándares de interoperabilidad IEEE 2030.5-2018 (Smart Energy Profile 2.0) e ISO/IEC 30141:2024, tecnologías de edge computing (Docker, TimescaleDB, Kafka), arquitecturas de referencia AMI (Advanced Metering Infrastructure), análisis de seguridad end-to-end (WPA3, DTLS, TLS), y revisión crítica del estado del arte con identificación de brechas de investigación.
 
-\textbf{Capítulo 3 - Gateway de Telemetría}: Arquitectura del gateway multi-protocolo, conformidad con estándares internacionales, requisitos funcionales/no funcionales, arquitectura jerárquica de 3 niveles IoT, diseño de hardware y software, y Stack de Servicios Containerizados.
+\textbf{Capítulo 3 - Capa de Dispositivos (Nodos IoT Thread)}: Diseño e implementación de nodos Thread 1.3.0 con ESP32-C6, protocolo LwM2M para gestión de dispositivos y telemetría, interfaz RS-485 para lectura de medidores inteligentes DLMS/COSEM (IEC 62056), objetos LwM2M personalizados para mapeo de registros OBIS, gestión de energía con modos Deep Sleep, actualización de firmware OTA (Over-The-Air) segura, y validación de consumo energético (<50 µA en sleep, <80 mA en transmisión).
 
-\textbf{Capítulo 4 - Arquitectura de Telemetría}: Visión general de arquitectura end-to-end, capa de dispositivos (medidores inteligentes), capa de campo (nodos Thread, DCUs), capa de agregación (gateway HaLow), capa de aplicación (ThingsBoard cloud), análisis de seguridad end-to-end, y modelado de latencias mediante teoría de colas.
+\textbf{Capítulo 4 - Gateway Edge y Backhaul HaLow}: Arquitectura del gateway multi-protocolo basado en Raspberry Pi 4 con OpenWRT 23.05.x, OpenThread Border Router (OTBR) con nRF52840 RCP, integración Wi-Fi HaLow (Morse Micro MM6108) para backhaul extendido (1 km urbano, 3-5 km outdoor LoS), failover multi-WAN con mwan3 (Ethernet/HaLow/LTE), stack Docker Compose con ThingsBoard Edge 3.6.0 + PostgreSQL 15 + TimescaleDB 2.13 + Apache Kafka 7.5.0, buffering FIFO para operación offline 48h+, y análisis de latencias por componente.
 
-\textbf{Capítulo 5 - Conclusiones y Trabajo Futuro}: Síntesis de la investigación, cumplimiento de objetivos, validación de hipótesis, contribuciones académicas y técnicas, lecciones aprendidas, limitaciones del trabajo, y recomendaciones para trabajo futuro.
+\textbf{Capítulo 5 - Servidor Cloud ThingsBoard}: Arquitectura de servidor ThingsBoard Professional Edition 3.6.0 on-premise, ingesta de telemetría multi-protocolo (MQTT, HTTP, CoAP), procesamiento con Apache Kafka y almacenamiento time-series en TimescaleDB, reglas de alarmas y dashboards de visualización, integración con IEEE 2030.5 Server (Python/Flask) para interoperabilidad Smart Energy Profile 2.0, validación de Function Sets (DCAP, Time, EndDevice, MirrorUsagePoint, MirrorMeterReading, Messaging), y arquitectura escalable para despliegues 1,000+ dispositivos.
 
-\textbf{Anexos}: Instalación OpenWRT y configuración HaLow (Anexo A), Docker Compose y servicios (Anexo B), Scripts de integración (Anexo C), Especificaciones IEEE 2030.5 (Anexo D), Implementación nodo IoT ESP32-C6 (Anexo E), Configuraciones OpenWRT UCI completas (Anexo F).
+\textbf{Capítulo 6 - Resultados Experimentales y Validación}: Validación empírica de hipótesis mediante experimentos controlados: (1) caracterización de latencias end-to-end (nodo→gateway→servidor) con mediciones por componente, (2) pruebas de disponibilidad durante desconexiones WAN de 48-72h con análisis de buffering y sincronización, (3) evaluación de resiliencia ante fallos (crash servicios, sobrecarga CPU), (4) benchmarking comparativo vs arquitecturas cloud-centric (AWS IoT Core) y edge-lite (Node-RED), (5) análisis de costos TCO para despliegues 1,000+ medidores durante 5 años, y (6) validación de conformidad IEEE 2030.5 con cliente certificado OpenADR VTN.
+
+\textbf{Capítulo 7 - Conclusiones y Trabajo Futuro}: Síntesis de resultados obtenidos, cumplimiento de objetivos generales y específicos, validación de hipótesis con significancia estadística, contribuciones académicas (caracterización empírica Thread-HaLow, arquitectura de referencia edge multi-protocolo), contribuciones técnicas (implementaciones open-source, configuraciones OpenWRT replicables), contribuciones industriales (análisis de viabilidad económica, guías de implementación práctica), limitaciones del trabajo (tamaño del testbed, escenarios de validación), lecciones aprendidas durante implementación, y líneas de trabajo futuro (chipset Morse Micro MM8108 con mayor alcance, integración con redes LoRaWAN para zonas rurales, machine learning para detección de anomalías).
+
+\textbf{Anexos}: Instalación OpenWRT custom en Raspberry Pi 4 y configuración HaLow (Anexo A), archivos docker-compose.yml completos con resource limits y health checks (Anexo B), scripts de integración Thread-ThingsBoard y sincronización IEEE 2030.5 (Anexo C), especificaciones IEEE 2030.5 Function Sets implementados con ejemplos XML (Anexo D), código fuente completo nodo IoT ESP32-C6 Thread LwM2M + RS-485 DLMS/COSEM (Anexo E), configuraciones OpenWRT UCI para mwan3, firewall, mesh 802.11s (Anexo F), y desarrollo detallado de hipótesis con metodología estadística (Anexo G).
 
 \section{Resumen del Capítulo}
 

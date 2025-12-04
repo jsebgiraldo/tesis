@@ -150,12 +150,12 @@ LwM2M define arquitectura cliente-servidor con roles asimétricos:
 \textbf{Modelo de objetos LwM2M:} Jerarquía de 3 niveles:
 
 \begin{enumerate}
-    \item \textbf{Object (16-bit ID):} Tipo de recurso estandarizado. Ejemplo: Object 3305 = Power Measurement. Definición incluye nombre, descripción, y lista de resources.
-    \item \textbf{Object Instance (16-bit ID):} Instancia específica de objeto. Permite múltiples instancias del mismo tipo. Ejemplo: /3305/0 (medidor fase A), /3305/1 (medidor fase B), /3305/2 (medidor fase C).
-    \item \textbf{Resource (16-bit ID):} Atributo individual con tipo de dato y permisos. Ejemplo: /3305/0/5800 = Instantaneous Active Power (float, Read-only).
+    \item \textbf{Object (16-bit ID):} Tipo de recurso estandarizado. Ejemplo: Object 10242 = 3-Phase Power Meter. Definición incluye nombre, descripción, y lista de resources.
+    \item \textbf{Object Instance (16-bit ID):} Instancia específica de objeto. Permite múltiples instancias del mismo tipo. Ejemplo: /10242/0 (medidor principal), /10242/1 (sub-medidor HVAC), /10242/2 (sub-medidor iluminación).
+    \item \textbf{Resource (16-bit ID):} Atributo individual con tipo de dato y permisos. Ejemplo: /10242/0/4 = Tension R (float, Read-only, Volts).
 \end{enumerate}
 
-Path format: \texttt{/ObjectID/InstanceID/ResourceID}. Ejemplos reales: \texttt{/3/0/0} (Device Object, Instance 0, Manufacturer string), \texttt{/3305/0/5800} (Power Measurement, Instance 0, Active Power).
+Path format: \texttt{/ObjectID/InstanceID/ResourceID}. Ejemplos reales: \texttt{/3/0/0} (Device Object, Instance 0, Manufacturer string), \texttt{/10242/0/34} (3-Phase Power Meter, Instance 0, 3-Phase Active Power).
 
 \textbf{Operaciones LwM2M:}
 
@@ -177,98 +177,140 @@ Path format: \texttt{/ObjectID/InstanceID/ResourceID}. Ejemplos reales: \texttt{
 
 Esta implementación usa TLV en Thread mesh (optimiza 127-byte MTU), gateway traduce a JSON para ThingsBoard cloud (compatibilidad REST API).
 
-\subsubsection{Objetos IPSO para Medición Eléctrica}
+\subsubsection{Objeto LwM2M 10242: 3-Phase Power Meter}
 \label{sec:nodo-lwm2m-objetos}
 
-La arquitectura implementa 4 objetos IPSO estandarizados para telemetría eléctrica:
+La arquitectura implementa el objeto LwM2M estandarizado \textbf{10242 (3-Phase Power Meter)}~\cite{OMA_LwM2M_Registry_10242} específicamente diseñado para medidores trifásicos inteligentes. A diferencia de objetos IPSO genéricos (3305 Power, 3312 Power Factor), el objeto 10242 está optimizado para sistemas trifásicos con recursos dedicados por fase (R, S, T) y totales agregados, alineándose con nomenclatura DLMS/COSEM y estándares de medición eléctrica IEC 62053.
 
-\textbf{Objeto 3305: Power Measurement}
+\textbf{Estructura jerárquica LwM2M:}
 
-Define recursos para medición de potencia instantánea y energía acumulada. Estructura completa:
+El objeto 10242 permite instancias múltiples (útil para sub-medidores o líneas independientes). En el piloto se usa instancia única:
+
+\begin{itemize}
+    \item \textbf{Path base:} \texttt{/10242/0/} (Object ID 10242, Instance 0)
+    \item \textbf{Recursos por fase:} IDs 4-33 (voltage, current, power active/reactive, THD)
+    \item \textbf{Recursos trifásicos totales:} IDs 34-40 (3-Phase Active/Reactive/Apparent Power, Power Factor)
+    \item \textbf{Recursos energía acumulada:} IDs 41-45 (Active/Reactive/Inductive/Capacitive/Apparent Energy)
+    \item \textbf{Recursos voltajes línea-línea:} IDs 46-48 (R-S, S-T, T-R)
+    \item \textbf{Recursos generales:} ID 49 (Frequency), ID 50 (Neutral Current)
+\end{itemize}
+
+\textbf{Tabla de recursos implementados (subset crítico):}
 
 \begin{table}[H]
 \centering
-\caption{Recursos implementados en Objeto 3305 (Power Measurement)}
-\label{tab:lwm2m-obj-3305}
+\caption{Recursos clave Objeto 10242 (3-Phase Power Meter) implementados en piloto}
+\label{tab:lwm2m-obj-10242}
 \resizebox{\textwidth}{!}{%
-\begin{tabular}{|l|l|l|l|}
+\begin{tabular}{|l|p{4.5cm}|l|l|p{4.5cm}|}
 \hline
 \rowcolor{gray!20}
-\textbf{Resource ID} & \textbf{Tipo} & \textbf{Permisos} & \textbf{Descripción} \\
+\textbf{Resource ID} & \textbf{Nombre} & \textbf{Tipo} & \textbf{Unidad} & \textbf{Descripción} \\
 \hline
-5800 & Float & R & Potencia activa instantánea (W) \\
+\multicolumn{5}{|c|}{\cellcolor{gray!10}\textbf{Información del medidor}} \\
 \hline
-5801 & Float & R & Potencia activa mínima desde reset (W) \\
+0 & Manufacturer & String & - & Fabricante: "Emsitech" \\
 \hline
-5802 & Float & R & Potencia activa máxima desde reset (W) \\
+1 & Model Number & String & - & Modelo: "ET-340" \\
 \hline
-5805 & Float & R & Energía activa acumulada (kWh) \\
+2 & Serial Number & String & - & Número de serie único (OBIS 0-0:96.1.0*255) \\
 \hline
-5822 & Execute & E & Reset valores min/max \\
+\multicolumn{5}{|c|}{\cellcolor{gray!10}\textbf{Mediciones Fase R (Phase 1)}} \\
 \hline
-5518 & Time & R & Timestamp de última lectura (Unix epoch) \\
+4 & Tension R & Float & V & Voltaje fase R (fase-neutro) \\
+\hline
+5 & Current R & Float & A & Corriente fase R \\
+\hline
+6 & Active Power R & Float & kW & Potencia activa fase R \\
+\hline
+7 & Reactive Power R & Float & kvar & Potencia reactiva fase R \\
+\hline
+11 & Power Factor R & Float & adim. & Factor de potencia fase R (-1..1) \\
+\hline
+\multicolumn{5}{|c|}{\cellcolor{gray!10}\textbf{Mediciones Fase S (Phase 2)}} \\
+\hline
+14 & Tension S & Float & V & Voltaje fase S (fase-neutro) \\
+\hline
+15 & Current S & Float & A & Corriente fase S \\
+\hline
+16 & Active Power S & Float & kW & Potencia activa fase S \\
+\hline
+17 & Reactive Power S & Float & kvar & Potencia reactiva fase S \\
+\hline
+21 & Power Factor S & Float & adim. & Factor de potencia fase S (-1..1) \\
+\hline
+\multicolumn{5}{|c|}{\cellcolor{gray!10}\textbf{Mediciones Fase T (Phase 3)}} \\
+\hline
+24 & Tension T & Float & V & Voltaje fase T (fase-neutro) \\
+\hline
+25 & Current T & Float & A & Corriente fase T \\
+\hline
+26 & Active Power T & Float & kW & Potencia activa fase T \\
+\hline
+27 & Reactive Power T & Float & kvar & Potencia reactiva fase T \\
+\hline
+31 & Power Factor T & Float & adim. & Factor de potencia fase T (-1..1) \\
+\hline
+\multicolumn{5}{|c|}{\cellcolor{gray!10}\textbf{Totales Trifásicos}} \\
+\hline
+34 & 3-Phase Active Power & Float & kW & Potencia activa total (suma R+S+T) \\
+\hline
+35 & 3-Phase Reactive Power & Float & kvar & Potencia reactiva total \\
+\hline
+38 & 3-Phase Apparent Power & Float & kVA & Potencia aparente total \\
+\hline
+39 & 3-Phase Power Factor & Float & adim. & Factor de potencia total (-1..1) \\
+\hline
+\multicolumn{5}{|c|}{\cellcolor{gray!10}\textbf{Energía Acumulada}} \\
+\hline
+41 & Active Energy & Float & kWh & Energía activa importada acumulada (OBIS 1-0:1.8.0) \\
+\hline
+42 & Reactive Energy & Float & kvarh & Energía reactiva acumulada \\
+\hline
+\multicolumn{5}{|c|}{\cellcolor{gray!10}\textbf{Otros Parámetros}} \\
+\hline
+46 & Tension R-S & Float & V & Voltaje línea-línea R-S \\
+\hline
+47 & Tension S-T & Float & V & Voltaje línea-línea S-T \\
+\hline
+48 & Tension T-R & Float & V & Voltaje línea-línea T-R \\
+\hline
+49 & Frequency & Float & Hz & Frecuencia de red (OBIS 1-0:14.7.0) \\
+\hline
+50 & Neutral Current & Float & A & Corriente de neutro (desbalance) \\
 \hline
 \end{tabular}}
 \end{table}
 
-Lectura típica: \texttt{GET /3305/0/5800} → Response: \texttt{2300.5} (2.3 kW). Client actualiza resource cada 15 segundos leyendo pin ADC conectado a sensor INA219 (shunt resistor 0.1Ω, rango 0-26V, 0-3.2A).
+\textbf{Mapeo OBIS → LwM2M:}
 
-\textbf{Objeto 3312: Power Factor}
+El parser DLMS/COSEM del nodo ESP32-C6 (\texttt{dlms\_parser.c}) lee registros OBIS del medidor Emsitech ET-340 vía RS-485 y mapea valores a recursos LwM2M:
 
-Mide factor de potencia (cos φ) indicando eficiencia del consumo. Valores: 1.0 (puramente resistivo), 0.7-0.9 (típico residencial), <0.7 (cargas inductivas pesadas).
+\begin{itemize}
+    \item OBIS \texttt{1-0:32.7.0*255} (Voltage L1) → LwM2M \texttt{/10242/0/4} (Tension R)
+    \item OBIS \texttt{1-0:52.7.0*255} (Voltage L2) → LwM2M \texttt{/10242/0/14} (Tension S)
+    \item OBIS \texttt{1-0:72.7.0*255} (Voltage L3) → LwM2M \texttt{/10242/0/24} (Tension T)
+    \item OBIS \texttt{1-0:31.7.0*255} (Current L1) → LwM2M \texttt{/10242/0/5} (Current R)
+    \item OBIS \texttt{1-0:1.8.0*255} (Energy import) → LwM2M \texttt{/10242/0/41} (Active Energy)
+    \item OBIS \texttt{1-0:13.7.0*255} (Power Factor) → LwM2M \texttt{/10242/0/39} (3-Phase Power Factor)
+    \item OBIS \texttt{1-0:14.7.0*255} (Frequency) → LwM2M \texttt{/10242/0/49} (Frequency)
+\end{itemize}
 
-\begin{table}[H]
-\centering
-\caption{Recursos Objeto 3312 (Power Factor)}
-\label{tab:lwm2m-obj-3312}
-\begin{tabular}{|l|l|l|p{6cm}|}
-\hline
-\rowcolor{gray!20}
-\textbf{Resource ID} & \textbf{Tipo} & \textbf{Permisos} & \textbf{Descripción} \\
-\hline
-5700 & Float & R & Factor de potencia (adimensional 0.0-1.0) \\
-\hline
-5518 & Time & R & Timestamp lectura \\
-\hline
-\end{tabular}
-\end{table}
+\textbf{Ejemplo lectura LwM2M:}
 
-Cálculo: $PF = \frac{P_{active}}{P_{apparent}} = \frac{V \cdot I \cdot \cos\varphi}{V \cdot I} = \cos\varphi$. Implementación lee voltaje RMS (Resource 3316/0/5700) y corriente RMS (Resource 3317/0/5700), calcula potencia aparente, divide por potencia activa (3305/0/5800).
+Server (ThingsBoard Edge) solicita potencia activa total:
 
-\textbf{Objeto 3316: Voltage}
+\begin{verbatim}
+CoAP GET coap://[fd00::1234]/10242/0/34
+Response: 2.05 Content, Payload: 5.47 (5.47 kW)
+\end{verbatim}
 
-\begin{table}[H]
-\centering
-\caption{Recursos Objeto 3316 (Voltage)}
-\label{tab:lwm2m-obj-3316}
-\begin{tabular}{|l|l|l|p{6cm}|}
-\hline
-\rowcolor{gray!20}
-\textbf{Resource ID} & \textbf{Tipo} & \textbf{Permisos} & \textbf{Descripción} \\
-\hline
-5700 & Float & R & Voltaje RMS instantáneo (V) \\
-\hline
-5701 & String & R & Unidad: "V" \\
-\hline
-5603 & Float & R/W & Rango mínimo alarma (e.g., 207V = -10\%) \\
-\hline
-5604 & Float & R/W & Rango máximo alarma (e.g., 253V = +10\%) \\
-\hline
-\end{tabular}
-\end{table}
-
-Alarmas configuradas: voltage sag <207V (ANSI C84.1 Range B), voltage swell >253V. Server escribe resources 5603/5604 remotamente, client genera alarma LwM2M (Send operation) al violar umbrales.
-
-\textbf{Objeto 3320: Temperature}
-
-Monitorea temperatura interna ESP32-C6, previniendo thermal throttling (>85°C CPU reduce clock 160→80 MHz, aumentando latency).
-
-Path: \texttt{/3320/0/5700} (°C). Alarma configurada: >70°C genera notificación CRITICAL a servidor, trigger cooling (e.g., relay ventilador).
+Client actualiza recursos cada 15 segundos tras polling DLMS completo (~300 ms). Valores almacenados en estructura \texttt{meter\_data\_t} (68 bytes SRAM).
 
 \subsubsection{Modo Observación y Notificaciones}
 \label{sec:nodo-lwm2m-observacion}
 
-CoAP Observe (RFC 7641) extiende request/response con subscripciones persistentes. Server envía \texttt{GET /3305/0/5800} con header Observe:0, client responde con valor actual y añade subscription interna. Subsecuentemente, client envía notifications CON/NON cada vez que valor cambia, sin server poll.
+CoAP Observe (RFC 7641) extiende request/response con subscripciones persistentes. Server envía \texttt{GET /10242/0/34} (3-Phase Active Power) con header Observe:0, client responde con valor actual y añade subscription interna. Subsecuentemente, client envía notifications CON/NON cada vez que valor cambia, sin server poll.
 
 \textbf{Atributos LwM2M Write-Attributes:}
 
@@ -283,7 +325,7 @@ LwM2M define 6 atributos configurables por resource para controlar notificacione
     \item \textbf{epmin/epmax:} Evaluation period, controla frecuencia de evaluación de condiciones gt/lt/st.
 \end{itemize}
 
-Server configura atributos vía operación Write-Attributes: \texttt{PUT /3305/0/5800?pmin=60\&pmax=900\&st=50}. Client almacena en RAM, evalúa cada lectura ADC (1 Hz), envía notification solo si condiciones cumplen.
+Server configura atributos vía operación Write-Attributes: \texttt{PUT /10242/0/34?pmin=60\&pmax=900\&st=0.5} (notificar si potencia trifásica cambia ±0.5 kW). Client almacena en RAM, evalúa cada lectura DLMS (15 min), envía notification solo si condiciones cumplen.
 
 \textbf{Mensajes CON vs NON:}
 
@@ -292,7 +334,7 @@ Server configura atributos vía operación Write-Attributes: \texttt{PUT /3305/0
     \item \textbf{NON (Non-Confirmable):} Fire-and-forget, sin ACK ni retries. Usado para telemetría periódica no-crítica (temperature, power readings). Latency 8-15 ms one-way, pero 0.1-1\% pérdida de paquetes aceptada.
 \end{itemize}
 
-Configuración implementada: \texttt{/3305/0/5800} (power) usa NON con pmax=900s, \texttt{/3316/0/5700} (voltage) usa CON con gt=253/lt=207 (alarmas requieren reliability).
+Configuración implementada: \texttt{/10242/0/34} (3-Phase Active Power) usa NON con pmax=900s, \texttt{/10242/0/4,14,24} (Tension R/S/T) usan CON con gt=253/lt=207 (alarmas voltage sag/swell requieren reliability).
 
 \section{Implementación del Hardware ESP32-C6}
 \label{sec:nodo-hardware}
@@ -462,6 +504,225 @@ Para deployment battery-powered futuro, firmware incluye modo SED (Sleepy End De
 
 Validación piloto: 30 nodos operando MED mode (RX always-on) durante 90 días, consumo medido 19.2±0.8 mA @ 5V (correlación 0.98 con datasheet), sin thermal throttling (temperatura max 62°C @ 35°C ambient).
 
+\section{Medidor Trifásico Inteligente y Protocolo DLMS/COSEM}
+\label{sec:nodo-medidor-dlms}
+
+La arquitectura propuesta se valida con medidores trifásicos inteligentes Emsitech ET-340 certificados IEC 62053-22 (clase 1.0) y compatibles con protocolo DLMS/COSEM (IEC 62056-62)~\cite{IEC62056622016}. Esta sección detalla las características técnicas del medidor, los registros OBIS leídos periódicamente, y el análisis cuantitativo del payload de comunicación generado en la red Thread.
+
+\subsection{Especificaciones del Medidor Emsitech ET-340}
+\label{sec:nodo-medidor-specs}
+
+El Emsitech ET-340 es un medidor electrónico trifásico de energía activa/reactiva con comunicación multi-protocolo (RS-485 DLMS/COSEM, Modbus RTU, M-Bus) diseñado para redes AMI (Advanced Metering Infrastructure). Especificaciones técnicas:
+
+\textbf{Medición eléctrica:}
+\begin{itemize}
+    \item \textbf{Voltaje nominal:} 3×220/380V (configurable 3×127/220V), rango operativo 0.8-1.2 Vn (176-264V fase)
+    \item \textbf{Corriente nominal:} 5(60)A clase 1.0, corriente de arranque 20 mA (0.4\% In)
+    \item \textbf{Frecuencia:} 50/60 Hz ± 5\% (47.5-63 Hz)
+    \item \textbf{Precisión:} Clase 1.0 energía activa (IEC 62053-22), Clase 2.0 energía reactiva (IEC 62053-23)
+    \item \textbf{Constante de pulsos:} 1000 imp/kWh (LED frontal + salida optoacoplada)
+\end{itemize}
+
+\textbf{Comunicación RS-485 DLMS/COSEM:}
+\begin{itemize}
+    \item \textbf{Interfaz física:} RS-485 half-duplex, conector RJ45 (pines 4-5: Data+/Data-), impedancia 120Ω terminación
+    \item \textbf{Parámetros:} 9600 bps (configurable 1200-38400), 8 bits datos, 1 bit stop, sin paridad (8N1)
+    \item \textbf{Protocolo:} DLMS/COSEM (Device Language Message Specification / Companion Specification for Energy Metering) según IEC 62056-62, encapsulación HDLC (High-Level Data Link Control)
+    \item \textbf{Dirección HDLC:} Configurable 1-250 (default: 1), permite bus multi-drop hasta 32 medidores por segmento RS-485
+    \item \textbf{Timeout respuesta:} 250 ms típico, máximo 1000 ms según IEC 62056-21
+\end{itemize}
+
+\textbf{Funcionalidades avanzadas:}
+\begin{itemize}
+    \item \textbf{Registro de eventos:} 1000 eventos almacenados (fallas de fase, inversión de corriente, tamper magnético, apertura de cubierta)
+    \item \textbf{Perfiles de carga:} Buffer circular 35 días × 96 intervalos/día (15 min) = 3360 registros de potencia/energía
+    \item \textbf{Relé de corte:} 60A @ 250VAC, control remoto vía comando DLMS (código OBIS 0-0:96.3.10*255)
+    \item \textbf{Display LCD:} 8 dígitos, 16 pantallas rotativas (energía activa/reactiva, demanda máxima, voltajes fase, corrientes fase)
+\end{itemize}
+
+\subsection{Registros OBIS del Medidor Trifásico}
+\label{sec:nodo-registros-obis}
+
+El sistema de codificación OBIS (Object Identification System, IEC 62056-61) define identificadores únicos para cada magnitud eléctrica. Código OBIS tiene formato \texttt{A-B:C.D.E*F} donde:
+\begin{itemize}
+    \item \textbf{A:} Medio (1=Energía eléctrica, 0=Abstract)
+    \item \textbf{B:} Canal (0=Total, 1-63=Fases individuales, 81-84=Neutro)
+    \item \textbf{C:} Magnitud física (1=Energía activa, 2=Energía reactiva, 3=Reactiva inductiva, 4=Reactiva capacitiva, 7=Instantáneos, 32=Voltaje, 31=Corriente, 13=Factor de potencia)
+    \item \textbf{D:} Tipo de medida (8=Acumulado, 7=Instantáneo, 6=Demanda máxima)
+    \item \textbf{E:} Tarifas (0=Total, 1-4=Tarifa horaria)
+    \item \textbf{F:} Histórico (0=Actual, 1-99=Perfiles anteriores)
+\end{itemize}
+
+\textbf{Registros OBIS leídos periódicamente (cada 15 min):}
+
+\begin{table}[H]
+\centering
+\caption{Registros OBIS medidor trifásico Emsitech ET-340}
+\label{tab:obis-registers}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{|l|p{5cm}|l|l|p{4cm}|}
+\hline
+\rowcolor{gray!20}
+\textbf{Código OBIS} & \textbf{Descripción} & \textbf{Tipo} & \textbf{Unidad} & \textbf{Uso en tesis} \\
+\hline
+1-0:1.8.0*255 & Energía activa importada total & double-long-unsigned & kWh & Facturación, detección anomalías \\
+\hline
+1-0:2.8.0*255 & Energía activa exportada total & double-long-unsigned & kWh & Generación distribuida (solar) \\
+\hline
+1-0:3.8.0*255 & Energía reactiva inductiva total & double-long-unsigned & kvarh & Cálculo factor de potencia \\
+\hline
+1-0:4.8.0*255 & Energía reactiva capacitiva total & double-long-unsigned & kvarh & Compensación reactivos \\
+\hline
+1-0:32.7.0*255 & Voltaje fase L1 instantáneo & unsigned & V (0.1V) & Detección voltage sag/swell \\
+\hline
+1-0:52.7.0*255 & Voltaje fase L2 instantáneo & unsigned & V (0.1V) & Monitoreo desbalance fases \\
+\hline
+1-0:72.7.0*255 & Voltaje fase L3 instantáneo & unsigned & V (0.1V) & Calidad de energía \\
+\hline
+1-0:31.7.0*255 & Corriente fase L1 instantánea & unsigned & A (0.01A) & Detección sobrecarga \\
+\hline
+1-0:51.7.0*255 & Corriente fase L2 instantánea & unsigned & A (0.01A) & Balance de carga \\
+\hline
+1-0:71.7.0*255 & Corriente fase L3 instantánea & unsigned & A (0.01A) & Límite térmico \\
+\hline
+1-0:13.7.0*255 & Factor de potencia total & unsigned & adim. (0.001) & Penalización reactivos \\
+\hline
+1-0:14.7.0*255 & Frecuencia de red & unsigned & Hz (0.01Hz) & Detección inestabilidad \\
+\hline
+1-0:1.6.0*255 & Demanda máxima activa & double-long-unsigned & kW & Gestión de demanda \\
+\hline
+1-0:1.6.0*1 & Timestamp demanda máxima & octet-string (12 bytes) & YYMMDDhhmmss & Análisis histórico \\
+\hline
+0-0:96.1.0*255 & Número de serie medidor & octet-string (16 bytes) & ASCII & Identificación única \\
+\hline
+0-0:96.5.5*255 & Estado relé de corte & unsigned & 0=Abierto, 1=Cerrado & Control remoto \\
+\hline
+0-0:96.7.0*255 & Contador fallas de fase & unsigned & count & Calidad de suministro \\
+\hline
+\end{tabular}}
+\end{table}
+
+\textbf{Total registros leídos por polling:} 17 registros OBIS × 15 min = 96 lecturas/día × 30 medidores = 2,880 transacciones DLMS/día en el piloto.
+
+\subsection{Análisis de Payload y Carga de Red}
+\label{sec:nodo-payload-analysis}
+
+Esta sección cuantifica el volumen de datos generado por el medidor trifásico, desde el frame DLMS/COSEM en RS-485 hasta el paquete Thread/6LoWPAN transmitido por el nodo ESP32-C6, permitiendo dimensionar capacidad de red y recursos de gateway.
+
+\subsubsection{Tamaño de Payload DLMS/COSEM}
+
+\textbf{Estructura frame HDLC DLMS (lectura 17 registros OBIS):}
+
+\begin{enumerate}
+    \item \textbf{Request (ESP32-C6 → Medidor):}
+    \begin{itemize}
+        \item HDLC Header: 8 bytes (Flag 0x7E, Address 2B, Control 1B, HCS 2B)
+        \item DLMS GET Request: 45 bytes (APDU Tag, Invoke-ID, 17× OBIS codes 6 bytes c/u)
+        \item HDLC Trailer: 3 bytes (FCS 2B, Flag 0x7E)
+        \item \textbf{Total Request: 56 bytes}
+    \end{itemize}
+    
+    \item \textbf{Response (Medidor → ESP32-C6):}
+    \begin{itemize}
+        \item HDLC Header: 8 bytes
+        \item DLMS GET Response: 142 bytes (APDU Tag, Invoke-ID, 17× valores con tipo+dato)
+        \begin{itemize}
+            \item 4× Energías (double-long-unsigned): 4×5 bytes = 20 bytes
+            \item 7× Voltajes/Corrientes (unsigned): 7×3 bytes = 21 bytes
+            \item 2× Factor potencia/Frecuencia (unsigned): 2×3 bytes = 6 bytes
+            \item 1× Demanda máxima (double-long-unsigned): 5 bytes
+            \item 1× Timestamp (octet-string 12B): 14 bytes (type 2B + length 12B)
+            \item 1× Número serie (octet-string 16B): 18 bytes
+            \item 2× Estado relé/Contador (unsigned): 2×3 bytes = 6 bytes
+            \item Overhead DLMS (Tags, lengths): 52 bytes
+        \end{itemize}
+        \item HDLC Trailer: 3 bytes
+        \item \textbf{Total Response: 153 bytes}
+    \end{itemize}
+\end{enumerate}
+
+\textbf{Transacción completa DLMS:} 56 bytes Request + 153 bytes Response = \textbf{209 bytes por polling} (17 registros OBIS).
+
+\textbf{Tiempo de transacción RS-485 @ 9600 bps:}
+\begin{equation}
+T_{RS485} = \frac{209 \text{ bytes} \times 10 \text{ bits/byte}}{9600 \text{ bps}} = 217.7 \text{ ms}
+\end{equation}
+
+Overhead adicional: Request-Response turnaround (50 ms), processing time medidor (30 ms) → \textbf{Total: ~300 ms por lectura}.
+
+\subsubsection{Payload Thread/6LoWPAN}
+
+El nodo ESP32-C6 empaqueta los 17 valores OBIS en formato JSON compacto y lo transmite vía CoAP POST hacia ThingsBoard Edge (gateway). Análisis de overhead de protocolos:
+
+\textbf{Payload JSON (datos medidor):}
+\begin{verbatim}
+{
+  "energy_import":12345.67, "energy_export":0.00,
+  "energy_reactive_ind":234.56, "energy_reactive_cap":12.34,
+  "voltage_l1":220.5, "voltage_l2":221.3, "voltage_l3":219.8,
+  "current_l1":12.45, "current_l2":11.87, "current_l3":13.02,
+  "power_factor":0.95, "frequency":50.01,
+  "demand_max":3.45, "demand_ts":"241204123045",
+  "serial":"ET340-00012345", "relay_state":1, "phase_failures":0
+}
+\end{verbatim}
+\textbf{JSON payload: 385 bytes} (sin whitespace, keys abreviadas)
+
+\textbf{Stack de protocolos Thread/IPv6/UDP/CoAP:}
+\begin{itemize}
+    \item \textbf{CoAP Header:} 12 bytes (Version 2 bits, Type 2 bits, Token 4 bytes, Code 8 bits, Message ID 16 bits, Options 6 bytes)
+    \item \textbf{UDP Header:} 8 bytes (Source Port 2B, Dest Port 2B, Length 2B, Checksum 2B)
+    \item \textbf{IPv6 Header (6LoWPAN compressed):} 7 bytes típico (compression HC1+HC2, context-based addressing)
+    \item \textbf{IEEE 802.15.4 MAC Header:} 13 bytes (Frame Control 2B, Sequence 1B, PAN ID 2B, Dest Addr 8B)
+    \item \textbf{IEEE 802.15.4 MAC Footer:} 2 bytes (FCS checksum)
+\end{itemize}
+
+\textbf{Overhead total protocolos:} 12 + 8 + 7 + 13 + 2 = \textbf{42 bytes}
+
+\textbf{Fragmentación 6LoWPAN:}
+\begin{itemize}
+    \item MTU IEEE 802.15.4: 127 bytes
+    \item Payload disponible tras overhead: 127 - 42 = 85 bytes
+    \item Payload JSON: 385 bytes → Requiere $\lceil 385/85 \rceil = 5$ fragmentos
+    \item Overhead fragmentación (4 bytes FRAG1 header + 5 bytes FRAGn headers): 4 + 4×5 = 24 bytes
+\end{itemize}
+
+\textbf{Total bytes transmitidos Thread:} 385 + 42 + 24 = \textbf{451 bytes por mensaje} (5 frames IEEE 802.15.4)
+
+\textbf{Tiempo de transmisión Thread @ 250 kbps:}
+\begin{equation}
+T_{Thread} = \frac{451 \text{ bytes} \times 8 \text{ bits/byte}}{250,000 \text{ bps}} = 14.4 \text{ ms}
+\end{equation}
+
+Overhead adicional: CSMA/CA backoff (promedio 2.5 ms), ACK turnaround (5× 1.8 ms = 9 ms) → \textbf{Total: ~26 ms transmisión Thread}.
+
+\subsubsection{Carga de Red Agregada}
+
+\textbf{Escenario: 100 medidores trifásicos con polling cada 15 minutos:}
+
+\begin{itemize}
+    \item \textbf{Throughput promedio Thread:} 
+    \begin{equation}
+    R_{avg} = \frac{100 \text{ medidores} \times 451 \text{ bytes} \times 8 \text{ bits/byte}}{15 \times 60 \text{ s}} = 401 \text{ bps}
+    \end{equation}
+    
+    \item \textbf{Utilización canal Thread:} $\frac{401 \text{ bps}}{250,000 \text{ bps}} = 0.16\%$ → Capacidad residual 99.84\% para eventos asíncronos (alarmas, comandos)
+    
+    \item \textbf{Throughput peak (burst simultáneo):} Si 100 medidores transmiten simultáneamente en ventana 60s:
+    \begin{equation}
+    R_{peak} = \frac{100 \times 451 \times 8}{60} = 6,013 \text{ bps} = 2.4\% \text{ utilización}
+    \end{equation}
+    
+    \item \textbf{Latencia agregada Thread (3 hops mesh):} 26 ms transmisión × 3 hops + 12 ms forwarding = \textbf{90 ms end-to-end} nodo → Border Router
+    
+    \item \textbf{Almacenamiento gateway (buffer 7 días):}
+    \begin{equation}
+    Storage = 100 \text{ medidores} \times 96 \text{ msg/día} \times 451 \text{ bytes} \times 7 \text{ días} = 303 \text{ MB}
+    \end{equation}
+\end{itemize}
+
+\textbf{Conclusión:} La carga generada por 100 medidores trifásicos Emsitech ET-340 representa \textbf{0.16\% de utilización promedio} del canal Thread, validando escalabilidad de la arquitectura hasta 500+ medidores por Border Router (límite Thread Group: 250 devices típico, 500+ con tuning). El payload de 451 bytes por mensaje justifica el uso de HaLow (43.3 Mbps @ 8 MHz) para backhaul, permitiendo agregación de múltiples gateways Thread sin congestión.
+
 \section{Configuración del Perfil LwM2M para Medidor Trifásico}
 \label{sec:nodo-configuracion-lwm2m}
 
@@ -488,57 +749,111 @@ Gateway ejecuta traductor LwM2M-MQTT que transforma notificaciones CoAP en mensa
 
 \begin{table}[H]
 \centering
-\caption{Mapeo LwM2M Objects $\rightarrow$ ThingsBoard Telemetry Keys}
+\caption{Mapeo LwM2M Object 10242 $\rightarrow$ ThingsBoard Telemetry Keys}
 \label{tab:lwm2m-tb-mapping}
-\begin{tabular}{|l|l|l|l|}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{|l|l|l|l|p{5cm}|}
 \hline
 \rowcolor{gray!20}
-\textbf{LwM2M Path} & \textbf{ThingsBoard Key} & \textbf{Tipo} & \textbf{Unidad} \\\\
+\textbf{LwM2M Path} & \textbf{ThingsBoard Key} & \textbf{Tipo} & \textbf{Unidad} & \textbf{Descripción DLMS OBIS} \\\\
 \hline
-/3305/0/5800 & power\_w & float & W \\\\
+\multicolumn{5}{|c|}{\cellcolor{gray!10}\textbf{Fase R (Phase 1)}} \\
 \hline
-/3305/0/5805 & energy\_kwh & float & kWh \\\\
+/10242/0/4 & voltage\_r\_v & float & V & Voltaje fase R (OBIS 1-0:32.7.0) \\\\
 \hline
-/3312/0/5700 & power\_factor & float & - (0.0-1.0) \\\\
+/10242/0/5 & current\_r\_a & float & A & Corriente fase R (OBIS 1-0:31.7.0) \\\\
 \hline
-/3316/0/5700 & voltage\_v & float & V \\\\
+/10242/0/6 & power\_active\_r\_kw & float & kW & Potencia activa fase R \\\\
 \hline
-/3317/0/5700 & current\_a & float & A \\\\
+/10242/0/7 & power\_reactive\_r\_kvar & float & kvar & Potencia reactiva fase R \\\\
 \hline
-/3320/0/5700 & temperature\_c & float & °C \\\\
+/10242/0/11 & power\_factor\_r & float & - & Factor de potencia fase R \\\\
 \hline
-/4/0/2 (Connectivity) & rssi\_dbm & int & dBm \\\\
+\multicolumn{5}{|c|}{\cellcolor{gray!10}\textbf{Fase S (Phase 2)}} \\
 \hline
-/3/0/13 (Device) & timestamp\_unix & long & s (epoch) \\\\
+/10242/0/14 & voltage\_s\_v & float & V & Voltaje fase S (OBIS 1-0:52.7.0) \\\\
 \hline
-\end{tabular}
+/10242/0/15 & current\_s\_a & float & A & Corriente fase S (OBIS 1-0:51.7.0) \\\\
+\hline
+/10242/0/16 & power\_active\_s\_kw & float & kW & Potencia activa fase S \\\\
+\hline
+/10242/0/17 & power\_reactive\_s\_kvar & float & kvar & Potencia reactiva fase S \\\\
+\hline
+/10242/0/21 & power\_factor\_s & float & - & Factor de potencia fase S \\\\
+\hline
+\multicolumn{5}{|c|}{\cellcolor{gray!10}\textbf{Fase T (Phase 3)}} \\
+\hline
+/10242/0/24 & voltage\_t\_v & float & V & Voltaje fase T (OBIS 1-0:72.7.0) \\\\
+\hline
+/10242/0/25 & current\_t\_a & float & A & Corriente fase T (OBIS 1-0:71.7.0) \\\\
+\hline
+/10242/0/26 & power\_active\_t\_kw & float & kW & Potencia activa fase T \\\\
+\hline
+/10242/0/27 & power\_reactive\_t\_kvar & float & kvar & Potencia reactiva fase T \\\\
+\hline
+/10242/0/31 & power\_factor\_t & float & - & Factor de potencia fase T \\\\
+\hline
+\multicolumn{5}{|c|}{\cellcolor{gray!10}\textbf{Totales Trifásicos}} \\
+\hline
+/10242/0/34 & power\_3ph\_kw & float & kW & Potencia activa total 3-Phase \\\\
+\hline
+/10242/0/35 & power\_reactive\_3ph\_kvar & float & kvar & Potencia reactiva total \\\\
+\hline
+/10242/0/38 & power\_apparent\_3ph\_kva & float & kVA & Potencia aparente total \\\\
+\hline
+/10242/0/39 & power\_factor\_3ph & float & - & Factor de potencia total (OBIS 1-0:13.7.0) \\\\
+\hline
+\multicolumn{5}{|c|}{\cellcolor{gray!10}\textbf{Energía y Otros}} \\
+\hline
+/10242/0/41 & energy\_active\_kwh & float & kWh & Energía activa acumulada (OBIS 1-0:1.8.0) \\\\
+\hline
+/10242/0/42 & energy\_reactive\_kvarh & float & kvarh & Energía reactiva acumulada (OBIS 1-0:3.8.0) \\\\
+\hline
+/10242/0/49 & frequency\_hz & float & Hz & Frecuencia de red (OBIS 1-0:14.7.0) \\\\
+\hline
+/10242/0/50 & current\_neutral\_a & float & A & Corriente de neutro (desbalance) \\\\
+\hline
+\multicolumn{5}{|c|}{\cellcolor{gray!10}\textbf{Metadata Dispositivo}} \\
+\hline
+/10242/0/2 & meter\_serial & string & - & Número de serie medidor (OBIS 0-0:96.1.0) \\\\
+\hline
+/3/0/13 (Device) & timestamp\_unix & long & s & Timestamp Unix epoch \\\\
+\hline
+/4/0/2 (Connectivity) & rssi\_dbm & int & dBm & RSSI Thread promedio \\\\
+\hline
+\end{tabular}}
 \end{table}
 
 \textbf{Transformaciones aplicadas:}
 
 \begin{itemize}
-    \item \textbf{Energía acumulada:} LwM2M Object 3305/0/5805 reporta Wh (watt-hora), se divide por 1000 antes de publicar: \texttt{energy\_kwh = lwm2m\_value / 1000.0}. Ejemplo: LwM2M reports 24500 Wh $\rightarrow$ ThingsBoard recibe 24.5 kWh.
+    \item \textbf{Energía acumulada:} LwM2M Object 10242/0/41 (Active Energy) reporta kWh directamente, sin conversión. Medidor Emsitech ET-340 envía valor OBIS \texttt{1-0:1.8.0*255} en formato double-long-unsigned (4 bytes) con unidad kWh. Ejemplo: DLMS frame contiene 0x00003B85 (15237) $\rightarrow$ 15237.00 kWh publicado a ThingsBoard.
     
-    \item \textbf{Timestamp:} LwM2M incluye Resource 5518 (Current Time, Unix epoch). Gateway verifica drift contra NTP: si $|t_{lwm2m} - t_{gateway}| > 60s$, descarta timestamp LwM2M y usa timestamp gateway (previene datos futuros/pasados erróneos por RTC drift).
+    \item \textbf{Timestamp:} ESP32-C6 usa RTC DS3231 (precisión ±2 ppm, drift <1 min/año) sincronizado con NTP cada 24h via gateway. Timestamp Unix epoch adjuntado a cada mensaje LwM2M. Gateway valida: si $|t_{lwm2m} - t_{gateway}| > 300s$ (5 min), genera alarma "Clock Drift" y reescribe timestamp con hora gateway.
     
-    \item \textbf{Factor de potencia:} LwM2M reporta rango 0.0-1.0 (leading/lagging sin signo). Gateway calcula tipo: si $P_{reactive} > 0$ (inductivo), \texttt{pf\_type="lagging"}, si $P_{reactive} < 0$ (capacitivo), \texttt{pf\_type="leading"}. ThingsBoard almacena ambos: \texttt{power\_factor=0.87} y \texttt{power\_factor\_type="lagging"}.
+    \item \textbf{Factor de potencia:} Objeto 10242 incluye recursos dedicados por fase (11, 21, 31) y total (39). Valores rango -1..+1 donde signo indica tipo: positivo = inductivo (lagging), negativo = capacitivo (leading). Gateway mapea a ThingsBoard: \texttt{power\_factor\_3ph=0.87} y atributo calculado \texttt{power\_factor\_type="lagging"} basado en signo.
     
-    \item \textbf{RSSI Thread:} LwM2M Object 4 (Connectivity Monitoring) Resource 2 reporta signal strength. ESP32-C6 calcula RSSI promedio de últimos 10 MLE Advertisements recibidos, filtro media móvil reduce jitter ±10 dBm instantáneo a ±2 dBm promedio.
+    \item \textbf{Voltajes línea-línea:} Resources 46-48 (Tension R-S, S-T, T-R) no mapeadas en tabla pero disponibles. Útiles para detección desbalance: si $|V_{RS} - V_{ST}| > 15V$, indica falla fase o carga asimétrica severa.
+    
+    \item \textbf{RSSI Thread:} LwM2M Object 4 (Connectivity Monitoring) Resource 2. ESP32-C6 calcula RSSI promedio móvil de últimos 10 MLE Advertisements recibidos del Thread Leader. Filtro Exponential Weighted Moving Average (EWMA, $\alpha=0.2$) reduce jitter ±10 dBm instantáneo a ±2 dBm. Valor usado para handover optimization: si RSSI < -85 dBm durante 5 min, nodo intenta MLE Parent Request a router vecino.
 \end{itemize}
 
-\textbf{Ejemplo payload MQTT generado:}
+\textbf{Ejemplo payload MQTT generado (medidor trifásico completo):}
 
 \begin{verbatim}
 {
   "ts": 1732742400000,
   "values": {
-    "voltage_v": 230.5,
-    "current_a": 12.3,
-    "power_w": 2835.15,
-    "energy_kwh": 142.78,
-    "power_factor": 0.87,
-    "power_factor_type": "lagging",
-    "temperature_c": 42.1,
+    "voltage_r_v": 220.5, "voltage_s_v": 221.3, "voltage_t_v": 219.8,
+    "current_r_a": 12.45, "current_s_a": 11.87, "current_t_a": 13.02,
+    "power_active_r_kw": 2.74, "power_active_s_kw": 2.63, "power_active_t_kw": 2.86,
+    "power_reactive_r_kvar": 0.85, "power_reactive_s_kvar": 0.82, "power_reactive_t_kvar": 0.89,
+    "power_factor_r": 0.955, "power_factor_s": 0.952, "power_factor_t": 0.956,
+    "power_3ph_kw": 8.23, "power_reactive_3ph_kvar": 2.56, "power_apparent_3ph_kva": 8.62,
+    "power_factor_3ph": 0.954,
+    "energy_active_kwh": 12345.67, "energy_reactive_kvarh": 234.56,
+    "frequency_hz": 50.01, "current_neutral_a": 0.42,
+    "meter_serial": "ET340-00012345",
     "rssi_dbm": -68
   }
 }
@@ -579,13 +894,18 @@ Device Offline & MINOR & last\_activity > 1800s & - (auto-clear on reconnect) \\
 Además de Alarm Rules evaluadas server-side, ESP32-C6 genera alarmas localmente (edge intelligence) y las propaga vía LwM2M Send operation:
 
 \begin{itemize}
-    \item \textbf{Trigger local:} ULP coprocessor monitorea ADC continuo (100 Hz sampling). Si voltage < 207V durante >500 ms consecutivos (50 samples), wakeup CPU main.
+    \item \textbf{Trigger local:} Firmware implementa watchdog de voltaje basado en recursos LwM2M 10242/0/4, 10242/0/14, 10242/0/24 (Tension R/S/T). Cada lectura DLMS (15 min) evalúa: si cualquier fase $< 207V$ durante 3 lecturas consecutivas (45 min), genera alarma MAJOR "Voltage Sag Phase X".
     
-    \item \textbf{LwM2M Send:} Client envía CoAP POST Confirmable (CON) a /dp (Device Profile) con payload TLV conteniendo: Object 3316 Instance 0 (timestamp + voltage value), severidad (MAJOR), descripción ("Voltage sag detected").
+    \item \textbf{LwM2M Send:} Client envía CoAP POST Confirmable (CON) a gateway (OTBR) path \texttt{/dp} con payload TLV conteniendo: Object 10242 Instance 0 Resources [4,14,24] (voltajes 3 fases), timestamp Unix, severidad (MAJOR), descripción ("Voltage sag detected - Phase R: 198.2V").
     
-    \item \textbf{Retries:} CON message con 4 retries (2s, 4s, 8s, 16s exponential backoff). Si ACK no recibido tras 30s total, almacena alarma en NVS (queue persistente 50 alarmas máx), reintenta en próxima conexión.
+    \item \textbf{Retries:} CON message con 4 retries exponential backoff (2s, 4s, 8s, 16s). Si ACK no recibido tras 30s total, almacena alarma en NVS flash (partición "alarms", queue circular 50 eventos máx), reintenta transmisión en próxima conexión Thread estable (MLE Parent Response recibido).
     
-    \item \textbf{Gateway forwarding:} Gateway recibe CoAP Send, traduce a MQTT publish topic \texttt{v1/devices/me/attributes} con key \texttt{alarm\_voltage\_sag=true}, ThingsBoard evalúa alarm rule y notifica operadores (email, SMS, webhook).
+    \item \textbf{Gateway forwarding:} OTBR ejecuta LwM2M-to-MQTT translator (Python script \texttt{lwm2m\_bridge.py} 450 LOC), recibe CoAP Send, parsea TLV, genera JSON MQTT publish a topic \texttt{v1/gateway/attributes} con payload:
+    \begin{verbatim}
+    {"alarm_voltage_sag_phase_r": true, "voltage_r_v": 198.2, 
+     "alarm_timestamp": 1732742400, "severity": "MAJOR"}
+    \end{verbatim}
+    ThingsBoard evalúa Alarm Rule y dispara notificaciones (email NOC, SMS on-call engineer, webhook PagerDuty).
 \end{itemize}
 
 \textbf{Latencia alarma end-to-end medida:} ULP trigger (0 ms) + wakeup CPU (2 ms) + LwM2M Send encode (5 ms) + Thread TX (15 ms) + Gateway RX+translate (8 ms) + MQTT publish (25 ms LTE) + ThingsBoard Rule Engine (12 ms) = \textbf{67 ms total} (P95: 120 ms considerando retries CoAP). Cumple requisito IEEE 2030.5 Demand Response (<500 ms end-to-end).
