@@ -79,40 +79,46 @@ La arquitectura propuesta implementa las 7 entidades funcionales requeridas por 
 \section{Fundamentos de Seguridad en Sistemas IoT}
 \label{sec:marco-seguridad}
 
-% TODO: NUEVO contenido (1000 palabras)
-% Enfoque GENERAL (detalles específicos en Cap 3-4)
-% Longitud estimada: 3-4 páginas
+Los sistemas IoT para infraestructuras críticas como Smart Grids presentan superficie de ataque significativamente ampliada respecto a sistemas tradicionales debido a: (1) millones de dispositivos distribuidos geográficamente con acceso físico limitado, (2) redes inalámbricas susceptibles a eavesdropping, (3) dispositivos resource-constrained que limitan implementación de criptografía robusta, y (4) ciclos de vida operacional prolongados (10-15 años) que exceden vigencia de algoritmos criptográficos~\cite{BlockchainBasedSecureAuthentication2025,nandalSECURITYRISKSIoT2025}. Esta sección revisa amenazas específicas de ecosistemas IoT AMI, el marco NIST Cybersecurity Framework aplicado a Smart Energy, y mecanismos criptográficos que balancean seguridad con restricciones computacionales.
 
-\subsection{Amenazas y Vectores de Ataque}
+\subsection{Amenazas y Vectores de Ataque en Ecosistemas IoT}
 \label{sec:marco-seguridad-amenazas}
 
-% TODO: NUEVO contenido (500 palabras)
-% - Ataques a dispositivos: Physical tampering, firmware compromise
-% - Ataques a red: Eavesdropping, man-in-the-middle, DoS
-% - Ataques a servidor: SQL injection, credential stuffing
-% - Casos reales: Mirai botnet, Stuxnet, Industroyer
-% Figura: Árbol de ataques IoT
+La taxonomía de amenazas IoT abarca múltiples capas arquitectónicas, desde ataques físicos a dispositivos de campo hasta exfiltración de datos en servidores cloud. El modelo STRIDE (Spoofing, Tampering, Repudiation, Information Disclosure, Denial of Service, Elevation of Privilege) aplicado a AMI identifica vectores de ataque críticos~\cite{alsuwaidiSecuringSmartGrid2024}:
+
+\textbf{Ataques a Dispositivos de Campo (Nivel 1):} Los medidores inteligentes y sensores IoT son vulnerables a: (a) \textit{Physical tampering} - extracción de claves criptográficas mediante side-channel attacks (análisis de consumo energético) o lectura directa de memoria flash, (b) \textit{Firmware compromise} - inyección de código malicioso mediante vulnerabilidades en bootloaders inseguros o actualizaciones OTA sin verificación criptográfica de firma digital, (c) \textit{Node capture} - captura física de dispositivos para análisis forense inverso que expone credenciales hardcodeadas o algoritmos propietarios. El caso Mirai botnet (2016) demostró capacidad de comprometer 600,000+ dispositivos IoT mediante credenciales por defecto, generando ataques DDoS de 1 Tbps~\cite{nandalSECURITYRISKSIoT2025}.
+
+\textbf{Ataques a Redes de Comunicación (Nivel 2):} Las redes inalámbricas mesh (Thread, Zigbee, Wi-Fi) presentan vulnerabilidades específicas: (a) \textit{Eavesdropping pasivo} - captura de tráfico sin cifrado o con cifrado débil (WEP, WPA-TKIP deprecados), (b) \textit{Man-in-the-Middle (MITM)} - interposición entre nodo y gateway mediante rogue access points que explotan ausencia de mutual authentication, (c) \textit{Replay attacks} - retransmisión de comandos capturados (ej. comando de desconexión DER) que explotan falta de nonces o timestamps en protocolos sin protección anti-replay, (d) \textit{Jamming/DoS} - saturación deliberada del canal RF para denegar servicio. El ataque Industroyer (2016) comprometió subestaciones eléctricas mediante MITM en protocolos IEC 60870-5-104, causando apagón masivo en Ucrania~\cite{alsuwaidiSecuringSmartGrid2024}.
+
+\textbf{Ataques a Infraestructura Backend (Niveles 3-4):} Servidores edge y cloud son objetivos de: (a) \textit{SQL injection} - explotación de queries mal sanitizadas para exfiltrar base de datos de mediciones (violación GDPR), (b) \textit{Credential stuffing} - ataques de fuerza bruta contra interfaces web de administración con credenciales filtradas de otros servicios, (c) \textit{API abuse} - explotación de rate limiting inexistente o autenticación débil en APIs REST/MQTT para flooding, (d) \textit{Container escape} - escape de sandboxing Docker para acceso a host subyacente. Stuxnet (2010) demostró capacidad de malware para propagarse desde IT systems hacia Operational Technology (OT) mediante explotación de vulnerabilidades zero-day en SCADA, destruyendo 1,000+ centrifugadoras nucleares~\cite{nandalSECURITYRISKSIoT2025}.
 
 \subsection{Marco de Seguridad NIST Cybersecurity Framework}
 \label{sec:marco-seguridad-nist}
 
-% TODO: NUEVO contenido (700 palabras)
-% - NIST CSF 5 funciones:
-%   1. Identify: Asset inventory, risk assessment
-%   2. Protect: Access control, encryption, secure boot
-%   3. Detect: Anomaly detection, intrusion detection
-%   4. Respond: Incident response plan, forensics
-%   5. Recover: Backup, disaster recovery
-% - Aplicación a AMI: Mapeo funciones NIST a arquitectura (referencia Cap 3)
-% Figura: NIST CSF wheel
+El NIST Cybersecurity Framework (CSF) versión 2.0 define enfoque estructurado basado en 5 funciones concurrentes (Identify, Protect, Detect, Respond, Recover) aplicables a infraestructuras críticas incluyendo Smart Grids~\cite{alsuwaidiSecuringSmartGrid2024}. A diferencia de estándares prescriptivos, NIST CSF es framework de gestión de riesgo que permite adaptación según contexto operacional y apetito de riesgo organizacional.
 
-\subsection{Mecanismos Criptográficos}
+\textbf{Función 1 - Identify (Identificar):} Establece comprensión de contexto de negocio, recursos a proteger, y riesgos asociados. Para AMI incluye: (a) \textit{Asset inventory} - catálogo completo de medidores, gateways, servidores con metadatos (firmware version, última actualización, criticidad), (b) \textit{Risk assessment} - análisis cuantitativo de probabilidad $\times$ impacto para cada amenaza identificada (ej. compromise de gateway edge: probabilidad media, impacto alto = riesgo alto), (c) \textit{Business context} - identificación de procesos críticos (billing, demand response) que dependen de integridad y disponibilidad de telemetría. La arquitectura propuesta (Capítulo 3) implementa inventario automatizado mediante LwM2M Object 3 (Device) que reporta metadata de dispositivos.
+
+\textbf{Función 2 - Protect (Proteger):} Implementa salvaguardas para asegurar entrega de servicios críticos. Mecanismos específicos AMI: (a) \textit{Access control} - autenticación mutual TLS 1.3 con certificados X.509 entre dispositivos y gateway, RBAC (Role-Based Access Control) en ThingsBoard con permisos granulares por tenant/device group, (b) \textit{Data security} - cifrado end-to-end con Thread AES-128-CCM-8 en capa mesh, cifrado at-rest con LUKS para bases de datos TimescaleDB, (c) \textit{Secure boot} - verificación criptográfica de integridad de firmware en ESP32-C6 mediante eFuse y signature checking, (d) \textit{Network segmentation} - VLANs segregadas (Thread mesh aislada, WAN/LTE en DMZ, servidor cloud en zona privada). La estrategia Defence in Depth implementa seguridad en 4 capas concéntricas: física (secure boot, TPM), red (firewall nftables, WPA3-SAE), aplicación (RBAC, rate limiting), datos (cifrado LUKS, backup GPG)~\cite{alsuwaidiSecuringSmartGrid2024}.
+
+\textbf{Función 3 - Detect (Detectar):} Identifica ocurrencia de eventos de seguridad mediante monitoreo continuo. Capacidades AMI: (a) \textit{Anomaly detection} - Complex Event Processing (CEP) en ThingsBoard Edge Rule Engine que detecta patrones anómalos (ej. consumo energético 10$\times$ promedio histórico sugiere compromise o fraude), (b) \textit{Intrusion detection} - análisis de tráfico de red mediante Suricata/Snort que identifica signatures de ataques conocidos (port scanning, SQL injection attempts), (c) \textit{Continuous monitoring} - logs centralizados en ELK stack (Elasticsearch, Logstash, Kibana) con alertas proactivas. El procesamiento local en edge permite detección con latencia <100 ms vs >1 segundo en arquitecturas cloud-only.
+
+\textbf{Función 4 - Respond (Responder):} Define acciones ante incidentes detectados. Plan de respuesta AMI: (a) \textit{Incident response} - playbooks automatizados que activan cuarentena de dispositivo comprometido (bloqueo de comunicación en firewall, revocación de certificado X.509), (b) \textit{Communication} - notificación automática a NOC (Network Operations Center) y stakeholders regulatorios según severidad, (c) \textit{Forensics} - preservación de evidencia mediante snapshots de bases de datos y logs para análisis post-mortem. La arquitectura híbrida edge-cloud permite respuesta local durante desconexiones WAN, sincronizando eventos al restaurar conectividad.
+
+\textbf{Función 5 - Recover (Recuperar):} Restaura capacidades degradadas tras incidente. Mecanismos AMI: (a) \textit{Recovery planning} - RTO (Recovery Time Objective) <1 hora para servicios críticos mediante failover automático LTE, (b) \textit{Backup estrategia} - backups incrementales diarios en edge (7 días retention), backups completos semanales en cloud (5 años retention) con cifrado GPG, (c) \textit{Disaster recovery} - procedimientos de reimaging de gateways comprometidos mediante PXE boot desde servidor central. La validación de resiliencia (Capítulo 6) demuestra recuperación completa en <15 minutos post-compromise de gateway.
+
+\subsection{Mecanismos Criptográficos y Trade-offs Computacionales}
 \label{sec:marco-seguridad-cripto}
 
-% TODO: NUEVO contenido (500 palabras)
-% - Cifrado simétrico: AES-128/256 (throughput vs seguridad)
-% - Cifrado asimétrico: RSA, ECC (key exchange, firma digital)
-% - Hash: SHA-256 (integridad)
+La selección de algoritmos criptográficos en sistemas IoT energy-constrained requiere balance entre robustez criptográfica y overhead computacional/energético. Esta subsección analiza primitivas criptográficas implementadas en la arquitectura propuesta.
+
+\textbf{Cifrado Simétrico:} Thread implementa AES-128-CCM-8 (Counter with CBC-MAC, 8-byte MIC) para cifrado de capa MAC 802.15.4, proporcionando confidencialidad e integridad con overhead de 13 bytes por frame (5 bytes counter + 8 bytes MIC). AES-128 ofrece seguridad de $2^{128}$ operaciones para brute-force, suficiente para horizonte 2040+ según recomendaciones NIST. Almacenamiento local en edge utiliza AES-256-XTS (implementado por LUKS) para cifrado at-rest de bases de datos, con overhead de performance <5\% en SSD modernos gracias a instrucciones AES-NI de CPUs ARM Cortex-A72.
+
+\textbf{Cifrado Asimétrico:} La autenticación mutual TLS 1.3 entre gateway y servidor cloud emplea curvas elípticas ECDSA P-256 (equivalente a RSA-3072 pero con claves de 256 bits), reduciendo tamaño de certificados X.509 de $\sim$2 KB (RSA-2048) a $\sim$1 KB y acelerando handshake TLS en 3-5$\times$ respecto a RSA. ESP32-C6 incluye acelerador hardware ECC que ejecuta firma ECDSA en <10 ms vs >100 ms en software puro, habilitando verificación criptográfica de actualizaciones OTA sin degradación perceptible de performance.
+
+\textbf{Funciones Hash:} SHA-256 provee integridad de mensajes y firmado de firmware con resistencia a colisiones de $2^{128}$ operaciones (cumple requisito NIST de 112 bits post-quantum). LwM2M Object 5 (Firmware Update) incluye campo SHA-256 checksum que el dispositivo verifica antes de aplicar actualización, previniendo inyección de firmware modificado. El overhead de computación SHA-256 para paquete CoAP típico (100 bytes) es <1 ms en ESP32-C6 @ 160 MHz.
+
+\textbf{Infraestructura de Clave Pública (PKI):} Certificados X.509v3 establecen identidad de dispositivos y gateways mediante cadena de confianza desde Root CA (Certificate Authority) organizacional. Thread utiliza certificados para derivar LFDI (Long Form Device Identifier) de 160 bits según IEEE 2030.5, garantizando unicidad global sin colisiones. La gestión de ciclo de vida incluye: (a) provisioning inicial con Certificate Signing Request (CSR) generado en dispositivo, (b) renovación automática 30 días antes de expiración, (c) revocación mediante Certificate Revocation Lists (CRL) distribuidas vía LwM2M. El overhead de almacenamiento es $\sim$3 KB por certificado (aceptable en dispositivos con >4 MB flash).
 % - TLS/DTLS: Handshake, cipher suites
 % - Nota: Detalles implementación en Cap 3 (DTLS Thread), Cap 4 (TLS MQTT)
 
