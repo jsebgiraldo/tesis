@@ -9,18 +9,20 @@
 \section{Introducción}
 \label{sec:gateway-intro}
 
-Este capítulo documenta la implementación de los Niveles 2 y 3 de la arquitectura, que comprenden la red de distribución Wi-Fi HaLow (IEEE 802.11ah) y el gateway de borde inteligente basado en Raspberry Pi 4. El gateway desempeña un rol dual crítico en la arquitectura: (1) actúa como puente entre la red Thread mesh (IEEE 802.15.4) de los nodos IoT y la infraestructura IP tradicional mediante OpenThread Border Router (OTBR), y (2) implementa inteligencia distribuida con ThingsBoard Edge para procesamiento local, agregación de datos y operación autónoma durante desconexiones de backhaul.
+Este capítulo documenta la implementación de los Niveles 2 y 3 de la arquitectura, que comprenden la red de distribución Wi-Fi HaLow (IEEE 802.11ah) mesh 802.11s y los gateways de borde inteligentes basados en Raspberry Pi 4. \textbf{Enfoque del capítulo:} Detalla arquitectura HaLow mesh con protocolo HWMP, gateways edge RPi4 como clientes STA, y servicios locales (OTBR, ThingsBoard Edge). La infraestructura de servidor on-premise, conectividad WAN (LTE backup), y sincronización cloud se documentan en Capítulo~\ref{chap:resultados}. Los gateways desempeñan un rol dual crítico: (1) actúan como puente entre la red Thread mesh (IEEE 802.15.4) de los nodos IoT y la infraestructura IP local mediante OpenThread Border Router (OTBR), y (2) implementan inteligencia distribuida con ThingsBoard Edge para procesamiento local, agregación de datos y operación autónoma.
 
-La red HaLow proporciona conectividad de última milla entre el gateway y múltiples Border Routers Thread, aprovechando las ventajas de operación sub-1 GHz: alcance extendido hasta 1.2 km en línea de vista, mejor penetración en interiores respecto a Wi-Fi tradicional 2.4 GHz, y soporte de cientos de clientes con mecanismos RAW (Restricted Access Window) que reducen colisiones en redes densas. La arquitectura HaLow mesh IEEE 802.11s con protocolo HWMP (Hybrid Wireless Mesh Protocol) elimina cableado estructurado punto-a-punto, reduciendo costos de despliegue 60\% comparado con enlaces cableados Ethernet.
+La red HaLow proporciona conectividad de última milla entre gateways edge y múltiples Border Routers Thread, aprovechando las ventajas de operación sub-1 GHz: alcance extendido hasta 1.2 km en línea de vista, mejor penetración en interiores respecto a Wi-Fi tradicional 2.4 GHz, y soporte de cientos de clientes con mecanismos RAW (Restricted Access Window) que reducen colisiones en redes densas. La arquitectura HaLow mesh IEEE 802.11s con protocolo HWMP (Hybrid Wireless Mesh Protocol) elimina cableado estructurado punto-a-punto, reduciendo costos de despliegue 60\% comparado con enlaces cableados Ethernet. El Mesh Gate provee backhaul Ethernet hacia switch local; la arquitectura completa de servidor on-premise (ThingsBoard, PostgreSQL, conectividad WAN LTE) se documenta en Capítulo~\ref{chap:resultados}.
 
-El capítulo se estructura en cinco secciones principales: §\ref{sec:gateway-arquitectura} presenta la arquitectura hardware Raspberry Pi 4 y el stack de software Docker con 6 microservicios containerizados, §\ref{sec:gateway-otbr} documenta la implementación del OpenThread Border Router con servicios NAT64/DNS64 para interconexión Thread-IPv6, §\ref{sec:gateway-halow} detalla la red HaLow mesh con routers MikroTik Tube AHM y protocolo HWMP, §\ref{sec:gateway-tb-edge} describe el despliegue de ThingsBoard Edge con Rule Chains para procesamiento local y reducción 72\% del tráfico WAN, y §\ref{sec:gateway-conclusiones} sintetiza los logros y transiciones al Capítulo 5.
+El capítulo se estructura en cinco secciones principales: §\ref{sec:gateway-arquitectura} presenta la arquitectura hardware Raspberry Pi 4 y el stack de software Docker con 6 microservicios containerizados, §\ref{sec:gateway-otbr} documenta la implementación del OpenThread Border Router con servicios NAT64/DNS64 para interconexión Thread-IPv6, §\ref{sec:gateway-halow} detalla la red HaLow mesh con routers Alfa Networks Tube AHM y protocolo HWMP, §\ref{sec:gateway-tb-edge} describe el despliegue de ThingsBoard Edge con Rule Chains para procesamiento local y reducción 72\% del tráfico WAN, y §\ref{sec:gateway-conclusiones} sintetiza los logros y transiciones al Capítulo 5.
 
 \section{Arquitectura del Gateway Inteligente Raspberry Pi 4}
 \label{sec:gateway-arquitectura}
 
-El Nivel 3 de la arquitectura implementa inteligencia distribuida mediante gateway edge que ejecuta procesamiento local, almacenamiento persistente y sincronización bidireccional con cloud. La implementación utilizó 3 gateways Raspberry Pi 4 desplegados en ubicaciones estratégicas de alta cota, proporcionando cobertura de 0.8 km² en zona urbana residencial montañosa de Medellín (barrio San Javier, desnivel 180 m entre puntos extremos).
+El Nivel 3 de la arquitectura implementa inteligencia distribuida mediante gateways edge que ejecutan procesamiento local, almacenamiento persistente y sincronización bidireccional con servidor on-premise. La implementación desplegó \textbf{3 routers Alfa Networks Tube AHM} (chipset MT7628 + radio Morse Micro MM6108) formando red mesh IEEE 802.11s HaLow en ubicaciones estratégicas de alta cota, proporcionando cobertura de 0.8 km² en zona urbana residencial montañosa (desnivel 180 m entre puntos extremos). \textbf{2 gateways Raspberry Pi 4} se conectan como \textbf{clientes STA inalámbricos exclusivamente a los 2 Mesh Points} (Tube-02 y Tube-03) mediante módulos USB Alfa AHPE-HM (también basados en MM6108), eliminando necesidad de cableado Ethernet punto-a-punto. El Mesh Gate (Tube-01) provee únicamente backhaul Ethernet hacia switch local (server on-premise conectado al mismo switch) sin gateways edge co-ubicados. Este capítulo enfoca en arquitectura HaLow mesh 802.11s y gateways edge RPi4; la infraestructura de servidor on-premise y conectividad WAN se documentan en Capítulo~\ref{chap:resultados}.
 
-El Gateway desempeña tres roles arquitectónicos críticos: (1) \textbf{Thread Border Router} mediante nRF52840 USB Dongle con stack OpenThread, interconectando red mesh Thread (IEEE 802.15.4, 2.4 GHz) con infraestructura IP tradicional vía servicios NAT64/DNS64, (2) \textbf{Plataforma Edge Computing} ejecutando ThingsBoard Edge 3.6.2 en stack Docker con 6 microservicios para Rule Engine local, agregación temporal TimescaleDB, y buffer offline 72 horas de telemetría, y (3) \textbf{Access Point HaLow} mediante módulo Alfa Tube-AHM (Morse Micro MM6108) operando en banda 902-928 MHz con cobertura 1.2 km hacia múltiples Border Routers Thread distribuidos geográficamente.
+Cada Gateway Raspberry Pi 4 desempeña tres roles arquitectónicos críticos: (1) \textbf{Thread Border Router} mediante nRF52840 USB Dongle con stack OpenThread, interconectando red mesh Thread local (IEEE 802.15.4, 2.4 GHz) con infraestructura IP tradicional vía servicios NAT64/DNS64, (2) \textbf{Plataforma Edge Computing} ejecutando ThingsBoard Edge 3.6.2 en stack Docker con 6 microservicios para Rule Engine local, agregación temporal TimescaleDB, y buffer offline 72 horas de telemetría, y (3) \textbf{Cliente HaLow STA} conectándose inalámbricamente a red mesh Alfa Networks Tube AHM operando en banda 902-928 MHz sub-1 GHz con alcance 280-520 m hacia múltiples Border Routers Thread distribuidos geográficamente.
+
+\textbf{Clarificación arquitectónica crítica:} Los routers Alfa Networks Tube AHM son dispositivos \textit{comerciales standalone} con procesador integrado MT7628 (MIPS @ 580 MHz) ejecutando OpenWRT 23.05 y radio HaLow MM6108. \textbf{NO son módulos conectados directamente a Raspberry Pi 4}; son routers independientes que forman la infraestructura mesh HaLow. Los 2 gateways Raspberry Pi 4 actúan como clientes finales (STAs) conectándose \textbf{exclusivamente a los 2 Mesh Points} (Tube-02 y Tube-03) mediante adaptadores USB HaLow externos, \textbf{NO al Mesh Gate} (Tube-01). El Mesh Gate se dedica únicamente a proveer backhaul Ethernet hacia switch local (server on-premise con ThingsBoard conectado al mismo switch). Esta arquitectura distribuida permite cobertura extendida (520 m entre puntos extremos) sin requerir cableado estructurado Ethernet, reduciendo CAPEX deployment 60\% vs alternativas cableadas.
 
 \subsection{Especificaciones del Hardware}
 \label{sec:gateway-hardware}
@@ -33,9 +35,10 @@ El Gateway desempeña tres roles arquitectónicos críticos: (1) \textbf{Thread 
     \item \textbf{Almacenamiento:} MicroSD 128 GB UHS-I (SanDisk Extreme Pro, velocidad lectura 160 MB/s, escritura 90 MB/s), capacidad suficiente para buffer offline 90 días telemetría 1,000 medidores (ocupación medida 2.4 GB / 128 GB = 1.9\%)
     \item \textbf{Conectividad Red:}
         \begin{itemize}
-        \item Ethernet Gigabit (Broadcom GENET, throughput real 940 Mbps), conexión primaria a ONT GPON vía cable Cat6
+        \item \textbf{HaLow 802.11ah (conexión primaria):} Módulo USB Alfa AHPE-HM (Morse Micro MM6108), modo STA, banda 902-928 MHz @ 4 MHz BW, throughput 4 Mbps, alcance 280-520m hacia routers Alfa Tube AHM mesh. \textit{Esta es la conexión principal de backhaul para telemetría AMI.}
+        \item Ethernet Gigabit (Broadcom GENET, throughput real 940 Mbps), disponible pero NO usado en deployment piloto (arquitectura 100\% wireless)
         \item WiFi 802.11ac dual-band (2.4/5 GHz, Cypress CYW43455), deshabilitado en producción para minimizar interferencia Thread 2.4 GHz
-        \item Quectel EG25-G LTE Cat-4 USB (módulo externo, backup WAN, throughput 150 Mbps DL / 50 Mbps UL, latencia 35-80 ms)
+        \item Quectel EG25-G LTE Cat-4 USB (módulo externo, backup WAN secundario, throughput 150 Mbps DL / 50 Mbps UL, latencia 35-80 ms)
         \end{itemize}
     \item \textbf{Interfaces USB:}
         \begin{itemize}
@@ -437,7 +440,7 @@ Done
 
 El Nivel 2 de la arquitectura implementa infraestructura de distribución Wi-Fi HaLow (IEEE 802.11ah) operando en banda sub-1 GHz (902-928 MHz ISM región América) como backhaul de última milla entre Gateway Edge y múltiples Border Routers Thread distribuidos geográficamente. HaLow proporciona tres ventajas críticas sobre Wi-Fi tradicional 2.4/5 GHz: (1) \textbf{Alcance extendido} hasta 1.2 km línea de vista vs 100 m Wi-Fi 802.11n/ac, habilitado por propagación Fresnel favorable sub-1 GHz y potencia TX +23 dBm (200 mW) vs +20 dBm Wi-Fi, (2) \textbf{Penetración indoor superior} con atenuación paredes concreto -8 dB @ 900 MHz vs -15 dB @ 2.4 GHz (47\% reducción pérdida), y (3) \textbf{Eficiencia espectral} para redes densas mediante mecanismos RAW (Restricted Access Window) y TWT (Target Wake Time) que reducen colisiones CSMA/CA 60\% comparado EDCA puro.
 
-La implementación desplegó topología mesh IEEE 802.11s con protocolo HWMP (Hybrid Wireless Mesh Protocol) para path selection automático, eliminando cableado estructurado punto-a-punto y reduciendo CAPEX 65\% vs enlaces Ethernet cableados (costo cableado Cat6 outdoor \$2.5/metro $\times$ 2400 metros = \$6,000 vs 3$\times$ routers MikroTik Tube AHM @ \$89 = \$267). Red mesh proporciona redundancia automática: fallo de un mesh point no interrumpe conectividad, HWMP redirige tráfico por rutas alternativas con convergencia <2 segundos.
+La implementación desplegó topología mesh IEEE 802.11s con protocolo HWMP (Hybrid Wireless Mesh Protocol) para path selection automático, eliminando cableado estructurado punto-a-punto y reduciendo CAPEX 65\% vs enlaces Ethernet cableados (costo cableado Cat6 outdoor \$2.5/metro $\times$ 2400 metros = \$6,000 vs 3$\times$ routers Alfa Networks Tube AHM @ \$89 = \$267). Red mesh proporciona redundancia automática: fallo de un mesh point no interrumpe conectividad, HWMP redirige tráfico por rutas alternativas con convergencia <2 segundos.
 
 \subsection{Fundamentos IEEE 802.11ah (Wi-Fi HaLow)}
 \label{sec:gateway-halow-fundamentos}
@@ -515,16 +518,19 @@ Arquitectura mesh 802.11s proporciona tres beneficios arquitectónicos críticos
 \subsubsection{Topología de la Red HaLow}
 \label{sec:gateway-halow-topologia}
 
-\textbf{Topología física desplegada (piloto Medellín):}
+% Insertar diagrama de topología mesh
+\input{fig_halow_mesh_topology}
 
-Implementación mesh comprende 3 routers MikroTik Tube AHM (Morse Micro MM6108 chipset) en configuración triangular:
+\textbf{Topología física desplegada:}
+
+Implementación mesh comprende 3 routers Alfa Networks Tube AHM (Morse Micro MM6108 chipset) en configuración triangular:
 
 \begin{itemize}
-    \item \textbf{Tube-01 (Mesh Gate):} Instalado rack Gateway Raspberry Pi 4, conexión Ethernet GbE hacia eth0 RPi (backhaul primario), coordenadas GPS 6.2476°N, -75.5658°W, altura 1650 msnm (azotea edificio). Role: Root mesh gate, propaga default route hacia internet via HWMP, responde PREQ broadcasts con costo métrico 0.
+    \item \textbf{Tube-01 (Mesh Gate):} Instalado en ubicación central estratégica, conexión Ethernet GbE hacia switch local (server on-premise ThingsBoard conectado al mismo switch, arquitectura detallada Capítulo~\ref{chap:resultados}), coordenadas GPS 6.2476°N, -75.5658°W, altura 1650 msnm (azotea edificio). \textbf{Sin gateways Raspberry Pi 4 conectados} (Mesh Gate dedicado exclusivamente a routing mesh y backhaul Ethernet). Role: Root mesh gate, propaga default route hacia red local via HWMP, responde PREQ broadcasts con costo métrico 0.
     
-    \item \textbf{Tube-02 (Mesh Point relay):} Instalado poste eléctrico intermedio, distancia 280 m desde Tube-01, coordenadas 6.2494°N, -75.5672°W, altura 1540 msnm. Role: Relay tráfico entre 10 Border Routers Thread downstream y Mesh Gate upstream, forwarding bidireccional.
+    \item \textbf{Tube-02 (Mesh Point relay):} Instalado poste eléctrico intermedio, distancia 280 m desde Tube-01, coordenadas 6.2494°N, -75.5672°W, altura 1540 msnm. \textbf{Gateway RPi4-01 conectado como cliente STA HaLow} a este Mesh Point, gestionando 15 nodos Thread locales. Role: Relay tráfico entre Gateway RPi4-01 y Mesh Gate upstream, forwarding bidireccional.
     
-    \item \textbf{Tube-03 (Mesh Point relay):} Instalado poste extremo cobertura, distancia 520 m desde Tube-01 / 380 m desde Tube-02, coordenadas 6.2512°N, -75.5695°W, altura 1470 msnm (desnivel -180 m vs Tube-01). Role: Relay 20 Border Routers Thread zona baja ladera, path primario via Tube-02 (1 hop), path secundario directo Tube-01 (1 hop, usado si Tube-02 falla).
+    \item \textbf{Tube-03 (Mesh Point relay):} Instalado poste extremo cobertura, distancia 520 m desde Tube-01 / 380 m desde Tube-02, coordenadas 6.2512°N, -75.5695°W, altura 1470 msnm (desnivel -180 m vs Tube-01). \textbf{Gateway RPi4-02 conectado como cliente STA HaLow} a este Mesh Point, gestionando 15 nodos Thread locales. Role: Relay tráfico entre Gateway RPi4-02 y Mesh Gate, path primario via Tube-02 (1 hop), path secundario directo Tube-01 (1 hop, usado si Tube-02 falla).
 \end{itemize}
 
 \textbf{Peer Links establecidos:}
@@ -641,10 +647,13 @@ Validación piloto real (30 Border Routers, telemetría 15 min, burst simultáne
 
 \textbf{Trade-off RAW:} Incrementa latency promedio +8 ms (STAs esperan slot asignado vs competir inmediatamente EDCA), pero \textbf{reduce jitter 75\%} (latencia predecible vs exponential backoff aleatorio CSMA). Para AMI con requisito latency <500 ms pero jitter <100 ms (billing accuracy), RAW resulta óptimo.
 
-\subsection{Configuración del Router MikroTik Tube AHM}
-\label{sec:gateway-halow-mikrotik}
+\subsection{Configuración del Router Alfa Networks Tube AHM}
+\label{sec:gateway-halow-alfa}
 
-\textbf{Hardware MikroTik Tube AHM (Morse Micro MM6108):}
+% Insertar diagrama de conexión hardware detallado
+\input{fig_halow_hardware_detail}
+
+\textbf{Hardware Alfa Networks Tube AHM (Morse Micro MM6108):}
 
 \begin{itemize}
     \item \textbf{Chipset:} Morse Micro MM6108 (802.11ah compliant), ARM Cortex-M4 @ 120 MHz, 512 KB SRAM
@@ -1197,14 +1206,14 @@ Este capítulo presentó la implementación completa del Gateway Inteligente y R
     
     \item \textbf{OpenThread Border Router (OTBR):} Implementación completa NAT64/DNS64 permite conectividad Thread mesh (Nivel 1 nodos) $\rightarrow$ IPv6/IPv4 internet. Thread Commissioner automatiza comisionado 30 nodos piloto, tiempo promedio 2.8$\pm$0.4s por nodo, tasa éxito 100\% (30/30 first-attempt). OTBR valida latencia Thread $\rightarrow$ Internet 44.7 ms promedio (dentro requisito <500 ms IEC 62056 AMI).
     
-    \item \textbf{Red HaLow IEEE 802.11ah (NOVEDAD PRINCIPAL):} Primera implementación documentada malla 802.11s HaLow para AMI en literatura científica. Topología 3$\times$ MikroTik Tube AHM (\$267 CAPEX total) logra: (a) Alcance 1.2 km LOS validado (RSSI -93 dBm con 2 dB margen vs sensibilidad MCS3), (b) Throughput 4.2 Mbps @ 4 MHz bandwidth MCS7, (c) Latencia RTT 11.3 ms P50 / 14.2 ms P95 (dentro <20 ms requisito IEEE 2030.5 Demand Response). Protocolo HWMP (Hybrid Wireless Mesh Protocol) con métrica airtime cost optimiza path selection multi-hop. RAW (Restricted Access Window) reduce packet loss 93\% (4.2\% $\rightarrow$ 0.3\%) en burst simultáneo 30 Border Routers vs EDCA puro. Cobertura 92\% área 0.8 km² barrio piloto con RSSI >-85 dBm (suficiente MCS5+ 2 Mbps).
+    \item \textbf{Red HaLow IEEE 802.11ah (NOVEDAD PRINCIPAL):} Primera implementación documentada malla 802.11s HaLow para AMI en literatura científica. Topología 3$\times$ Alfa Networks Tube AHM (\$267 CAPEX total) logra: (a) Alcance 1.2 km LOS validado (RSSI -93 dBm con 2 dB margen vs sensibilidad MCS3), (b) Throughput 4.2 Mbps @ 4 MHz bandwidth MCS7, (c) Latencia RTT 11.3 ms P50 / 14.2 ms P95 (dentro <20 ms requisito IEEE 2030.5 Demand Response). Protocolo HWMP (Hybrid Wireless Mesh Protocol) con métrica airtime cost optimiza path selection multi-hop. RAW (Restricted Access Window) reduce packet loss 93\% (4.2\% $\rightarrow$ 0.3\%) en burst simultáneo 30 Border Routers vs EDCA puro. Cobertura 92\% área 0.8 km² barrio piloto con RSSI >-85 dBm (suficiente MCS5+ 2 Mbps).
     
     \item \textbf{ThingsBoard Edge:} Plataforma edge open-source (Zero OPEX licencia) logra reducción 72\% tráfico WAN mediante Rule Chains locales (9,600 msgs/día ingreso $\rightarrow$ 2,640 msgs/día sincronización cloud), ahorro 6.8 MB/día datos LTE por Gateway. Buffer offline PostgreSQL 7 días (128 GB SD card capacidad 20M msgs, 626$\times$ margen vs 67K msgs piloto) validado durante 3 eventos desconexión WAN (87 min downtime acumulado) con 100\% preservación datos. Dashboards locales permiten operadores campo trabajar sin conectividad internet. Comparativa vs AWS Greengrass (\$2.20/device/mes) y Azure IoT Edge (\$1.50/device/mes) confirma ThingsBoard Edge ahorro 100\% OPEX (open-source) para 192 devices piloto.
 \end{enumerate}
 
 \textbf{Regla de Exclusión aplicada - HaLow y OTBR exhaustados:}
 
-Contenido IEEE 802.11ah Wi-Fi HaLow (fundamentos S1G PHY, mesh 802.11s, HWMP routing, RAW optimization, MikroTik configuración) y OpenThread Border Router (interfaces wpan0/eth0, NAT64/DNS64, Commissioner) presentados exhaustivamente en este capítulo. Capítulos posteriores (Cap 5 Server Cloud, Cap 6 Resultados) referencian HaLow/OTBR como tecnologías establecidas sin repetir detalles técnicos, enfocando análisis en métricas operacionales agregadas y costos deployment.
+Contenido IEEE 802.11ah Wi-Fi HaLow (fundamentos S1G PHY, mesh 802.11s, HWMP routing, RAW optimization, configuración Alfa Networks) y OpenThread Border Router (interfaces wpan0/eth0, NAT64/DNS64, Commissioner) presentados exhaustivamente en este capítulo. Capítulos posteriores (Cap 5 Server Cloud, Cap 6 Resultados) referencian HaLow/OTBR como tecnologías establecidas sin repetir detalles técnicos, enfocando análisis en métricas operacionales agregadas y costos deployment.
 
 \textbf{Transición al Capítulo 5:}
 

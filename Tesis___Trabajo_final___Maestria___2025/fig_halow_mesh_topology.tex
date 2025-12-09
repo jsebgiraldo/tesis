@@ -1,0 +1,143 @@
+% Diagrama de topología HaLow Mesh con Raspberry Pi 4 como clientes STA
+% Muestra 3 Alfa Networks Tube AHM (MT7628) formando mesh IEEE 802.11s
+% y 3 Raspberry Pi 4 conectados como STAs vía HaLow
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+    % Estilos de nodos
+    meshgate/.style={rectangle, draw=blue!60, fill=blue!20, thick, minimum width=2.5cm, minimum height=1.2cm, rounded corners, font=\small\bfseries},
+    meshpoint/.style={rectangle, draw=green!60, fill=green!20, thick, minimum width=2.5cm, minimum height=1.2cm, rounded corners, font=\small\bfseries},
+    gateway/.style={rectangle, draw=orange!60, fill=orange!20, thick, minimum width=2.8cm, minimum height=1.4cm, rounded corners, font=\small},
+    thread/.style={circle, draw=purple!60, fill=purple!10, thick, minimum size=0.8cm, font=\tiny},
+    % Estilos de conexiones
+    mesh/.style={<->, thick, draw=green!70!black, dashed},
+    halow/.style={->, thick, draw=blue!70!black, dotted},
+    ethernet/.style={-, thick, draw=black},
+    threadlink/.style={-, thick, draw=purple!70!black, dotted}
+]
+
+% ============ CAPA 1: RED HALOW MESH (802.11s) ============
+
+% Mesh Gate (Tube-01) - Root con backhaul
+\node[meshgate] (tube01) at (0,6) {
+    \textbf{Tube-01}\\
+    \textcolor{blue}{\footnotesize Mesh Gate}
+};
+\node[below=0.1cm of tube01, font=\tiny, text width=3cm, align=center] {
+    Alfa Tube AHM\\MT7628 + MM6108\\915 MHz @ 4 MHz BW\\+20 dBm TX
+};
+
+% Mesh Point 2 (Tube-02) - Relay intermedio
+\node[meshpoint] (tube02) at (-4,3) {
+    \textbf{Tube-02}\\
+    \textcolor{green!50!black}{\footnotesize Mesh Point}
+};
+\node[below=0.1cm of tube02, font=\tiny, text width=3cm, align=center] {
+    Relay 280m\\RSSI -72 dBm\\Airtime cost 512
+};
+
+% Mesh Point 3 (Tube-03) - Relay extremo
+\node[meshpoint] (tube03) at (4,3) {
+    \textbf{Tube-03}\\
+    \textcolor{green!50!black}{\footnotesize Mesh Point}
+};
+\node[below=0.1cm of tube03, font=\tiny, text width=3cm, align=center] {
+    Relay 520m\\RSSI -88 dBm\\Airtime cost 2048
+};
+
+% Enlaces mesh 802.11s (peer links bidireccionales)
+\draw[mesh] (tube01) -- (tube02) node[midway, above, sloped, font=\tiny] {Peer Link 1};
+\draw[mesh] (tube01) -- (tube03) node[midway, above, sloped, font=\tiny] {Peer Link 2};
+\draw[mesh] (tube02) -- (tube03) node[midway, above, font=\tiny] {Peer Link 3};
+
+% Etiqueta red mesh
+\node[above=0.3cm of tube01, font=\small\bfseries, text=blue!70!black] {
+    Red HaLow Mesh IEEE 802.11s (902-928 MHz)
+};
+
+% ============ CAPA 2: GATEWAYS RASPBERRY PI 4 (CLIENTES STA) ============
+% SOLO 2 GATEWAYS: RPi4-01 conectado a Tube-02, RPi4-02 conectado a Tube-03
+
+% Gateway 1 (RPi4-01) - Conectado a Mesh Point 2 (Tube-02)
+\node[gateway] (rpi01) at (-4,0) {
+    \textbf{RPi4-01}\\
+    \footnotesize Gateway Edge
+};
+\node[below=0.1cm of rpi01, font=\tiny, text width=3.2cm, align=center] {
+    HaLow STA (wireless)\\ThingsBoard Edge\\OTBR + Docker stack
+};
+
+% Gateway 2 (RPi4-02) - Conectado a Mesh Point 3 (Tube-03)
+\node[gateway] (rpi02) at (4,0) {
+    \textbf{RPi4-02}\\
+    \footnotesize Gateway Edge
+};
+\node[below=0.1cm of rpi02, font=\tiny, text width=3.2cm, align=center] {
+    HaLow STA (wireless)\\ThingsBoard Edge\\OTBR + Docker stack
+};
+
+% Conexiones HaLow (STAs hacia APs mesh) - SOLO a Mesh Points, NO al Mesh Gate
+\draw[halow] (rpi01) -- (tube02) node[midway, right, font=\tiny] {HaLow STA};
+\draw[halow] (rpi02) -- (tube03) node[midway, right, font=\tiny] {HaLow STA};
+
+% Etiqueta capa gateways
+\node[left=0.5cm of rpi01, font=\small\bfseries, text=orange!70!black, rotate=90, anchor=south] {
+    2 Gateways Edge (HaLow STAs)
+};
+
+% ============ CAPA 3: NODOS THREAD (ejemplo) ============
+
+% Nodos Thread conectados a RPi4-01 (via Mesh Point 2)
+\node[thread] (t01) at (-4.8,-1.5) {T1};
+\node[thread] (t02) at (-4,-1.5) {T2};
+\node[thread] (t03) at (-3.2,-1.5) {T3};
+
+% Nodos Thread conectados a RPi4-02 (via Mesh Point 3)
+\node[thread] (t04) at (3.2,-1.5) {T4};
+\node[thread] (t05) at (4,-1.5) {T5};
+\node[thread] (t06) at (4.8,-1.5) {T6};
+
+% Enlaces Thread (IEEE 802.15.4 mesh)
+\draw[threadlink] (rpi01) -- (t01);
+\draw[threadlink] (rpi01) -- (t02);
+\draw[threadlink] (rpi01) -- (t03);
+\draw[threadlink] (rpi02) -- (t04);
+\draw[threadlink] (rpi02) -- (t05);
+\draw[threadlink] (rpi02) -- (t06);
+
+% Etiqueta capa Thread
+\node[below=0.3cm of t05, font=\small\bfseries, text=purple!70!black] {
+    Nodos Thread (IEEE 802.15.4 @ 2.4 GHz) - 30 total
+};
+
+% ============ BACKHAUL (ETHERNET LOCAL) ============
+
+% Switch Ethernet local (arriba del Mesh Gate)
+\node[rectangle, draw=black, fill=gray!10, thick, minimum width=2.5cm, minimum height=0.8cm] (switch) at (0,8) {
+    \textbf{Switch Ethernet}\\
+    \tiny Local network
+};
+
+% Conexión Ethernet desde Mesh Gate a Switch
+\draw[ethernet] (tube01) -- (switch) node[midway, right, font=\tiny] {GbE};
+
+% Nota sobre server on-premise
+\node[above=0.1cm of switch, font=\tiny, text width=4cm, align=center, text=gray!70!black] {
+    Server on-premise conectado\\al mismo switch (Cap. 5)
+};
+
+% ============ LEYENDA ============
+
+\node[below=2cm of t02, font=\footnotesize, text width=5cm, align=left] (legend) {
+    \textbf{Leyenda:}\\[0.2cm]
+    \tikz\draw[mesh] (0,0) -- (0.5,0); Peer Link 802.11s\\
+    \tikz\draw[halow] (0,0) -- (0.5,0); HaLow STA to AP\\
+    \tikz\draw[threadlink] (0,0) -- (0.5,0); Thread 802.15.4\\
+    \tikz\draw[ethernet] (0,0) -- (0.5,0); Ethernet GbE
+};
+
+\end{tikzpicture}
+\caption{Topología HaLow Mesh con Gateways Raspberry Pi 4 como clientes STA. Red HaLow (capa superior) comprende 3 routers Alfa Networks Tube AHM formando mesh IEEE 802.11s con protocolo HWMP: 1 Mesh Gate (Tube-01) con backhaul Ethernet a switch local (server on-premise conectado al mismo switch, detallado Capítulo 5), y 2 Mesh Points (Tube-02, Tube-03) relay. Gateways Raspberry Pi 4 (capa intermedia, 2 unidades) se conectan como clientes STA inalámbricos exclusivamente a los Mesh Points (NO al Mesh Gate), ejecutando ThingsBoard Edge y OTBR. Nodos Thread (capa inferior) forman mesh IEEE 802.15.4 conectado a cada gateway vía nRF52840 Dongle USB. Este capítulo enfoca en red HaLow mesh 802.11s y edge gateways; conectividad WAN se documenta Capítulo 5.}
+\label{fig:halow-mesh-topology}
+\end{figure}

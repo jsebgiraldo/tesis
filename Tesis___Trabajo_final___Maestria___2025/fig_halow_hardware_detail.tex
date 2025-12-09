@@ -1,0 +1,101 @@
+% Diagrama detallado de conexión hardware Alfa Networks Tube AHM con Raspberry Pi 4
+% Muestra configuración física: Tube AHM como AP HaLow, RPi4 como STA con módulo HaLow USB
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+    % Estilos
+    device/.style={rectangle, draw=black, thick, minimum width=4cm, minimum height=3cm, rounded corners},
+    module/.style={rectangle, draw=blue!60, fill=blue!10, thick, minimum width=2.5cm, minimum height=1cm, rounded corners, font=\small},
+    antenna/.style={isosceles triangle, draw=red!60, fill=red!20, thick, minimum width=0.5cm, minimum height=1cm, rotate=90},
+    connector/.style={rectangle, draw=black, fill=gray!30, thick, minimum width=1.5cm, minimum height=0.4cm, font=\tiny},
+    arrow/.style={->, thick, >=stealth}
+]
+
+% ============ ALFA NETWORKS TUBE AHM (AP MESH) ============
+
+\node[device, fill=green!5] (tube) at (0,4) {};
+\node[above=-0.1cm of tube.north, font=\bfseries] {Alfa Networks Tube AHM};
+
+% Componentes internos Tube AHM
+\node[module, fill=yellow!20] at (0,5) (mt7628) {
+    \textbf{MT7628}\\
+    \tiny MIPS 580 MHz\\OpenWRT 23.05
+};
+\node[module, fill=cyan!20] at (0,3.8) (mm6108) {
+    \textbf{MM6108}\\
+    \tiny 802.11ah radio\\915 MHz @ 4 MHz
+};
+\node[antenna, fill=red!40] at (1.5,4.5) (ant_tube) {};
+\node[right=0.1cm of ant_tube, font=\tiny] {5 dBi omni};
+
+% Puerto Ethernet Tube AHM
+\node[connector] at (0,2.5) (eth_tube) {ETH0\\PoE 24V};
+
+% Etiqueta role
+\node[below=0.2cm of eth_tube, font=\footnotesize, text=green!50!black] {
+    \textbf{Role: Mesh Point AP}\\(modo ap-bridge 802.11s)
+};
+
+% ============ RASPBERRY PI 4 (STA CLIENT) ============
+
+\node[device, fill=orange!5] (rpi) at (0,-2) {};
+\node[above=-0.1cm of rpi.north, font=\bfseries] {Raspberry Pi 4 (Gateway Edge)};
+
+% Componentes Raspberry Pi 4
+\node[module, fill=orange!20] at (-1,-1.2) (cpu) {
+    \textbf{BCM2711}\\
+    \tiny ARM A72 4-core\\1.5 GHz
+};
+\node[module, fill=blue!20, minimum width=1.8cm] at (1.2,-1.2) (nrf) {
+    \textbf{nRF52840}\\
+    \tiny USB Dongle\\Thread OTBR
+};
+
+% Módulo HaLow USB (cliente STA)
+\node[module, fill=cyan!20, minimum height=1.2cm] at (0,-2.5) (halow_sta) {
+    \textbf{HaLow USB}\\
+    \tiny MM6108 module\\STA mode\\(Alfa AHPE-HM)
+};
+\node[antenna, fill=red!40] at (-1.5,-2.5) (ant_rpi) {};
+\node[left=0.1cm of ant_rpi, font=\tiny] {3 dBi};
+
+% Puerto Ethernet RPi4
+\node[connector] at (0,-3.8) (eth_rpi) {ETH0\\GbE (opcional)
+};
+
+% Etiqueta role
+\node[below=0.2cm of eth_rpi, font=\footnotesize, text=orange!70!black] {
+    \textbf{Role: HaLow Client STA}\\ThingsBoard Edge + OTBR
+};
+
+% ============ CONEXIÓN HALOW WIRELESS ============
+
+% Enlace inalámbrico HaLow
+\draw[arrow, blue!70!black, thick, dashed] (halow_sta) -- (mm6108) 
+    node[midway, right, font=\small, text width=3cm, align=left] {
+        \textbf{HaLow Link}\\
+        \tiny 915 MHz (902-928)\\
+        4 MHz BW (MCS7)\\
+        Throughput: 4 Mbps\\
+        Range: 280-520m\\
+        RSSI: -72 to -88 dBm
+    };
+
+% Señales RF
+\draw[red!50, thick, dotted] (ant_tube) to[bend left=15] (ant_rpi);
+
+% ============ NOTAS ARQUITECTURA ============
+
+\node[below=1cm of rpi, font=\footnotesize, text width=12cm, align=left] {
+    \textbf{Arquitectura correcta:}\\[0.2cm]
+    $\bullet$ \textbf{Alfa Networks Tube AHM:} Router comercial MT7628 + MM6108 radio HaLow 802.11ah. AP Mesh Point modo 802.11s.\\[0.1cm]
+    $\bullet$ \textbf{Raspberry Pi 4:} Gateway edge con Docker stack (ThingsBoard Edge, OTBR, PostgreSQL). Conecta como cliente STA a APs HaLow via USB Alfa AHPE-HM.\\[0.1cm]
+    $\bullet$ \textbf{Conexi\'on wireless:} RPi4 NO usa Ethernet hacia Tube AHM. Conexi\'on 100\% inal\'ambrica HaLow (915 MHz sub-1 GHz) con alcance 280-520m.\\[0.1cm]
+    $\bullet$ \textbf{Thread Border Router:} Cada RPi4 ejecuta OTBR mediante nRF52840 USB Dongle, creando red Thread local para 10-20 nodos IoT ESP32-C6.
+};
+
+\end{tikzpicture}
+\caption{Detalle hardware de conexión HaLow: Alfa Networks Tube AHM (AP Mesh) y Raspberry Pi 4 (STA Client). El Tube AHM integra procesador MT7628 con radio MM6108 actuando como AP mesh. El RPi4 se conecta inalámbricamente mediante módulo USB HaLow Alfa AHPE-HM (también con radio MM6108) en modo STA. No hay conexión Ethernet entre ambos dispositivos; el backhaul es 100\% wireless sub-1 GHz HaLow con alcance hasta 520m.}
+\label{fig:halow-hardware-detail}
+\end{figure}
