@@ -238,7 +238,7 @@ Se desarrollaron tres scripts Python para la integración del gateway con los pr
 \begin{itemize}
     \item CPU ARM Cortex-A72 64-bit @ 1.5 GHz (quad-core) permite ejecutar Docker + servicios con <60\% CPU bajo carga.
     \item 4 GB RAM soportan Stack completo (OpenWRT + Docker + servicios) con 1.2 GB libre.
-    \item Conectividad: 2 × USB 3.0, 2 × USB 2.0 (para dongles Thread/LTE), Ethernet Gigabit, GPIO 40-pin.
+    \item Conectividad: 2 $\times$ USB 3.0, 2 $\times$ USB 2.0 (para dongles Thread/LTE), Ethernet Gigabit, GPIO 40-pin.
     \item Consumo: 7.5 W promedio (ocioso), 12.5 W bajo carga → compatible con alimentación solar.
     \item Costo: \$55 USD (accessible para despliegues masivos).
 \end{itemize}
@@ -250,10 +250,10 @@ Se desarrollaron tres scripts Python para la integración del gateway con los pr
 \begin{tabular}{|l|c|c|c|c|}
 \hline
 \textbf{Plataforma} & \textbf{CPU} & \textbf{RAM} & \textbf{Consumo} & \textbf{Costo} \\ \hline
-Raspberry Pi 4 & 4×1.5 GHz & 4 GB & 12.5 W & \$55 \\ \hline
-NVIDIA Jetson Nano & 4×1.43 GHz & 4 GB & 10 W & \$99 \\ \hline
-BeagleBone Black & 1×1 GHz & 512 MB & 2.3 W & \$60 \\ \hline
-Intel NUC i3 & 2×3.0 GHz & 8 GB & 25 W & \$299 \\ \hline
+Raspberry Pi 4 & 4$\times$1.5 GHz & 4 GB & 12.5 W & \$55 \\ \hline
+NVIDIA Jetson Nano & 4$\times$1.43 GHz & 4 GB & 10 W & \$99 \\ \hline
+BeagleBone Black & 1$\times$1 GHz & 512 MB & 2.3 W & \$60 \\ \hline
+Intel NUC i3 & 2$\times$3.0 GHz & 8 GB & 25 W & \$299 \\ \hline
 \end{tabular}
 \end{table}
 
@@ -530,7 +530,7 @@ WHERE dbl_v IS NOT NULL
 GROUP BY entity_id, key, bucket;
 \end{verbatim}
 
-Esta vista se actualiza automáticamente cada 5 minutos, permitiendo consultas agregadas 100× más rápidas.
+Esta vista se actualiza automáticamente cada 5 minutos, permitiendo consultas agregadas 100$\times$ más rápidas.
 
 \textit{Nota}: El esquema completo de base de datos TimescaleDB, incluyendo políticas de retención, compression policies, índices adicionales y triggers, se documenta en el Anexo D.
 
@@ -633,7 +633,7 @@ El gateway almacena hasta 7 días de telemetría en PostgreSQL local. En caso de
     \item La sincronización usa batch uploads de hasta 1000 registros por petición para optimizar ancho de banda.
 \end{enumerate}
 
-Capacidad de buffer: 100 medidores × 96 lecturas/día × 7 días = 67,200 registros ≈ 8 MB (con índices ~30 MB).
+Capacidad de buffer: 100 medidores $\times$ 96 lecturas/día $\times$ 7 días = 67,200 registros ≈ 8 MB (con índices ~30 MB).
 
 \subsection{Watchdog y Reinicio Automático}
 

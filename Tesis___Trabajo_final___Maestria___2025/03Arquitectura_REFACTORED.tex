@@ -285,7 +285,7 @@ El Gateway requiere conectividad WAN para publicar datos agregados a ThingsBoard
 
 Cat-M1 seleccionado por balance óptimo entre throughput, latencia y consumo energético:
 
-\textbf{(1) Throughput adecuado:} Gateway con 1,000 medidores genera tráfico uplink 26.4 kbps promedio, picos burst 53 kbps. Cat-M1 uplink 375 kbps >> 53 kbps: 7× margen. Cat-NB1 (20 kbps typical) insuficiente.
+\textbf{(1) Throughput adecuado:} Gateway con 1,000 medidores genera tráfico uplink 26.4 kbps promedio, picos burst 53 kbps. Cat-M1 uplink 375 kbps >> 53 kbps: 7$\times$ margen. Cat-NB1 (20 kbps typical) insuficiente.
 
 \textbf{(2) Latencia baja crítica:} Demand Response (DR) requiere latencia <500 ms E2E. Cat-M1 latency 10-50 ms permite cumplir requisito. Cat-NB1 latency 1.6-10 s viola spec IEEE 2030.5.
 
@@ -353,13 +353,13 @@ ThingsBoard Edge seleccionado por cinco ventajas críticas:
 
 \textbf{(1) Operación offline completa:} Dashboards React en puerto 8080, Rule Engine ejecuta JavaScript localmente, PostgreSQL+TimescaleDB almacena 90 días telemetría local con queries SQL sin dependencia internet. AWS/Azure requieren cloud para dashboards.
 
-\textbf{(2) TCO 5 años (10,000 medidores):} ThingsBoard Cloud PE: \$60,000 (10K devices × \$0.10/mes × 60 meses). AWS Greengrass: \$240,000 (IoT Core msgs + Shadow sync + S3 storage). Azure IoT Edge: \$154,500 (IoT Hub + egress + Azure SQL). Ahorro ThingsBoard: \$180K (AWS) o \$94.5K (Azure).
+\textbf{(2) TCO 5 años (10,000 medidores):} ThingsBoard Cloud PE: \$60,000 (10K devices $\times$ \$0.10/mes $\times$ 60 meses). AWS Greengrass: \$240,000 (IoT Core msgs + Shadow sync + S3 storage). Azure IoT Edge: \$154,500 (IoT Hub + egress + Azure SQL). Ahorro ThingsBoard: \$180K (AWS) o \$94.5K (Azure).
 
 \textbf{(3) Cero vendor lock-in:} Arquitectura 100\% portable con REST/MQTT APIs estándar, PostgreSQL export/import trivial. AWS/Azure lock-in profundo (Lambda functions, DynamoDB, S3 buckets). Costo switching estimado: \$50k-150k engineering.
 
 \textbf{(4) Requisitos hardware accesibles:} Raspberry Pi 4 4GB suficiente (\$55) vs AWS/Azure requieren RPi 4 8GB o x86 (\$75-200). Ahorro hardware 10 Gateways: \$200-1,450.
 
-\textbf{(5) Time-series optimization nativa:} TimescaleDB provee hypertables con particionamiento automático (chunks 7 días), compresión 10:1 columnar storage, continuous aggregates (latency <100 ms queries). AWS Timestream: \$15,000/mes para 10K devices (300× más caro).
+\textbf{(5) Time-series optimization nativa:} TimescaleDB provee hypertables con particionamiento automático (chunks 7 días), compresión 10:1 columnar storage, continuous aggregates (latency <100 ms queries). AWS Timestream: \$15,000/mes para 10K devices (300$\times$ más caro).
 
 \textbf{Trade-offs aceptados:} Límite 5,000 devices Community (upgrade a Pro \$2,500/mes sigue 50\% más barato que AWS/Azure). ML inference menos integrado (requiere custom TensorFlow Lite wrapper vs AWS SageMaker Edge managed).
 
@@ -442,7 +442,7 @@ La arquitectura jerárquica de 4 niveles presentada optimiza el balance costo-de
 
 \textbf{Nivel 3 (Gateway Edge):} ThingsBoard Edge 3.6 en Raspberry Pi CM4 ejecuta Rule Engine JavaScript para detección anomalías (latencia procesamiento edge 8±2 ms validada piloto Q4 2024), agregación temporal TimescaleDB (continuous aggregates con compresión 10:1), y buffer offline 72h (capacidad 90 GB para 1000 medidores). Reducción 72\% tráfico WAN mediante eliminación redundancia + run-length encoding. TCO 5 años: \$60K ThingsBoard vs \$240K AWS Greengrass vs \$154.5K Azure IoT Edge (ahorro \$180K-\$94.5K). Cero vendor lock-in con APIs REST/MQTT estándar y PostgreSQL export/import trivial.
 
-\textbf{Nivel 4 (Plataforma Cloud):} ThingsBoard PE en AWS con cluster EC2 Auto Scaling (3× t3.xlarge), RDS PostgreSQL Multi-AZ (RTO=60s, RPO=0), Cassandra 4.0 time-series (50 TB capacity, RF=3), y MSK Kafka (50K msg/s throughput, P99 latency <100 ms). Dashboards multi-tenant RBAC, reportes regulatorios CREG 015 automatizados, integración bidireccional SCADA/CIS REST APIs, analítica batch Spark EMR (detección fraude Isolation Forest). SLA 99.95\% uptime anual con DR plan RTO=2h RPO=6h.
+\textbf{Nivel 4 (Plataforma Cloud):} ThingsBoard PE en AWS con cluster EC2 Auto Scaling (3$\times$ t3.xlarge), RDS PostgreSQL Multi-AZ (RTO=60s, RPO=0), Cassandra 4.0 time-series (50 TB capacity, RF=3), y MSK Kafka (50K msg/s throughput, P99 latency <100 ms). Dashboards multi-tenant RBAC, reportes regulatorios CREG 015 automatizados, integración bidireccional SCADA/CIS REST APIs, analítica batch Spark EMR (detección fraude Isolation Forest). SLA 99.95\% uptime anual con DR plan RTO=2h RPO=6h.
 
 \textbf{Métricas globales arquitectura:} Latencia E2E 248 ms cumple IEC 62056 (<1s) con 75\% margen. Disponibilidad sistema 99.62\% medida piloto 90 días excede objetivo 99.5\%. Consumo energético 2.47 W/medidor (53\% reducción vs baseline cloud-only 5.3 W/medidor), ahorro \$24,791 en 10 años para 1000 medidores + reducción 124 toneladas CO₂. Autonomía baterías respaldo 18-20h excede requisito IEC 62052 (8h mínimo). Escalabilidad validada: arquitectura soporta 10,000-100,000 medidores con escalamiento horizontal Gateway Edge + cloud Kafka/Cassandra.
 

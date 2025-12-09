@@ -351,9 +351,9 @@ La implementación física del nodo IoT utiliza el módulo ESP32-C6-WROOM-1 de E
     \item \textbf{Memoria:} 512 KB SRAM (400 KB disponible user, 112 KB ROM bootloader), 4 MB Flash QSPI integrada (3.2 MB disponible tras partitions bootloader/nvs/coredump)
     \item \textbf{Radio IEEE 802.15.4:} 2400-2483.5 MHz, TX power -24 a +21 dBm (configurable 1 dB steps), RX sensitivity -103 dBm @ 250 kbps
     \item \textbf{Radio BLE 5.0:} Compartido con 802.15.4 (time-slicing autónomo), LE Coded PHY (125/500 kbps), LE 2M PHY (2 Mbps), advertising extensions
-    \item \textbf{Periféricos:} 3× UART, 2× SPI, 1× I2C, 2× I2S, 6× PWM, 7× ADC 12-bit (rango 0-3.3V, 48 kHz sample rate), RTC con ULP coprocessor (consuming 10 µA)
+    \item \textbf{Periféricos:} 3$\times$ UART, 2$\times$ SPI, 1$\times$ I2C, 2$\times$ I2S, 6$\times$ PWM, 7$\times$ ADC 12-bit (rango 0-3.3V, 48 kHz sample rate), RTC con ULP coprocessor (consuming 10 µA)
     \item \textbf{Seguridad:} AES-128/256, SHA-256, RSA-2048/3072, ECDSA P-256, Secure Boot v2, Flash Encryption, TRNG (True Random Number Generator)
-    \item \textbf{Package:} QFN56 7×7mm (ESP32-C6-WROOM-1: módulo pre-certificado FCC/CE/IC con antena PCB integrada)
+    \item \textbf{Package:} QFN56 7$\times$7mm (ESP32-C6-WROOM-1: módulo pre-certificado FCC/CE/IC con antena PCB integrada)
 \end{itemize}
 
 \textbf{Board ESP32-C6-DevKitC-1:}
@@ -366,7 +366,7 @@ Development kit oficial Espressif utilizado en piloto (30 unidades), posteriorme
     \item LDO 3.3V AMS1117 (1A max, eficiencia 75\%, genera 1.3W heat @ 5V input 500mA load)
     \item Botón BOOT (GPIO9, pull-up) + botón RESET (EN pin)
     \item LED RGB WS2812 (GPIO8, indicador estado: verde=Thread joined, rojo=alarm, azul=commissioning)
-    \item Header pins 2×19 (38 GPIO expuestos, pitch 2.54mm compatible breadboard)
+    \item Header pins 2$\times$19 (38 GPIO expuestos, pitch 2.54mm compatible breadboard)
 \end{itemize}
 
 \textbf{Sensores y periféricos externos:}
@@ -516,7 +516,7 @@ El Emsitech ET-340 es un medidor electrónico trifásico de energía activa/reac
 
 \textbf{Medición eléctrica:}
 \begin{itemize}
-    \item \textbf{Voltaje nominal:} 3×220/380V (configurable 3×127/220V), rango operativo 0.8-1.2 Vn (176-264V fase)
+    \item \textbf{Voltaje nominal:} 3$\times$220/380V (configurable 3$\times$127/220V), rango operativo 0.8-1.2 Vn (176-264V fase)
     \item \textbf{Corriente nominal:} 5(60)A clase 1.0, corriente de arranque 20 mA (0.4\% In)
     \item \textbf{Frecuencia:} 50/60 Hz ± 5\% (47.5-63 Hz)
     \item \textbf{Precisión:} Clase 1.0 energía activa (IEC 62053-22), Clase 2.0 energía reactiva (IEC 62053-23)
@@ -535,7 +535,7 @@ El Emsitech ET-340 es un medidor electrónico trifásico de energía activa/reac
 \textbf{Funcionalidades avanzadas:}
 \begin{itemize}
     \item \textbf{Registro de eventos:} 1000 eventos almacenados (fallas de fase, inversión de corriente, tamper magnético, apertura de cubierta)
-    \item \textbf{Perfiles de carga:} Buffer circular 35 días × 96 intervalos/día (15 min) = 3360 registros de potencia/energía
+    \item \textbf{Perfiles de carga:} Buffer circular 35 días $\times$ 96 intervalos/día (15 min) = 3360 registros de potencia/energía
     \item \textbf{Relé de corte:} 60A @ 250VAC, control remoto vía comando DLMS (código OBIS 0-0:96.3.10*255)
     \item \textbf{Display LCD:} 8 dígitos, 16 pantallas rotativas (energía activa/reactiva, demanda máxima, voltajes fase, corrientes fase)
 \end{itemize}
@@ -602,7 +602,7 @@ El sistema de codificación OBIS (Object Identification System, IEC 62056-61) de
 \end{tabular}}
 \end{table}
 
-\textbf{Total registros leídos por polling:} 17 registros OBIS × 15 min = 96 lecturas/día × 30 medidores = 2,880 transacciones DLMS/día en el piloto.
+\textbf{Total registros leídos por polling:} 17 registros OBIS $\times$ 15 min = 96 lecturas/día $\times$ 30 medidores = 2,880 transacciones DLMS/día en el piloto.
 
 \subsection{Análisis de Payload y Carga de Red}
 \label{sec:nodo-payload-analysis}
@@ -617,7 +617,7 @@ Esta sección cuantifica el volumen de datos generado por el medidor trifásico,
     \item \textbf{Request (ESP32-C6 → Medidor):}
     \begin{itemize}
         \item HDLC Header: 8 bytes (Flag 0x7E, Address 2B, Control 1B, HCS 2B)
-        \item DLMS GET Request: 45 bytes (APDU Tag, Invoke-ID, 17× OBIS codes 6 bytes c/u)
+        \item DLMS GET Request: 45 bytes (APDU Tag, Invoke-ID, 17$\times$ OBIS codes 6 bytes c/u)
         \item HDLC Trailer: 3 bytes (FCS 2B, Flag 0x7E)
         \item \textbf{Total Request: 56 bytes}
     \end{itemize}
@@ -625,15 +625,15 @@ Esta sección cuantifica el volumen de datos generado por el medidor trifásico,
     \item \textbf{Response (Medidor → ESP32-C6):}
     \begin{itemize}
         \item HDLC Header: 8 bytes
-        \item DLMS GET Response: 142 bytes (APDU Tag, Invoke-ID, 17× valores con tipo+dato)
+        \item DLMS GET Response: 142 bytes (APDU Tag, Invoke-ID, 17$\times$ valores con tipo+dato)
         \begin{itemize}
-            \item 4× Energías (double-long-unsigned): 4×5 bytes = 20 bytes
-            \item 7× Voltajes/Corrientes (unsigned): 7×3 bytes = 21 bytes
-            \item 2× Factor potencia/Frecuencia (unsigned): 2×3 bytes = 6 bytes
-            \item 1× Demanda máxima (double-long-unsigned): 5 bytes
-            \item 1× Timestamp (octet-string 12B): 14 bytes (type 2B + length 12B)
-            \item 1× Número serie (octet-string 16B): 18 bytes
-            \item 2× Estado relé/Contador (unsigned): 2×3 bytes = 6 bytes
+            \item 4$\times$ Energías (double-long-unsigned): 4$\times$5 bytes = 20 bytes
+            \item 7$\times$ Voltajes/Corrientes (unsigned): 7$\times$3 bytes = 21 bytes
+            \item 2$\times$ Factor potencia/Frecuencia (unsigned): 2$\times$3 bytes = 6 bytes
+            \item 1$\times$ Demanda máxima (double-long-unsigned): 5 bytes
+            \item 1$\times$ Timestamp (octet-string 12B): 14 bytes (type 2B + length 12B)
+            \item 1$\times$ Número serie (octet-string 16B): 18 bytes
+            \item 2$\times$ Estado relé/Contador (unsigned): 2$\times$3 bytes = 6 bytes
             \item Overhead DLMS (Tags, lengths): 52 bytes
         \end{itemize}
         \item HDLC Trailer: 3 bytes
@@ -684,7 +684,7 @@ El nodo ESP32-C6 empaqueta los 17 valores OBIS en formato JSON compacto y lo tra
     \item MTU IEEE 802.15.4: 127 bytes
     \item Payload disponible tras overhead: 127 - 42 = 85 bytes
     \item Payload JSON: 385 bytes → Requiere $\lceil 385/85 \rceil = 5$ fragmentos
-    \item Overhead fragmentación (4 bytes FRAG1 header + 5 bytes FRAGn headers): 4 + 4×5 = 24 bytes
+    \item Overhead fragmentación (4 bytes FRAG1 header + 5 bytes FRAGn headers): 4 + 4$\times$5 = 24 bytes
 \end{itemize}
 
 \textbf{Total bytes transmitidos Thread:} 385 + 42 + 24 = \textbf{451 bytes por mensaje} (5 frames IEEE 802.15.4)
@@ -694,7 +694,7 @@ El nodo ESP32-C6 empaqueta los 17 valores OBIS en formato JSON compacto y lo tra
 T_{Thread} = \frac{451 \text{ bytes} \times 8 \text{ bits/byte}}{250,000 \text{ bps}} = 14.4 \text{ ms}
 \end{equation}
 
-Overhead adicional: CSMA/CA backoff (promedio 2.5 ms), ACK turnaround (5× 1.8 ms = 9 ms) → \textbf{Total: ~26 ms transmisión Thread}.
+Overhead adicional: CSMA/CA backoff (promedio 2.5 ms), ACK turnaround (5$\times$ 1.8 ms = 9 ms) → \textbf{Total: ~26 ms transmisión Thread}.
 
 \subsubsection{Carga de Red Agregada}
 
@@ -713,7 +713,7 @@ Overhead adicional: CSMA/CA backoff (promedio 2.5 ms), ACK turnaround (5× 1.8 m
     R_{peak} = \frac{100 \times 451 \times 8}{60} = 6,013 \text{ bps} = 2.4\% \text{ utilización}
     \end{equation}
     
-    \item \textbf{Latencia agregada Thread (3 hops mesh):} 26 ms transmisión × 3 hops + 12 ms forwarding = \textbf{90 ms end-to-end} nodo → Border Router
+    \item \textbf{Latencia agregada Thread (3 hops mesh):} 26 ms transmisión $\times$ 3 hops + 12 ms forwarding = \textbf{90 ms end-to-end} nodo → Border Router
     
     \item \textbf{Almacenamiento gateway (buffer 7 días):}
     \begin{equation}
@@ -917,9 +917,9 @@ Esta sección presenta validación experimental del nodo ESP32-C6 de forma \text
 
 \textbf{Setup experimental:}
 \begin{itemize}
-    \item 1× nodo ESP32-C6-DevKitC-1 (device under test)
-    \item 1× nRF52840 Dongle (OpenThread Border Router v0.3.0)
-    \item 1× Raspberry Pi 4 ejecutando Wireshark 4.0.8 (captura 802.15.4 via nRF52840 sniffer)
+    \item 1$\times$ nodo ESP32-C6-DevKitC-1 (device under test)
+    \item 1$\times$ nRF52840 Dongle (OpenThread Border Router v0.3.0)
+    \item 1$\times$ Raspberry Pi 4 ejecutando Wireshark 4.0.8 (captura 802.15.4 via nRF52840 sniffer)
     \item Power Profiler Kit II (Nordic Semiconductor) midiendo corriente nodo @ 5V
     \item Duración: 48 horas continuas (2024-10-15 00:00 a 2024-10-17 00:00)
     \item Entorno: Cámara semi-anechoic (atenuar interferencias WiFi), temperatura controlada 23±2°C
@@ -969,7 +969,7 @@ Firmware processing & 31.5 mA & 0.2\% & 0.06 mA & 0.04 Wh \tabularnewline
     \item Consumo promedio 19.3 mA @ 5V = 96.5 mW coincide con predicción teórica (\S\ref{sec:nodo-energia}: 95 mW) con error +1.6\%.
     \item RX Idle domina consumo (98.8\% tiempo, 93\% energía), validando decisión MED vs SED para latencia crítica.
     \item TX duty cycle 0.2\% (1.73s cada 900s) refleja reporting interval 15 min: lectura sensores (0.5s) + encode LwM2M TLV (0.2s) + CoAP transmission (1.03s incluyendo retries 10\% paquetes).
-    \item Energía total 48h: 2.45 Wh/día × 2 días = 4.9 Wh medido vs 11.1 Wh batería LiPo 3000 mAh @ 3.7V. Autonomía: $\frac{11.1}{2.45} = 4.5$ días (108 horas) operación continua. Discrepancia vs 19.3h predicho (\S\ref{sec:nodo-energia}) explicada: cálculo teórico asumió voltaje 5V (alimentación medidor), experimental usó batería 3.7V (eficiencia LDO 85\% vs 100\%).
+    \item Energía total 48h: 2.45 Wh/día $\times$ 2 días = 4.9 Wh medido vs 11.1 Wh batería LiPo 3000 mAh @ 3.7V. Autonomía: $\frac{11.1}{2.45} = 4.5$ días (108 horas) operación continua. Discrepancia vs 19.3h predicho (\S\ref{sec:nodo-energia}) explicada: cálculo teórico asumió voltaje 5V (alimentación medidor), experimental usó batería 3.7V (eficiencia LDO 85\% vs 100\%).
 \end{itemize}
 
 \textbf{Validación autonomía real:} Nodo desconectado de fuente, operando solo con batería LiPo 3000 mAh. Monitored hasta shutdown por batería agotada (cutoff 3.0V). Resultado: \textbf{106.2 horas} (4.4 días) operación continua, confirma cálculo teórico dentro 2\% error.
@@ -1019,11 +1019,11 @@ Desv. estándar & 8.1 ms & Baja varianza confirma estabilidad \tabularnewline
 \textbf{Análisis breakdown latencia (Wireshark trace):}
 
 \begin{itemize}
-    \item \textbf{Sensor I2C read:} 4.2 ms (INA219 conversion time 532 µs × 4 sensores + I2C overhead)
+    \item \textbf{Sensor I2C read:} 4.2 ms (INA219 conversion time 532 µs $\times$ 4 sensores + I2C overhead)
     \item \textbf{LwM2M encode TLV:} 2.8 ms (Anjay library serialize 8 resources, CPU-bound @ 160 MHz)
     \item \textbf{CoAP frame build:} 1.1 ms (4-byte header + token + options + payload 120 bytes)
     \item \textbf{6LoWPAN compression:} 0.9 ms (IPHC + NHC reduce 48 bytes IPv6+UDP header a 7 bytes)
-    \item \textbf{CSMA/CA backoff:} 3.2 ms promedio (CCA 128 µs + backoff aleatorio 0-7 slots × 320 µs)
+    \item \textbf{CSMA/CA backoff:} 3.2 ms promedio (CCA 128 µs + backoff aleatorio 0-7 slots $\times$ 320 µs)
     \item \textbf{802.15.4 TX:} 4.8 ms (frame 127 bytes @ 250 kbps = 4.064 ms + preamble/SFD 160 µs + IFS 192 µs)
     \item \textbf{ACK wait:} 0.9 ms (turnaround time 192 µs + ACK frame 352 µs + processing)
     \item \textbf{OTBR processing:} 2.1 ms (descompresión 6LoWPAN + CoAP parse + log timestamp)

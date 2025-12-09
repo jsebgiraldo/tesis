@@ -415,11 +415,11 @@ Heartbeat conectividad & 5 minutos & 40 bytes \\
 \textbf{Throughput agregado necesario:}
 
 \begin{itemize}
-\item \textbf{Telemetría normal:} 10,000 medidores × 180 bytes / 60 s = 30 KB/s = 240 kbps
-\item \textbf{Waveforms:} 10,000 × 2.5 KB / 900 s = 27.8 KB/s = 222 kbps
-\item \textbf{Heartbeat:} 10,000 × 40 bytes / 300 s = 1.33 KB/s = 10.6 kbps
+\item \textbf{Telemetría normal:} 10,000 medidores $\times$ 180 bytes / 60 s = 30 KB/s = 240 kbps
+\item \textbf{Waveforms:} 10,000 $\times$ 2.5 KB / 900 s = 27.8 KB/s = 222 kbps
+\item \textbf{Heartbeat:} 10,000 $\times$ 40 bytes / 300 s = 1.33 KB/s = 10.6 kbps
 \item \textbf{Overhead protocolar:} Thread (15\%) + HaLow (8\%) + MQTT (12\%) = 35\% adicional
-\item \textbf{Total throughput downlink (medidores → gateway):} (240 + 222 + 10.6) × 1.35 = \textbf{638 kbps}
+\item \textbf{Total throughput downlink (medidores → gateway):} (240 + 222 + 10.6) $\times$ 1.35 = \textbf{638 kbps}
 \item \textbf{Total throughput uplink (comandos → medidores):} ~50 kbps (10\% del downlink)
 \end{itemize}
 
@@ -427,7 +427,7 @@ Heartbeat conectividad & 5 minutos & 40 bytes \\
 
 Asumiendo edge processing filtra 72\% del tráfico (agregación temporal, rule chains):
 \begin{itemize}
-\item \textbf{Tráfico cloud sync:} 638 kbps × 0.28 = 179 kbps (\textasciitilde{}1.3 GB/mes)
+\item \textbf{Tráfico cloud sync:} 638 kbps $\times$ 0.28 = 179 kbps (\textasciitilde{}1.3 GB/mes)
 \item \textbf{Compatible con:} LTE Cat-M1 (1 Mbps downlink), plan datos \$30/mes (\textasciitilde\$1/GB en Colombia 2024)
 \end{itemize}
 
@@ -441,14 +441,14 @@ Asumiendo edge processing filtra 72\% del tráfico (agregación temporal, rule c
 \item \textbf{Router ID limit:} Thread soporta máximo 32 Routers activos en red (especificación Thread 1.3~\cite{openthread2024})
 \item \textbf{Child table size:} Cada Router Thread mantiene hasta 511 End Devices hijos (nRF52840 implementación: 64 hijos por RAM 256 KB)
 \item \textbf{MLE routing overhead:} Con N routers, cada uno mantiene N-1 enlaces, overhead $O(N^2)$ en mensajes Advertisement
-\item \textbf{Capacidad estimada OTBR single-instance:} 8 Routers × 32 End Devices = \textbf{256 dispositivos Thread máximo}
+\item \textbf{Capacidad estimada OTBR single-instance:} 8 Routers $\times$ 32 End Devices = \textbf{256 dispositivos Thread máximo}
 \end{itemize}
 
 \textbf{Latencia bajo carga:}
 
 Modelo M/M/1 para OTBR forwarding (asumiendo llegadas Poisson, servicio exponencial):
 \begin{itemize}
-\item $\lambda$ (tasa llegada paquetes): 10,000 medidores × 1 pkt/60s = 167 pkt/s
+\item $\lambda$ (tasa llegada paquetes): 10,000 medidores $\times$ 1 pkt/60s = 167 pkt/s
 \item $\mu$ (tasa servicio OTBR): 1/(2 ms) = 500 pkt/s (medido Cap. 4)
 \item $\rho$ (utilización): 167/500 = 0.334 (33.4\%)
 \item \textbf{Latencia media en cola:} $W_q = \frac{\rho}{\mu(1-\rho)} = \frac{0.334}{500 \times 0.666} = 1.0$ ms
@@ -473,7 +473,7 @@ Modelo M/M/1 para OTBR forwarding (asumiendo llegadas Poisson, servicio exponenc
 \item \textbf{Configuración:} Ancho de banda 2 MHz (mejor penetración), MCS3 (QPSK 1/2)
 \item \textbf{Data rate PHY:} 650 kbps (incluyendo overhead MAC 802.11ah)
 \item \textbf{Eficiencia canal medida:} 68\% (incluye CSMA backoff, ACKs, beacons)
-\item \textbf{Throughput efectivo:} 650 × 0.68 = \textbf{442 kbps por AP}
+\item \textbf{Throughput efectivo:} 650 $\times$ 0.68 = \textbf{442 kbps por AP}
 \end{itemize}
 
 \textbf{Escalabilidad HaLow:}
@@ -521,16 +521,16 @@ Docker daemon + overhead & 4\% & 210 \\
 \textbf{Extrapolación lineal a 10,000 dispositivos:}
 
 \begin{itemize}
-\item \textbf{CPU:} 34\% × (10,000 / 10) = 3,400\% = \textbf{34 cores necesarios} (8.5× Raspberry Pi 4)
-\item \textbf{RAM:} 3,735 MB × 1,000 = \textbf{3.6 TB RAM} (escalado no es lineal, ver análisis siguiente)
-\item \textbf{Storage (telemetría 1 año):} 180 bytes/msg × 10K × (60s/24h/365d) = \textbf{947 GB/año}
+\item \textbf{CPU:} 34\% $\times$ (10,000 / 10) = 3,400\% = \textbf{34 cores necesarios} (8.5$\times$ Raspberry Pi 4)
+\item \textbf{RAM:} 3,735 MB $\times$ 1,000 = \textbf{3.6 TB RAM} (escalado no es lineal, ver análisis siguiente)
+\item \textbf{Storage (telemetría 1 año):} 180 bytes/msg $\times$ 10K $\times$ (60s/24h/365d) = \textbf{947 GB/año}
 \end{itemize}
 
 \textbf{Realidad: Escalado sublineal con optimizaciones:}
 
 \begin{itemize}
 \item \textbf{ThingsBoard Edge:} Consume memoria por dispositivo activo, pero con connection pooling + lazy loading + caching LRU, escalado es $O(N^{0.7})$ no $O(N)$. Para 10K dispositivos: $1,850 \times (10,000/10)^{0.7} = 1,850 \times 251 =$ \textbf{464 GB RAM} (estimado)
-\item \textbf{TimescaleDB:} Continuous aggregates + compression (política 7 días) + partitioning reduce footprint RAM a ~50 MB + (10 KB × número dispositivos activos últimas 24h). Para 10K: $50 + (10 \times 10,000/1024) =$ \textbf{148 MB RAM} (conexiones activas)
+\item \textbf{TimescaleDB:} Continuous aggregates + compression (política 7 días) + partitioning reduce footprint RAM a ~50 MB + (10 KB $\times$ número dispositivos activos últimas 24h). Para 10K: $50 + (10 \times 10,000/1024) =$ \textbf{148 MB RAM} (conexiones activas)
 \item \textbf{Total estimado realista:} \textbf{600-800 GB RAM} para 10K dispositivos (vs 3.6 TB naive)
 \end{itemize}
 
@@ -580,14 +580,14 @@ Docker daemon + overhead & 4\% & 210 \\
 \textbf{Nivel 2 - Agregación HaLow (40 gateways → 2 APs):}
 \begin{itemize}
 \item \textbf{Backhaul:} 40 gateways RPI4 conectan vía HaLow STA mode a 2 HaLow APs centrales
-\item \textbf{Throughput uplink:} 40 × 16 kbps = 640 kbps (dentro capacidad 442 kbps × 2 APs)
+\item \textbf{Throughput uplink:} 40 $\times$ 16 kbps = 640 kbps (dentro capacidad 442 kbps $\times$ 2 APs)
 \item \textbf{Latencia HaLow hop:} 11 ms medida (Cap. 4)
 \item \textbf{Redundancia:} Failover automático entre AP1 $\leftrightarrow$ AP2 (<3 segundos mwan3)
 \end{itemize}
 
 \textbf{Nivel 3 - Gateway Central (servidor x86):}
 \begin{itemize}
-\item \textbf{Hardware:} Dell PowerEdge R750 (2× Xeon Silver 4314 16-core, 768 GB RAM, RAID SSD 4 TB)
+\item \textbf{Hardware:} Dell PowerEdge R750 (2$\times$ Xeon Silver 4314 16-core, 768 GB RAM, RAID SSD 4 TB)
 \item \textbf{Software:} ThingsBoard Edge (cluster mode 4 instancias), PostgreSQL HA (streaming replication), Kafka (3 brokers RF=2)
 \item \textbf{Procesamiento:} Agregación 10K medidores, ML inference, sync cloud cada 15 min
 \item \textbf{WAN:} Dual uplink LTE Cat-M1 (primario) + Ethernet Gbps (backup)
@@ -663,9 +663,9 @@ Herramientas + repuestos & - & - & 5,000 \\
 \hline
 \textbf{Concepto} & \textbf{Costo Anual (\$)} \\
 \hline
-Conectividad LTE (2 SIM × \$30/mes) & 720 \\
+Conectividad LTE (2 SIM $\times$ \$30/mes) & 720 \\
 \hline
-Energía eléctrica (41 dispositivos × 15W × \$0.12/kWh) & 648 \\
+Energía eléctrica (41 dispositivos $\times$ 15W $\times$ \$0.12/kWh) & 648 \\
 \hline
 Mantenimiento preventivo (4 visitas/año) & 3,200 \\
 \hline
@@ -673,7 +673,7 @@ Reemplazo componentes (5\% fallas/año) & 13,532 \\
 \hline
 Licencias software (ThingsBoard PE opcional) & 0 (open-source) \\
 \hline
-Personal soporte técnico (0.5 FTE × \$45K) & 22,500 \\
+Personal soporte técnico (0.5 FTE $\times$ \$45K) & 22,500 \\
 \hline
 Actualizaciones seguridad + backup cloud & 2,400 \\
 \hline
@@ -688,7 +688,7 @@ Actualizaciones seguridad + backup cloud & 2,400 \\
 \textbf{TCO (Total Cost of Ownership) 5 años:}
 \begin{itemize}
 \item \textbf{CAPEX:} \$270,640
-\item \textbf{OPEX (5 años):} \$43,000 × 5 = \$215,000
+\item \textbf{OPEX (5 años):} \$43,000 $\times$ 5 = \$215,000
 \item \textbf{TCO total:} \$485,640
 \item \textbf{TCO por medidor (5 años):} \$48.56
 \item \textbf{TCO por medidor/mes:} \$0.81
@@ -696,9 +696,9 @@ Actualizaciones seguridad + backup cloud & 2,400 \\
 
 \textbf{Comparación con solución LTE celular directa (baseline):}
 \begin{itemize}
-\item \textbf{CAPEX:} Medidor + modem LTE = \$55 × 10,000 = \$550,000
-\item \textbf{OPEX:} Plan datos \$8/mes × 10,000 = \$80,000/mes = \$960,000/año
-\item \textbf{TCO 5 años:} \$550K + (\$960K × 5) = \textbf{\$5,350,000}
+\item \textbf{CAPEX:} Medidor + modem LTE = \$55 $\times$ 10,000 = \$550,000
+\item \textbf{OPEX:} Plan datos \$8/mes $\times$ 10,000 = \$80,000/mes = \$960,000/año
+\item \textbf{TCO 5 años:} \$550K + (\$960K $\times$ 5) = \textbf{\$5,350,000}
 \end{itemize}
 
 \textbf{Ahorro arquitectura propuesta:} \$5.35M - \$485K = \textbf{\$4.86M (91\% reducción)} en 5 años.
@@ -771,7 +771,7 @@ Cloud processing (AWS) & 18 ms & Lambda + RDS (estimado) \\
 \begin{itemize}
 \item TimescaleDB continuous aggregates cada 5 min (reduce queries 98\%)
 \item Compression policy 7 días (reducción 90\% storage)
-\item Partitioning por mes (mejora queries temporales 10×)
+\item Partitioning por mes (mejora queries temporales 10$\times$)
 \item Connection pooling PgBouncer (reduce overhead PostgreSQL)
 \end{itemize}
 
@@ -1064,7 +1064,7 @@ L5.3 - 5G RedCap WAN & & & & \cellcolor{green!30}{\textbf{Spec}} & \cellcolor{ye
     \item L4: 2.5 PA (1 PA legacy, 1.5 PA federación)
     \item L5: 2 PA (0.5 PA Matter, 0.5 PA Wi-Fi 7, 1 PA 5G RedCap)
     \item \textbf{L6: 1.5 PA} (0.5 PA evaluación MM8108, 0.5 PA validación campo, 0.5 PA piloto upgrade)
-    \item \textbf{Total: 16.5 PA} → equipo sostenido 3 investigadores × 5.5 años
+    \item \textbf{Total: 16.5 PA} → equipo sostenido 3 investigadores $\times$ 5.5 años
 \end{itemize}
 
 \textbf{Financiamiento potencial:} Convocatorias Minciencias (Investigación Aplicada), Fondo Energético Nacional FENOGE (Smart Grids), colaboración industrial utilities colombianas (EPM, Codensa, CHEC), European Horizon Europe calls (si partnership internacional).
@@ -1093,7 +1093,7 @@ L5.3 - 5G RedCap WAN & & & & \cellcolor{green!30}{\textbf{Spec}} & \cellcolor{ye
 
 \textbf{Timeline:} Q2 2026 (2 meses). \textbf{TRL objetivo:} 5-6 (componente validado en entorno relevante).
 
-\textbf{Recursos:} 0.5 PA investigador junior + \$1.5K hardware (3× GW16167 @ \$150 + antennas + instrumentación).
+\textbf{Recursos:} 0.5 PA investigador junior + \$1.5K hardware (3$\times$ GW16167 @ \$150 + antennas + instrumentación).
 
 \subsubsection{L6.2 - Validación Alcance Extendido 4-5 km}
 
@@ -1135,7 +1135,7 @@ L5.3 - 5G RedCap WAN & & & & \cellcolor{green!30}{\textbf{Spec}} & \cellcolor{ye
 
 \textbf{Timeline:} Q2 2027 (6 meses, tras completar L6.2 + L1.1 scale validation). \textbf{TRL objetivo:} 8-9 (sistema completo calificado y demostrado en entorno operacional).
 
-\textbf{Recursos:} 0.5 PA ingeniero de campo + \$3.5K (10× módulos GW16167 @ \$150 + labor on-site 10× \$25 + contingencia).
+\textbf{Recursos:} 0.5 PA ingeniero de campo + \$3.5K (10$\times$ módulos GW16167 @ \$150 + labor on-site 10$\times$ \$25 + contingencia).
 
 \textbf{Dependencias críticas L6:}
 \begin{itemize}
@@ -1339,7 +1339,7 @@ L5.3 - 5G RedCap WAN & & & & \cellcolor{green!30}{\textbf{Spec}} & \cellcolor{ye
 
 \textbf{Timeline:} Q2 2026 (2 meses). \textbf{TRL objetivo:} 5-6 (componente validado en entorno relevante).
 
-\textbf{Recursos:} 0.5 PA investigador junior + \$1.5K hardware (3× GW16167 @ \$150 + antennas + instrumentación).
+\textbf{Recursos:} 0.5 PA investigador junior + \$1.5K hardware (3$\times$ GW16167 @ \$150 + antennas + instrumentación).
 
 \subsubsection{L6.2 - Validación Alcance Extendido 4-5 km}
 
@@ -1381,7 +1381,7 @@ L5.3 - 5G RedCap WAN & & & & \cellcolor{green!30}{\textbf{Spec}} & \cellcolor{ye
 
 \textbf{Timeline:} Q2 2027 (6 meses, tras completar L6.2 + L1.1 scale validation). \textbf{TRL objetivo:} 8-9 (sistema completo calificado y demostrado en entorno operacional).
 
-\textbf{Recursos:} 0.5 PA ingeniero de campo + \$3.5K (10× módulos GW16167 @ \$150 + labor on-site 10× \$25 + contingencia).
+\textbf{Recursos:} 0.5 PA ingeniero de campo + \$3.5K (10$\times$ módulos GW16167 @ \$150 + labor on-site 10$\times$ \$25 + contingencia).
 
 \textbf{Dependencias críticas L6:}
 \begin{itemize}

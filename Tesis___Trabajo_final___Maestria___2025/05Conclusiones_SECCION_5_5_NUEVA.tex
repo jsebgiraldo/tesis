@@ -96,7 +96,7 @@ Para evaluación comparativa, se define escenario base representativo de utility
 \item \textbf{Geografía:} Área urbana/suburbana 50 km², densidad 200 meters/km²
 \item \textbf{Networking:} Cobertura LTE disponible 95\%, fiber backbone limited 20\%
 \item \textbf{Data volume:} 96 readings/día/meter (intervalo 15 min), 50 bytes/reading → 48 MB/día agregado
-\item \textbf{Waveform sampling:} Subset 5\% meters (500 units) con capacidad waveform 10 kHz × 1\% duty cycle → 1.6 GB/día adicional
+\item \textbf{Waveform sampling:} Subset 5\% meters (500 units) con capacidad waveform 10 kHz $\times$ 1\% duty cycle → 1.6 GB/día adicional
 \item \textbf{Horizon temporal:} 10 años TCO analysis
 \end{itemize}
 
@@ -150,18 +150,18 @@ Para evaluación comparativa, se define escenario base representativo de utility
 (SIM card data plan \$2/mes/meter) & & \\
 \hline
 \textbf{Cloud ingestion (AWS IoT Core)} & \$1/millón msgs & \$35,040 \\
-(10K meters × 96 readings/día × 365) & (350M msgs/año) & \\
+(10K meters $\times$ 96 readings/día $\times$ 365) & (350M msgs/año) & \\
 \hline
 \textbf{Cloud storage (S3 Standard)} & \$0.023/GB/mes & \$5,520 \\
-(48 MB/día × 365 = 17.5 GB/año) & (17.5 GB × 12 meses) & \\
+(48 MB/día $\times$ 365 = 17.5 GB/año) & (17.5 GB $\times$ 12 meses) & \\
 \hline
 \textbf{Cloud compute (RDS PostgreSQL)} & \$3,500/mes & \$42,000 \\
 (db.r5.2xlarge 8 vCPU, 64 GB RAM) & & \\
 \hline
 \textbf{Waveform storage (S3 Infrequent)} & \$0.0125/GB/mes & \$7,200 \\
-(1.6 GB/día × 365 = 584 GB/año) & (584 GB × 12 meses) & \\
+(1.6 GB/día $\times$ 365 = 584 GB/año) & (584 GB $\times$ 12 meses) & \\
 \hline
-\textbf{Maintenance (device failures)} & 2\%/año × \$85 & \$17,000 \\
+\textbf{Maintenance (device failures)} & 2\%/año $\times$ \$85 & \$17,000 \\
 (Replacement 200 meters/año fallidos) & & \\
 \hline
 \textbf{Personnel (3 FTE)} & \$45K/año/persona & \$135,000 \\
@@ -236,12 +236,12 @@ Para evaluación comparativa, se define escenario base representativo de utility
 (Mesh networking sin suscripción) & & \\
 \hline
 \textbf{Gateway power (25 W continuous)} & \$0.15/kWh & \$3,285 \\
-(100 gateways × 25 W × 8760 hrs) & (21,900 kWh/año) & \\
+(100 gateways $\times$ 25 W $\times$ 8760 hrs) & (21,900 kWh/año) & \\
 \hline
 \textbf{Gateway maintenance} & \$200/gateway/año & \$20,000 \\
 (Preventive + failures 3\%/año) & & \\
 \hline
-\textbf{Meter maintenance} & 1.5\%/año × \$45 & \$6,750 \\
+\textbf{Meter maintenance} & 1.5\%/año $\times$ \$45 & \$6,750 \\
 (Lower failure rate vs NB-IoT) & & \\
 \hline
 \textbf{Storage upgrades (SSD refresh)} & 10\% gateways/año & \$600 \\
@@ -343,12 +343,12 @@ Para evaluación comparativa, se define escenario base representativo de utility
 (Wavelet compression 10:1) & (58.4 GB/año) & \\
 \hline
 \textbf{Gateway power (20 W optimized)} & \$0.15/kWh & \$2,628 \\
-(100 gateways × 20 W × 8760 hrs) & (17,520 kWh/año) & \\
+(100 gateways $\times$ 20 W $\times$ 8760 hrs) & (17,520 kWh/año) & \\
 \hline
 \textbf{Gateway maintenance} & \$200/gateway/año & \$20,000 \\
 (Preventive + failures 3\%/año) & & \\
 \hline
-\textbf{Meter maintenance} & 1.5\%/año × \$45 & \$6,750 \\
+\textbf{Meter maintenance} & 1.5\%/año $\times$ \$45 & \$6,750 \\
 (Lower failure rate vs NB-IoT) & & \\
 \hline
 \textbf{Personnel (2.5 FTE)} & \$45K/año/persona & \$112,500 \\
@@ -470,7 +470,7 @@ El análisis TCO presenta sensibilidad a variaciones en parámetros económicos 
 El análisis TCO presented contiene simplificaciones y assumptions que requieren validación empírica:
 
 \begin{enumerate}
-\item \textbf{Costos labor installation:} Estimate \$8/meter assumes deployment urban concentrated (200 meters/km²). Deployments rural dispersed (10-20 meters/km²) incrementan labor 3-5× por travel time técnicos, impacting CAPEX significantly. Validación field trials requerida.
+\item \textbf{Costos labor installation:} Estimate \$8/meter assumes deployment urban concentrated (200 meters/km²). Deployments rural dispersed (10-20 meters/km²) incrementan labor 3-5$\times$ por travel time técnicos, impacting CAPEX significantly. Validación field trials requerida.
 
 \item \textbf{Failure rates equipment:} Assumptions 2-3\%/año basadas en literature generic IoT devices. Smart meters específicos Thread/HaLow en harsh outdoor environments (temperature -20°C to +60°C, humidity 95\%, lightning) pueden exhibit failure rates superiores primeros 2-3 años (infant mortality). Extended field testing necesario.
 
@@ -478,7 +478,7 @@ El análisis TCO presented contiene simplificaciones y assumptions que requieren
 
 \item \textbf{Benefits quantification omitted:} TCO analysis focuses costs únicamente, omitting benefits monetization: (1) Theft reduction \$50-150K/año (1-3\% pérdidas no-técnicas), (2) Outage detection speedup reducing SAIDI/SAIFI penalties, (3) Demand response participation revenue \$10-30/meter/año. Net Present Value (NPV) comprehensive analysis requerido.
 
-\item \textbf{Scale economies not modeled:} Analysis linear scaling (100K meters = 10× cost 10K meters). Real deployments exhibit economies scale: bulk purchasing discounts 15-25\%, shared infrastructure amortization, optimization routing technicians. TCO per-meter decreases 20-30\% @ 100K+ scale.
+\item \textbf{Scale economies not modeled:} Analysis linear scaling (100K meters = 10$\times$ cost 10K meters). Real deployments exhibit economies scale: bulk purchasing discounts 15-25\%, shared infrastructure amortization, optimization routing technicians. TCO per-meter decreases 20-30\% @ 100K+ scale.
 \end{enumerate}
 
 \textbf{Trabajos Futuros:} (1) Pilot deployment 100-500 meters validando assumptions costs reales, (2) NPV analysis incorporating benefits quantified via field data, (3) Monte Carlo simulation TCO considering uncertainty distributions parameters críticos, (4) Comparative benchmarking vs deployments comerciales utilities LATAM (Enel, EPM, Chilectra).

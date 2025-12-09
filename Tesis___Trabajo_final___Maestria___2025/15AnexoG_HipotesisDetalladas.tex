@@ -22,7 +22,7 @@ Este anexo presenta el desglose detallado de las ocho hipótesis específicas qu
 
 \textbf{Métricas de validación:}
 \begin{itemize}
-\item Reducción tráfico WAN: (GB\_cloud - GB\_edge) / GB\_cloud × 100\%
+\item Reducción tráfico WAN: (GB\_cloud - GB\_edge) / GB\_cloud $\times$ 100\%
 \item Latencia procesamiento edge: timestamp\_llegada\_gateway → timestamp\_escritura\_DB local
 \item Disponibilidad offline: uptime\_servicios\_locales durante partición WAN 72h+
 \item Throughput sostenido: mensajes/segundo procesados sin pérdida durante carga pico
@@ -58,9 +58,9 @@ Este anexo presenta el desglose detallado de las ocho hipótesis específicas qu
 
 \textbf{Métricas de validación:}
 \begin{itemize}
-\item Compresión IPHC: (48 - bytes\_compressed\_header) / 48 × 100\%
-\item Compresión NHC: (bytes\_uncompressed\_coap - bytes\_compressed\_coap) / bytes\_uncompressed\_coap × 100\%
-\item Payload efectivo: bytes\_payload / 127 × 100\%
+\item Compresión IPHC: (48 - bytes\_compressed\_header) / 48 $\times$ 100\%
+\item Compresión NHC: (bytes\_uncompressed\_coap - bytes\_compressed\_coap) / bytes\_uncompressed\_coap $\times$ 100\%
+\item Payload efectivo: bytes\_payload / 127 $\times$ 100\%
 \end{itemize}
 
 \textbf{Validación experimental:} Sección §5.3.1 (captura Wireshark de paquetes 6LoWPAN)
@@ -75,8 +75,8 @@ Este anexo presenta el desglose detallado de las ocho hipótesis específicas qu
 \item Latencia MQTT: tiempo\_publish → tiempo\_subscribe\_callback
 \item Overhead CoAP: bytes\_header\_coap + bytes\_udp + bytes\_ipv6
 \item Overhead MQTT: bytes\_header\_mqtt + bytes\_tcp + bytes\_ipv6
-\item Reducción latencia: (latencia\_mqtt - latencia\_coap) / latencia\_mqtt × 100\%
-\item Reducción overhead: (overhead\_mqtt - overhead\_coap) / overhead\_mqtt × 100\%
+\item Reducción latencia: (latencia\_mqtt - latencia\_coap) / latencia\_mqtt $\times$ 100\%
+\item Reducción overhead: (overhead\_mqtt - overhead\_coap) / overhead\_mqtt $\times$ 100\%
 \end{itemize}
 
 \textbf{Validación experimental:} Sección §5.3.1
@@ -89,9 +89,9 @@ Este anexo presenta el desglose detallado de las ocho hipótesis específicas qu
 \begin{itemize}
 \item Tráfico gestión LwM2M: bytes\_totales operaciones Register, Update, Read, Write, Execute durante 24h
 \item Tráfico gestión HTTP/REST: bytes\_totales operaciones equivalentes API REST durante 24h
-\item Reducción tráfico: (bytes\_rest - bytes\_lwm2m) / bytes\_rest × 100\%
+\item Reducción tráfico: (bytes\_rest - bytes\_lwm2m) / bytes\_rest $\times$ 100\%
 \item Tiempo actualización OTA: duración transferencia firmware completo (ej. 512 KB) con block-wise
-\item Tasa de éxito OTA: (actualizaciones\_exitosas / actualizaciones\_intentadas) × 100\%
+\item Tasa de éxito OTA: (actualizaciones\_exitosas / actualizaciones\_intentadas) $\times$ 100\%
 \end{itemize}
 
 \textbf{Validación experimental:} Sección §4.3.2 (Firmware OTA), §5.3.1
@@ -105,7 +105,7 @@ Este anexo presenta el desglose detallado de las ocho hipótesis específicas qu
 \item Throughput CEP: eventos\_procesados / segundo medido con load testing
 \item Latencia P99 local: percentil 99 de distribución tiempo\_ingestion → tiempo\_alarm
 \item Latencia P99 cloud: percentil 99 incluyendo RTT WAN para procesamiento remoto
-\item Reducción latencia: (latencia\_cloud\_p99 - latencia\_edge\_p99) / latencia\_cloud\_p99 × 100\%
+\item Reducción latencia: (latencia\_cloud\_p99 - latencia\_edge\_p99) / latencia\_cloud\_p99 $\times$ 100\%
 \end{itemize}
 
 \textbf{Validación experimental:} Sección §5.2.2

@@ -23,7 +23,7 @@ El paradigma cloud computing concentra capacidad computacional, almacenamiento y
 
 \item \textbf{Servicios gestionados (managed services):} Eliminan overhead operacional de mantenimiento de infraestructura. Amazon RDS (PostgreSQL/TimescaleDB) provee backups automáticos, replicación multi-AZ, patching de seguridad, y scaling sin downtime. Azure IoT Hub ofrece device provisioning, identity management, telemetry routing y monitoring con modelo OpEx pay-per-use vs CapEx on-premise.
 
-\item \textbf{Analytics avanzados y ML/AI:} Acceso a servicios de machine learning (AWS SageMaker, Azure ML) para entrenamiento de modelos predictivos con datasets masivos (years of historical data). Ejemplo: modelo LSTM para forecasting de consumo energético entrenado con 5 años × 1M medidores × 96 lecturas/día = 175 TB de datos históricos, impracticable en edge gateways con storage local limitado (256 GB SSD típico).
+\item \textbf{Analytics avanzados y ML/AI:} Acceso a servicios de machine learning (AWS SageMaker, Azure ML) para entrenamiento de modelos predictivos con datasets masivos (years of historical data). Ejemplo: modelo LSTM para forecasting de consumo energético entrenado con 5 años $\times$ 1M medidores $\times$ 96 lecturas/día = 175 TB de datos históricos, impracticable en edge gateways con storage local limitado (256 GB SSD típico).
 
 \item \textbf{Disaster recovery y alta disponibilidad:} Datacenters multi-región con replicación geo-distribuida garantizan SLAs 99.95-99.99\% uptime. Backup automático incremental con retention configurable (7 días, 30 días, 7 años) cumple requisitos regulatorios de auditoría energética.
 
@@ -35,7 +35,7 @@ El paradigma cloud computing concentra capacidad computacional, almacenamiento y
 \begin{enumerate}
 \item \textbf{Latencia WAN inaceptable para control tiempo real:} Review sistemático de Andriulo et al. (2024)~\cite{andriuloEdgeComputingCloud2024} reporta latencias típicas cloud computing en rango \textbf{50-200 ms} considerando: (1) uplink device → cloud gateway (20-80 ms vía LTE según cobertura), (2) WAN routing Internet público (10-50 ms según geografía), (3) cloud ingestion processing (10-30 ms), (4) downlink response (20-80 ms). Esta latencia total 50-200 ms es \textbf{incompatible} con requisitos IEEE 2030.5 DERControl (<100 ms) para comandos de actuación críticos (disconnect switches, load shedding durante emergencias grid)~\cite{IEEERecommendedPractice}. Durante eventos transitorios de power quality (voltage sags <50 ms, inrush currents <20 ms), procesamiento cloud genera respuesta tardía post-evento sin capacidad de mitigación preventiva.
 
-\item \textbf{Consumo bandwidth excesivo:} Transmisión continua de waveforms sin filtrado local consume bandwidth WAN desproporcionadamente. Escenario: 1000 medidores transmitiendo waveforms 10 kHz × 2 bytes × 2 canales = 320 kbps/medidor → throughput agregado 320 Mbps. Con backhaul LTE Cat-4 (150 Mbps downlink, 50 Mbps uplink), el uplink se satura con solo 156 medidores simultáneos, requiriendo upgrades costosos a fiber o 5G mmWave.
+\item \textbf{Consumo bandwidth excesivo:} Transmisión continua de waveforms sin filtrado local consume bandwidth WAN desproporcionadamente. Escenario: 1000 medidores transmitiendo waveforms 10 kHz $\times$ 2 bytes $\times$ 2 canales = 320 kbps/medidor → throughput agregado 320 Mbps. Con backhaul LTE Cat-4 (150 Mbps downlink, 50 Mbps uplink), el uplink se satura con solo 156 medidores simultáneos, requiriendo upgrades costosos a fiber o 5G mmWave.
 
 \item \textbf{Dependencia conectividad WAN:} Durante outages WAN (tormentas, desastres naturales, ataques DDoS), sistemas cloud-only quedan completamente inoperativos sin capacidad de monitoreo local. Utilities requieren resiliencia operacional durante emergencias cuando visibilidad grid es más crítica.
 
@@ -51,7 +51,7 @@ Edge computing distribuye capacidad computacional y storage hacia el perímetro 
 \textbf{Ventajas Arquitectónicas Edge:}
 
 \begin{enumerate}
-\item \textbf{Latencia ultra-baja para aplicaciones tiempo real:} Andriulo et al. (2024)~\cite{andriuloEdgeComputingCloud2024} reportan latencias edge computing típicas en rango \textbf{1-10 ms} para procesamiento local sin round-trip WAN. Descomposición latencia edge: (1) uplink device → gateway (1-5 ms vía Thread/HaLow local), (2) processing local (2-5 ms según complejidad algoritmo), sin downlink WAN. Reducción 5-20× vs cloud (50-200 ms) habilita control tiempo real para DER: detección de voltage sag y activación de Dynamic Voltage Restorer (DVR) dentro de 1 ciclo AC (16.67 ms @ 60 Hz), previniendo daño equipment sensitive~\cite{minhEdgeComputingIoTEnabled2022}.
+\item \textbf{Latencia ultra-baja para aplicaciones tiempo real:} Andriulo et al. (2024)~\cite{andriuloEdgeComputingCloud2024} reportan latencias edge computing típicas en rango \textbf{1-10 ms} para procesamiento local sin round-trip WAN. Descomposición latencia edge: (1) uplink device → gateway (1-5 ms vía Thread/HaLow local), (2) processing local (2-5 ms según complejidad algoritmo), sin downlink WAN. Reducción 5-20$\times$ vs cloud (50-200 ms) habilita control tiempo real para DER: detección de voltage sag y activación de Dynamic Voltage Restorer (DVR) dentro de 1 ciclo AC (16.67 ms @ 60 Hz), previniendo daño equipment sensitive~\cite{minhEdgeComputingIoTEnabled2022}.
 
 \item \textbf{Reducción bandwidth 70-90\%:} Edge gateway ejecuta analytics local (agregación temporal, compresión lossy de waveforms, detección de anomalías) transmitiendo hacia cloud solo: (1) agregados estadísticos horarios (min/max/avg/stdev) vs raw samples cada 15 min, (2) eventos power quality detectados (sag/swell/interruption) con metadata vs waveforms completos, (3) alarmas críticas (threshold violations) vs polling periódico. Andriulo et al.~\cite{andriuloEdgeComputingCloud2024} estiman reducción bandwidth 70-90\% en deployments IoT industrial con filtrado edge, validado por case studies utilities (PG\&E California, Enel Italia).
 
@@ -171,7 +171,7 @@ La Tabla~\ref{tab:edge-cloud-latency-comparison} consolida métricas cuantitativ
 \end{tabular}}
 \end{table}
 
-\textbf{Factor de Mejora Latencia:} Edge computing reduce latencia end-to-end por factor \textbf{5-20×} vs cloud computing (1-10 ms vs 50-200 ms). Esta reducción no es incremental sino \textbf{cualitativa}, habilitando categorías completas de aplicaciones control tiempo real imposibles con arquitectura cloud-only.
+\textbf{Factor de Mejora Latencia:} Edge computing reduce latencia end-to-end por factor \textbf{5-20$\times$} vs cloud computing (1-10 ms vs 50-200 ms). Esta reducción no es incremental sino \textbf{cualitativa}, habilitando categorías completas de aplicaciones control tiempo real imposibles con arquitectura cloud-only.
 
 \subsubsection{Bandwidth Optimization: Reducción 70-90\% con Edge Filtering}
 
@@ -182,7 +182,7 @@ Andriulo et al.~\cite{andriuloEdgeComputingCloud2024} reportan que arquitecturas
 \item 1000 medidores transmitiendo readings cada 15 min: $1000 \times \frac{24 \times 60}{15} = 96,000$ mensajes/día
 \item Payload por mensaje: 250 bytes (timestamp, device ID, 10 metrics, checksums)
 \item Bandwidth diario: $96,000 \times 250\text{ bytes} = 24$ MB/día = 2.22 kbps promedio
-\item \textbf{Agregado con waveforms:} Si subset 100 medidores envían waveforms 10 kHz × 2 bytes durante 1\% duty cycle (14.4 min/día), bandwidth adicional: $100 \times 320\text{ kbps} \times 0.01 = 320$ kbps promedio → \textbf{Total 322 kbps}
+\item \textbf{Agregado con waveforms:} Si subset 100 medidores envían waveforms 10 kHz $\times$ 2 bytes durante 1\% duty cycle (14.4 min/día), bandwidth adicional: $100 \times 320\text{ kbps} \times 0.01 = 320$ kbps promedio → \textbf{Total 322 kbps}
 \end{itemize}
 
 \textbf{Escenario optimizado edge-cloud (con edge filtering):}
@@ -191,7 +191,7 @@ Andriulo et al.~\cite{andriuloEdgeComputingCloud2024} reportan que arquitecturas
   \begin{itemize}
   \item Agregados horarios (min/max/avg): $1000 \times 24 = 24,000$ mensajes/día ($4\times$ reducción)
   \item Waveforms comprimidos (wavelet transform, factor 10:1): 320 kbps / 10 = 32 kbps
-  \item Eventos power quality (solo detecciones): ~100 eventos/día × 1 KB = 100 KB/día
+  \item Eventos power quality (solo detecciones): ~100 eventos/día $\times$ 1 KB = 100 KB/día
   \end{itemize}
 \item Bandwidth diario cloud upload: 6 MB + 0.4 MB + 0.1 MB = 6.5 MB/día = 0.6 kbps + 32 kbps = \textbf{32.6 kbps}
 \item \textbf{Reducción bandwidth: $(322 - 32.6) / 322 = 89.9\%$} → Validando claim literatura 70-90\%

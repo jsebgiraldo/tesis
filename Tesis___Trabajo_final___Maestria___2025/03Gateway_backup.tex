@@ -702,13 +702,13 @@ El prototipo del gateway se implementó sobre \textbf{Raspberry Pi 4 Model B} de
     \end{itemize}
     \item \textbf{Puertos de expansión}:
     \begin{itemize}
-        \item 2× USB 3.0 (5 Gbps)
-        \item 2× USB 2.0 (480 Mbps)
+        \item 2$\times$ USB 3.0 (5 Gbps)
+        \item 2$\times$ USB 2.0 (480 Mbps)
         \item 40-pin GPIO header (alimentación 3.3V/5V, I2C, SPI, UART)
-        \item 1× PCIe 1× lane via GPIO 40-pin (requiere HAT adapter)
+        \item 1$\times$ PCIe 1$\times$ lane via GPIO 40-pin (requiere HAT adapter)
     \end{itemize}
     \item \textbf{Alimentación}: 5V/3A via USB-C (fuente oficial Raspberry Pi)
-    \item \textbf{Dimensiones}: 85 mm × 56 mm × 17 mm (sin HATs)
+    \item \textbf{Dimensiones}: 85 mm $\times$ 56 mm $\times$ 17 mm (sin HATs)
     \item \textbf{Consumo típico}: 2.7-6.4W según carga (idle vs CPU 100\%)
 \end{itemize}
 
@@ -728,7 +728,7 @@ RAM & 4 GB LPDDR4 & 512 MB DDR3 \\
 Docker support & Nativo ARM64 & Limitado (swap req.) \\
 PostgreSQL & Sí (TimescaleDB ARM64) & No (insuf. RAM) \\
 Kafka & Sí (Confluent ARM64) & No (OOM frecuente) \\
-PCIe nativo & Sí (1× lane via HAT) & Sí (miniPCIe) \\
+PCIe nativo & Sí (1$\times$ lane via HAT) & Sí (miniPCIe) \\
 GPIO/SPI & 40-pin, SPI0/1 & Limitado \\
 Costo (2025) & \$55 (4 GB) & \$40-60 (industrial) \\
 \hline
@@ -785,7 +785,7 @@ Costo (2025) & \$55 (4 GB) & \$40-60 (industrial) \\
     \item \textbf{Estándar}: IEEE 802.11ah-2016 completo (S1G PHY)
     \item \textbf{Frecuencia}: 902-928 MHz (ISM band US/América)
     \item \textbf{Canales}: 1/2/4/8 MHz bandwidth (implementación usa 8 MHz)
-    \item \textbf{Throughput}: Hasta 40 Mbps (MCS10, 8 MHz, MIMO 1×1)
+    \item \textbf{Throughput}: Hasta 40 Mbps (MCS10, 8 MHz, MIMO 1$\times$1)
     \item \textbf{Alcance típico}: 1-3 km LOS (line-of-sight) con antena 5 dBi
     \item \textbf{Potencia TX}: +20 dBm (100 mW, regulación FCC Part 15.247)
     \item \textbf{Consumo}: <500 mW TX, <50 mW RX, <10 mW sleep
@@ -882,7 +882,7 @@ ls /sys/class/net/
 \textbf{Hardware}:
 \begin{itemize}
     \item \textbf{HAT}: Geekworm X1001 M.2 NVMe PCIe HAT
-    \item \textbf{Interfaz}: PCIe 1× Gen 2 (5 Gbps, 500 MB/s teórico)
+    \item \textbf{Interfaz}: PCIe 1$\times$ Gen 2 (5 Gbps, 500 MB/s teórico)
     \item \textbf{Conexión}: GPIO 40-pin (PCIe lanes redirigidos desde USB 3.0 controller)
     \item \textbf{SSD}: Kingston NV2 M.2 2280 NVMe 256 GB (PCIe 4.0, retrocompatible PCIe 2.0)
     \item \textbf{Performance medida} (con Raspberry Pi 4 PCIe 2.0):
@@ -1362,7 +1362,7 @@ Para redundancia y uplink WAN, el gateway incorpora módulo LTE Cat-4/Cat-6:
     \item \textbf{Bandas soportadas}: B2/B4/B5/B7/B12/B13/B66 (Colombia/Latinoamérica).
     \item \textbf{Interfaz}: USB 3.0 con protocolo QMI/MBIM, drivers ModemManager en OpenWRT.
     \item \textbf{SIM}: Nano-SIM con soporte eSIM (MFF2) en módulos avanzados.
-    \item \textbf{Antenas}: 2x conectores U.FL para diversidad MIMO 2×2.
+    \item \textbf{Antenas}: 2x conectores U.FL para diversidad MIMO 2$\times$2.
     \item \textbf{Consumo}: <2W en transmisión activa, <100mW en idle.
     \item \textbf{Casos de uso}:
     \begin{itemize}
@@ -1801,7 +1801,7 @@ PostgreSQL almacena:
 TimescaleDB es una extensión de PostgreSQL optimizada para series temporales, que ofrece:
 
 \begin{itemize}
-    \item \textbf{Compresión}: 10-20× reducción en espacio disco mediante algoritmos adaptativos
+    \item \textbf{Compresión}: 10-20$\times$ reducción en espacio disco mediante algoritmos adaptativos
     \item \textbf{Queries rápidas}: Particionamiento automático por tiempo (chunks de 7 días por defecto)
     \item \textbf{Agregaciones}: Función \texttt{time\_bucket} para promedios 15-min/1-hora con vistas materializadas
     \item \textbf{Retención automática}: Elimina datos antiguos sin intervención manual
@@ -3177,7 +3177,7 @@ docker logs tb-edge | grep "Cloud synchronization completed"
     \item \textbf{Resiliencia offline}: Simular pérdida de conectividad WAN (Ethernet + LTE) durante 24 horas.
     \begin{itemize}
         \item Verificar que TB Edge continúa operando localmente.
-        \item Buffer local debe almacenar >28k mensajes (300 medidores × 96 lecturas/día).
+        \item Buffer local debe almacenar >28k mensajes (300 medidores $\times$ 96 lecturas/día).
         \item Al reconectar, confirmar sincronización completa del backlog en <10 min.
     \end{itemize}
     
@@ -3489,7 +3489,7 @@ Flujo:
     \item LLM invoca \texttt{get\_device\_telemetry} vía MCP para obtener datos.
     \item Analiza serie temporal (100 puntos, intervalo 15 min).
     \item Detecta pico de 500 kWh a las 3 AM (vs promedio 50 kWh).
-    \item Genera respuesta: "Anomalía detectada: consumo 10× superior al promedio. Posible bypass del medidor o falla de CT (transformador de corriente). Recomendar inspección física."
+    \item Genera respuesta: "Anomalía detectada: consumo 10$\times$ superior al promedio. Posible bypass del medidor o falla de CT (transformador de corriente). Recomendar inspección física."
 \end{enumerate}
 
 \subsubsection{Mantenimiento Predictivo}
@@ -3573,15 +3573,15 @@ El gateway basado en OpenWRT con arquitectura de contenedores Docker y conectivi
     
     \item \textbf{Escalabilidad Arquitectónica con Mesh HaLow}:
     \begin{itemize}
-        \item \textbf{Topología estrella (AP único)}: 10 DCUs × 250 nodos Thread = 2,500 endpoints, cobertura 3 km, latencia <50 ms.
-        \item \textbf{Topología mesh (3 gateways 802.11s)}: 30 DCUs × 250 nodos = 7,500 endpoints, cobertura 9 km, latencia <200 ms, resiliencia ante fallo de gateway.
-        \item \textbf{Topología EasyMesh (1 Controller + 4 Agents)}: 50 DCUs × 250 nodos = 12,500 endpoints, roaming transparente, carga balanceada automática.
+        \item \textbf{Topología estrella (AP único)}: 10 DCUs $\times$ 250 nodos Thread = 2,500 endpoints, cobertura 3 km, latencia <50 ms.
+        \item \textbf{Topología mesh (3 gateways 802.11s)}: 30 DCUs $\times$ 250 nodos = 7,500 endpoints, cobertura 9 km, latencia <200 ms, resiliencia ante fallo de gateway.
+        \item \textbf{Topología EasyMesh (1 Controller + 4 Agents)}: 50 DCUs $\times$ 250 nodos = 12,500 endpoints, roaming transparente, carga balanceada automática.
     \end{itemize}
     
     \item \textbf{Reducción CAPEX/OPEX con Arquitectura Mesh}:
     \begin{itemize}
         \item \textbf{CAPEX}: 3 gateways con mesh HaLow backhaul vs. 9 gateways con uplink dedicado (fibra/LTE) para misma cobertura (9 km) = ahorro 66\% en infraestructura WAN.
-        \item \textbf{OPEX}: Backhaul HaLow sin costo recurrente vs. 9 planes LTE × \$30/mes = ahorro \$3,240/año.
+        \item \textbf{OPEX}: Backhaul HaLow sin costo recurrente vs. 9 planes LTE $\times$ \$30/mes = ahorro \$3,240/año.
         \item \textbf{Instalación}: Mesh auto-configura rutas vs. despliegue manual de enlaces backhaul = reducción 40\% tiempo de instalación.
     \end{itemize}
     
@@ -3609,7 +3609,7 @@ El gateway basado en OpenWRT con arquitectura de contenedores Docker y conectivi
     \item \textbf{Arquitectura de Datos Distribuida}:
     \begin{itemize}
         \item \textbf{Apache Kafka}: Message broker distribuido, >100k msg/s, buffer persistente 7 días, multi-consumidor (TB Edge + analítica + ML), compresión gzip, backpressure handling.
-        \item \textbf{PostgreSQL + TimescaleDB}: Series temporales optimizadas, compresión 10-20×, particionamiento automático, retención 90 días, queries agregadas (time\_bucket), hypertables con >3000 IOPS en SSD NVMe.
+        \item \textbf{PostgreSQL + TimescaleDB}: Series temporales optimizadas, compresión 10-20$\times$, particionamiento automático, retención 90 días, queries agregadas (time\_bucket), hypertables con >3000 IOPS en SSD NVMe.
         \item \textbf{Ventajas Kafka}: Replay histórico, desacoplamiento productor/consumidor, tolerancia a picos de tráfico (GB de buffer vs 100k msgs in-memory).
     \end{itemize}
     
@@ -3643,7 +3643,7 @@ El gateway basado en OpenWRT con arquitectura de contenedores Docker y conectivi
         \item \textbf{EasyMesh}: Configuración remota de todos los Agents desde Controller único.
     \end{itemize}
     
-    \item \textbf{Escalabilidad}: Soporta hasta 10 DCUs simultáneos vía HaLow AP (cada DCU con 250 nodos Thread) con agregación en TB Edge antes de enviar al cloud. Mesh y EasyMesh multiplican capacidad 3-5× sin rediseño arquitectónico.
+    \item \textbf{Escalabilidad}: Soporta hasta 10 DCUs simultáneos vía HaLow AP (cada DCU con 250 nodos Thread) con agregación en TB Edge antes de enviar al cloud. Mesh y EasyMesh multiplican capacidad 3-5$\times$ sin rediseño arquitectónico.
     
     \item \textbf{Costo-efectividad}: 
     \begin{itemize}
@@ -3675,7 +3675,7 @@ AP (Bridge) & Integración con LAN existente & Transparencia L2, DHCP unificado 
 \hline
 STA & Zona rural sin fibra/LTE & Ahorro OPEX, throughput alto & Gateway conecta a torre utilidad con HaLow AP (10 km) \\
 \hline
-802.11s Mesh & Área extendida sin infraestructura & Auto-healing, 3× cobertura, CAPEX reducido & 3 gateways mesh en zona rural (9 km, 900 medidores) \\
+802.11s Mesh & Área extendida sin infraestructura & Auto-healing, 3$\times$ cobertura, CAPEX reducido & 3 gateways mesh en zona rural (9 km, 900 medidores) \\
 \hline
 EasyMesh & Multi-edificio/campus & Roaming, gestión centralizada, QoS & Universidad con 5 edificios, 1 Controller + 4 Agents \\
 \hline
@@ -3753,5 +3753,5 @@ Costo (qty 100) & \$12 & \$15 & \$18 \\
     \item \textbf{Quantum-safe crypto}: Preparar migración a algoritmos post-cuánticos (Kyber-768, Dilithium-3) en certificados X.509 para protección a largo plazo (NIST PQC Round 4, 2025+), especialmente crítico para infraestructura crítica Smart Grid con vida útil >20 años.
 \end{itemize}
 
-\textbf{Próximo capítulo}: Se presentará la arquitectura completa del sistema de telemetría, integrando los nodos Thread (ESP32-C6), DCUs con Thread Border Router, el gateway Raspberry Pi 4 + OpenWRT con HaLow multimodal (AP/STA/Mesh/EasyMesh), Quectel BG95 LTE-M y nRF52840 Thread RCP, y la plataforma cloud ThingsBoard, con un caso de estudio de despliegue real para 900 medidores residenciales en infraestructura colombiana con topología mesh 802.11s (3 gateways × 9 km cobertura).
+\textbf{Próximo capítulo}: Se presentará la arquitectura completa del sistema de telemetría, integrando los nodos Thread (ESP32-C6), DCUs con Thread Border Router, el gateway Raspberry Pi 4 + OpenWRT con HaLow multimodal (AP/STA/Mesh/EasyMesh), Quectel BG95 LTE-M y nRF52840 Thread RCP, y la plataforma cloud ThingsBoard, con un caso de estudio de despliegue real para 900 medidores residenciales en infraestructura colombiana con topología mesh 802.11s (3 gateways $\times$ 9 km cobertura).
 

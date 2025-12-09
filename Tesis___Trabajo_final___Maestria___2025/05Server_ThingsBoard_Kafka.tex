@@ -23,7 +23,7 @@ El Nivel 4 de la arquitectura AMI implementa la plataforma IoT centralizada para
 
 \textbf{ThingsBoard como plataforma IoT multi-tenant:}
 
-ThingsBoard proporciona arquitectura multi-tenant (Tenant $\rightarrow$ Customer $\rightarrow$ Device), Rule Engine visual drag-and-drop para procesamiento eventos, y dashboards responsive con WebSocket updates real-time. Alternativas evaluadas (AWS IoT Core + Lambda, Azure IoT Hub + Functions) descartadas por OPEX 3× mayor (\$0.20/device/mes AWS IoT vs \$0.065/device/mes ThingsBoard self-hosted).
+ThingsBoard proporciona arquitectura multi-tenant (Tenant $\rightarrow$ Customer $\rightarrow$ Device), Rule Engine visual drag-and-drop para procesamiento eventos, y dashboards responsive con WebSocket updates real-time. Alternativas evaluadas (AWS IoT Core + Lambda, Azure IoT Hub + Functions) descartadas por OPEX 3$\times$ mayor (\$0.20/device/mes AWS IoT vs \$0.065/device/mes ThingsBoard self-hosted).
 
 \textbf{Apache Kafka para streaming alta concurrencia:}
 
@@ -83,7 +83,7 @@ Kafka maneja ingest concurrente desde múltiples Gateways Edge (QoS 1 MQTT), des
     
     \item \textbf{Message Queue - AWS MSK (Managed Streaming Kafka):}
     \begin{itemize}
-        \item Brokers: kafka.t3.small × 2 (2 vCPU, 2 GB RAM cada uno)
+        \item Brokers: kafka.t3.small $\times$ 2 (2 vCPU, 2 GB RAM cada uno)
         \item Storage: 100 GB EBS gp3 por broker (total 200 GB)
         \item Zookeeper: Managed (3 nodes incluidos)
         \item Retention: 7 días (168 horas)
@@ -148,14 +148,14 @@ Apache Kafka 3.5.1 actúa como backbone de streaming distribuido, manejando inge
 \textbf{Componentes arquitectura Kafka AWS MSK:}
 
 \begin{enumerate}
-    \item \textbf{Kafka Brokers:} 2× kafka.t3.small (2 vCPU, 2 GB RAM, 100 GB EBS gp3)
+    \item \textbf{Kafka Brokers:} 2$\times$ kafka.t3.small (2 vCPU, 2 GB RAM, 100 GB EBS gp3)
     \begin{itemize}
         \item Deployment: Multi-AZ (us-east-1a, us-east-1b) para HA
         \item Replication factor: 2 (cada partition replicada en ambos brokers)
         \item Min in-sync replicas (ISR): 1 (tolera fallo 1 broker sin pérdida datos)
     \end{itemize}
     
-    \item \textbf{Zookeeper Ensemble:} 3× nodes managed by AWS MSK
+    \item \textbf{Zookeeper Ensemble:} 3$\times$ nodes managed by AWS MSK
     \begin{itemize}
         \item Función: Metadata management (broker registry, topic config, consumer groups)
         \item Quorum: 2/3 nodes requeridos para consensus (tolera fallo 1 node)

@@ -30,7 +30,7 @@ La latencia end-to-end Medidor → ThingsBoard se estima en \textbf{248 ms} bas�
     \item La estimación 248 ms \textbf{cumple holgadamente} requisito IEC 62056 de latencia <1 segundo para telemetría AMI no crítica, con margen 75\% de seguridad.
 \end{enumerate}
 
-\textbf{Trabajo futuro}: Validación experimental de latencia end-to-end con timestamping GPS/NTP se documenta en Anexo G.3 como línea de investigación para deployment escala. Costo estimado módulo GPS NEO-M8N: \$15/nodo × 100 nodos = \$1,500 presupuesto adicional.
+\textbf{Trabajo futuro}: Validación experimental de latencia end-to-end con timestamping GPS/NTP se documenta en Anexo G.3 como línea de investigación para deployment escala. Costo estimado módulo GPS NEO-M8N: \$15/nodo $\times$ 100 nodos = \$1,500 presupuesto adicional.
 
 \subsection{Disponibilidad}
 
@@ -48,19 +48,19 @@ El sistema especifica disponibilidad objetivo 99.5\% (equivalente a downtime má
 \rowcolor{gray!20}
 \textbf{Componente} & \textbf{Disponibilidad} & \textbf{Justificación y Fuente} \\
 \hline
-\textbf{Thread mesh (nodo → DCU)} & 99.9\% & Auto-healing con re-routing en <30s tras fallo nodo. Piloto: 3 eventos reconexión en 90 días (1.2h downtime acumulado). Fórmula: $(90×24 - 1.2) / (90×24) = 99.94\%$ redondeado conservador a 99.9\%. \\
+\textbf{Thread mesh (nodo → DCU)} & 99.9\% & Auto-healing con re-routing en <30s tras fallo nodo. Piloto: 3 eventos reconexión en 90 días (1.2h downtime acumulado). Fórmula: $(90$\times$24 - 1.2) / (90$\times$24) = 99.94\%$ redondeado conservador a 99.9\%. \\
 \hline
 \textbf{HaLow link (DCU → Gateway)} & 99.8\% & Interferencia WiFi 2.4 GHz causa 2 eventos/mes con degradación throughput <50\% durante 1h (link mantiene conectividad pero latencia >500 ms). RSSI logs: 4.32h downtime/mes = $(720 - 4.32) / 720 = 99.4\%$. Estimación conservadora 99.8\% asumiendo mitigación interferencia (channel hopping, filtrado espectral). \\
 \hline
 \textbf{LTE Cat-M1 (Gateway → Cloud)} & 99.5\% & SLA operador Claro Colombia IoT M2M~\cite{Claro2024Pricing}: 99.5\% Monthly Uptime (36h downtime/año permitido). Incluye handoffs entre celdas, mantenimiento red, congestión pico. Confirmado con 4 desconexiones >5 min en piloto 90 días (total 87 min downtime = 99.93\% medido, pero SLA contractual 99.5\% es límite garantizado). \\
 \hline
-\textbf{Gateway edge} & 99.95\% & Uptime piloto: 89.9/90 días (1 reinicio manual para actualización firmware, downtime 2h). Fórmula: $(90×24 - 2) / (90×24) = 99.91\%$. Hardware SBC Raspberry Pi 4 con alimentación UPS (backup 15 min) reduce riesgo cortes <1 min. MTBF especificado fabricante: 100,000h (11.4 años), tasa fallo anual 0.876\%. Disponibilidad estimada conservadora: 99.95\%. \\
+\textbf{Gateway edge} & 99.95\% & Uptime piloto: 89.9/90 días (1 reinicio manual para actualización firmware, downtime 2h). Fórmula: $(90$\times$24 - 2) / (90$\times$24) = 99.91\%$. Hardware SBC Raspberry Pi 4 con alimentación UPS (backup 15 min) reduce riesgo cortes <1 min. MTBF especificado fabricante: 100,000h (11.4 años), tasa fallo anual 0.876\%. Disponibilidad estimada conservadora: 99.95\%. \\
 \hline
-\textbf{ThingsBoard Cloud (AWS)} & 99.9\% & AWS SLA Multi-AZ deployment~\cite{AWS-SLA-2024}: EC2 99.99\% + RDS PostgreSQL Multi-AZ 99.95\%. Disponibilidad combinada (serie): $0.9999 × 0.9995 = 0.9994 = 99.94\%$. Downtime típico causado por: (a) Mantenimiento ventanas programadas (30 min/mes configurable), (b) Fallo AZ (raro, <1 evento/año con failover <2 min). Estimación conservadora redondeada: 99.9\%. \\
+\textbf{ThingsBoard Cloud (AWS)} & 99.9\% & AWS SLA Multi-AZ deployment~\cite{AWS-SLA-2024}: EC2 99.99\% + RDS PostgreSQL Multi-AZ 99.95\%. Disponibilidad combinada (serie): $0.9999 $\times$ 0.9995 = 0.9994 = 99.94\%$. Downtime típico causado por: (a) Mantenimiento ventanas programadas (30 min/mes configurable), (b) Fallo AZ (raro, <1 evento/año con failover <2 min). Estimación conservadora redondeada: 99.9\%. \\
 \hline
 \rowcolor{green!20}
-\textbf{Sistema E2E (serie)} & \textbf{99.05\%} & Producto disponibilidades individuales (modelo serie independiente): $0.999 × 0.998 × 0.995 × 0.9995 × 0.999 = \textbf{0.9905}$ \\
-& (83.1h/año) & Downtime anual equivalente: $(1 - 0.9905) × 8760h = 83.1h/año$ (vs objetivo 43.8h/año). \\
+\textbf{Sistema E2E (serie)} & \textbf{99.05\%} & Producto disponibilidades individuales (modelo serie independiente): $0.999 $\times$ 0.998 $\times$ 0.995 $\times$ 0.9995 $\times$ 0.999 = \textbf{0.9905}$ \\
+& (83.1h/año) & Downtime anual equivalente: $(1 - 0.9905) $\times$ 8760h = 83.1h/año$ (vs objetivo 43.8h/año). \\
 \hline
 \end{tabular}
 \end{table}
@@ -100,8 +100,8 @@ Reinicio Gateway & 120 min & Actualización firmware manual (no automatizada aú
 Fallo Thread mesh & 16 min & Nodo ESP32-C6 \#23 agotó batería (no detectado por alarma low-battery) & Alertas proactivas <20\% SOC implementadas Dic 2024 \\
 \hline
 \rowcolor{yellow!20}
-\textbf{Total} & \textbf{490 min} & \multicolumn{2}{p{8cm}|}{\textbf{Disponibilidad piloto: $(2160×60 - 490) / (2160×60) = 99.62\%$}} \\
-& (8.2h) & \multicolumn{2}{p{8cm}|}{Anualizado (×4 trimestres): $490 × 4 = 1,960$ min/año = 32.7h/año = \textbf{99.63\% anual}} \\
+\textbf{Total} & \textbf{490 min} & \multicolumn{2}{p{8cm}|}{\textbf{Disponibilidad piloto: $(2160$\times$60 - 490) / (2160$\times$60) = 99.62\%$}} \\
+& (8.2h) & \multicolumn{2}{p{8cm}|}{Anualizado ($\times$4 trimestres): $490 $\times$ 4 = 1,960$ min/año = 32.7h/año = \textbf{99.63\% anual}} \\
 \hline
 \end{tabular}
 \end{table}
@@ -126,7 +126,7 @@ Fallo Thread mesh & 16 min & Nodo ESP32-C6 \#23 agotó batería (no detectado po
     \item \textbf{ThingsBoard High-Availability (HA):} Upgrade a cluster 3-node con Zookeeper quorum + PostgreSQL replication streaming. Disponibilidad 99.99\% (downtime <1h/año). Costo adicional: \$150/mes hosting (vs \$50/mes single-node).
 \end{itemize}
 
-\textbf{Target post-mejoras:} $0.999 × 0.9995 × 0.9975 × 0.9995 × 0.9999 = \textbf{99.89\%}$ (9.6h downtime/año).
+\textbf{Target post-mejoras:} $0.999 $\times$ 0.9995 $\times$ 0.9975 $\times$ 0.9995 $\times$ 0.9999 = \textbf{99.89\%}$ (9.6h downtime/año).
 
 \subsection{Pérdida de Datos}
 

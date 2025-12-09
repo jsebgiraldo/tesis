@@ -23,7 +23,7 @@ Nodo ESP32-C6 & Medidor 5V aux & 3.3V & \textcolor{green}{\textbf{0.48 W}} prome
 Transceptor RS-485 & Mismo 3.3V & 3.3V & 0.05 W & MAX485 idle 300$\mu$A, TX 15mA durante 10s/hora & 1.2 Wh \\
 \hline
 \rowcolor{yellow!10}
-\textbf{Subtotal Nivel 1} & \multicolumn{3}{c|}{\textbf{2.33 W por nodo}} & \textbf{100 nodos × 2.33W} & \textbf{5,592 Wh/día} \\
+\textbf{Subtotal Nivel 1} & \multicolumn{3}{c|}{\textbf{2.33 W por nodo}} & \textbf{100 nodos $\times$ 2.33W} & \textbf{5,592 Wh/día} \\
 \hline
 \multicolumn{6}{|c|}{\cellcolor{green!20}\textbf{NIVEL 2: DCU (DATA CONCENTRATOR UNIT)}} \\
 \hline
@@ -71,7 +71,7 @@ AC/DC adapter overhead & 120V AC input & 5V output & 1.5 W & Eficiencia 80\% (lo
 \textbf{Análisis de distribución de consumo:}
 
 \begin{itemize}
-    \item \textbf{Medidores (Nivel 1): 94\%} del consumo total (5,592 Wh / 5,948 Wh). Dominante por cantidad (100 unidades × 1.8W c/u).
+    \item \textbf{Medidores (Nivel 1): 94\%} del consumo total (5,592 Wh / 5,948 Wh). Dominante por cantidad (100 unidades $\times$ 1.8W c/u).
     \item \textbf{Gateway (Nivel 3): 4.7\%} (277 Wh / 5,948 Wh). Raspberry Pi 4 representa 56\% del consumo de Gateway.
     \item \textbf{DCU (Nivel 2): 1.3\%} (79 Wh / 5,948 Wh). Más eficiente por uso de ESP32-S3 (vs RPi4) y PoE optimizado.
 \end{itemize}
@@ -83,7 +83,7 @@ Arquitectura tradicional con módems celulares LTE Cat-1 por medidor (sin DCU ni
     \item Medidor: 1.8W (igual)
     \item Módem LTE Cat-1: 3.5W promedio (vs 0.48W nodo Thread + amortizado DCU/Gateway 0.19W)
     \item \textbf{Total baseline: 5.3W/medidor vs 2.47W propuesto = 53\% menor consumo arquitectura edge}
-    \item Ahorro energético 100 medidores: (5.3 - 2.47) × 100 × 24h = \textbf{6,792 Wh/día = 2,479 kWh/año}
+    \item Ahorro energético 100 medidores: (5.3 - 2.47) $\times$ 100 $\times$ 24h = \textbf{6,792 Wh/día = 2,479 kWh/año}
     \item Ahorro económico @ \$0.10/kWh: \textbf{\$248/año} (payback hardware DCU+Gateway en 2.5 años)
 \end{itemize}
 
@@ -98,7 +98,7 @@ Requisito crítico para AMI: mantener operación durante cortes de suministro el
 \begin{itemize}
     \item \textbf{Consumo DCU}: 3.3W continuos
     \item \textbf{Batería seleccionada}: 12V 7Ah plomo-ácido AGM (ejemplo: CSB GP1272 F2)
-    \item \textbf{Energía disponible}: 12V × 7Ah × 0.8 (80\% DoD segura) = 67.2 Wh
+    \item \textbf{Energía disponible}: 12V $\times$ 7Ah $\times$ 0.8 (80\% DoD segura) = 67.2 Wh
     \item \textbf{Autonomía}: $\frac{67.2 \text{ Wh}}{3.3 \text{ W}} = 20.4$ horas
     \item \textbf{Costo}: \$18-25/batería
     \item \textbf{Vida útil}: 3-5 años (300-500 ciclos @ 80\% DoD)
@@ -111,7 +111,7 @@ Requisito crítico para AMI: mantener operación durante cortes de suministro el
 \begin{itemize}
     \item \textbf{Consumo Gateway}: 11.5W continuos
     \item \textbf{UPS seleccionada}: 12V 20Ah Li-ion (ejemplo: TalentCell 12V 20000mAh)
-    \item \textbf{Energía disponible}: 12V × 20Ah × 0.9 (90\% DoD Li-ion) = 216 Wh
+    \item \textbf{Energía disponible}: 12V $\times$ 20Ah $\times$ 0.9 (90\% DoD Li-ion) = 216 Wh
     \item \textbf{Autonomía}: $\frac{216 \text{ Wh}}{11.5 \text{ W}} = 18.8$ horas
     \item \textbf{Costo}: \$85-120/UPS
     \item \textbf{Vida útil}: 5-7 años (1000-2000 ciclos @ 90\% DoD)

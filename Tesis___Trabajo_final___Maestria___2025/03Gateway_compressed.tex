@@ -24,7 +24,7 @@ El gateway implementa entidades funcionales IoT: (1) Aplicación (ThingsBoard Ed
 
 \subsection{Raspberry Pi 4 Model B}
 
-Seleccionado por su balance costo/rendimiento: SoC Broadcom BCM2711 (Quad-core Cortex-A72 @ 1.8 GHz), 4 GB RAM, 16 GB eMMC + 256 GB NVMe SSD (vía USB 3.0 adapter), Ethernet Gigabit, 4× USB 3.0/2.0, GPIO 40-pin para expansión.
+Seleccionado por su balance costo/rendimiento: SoC Broadcom BCM2711 (Quad-core Cortex-A72 @ 1.8 GHz), 4 GB RAM, 16 GB eMMC + 256 GB NVMe SSD (vía USB 3.0 adapter), Ethernet Gigabit, 4$\times$ USB 3.0/2.0, GPIO 40-pin para expansión.
 
 \subsection{Interfaces de Conectividad}
 
@@ -87,7 +87,7 @@ HTTP/REST se utiliza para: (1) IEEE 2030.5 Server (puerto 8883/HTTPS), (2) Thing
 
 \subsection{TimescaleDB (Series Temporales)}
 
-TimescaleDB extiende PostgreSQL con optimizaciones para series temporales: (1) particionamiento automático (hypertables), (2) compresión 10-20× después de 7 días, (3) continuous aggregates para vistas materializadas (15-min, 1-hora, 1-día), (4) retención automática (90 días), y (5) queries eficientes con \texttt{time\_bucket()}.
+TimescaleDB extiende PostgreSQL con optimizaciones para series temporales: (1) particionamiento automático (hypertables), (2) compresión 10-20$\times$ después de 7 días, (3) continuous aggregates para vistas materializadas (15-min, 1-hora, 1-día), (4) retención automática (90 días), y (5) queries eficientes con \texttt{time\_bucket()}.
 
 El esquema completo de TimescaleDB, incluyendo definición de hypertables, políticas de compresión, continuous aggregates y cinco queries SQL de ejemplo, se presenta en el Anexo D.
 

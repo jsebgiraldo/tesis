@@ -66,7 +66,7 @@ ThingsBoard (cloud) & 1 & \$50/mes & \$600/año \\
 
 La solución propuesta resulta significativamente más económica que alternativas: Celular NB-IoT requiere \$10/mes/dispositivo (\$36,000/año, inviable), PLC (G3-PLC/PRIME) tiene mayor costo de nodos (\$30-40) sin ventajas claras, y LoRaWAN presenta mayor latencia (clase A) y menor throughput aunque alcance similar.
 
-\textbf{Análisis detallado NB-IoT:} NB-IoT (Narrowband IoT, 3GPP Release 13) representa la alternativa de conectividad directa celular más desplegada globalmente para AMI, con casos de uso documentados en Vodafone (Europa), AT\&T (USA), y Telefónica (Latinoamérica)~\cite{NBIoT-AMI-TCO-2024}. Ventajas: (1) \textbf{Sin infraestructura propia}: elimina CAPEX de gateways/DCUs, simplifica deployment, (2) \textbf{Cobertura celular existente}: penetración urbana 95\%+, (3) \textbf{Escalabilidad carrier-grade}: millones de dispositivos soportados por red existente. Limitaciones: (1) \textbf{OPEX dominante en TCO}: plan datos \$10/mes/medidor × 12 meses = \$120/año representa 67\% del TCO 10 años (\$182/medidor según~\cite{NBIoT-AMI-TCO-2024}), vs arquitectura propuesta 7.5\% OPEX/TCO, (2) \textbf{Latencia 10-30s}: inadecuada para aplicaciones near-realtime (DER control, Demand Response), (3) \textbf{Cobertura rural limitada}: penetración <70\% en zonas rurales Colombia (fuente: Claro coverage map 2024), donde HaLow opera independiente de infraestructura carrier. \textbf{Conclusión}: NB-IoT óptimo para deployments dispersos (<10 medidores/km$^2$) donde amortización de gateway es prohibitiva, pero inviable para densidades urbanas >50 med/km$^2$ donde arquitectura propuesta reduce TCO 10 años en 70\% (\$54 vs \$182/medidor).
+\textbf{Análisis detallado NB-IoT:} NB-IoT (Narrowband IoT, 3GPP Release 13) representa la alternativa de conectividad directa celular más desplegada globalmente para AMI, con casos de uso documentados en Vodafone (Europa), AT\&T (USA), y Telefónica (Latinoamérica)~\cite{NBIoT-AMI-TCO-2024}. Ventajas: (1) \textbf{Sin infraestructura propia}: elimina CAPEX de gateways/DCUs, simplifica deployment, (2) \textbf{Cobertura celular existente}: penetración urbana 95\%+, (3) \textbf{Escalabilidad carrier-grade}: millones de dispositivos soportados por red existente. Limitaciones: (1) \textbf{OPEX dominante en TCO}: plan datos \$10/mes/medidor $\times$ 12 meses = \$120/año representa 67\% del TCO 10 años (\$182/medidor según~\cite{NBIoT-AMI-TCO-2024}), vs arquitectura propuesta 7.5\% OPEX/TCO, (2) \textbf{Latencia 10-30s}: inadecuada para aplicaciones near-realtime (DER control, Demand Response), (3) \textbf{Cobertura rural limitada}: penetración <70\% en zonas rurales Colombia (fuente: Claro coverage map 2024), donde HaLow opera independiente de infraestructura carrier. \textbf{Conclusión}: NB-IoT óptimo para deployments dispersos (<10 medidores/km$^2$) donde amortización de gateway es prohibitiva, pero inviable para densidades urbanas >50 med/km$^2$ donde arquitectura propuesta reduce TCO 10 años en 70\% (\$54 vs \$182/medidor).
 
 \subsection{Análisis de Sensibilidad Económica}
 
@@ -85,8 +85,8 @@ Para evaluar la robustez de la propuesta ante variaciones en costos de mercado, 
 \hline
 \multicolumn{6}{|c|}{\cellcolor{blue!10}\textbf{CAPEX Inicial (Año 0)}} \\
 \hline
-Nodos (300× ESP32C6) & \$3,600 & \$4,500 & \$5,400 & \$15,000 & -76\% / -64\% \\
-DCUs (3× HaLow AP) & \$192 & \$240 & \$288 & \$3,000 & -94\% / -90\% \\
+Nodos (300$\times$ ESP32C6) & \$3,600 & \$4,500 & \$5,400 & \$15,000 & -76\% / -64\% \\
+DCUs (3$\times$ HaLow AP) & \$192 & \$240 & \$288 & \$3,000 & -94\% / -90\% \\
 Gateway (Raspberry Pi 4) & \$80 & \$100 & \$120 & \$500 & -84\% / -76\% \\
 Instalación (15\% hardware) & \$581 & \$726 & \$871 & \$2,775 & -79\% / -69\% \\
 Desarrollo SW inicial & \$2,000 & \$2,500 & \$3,000 & \$10,000 & -80\% / -70\% \\
@@ -98,7 +98,7 @@ Desarrollo SW inicial & \$2,000 & \$2,500 & \$3,000 & \$10,000 & -80\% / -70\% \
 Conectividad LTE (1GB/mes) & \$294 & \$420 & \$546 & \$36,000 & -99\% / -98\% \\
 Mantenimiento HW (5\% CAPEX) & \$323 & \$403 & \$484 & \$1,564 & -79\% / -69\% \\
 Actualizaciones SW & \$140 & \$200 & \$260 & \$5,000 & -97\% / -95\% \\
-Energía (0.5W × 303 × \$0.15/kWh) & \$200 & \$200 & \$200 & \$400 & -50\% / -50\% \\
+Energía (0.5W $\times$ 303 $\times$ \$0.15/kWh) & \$200 & \$200 & \$200 & \$400 & -50\% / -50\% \\
 \hline
 \textbf{Subtotal OPEX/año} & \textcolor{green}{\textbf{\$957}} & \textbf{\$1,223} & \textcolor{orange}{\textbf{\$1,490}} & \textcolor{red}{\textbf{\$42,964}} & \textbf{-98\% / -97\%} \\
 \hline
@@ -129,7 +129,7 @@ Meses para ROI & \textcolor{green}{\textbf{2.0 meses}} & \textbf{2.3 meses} & \t
     
     \item \textbf{Drivers de variación:}
     \begin{itemize}
-        \item \textbf{CAPEX:} Precio ESP32C6 varía \$12-18 según volumen (Mouser 2024: \$2.50 unit, \$1.80 × 1000). Módulos HaLow \$50-80 según proveedor (Morse Micro ME1000: \$60, NewRadio NR-7000: \$75). Variación ±20\% es conservadora para órdenes >1K unidades.
+        \item \textbf{CAPEX:} Precio ESP32C6 varía \$12-18 según volumen (Mouser 2024: \$2.50 unit, \$1.80 $\times$ 1000). Módulos HaLow \$50-80 según proveedor (Morse Micro ME1000: \$60, NewRadio NR-7000: \$75). Variación ±20\% es conservadora para órdenes >1K unidades.
         \item \textbf{OPEX:} Planes LTE 1GB/mes varían \$5-15/mes según país y contrato multi-año (Colombia 2024: Claro IoT \$7/mes, Movistar M2M \$12/mes). Variación ±30\% cubre incertidumbre tarifaria 10 años.
     \end{itemize}
     

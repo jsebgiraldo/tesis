@@ -274,26 +274,26 @@ Aunque existen múltiples tecnologías para backhaul IoT y conectividad AMI, se 
 \hline
 \textbf{5G/NR-Light} & OPEX recurrente operadora celular & \$15-25/dispositivo/mes = \$180K-300K/año @ 1,000 medidores. CAPEX densificación small cells \$15K-25K/celda en indoor. & HaLow: \textbf{\$0 OPEX} post-deployment (espectro no licenciado ISM 900 MHz). \textbf{Ahorro 90\% TCO 10 años} (\$107 vs \$1,800-3,000 5G). \tabularnewline
 \hline
-\textbf{NB-IoT} & Throughput insuficiente para waveforms power quality & 250 kbps vs 400 kbps requeridos para transmisión simultánea 10 kHz sampling rate + overhead CoAP (\textbf{déficit 62\%}). Latencia variable 50-100 ms por scheduling red compartida. & HaLow: 43.3 Mbps @ 8 MHz BW (\textbf{173× superior}). Latencia determinística <30 ms. OPEX \$0 vs \$8-12/mes NB-IoT. \tabularnewline
+\textbf{NB-IoT} & Throughput insuficiente para waveforms power quality & 250 kbps vs 400 kbps requeridos para transmisión simultánea 10 kHz sampling rate + overhead CoAP (\textbf{déficit 62\%}). Latencia variable 50-100 ms por scheduling red compartida. & HaLow: 43.3 Mbps @ 8 MHz BW (\textbf{173$\times$ superior}). Latencia determinística <30 ms. OPEX \$0 vs \$8-12/mes NB-IoT. \tabularnewline
 \hline
 \textbf{PLC (G3-PLC/PRIME)} & Limitado por topología transformadores MT/BT & Requiere bypass comunicaciones \$500-1,200/transformador. Red 100 medidores = 10 transformadores = \textbf{\$5K-12K CAPEX adicional}. Atenuación variable por distancia cable (60-90 dB/km). & HaLow: Propagación RF \textbf{transparente a transformadores}. Alcance 1 km directo sin repetidores. CAPEX \$40-60 radio vs \$500+ coupler PLC. \tabularnewline
 \hline
-\textbf{Zigbee Pro (2.4 GHz)} & Alcance limitado + latencia multi-hop & 50-100 m @ 2.4 GHz requiere topología mesh multi-hop (latencia +15-30 ms/hop × 3-5 hops = +45-150 ms). Interferencia WiFi co-channel. & HaLow: 1 km alcance directo, topología star/tree \textbf{sin multi-hop}. Sub-GHz 900 MHz (mejor penetración muros, -3 dB vs -10 dB 2.4 GHz). \tabularnewline
+\textbf{Zigbee Pro (2.4 GHz)} & Alcance limitado + latencia multi-hop & 50-100 m @ 2.4 GHz requiere topología mesh multi-hop (latencia +15-30 ms/hop $\times$ 3-5 hops = +45-150 ms). Interferencia WiFi co-channel. & HaLow: 1 km alcance directo, topología star/tree \textbf{sin multi-hop}. Sub-GHz 900 MHz (mejor penetración muros, -3 dB vs -10 dB 2.4 GHz). \tabularnewline
 \hline
-\textbf{LoRaWAN (privado)} & Throughput extremadamente bajo & 50 kbps máximo (SF7 @ 125 kHz), 5.5 kbps típico (SF10). \textbf{Insuficiente para waveforms} (400 kbps). Latencia 1-5s por ALOHA sin CSMA. & HaLow: 250 kbps mínimo (MCS0), \textbf{45× superior} LoRa típico. CSMA/CA garantiza latencia <100 ms. \tabularnewline
+\textbf{LoRaWAN (privado)} & Throughput extremadamente bajo & 50 kbps máximo (SF7 @ 125 kHz), 5.5 kbps típico (SF10). \textbf{Insuficiente para waveforms} (400 kbps). Latencia 1-5s por ALOHA sin CSMA. & HaLow: 250 kbps mínimo (MCS0), \textbf{45$\times$ superior} LoRa típico. CSMA/CA garantiza latencia <100 ms. \tabularnewline
 \hline
 \end{tabular}}
 \end{table}
 
 \textbf{Análisis detallado de limitantes críticas:}
 
-\textbf{NB-IoT - Requisito NO NEGOCIABLE de throughput:} La transmisión de waveforms de calidad de energía (power quality) según IEC 61000-4-30 requiere muestreo mínimo 10 kHz (10,000 samples/segundo) para capturar armónicos hasta 5to orden (50 Hz × 5 = 250 Hz). Con resolución 12-bit/sample (1.5 bytes) y overhead CoAP/UDP/IP comprimido 6LoWPAN (factor 1.3×), el throughput mínimo requerido es:
+\textbf{NB-IoT - Requisito NO NEGOCIABLE de throughput:} La transmisión de waveforms de calidad de energía (power quality) según IEC 61000-4-30 requiere muestreo mínimo 10 kHz (10,000 samples/segundo) para capturar armónicos hasta 5to orden (50 Hz $\times$ 5 = 250 Hz). Con resolución 12-bit/sample (1.5 bytes) y overhead CoAP/UDP/IP comprimido 6LoWPAN (factor 1.3$\times$), el throughput mínimo requerido es:
 
 \[
 \text{Throughput}_{min} = 10,000 \frac{samples}{s} \times 1.5 \frac{bytes}{sample} \times 1.3 = 19,500 \frac{bytes}{s} = 156 \text{ kbps}
 \]
 
-Para transmisión \textbf{simultánea de 3 fases} (trifásico) + metadata timestamp: $156 \times 3 = 468$ kbps requeridos. NB-IoT con 250 kbps nominal (Release 13) presenta un \textbf{déficit del 62\%} que no es mitigable mediante compresión sin introducir distorsión de armónicos (error >5\% THD inadmisible para análisis power quality). Wi-Fi HaLow con 43.3 Mbps @ 8 MHz BW (MCS9-10) supera el requisito por factor \textbf{92×}, permitiendo además transmisión de múltiples medidores simultáneamente sin colisiones.
+Para transmisión \textbf{simultánea de 3 fases} (trifásico) + metadata timestamp: $156 \times 3 = 468$ kbps requeridos. NB-IoT con 250 kbps nominal (Release 13) presenta un \textbf{déficit del 62\%} que no es mitigable mediante compresión sin introducir distorsión de armónicos (error >5\% THD inadmisible para análisis power quality). Wi-Fi HaLow con 43.3 Mbps @ 8 MHz BW (MCS9-10) supera el requisito por factor \textbf{92$\times$}, permitiendo además transmisión de múltiples medidores simultáneamente sin colisiones.
 
 \textbf{5G/NR-Light - Análisis económico OPEX:} Aunque 5G ofrece latencias teóricas 1-10 ms (URLLC) y throughput multi-Gbps, el \textbf{OPEX recurrente} lo hace económicamente inviable para AMI a escala:
 
@@ -304,7 +304,7 @@ Para transmisión \textbf{simultánea de 3 fases} (trifásico) + metadata timest
     \item \textbf{Densificación indoor:} Bandas >1 GHz (n78, n77) requieren small cells adicionales (\$15K-25K/celda) para penetración indoor 10+ pisos
 \end{itemize}
 
-HaLow con \textbf{CAPEX único} \$40-60/radio (Alfa Network AWUS036ACS) y \$0 OPEX presenta reducción \textbf{90\% TCO 10 años}: \$107/medidor (arquitectura propuesta, 5 años) vs \$1,800-3,000/medidor 5G (\$180-300/año × 10 años).
+HaLow con \textbf{CAPEX único} \$40-60/radio (Alfa Network AWUS036ACS) y \$0 OPEX presenta reducción \textbf{90\% TCO 10 años}: \$107/medidor (arquitectura propuesta, 5 años) vs \$1,800-3,000/medidor 5G (\$180-300/año $\times$ 10 años).
 
 \textbf{PLC - Limitante topológica transformadores:} Las comunicaciones PLC (G3-PLC, PRIME) están inherentemente limitadas por la topología de transformadores de distribución MT/BT (Media Tensión/Baja Tensión). Cada transformador introduce atenuación 40-60 dB que requiere \textbf{bypass communication devices} (repetidores/couplers) con costo \$500-1,200/unidad. Para red típica 100 medidores con 10 transformadores MT/BT, el CAPEX adicional PLC es \$5,000-12,000 vs \textbf{\$0 adicional HaLow} (propagación RF transparente a infraestructura eléctrica). Además, PLC presenta atenuación variable por longitud de cable (60-90 dB/km) y topología de red (estrella vs anillo), dificultando planificación de cobertura.
 
@@ -516,7 +516,7 @@ Diseñar, implementar y validar una arquitectura IoT centrada en edge gateways p
 
 \textbf{OE5 - Caso de Estudio Smart Energy Real:}
 \begin{itemize}
-\item Desplegar prototipo funcional para 900 medidores residenciales con topología: 300 nodos ESP32-C6 Thread por gateway × 3 gateways Raspberry Pi 4 + OpenWRT + HaLow, validando arquitectura en condiciones reales urbanas/suburbanas.
+\item Desplegar prototipo funcional para 900 medidores residenciales con topología: 300 nodos ESP32-C6 Thread por gateway $\times$ 3 gateways Raspberry Pi 4 + OpenWRT + HaLow, validando arquitectura en condiciones reales urbanas/suburbanas.
 \item Implementar conformidad IEEE 2030.5-2018 (Function Sets: DCAP, Time, EndDevice, MirrorUsagePoint, MirrorMeterReading, Messaging) con validación de interoperabilidad funcional vía test suite OpenADR VTN.
 \item Documentar lecciones aprendidas, patrones de diseño arquitectónicos, y guías de implementación técnica (instalación OpenWRT, configuración HaLow 4 modos, despliegue stack Docker, tuning kernel PREEMPT\_RT) en anexos técnicos completos.
 \end{itemize}

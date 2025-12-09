@@ -573,7 +573,7 @@ Esta sección analiza los costos operacionales reales medidos durante el piloto 
 \end{tabular}
 \end{table}
 
-\textbf{Frecuencia de fallas medida (piloto 30 nodos × 90 días = 2,700 nodo-días):}
+\textbf{Frecuencia de fallas medida (piloto 30 nodos $\times$ 90 días = 2,700 nodo-días):}
 
 Durante el piloto se registraron los siguientes eventos de falla que requirieron intervención:
 
@@ -608,15 +608,15 @@ Asumiendo tasa de fallas constante 4\%/año y resolución remota 67\% casos:
 \rowcolor{gray!20}
 \textbf{Concepto} & \textbf{Año 1-2} & \textbf{Año 3-5} & \textbf{Total 5 años} \tabularnewline
 \hline
-Fallas esperadas (4\%/año × 100 medidores) & 4 eventos/año & 4 eventos/año & 20 eventos \tabularnewline
+Fallas esperadas (4\%/año $\times$ 100 medidores) & 4 eventos/año & 4 eventos/año & 20 eventos \tabularnewline
 \hline
 Resolución remota exitosa (67\%) & 2.68 eventos & 2.68 eventos & 13.4 eventos \tabularnewline
 \hline
 Truck rolls requeridos (33\%) & 1.32 eventos & 1.32 eventos & 6.6 eventos \tabularnewline
 \hline
-Costo diagnóstico remoto (\$25 × 2.68) & \$67/año & \$67/año & \$335 \tabularnewline
+Costo diagnóstico remoto (\$25 $\times$ 2.68) & \$67/año & \$67/año & \$335 \tabularnewline
 \hline
-Costo truck rolls (\$145 × 1.32) & \$191/año & \$191/año & \$957 \tabularnewline
+Costo truck rolls (\$145 $\times$ 1.32) & \$191/año & \$191/año & \$957 \tabularnewline
 \hline
 Reemplazo hardware (50\% eventos, \$50 avg) & \$100/año & \$100/año & \$500 \tabularnewline
 \hline
@@ -645,9 +645,9 @@ Reemplazo hardware (50\% eventos, \$50 avg) & \$100/año & \$100/año & \$500 \t
 \hline
 \textbf{Costo truck roll} & \$120/visita (técnico propio o contratista). Frecuencia: 1.32 visitas/año @ 100 medidores. & \$80/visita (carrier SLA incluye visita técnica en suscripción enterprise). Frecuencia: 0.5 visitas/año (hardware carrier más robusto). & HaLow \textbf{+50\% más truck rolls} (RPi menos robusto que módems industriales). \tabularnewline
 \hline
-\textbf{Costo reemplazo hardware} & RPi4: \$55, ESP32-C6: \$25, HaLow radio: \$45. Frecuencia: 2\% dispositivos/año. & Módem NB-IoT industrial: \$85. Frecuencia: 0.5\% dispositivos/año (MTBF >50,000h). & NB-IoT hardware \textbf{4× más confiable} (MTBF validado). \tabularnewline
+\textbf{Costo reemplazo hardware} & RPi4: \$55, ESP32-C6: \$25, HaLow radio: \$45. Frecuencia: 2\% dispositivos/año. & Módem NB-IoT industrial: \$85. Frecuencia: 0.5\% dispositivos/año (MTBF >50,000h). & NB-IoT hardware \textbf{4$\times$ más confiable} (MTBF validado). \tabularnewline
 \hline
-\textbf{OPEX operacional total/medidor 5 años} & \textbf{\$17.92} (troubleshooting + truck rolls + hardware) & \textbf{\$35.00} (incluido en suscripción \$10/mes × 60 meses parcial) & HaLow \textbf{ahorra \$17.08/medidor} (-48\%) OPEX operacional. \tabularnewline
+\textbf{OPEX operacional total/medidor 5 años} & \textbf{\$17.92} (troubleshooting + truck rolls + hardware) & \textbf{\$35.00} (incluido en suscripción \$10/mes $\times$ 60 meses parcial) & HaLow \textbf{ahorra \$17.08/medidor} (-48\%) OPEX operacional. \tabularnewline
 \hline
 \rowcolor{yellow!20}
 \textbf{OPEX total (conectividad + operacional)} & \textbf{\$0 + \$17.92 = \$17.92} & \textbf{\$600 + \$35 = \$635} 5 años & HaLow ahorra \textbf{\$617.08/medidor} (-97\%) OPEX total. \tabularnewline
@@ -658,11 +658,11 @@ Reemplazo hardware (50\% eventos, \$50 avg) & \$100/año & \$100/año & \$500 \t
 \textbf{Análisis crítico:}
 
 \begin{itemize}
-    \item \textbf{Ventaja NB-IoT:} Carrier diagnostics (signal strength, SIM status, network logs) acelera troubleshooting remoto (10-15 min vs 30-60 min HaLow). Hardware módem industrial (MTBF >50,000h) reduce fallas 4× vs Raspberry Pi (MTBF $\sim$17,500h SD card). Menor frecuencia de truck rolls (0.5 vs 1.32 visitas/año).
+    \item \textbf{Ventaja NB-IoT:} Carrier diagnostics (signal strength, SIM status, network logs) acelera troubleshooting remoto (10-15 min vs 30-60 min HaLow). Hardware módem industrial (MTBF >50,000h) reduce fallas 4$\times$ vs Raspberry Pi (MTBF $\sim$17,500h SD card). Menor frecuencia de truck rolls (0.5 vs 1.32 visitas/año).
     
     \item \textbf{Ventaja HaLow:} Aunque OPEX operacional es 48\% mayor por dispositivo (\$17.92 vs \$35 NB-IoT), el \textbf{ahorro absoluto en OPEX conectividad} (\$0 vs \$600 NB-IoT 5 años) compensa ampliamente. OPEX total HaLow es \textbf{97\% menor} que NB-IoT (\$17.92 vs \$635).
     
-    \item \textbf{Break-even:} El costo adicional de troubleshooting HaLow (\$17.92 - \$0 = \$17.92/medidor OPEX operacional) se amortiza en el primer mes de operación vs ahorro OPEX conectividad NB-IoT (\$10/mes × 1 mes = \$10 > \$17.92/60 meses = \$0.30/mes).
+    \item \textbf{Break-even:} El costo adicional de troubleshooting HaLow (\$17.92 - \$0 = \$17.92/medidor OPEX operacional) se amortiza en el primer mes de operación vs ahorro OPEX conectividad NB-IoT (\$10/mes $\times$ 1 mes = \$10 > \$17.92/60 meses = \$0.30/mes).
     
     \item \textbf{Escalabilidad OPEX operacional:} A mayor escala (1,000+ medidores), el costo marginal de troubleshooting disminuye (ingeniero dedica 1 día/mes diagnosticando múltiples eventos batch vs eventos aislados). Estimación 1,000 medidores: OPEX operacional \$12/medidor 5 años (-33\% vs 100 medidores).
 \end{itemize}
@@ -946,7 +946,7 @@ Nodos Thread (firmware) & 1 & 2,160h (90 días) & 16 min \\
 \label{sec:resultados-discusion-fortalezas}
 
 % TODO: NUEVO contenido (700 palabras)
-% - Latencia E2E 248 ms (2× mejor que LTE)
+% - Latencia E2E 248 ms (2$\times$ mejor que LTE)
 % - Edge computing: 72% reducción tráfico WAN
 % - TCO: 64% ahorro vs cloud @ 10K dispositivos
 % - Autonomía: 18.7 horas (56% superior a objetivo)
@@ -967,8 +967,8 @@ Nodos Thread (firmware) & 1 & 2,160h (90 días) & 16 min \\
 
 % TODO: NUEVO contenido (800 palabras)
 % - Literatura:
-%   * [Ref1]: LoRaWAN AMI → 2000 ms latencia (8× peor)
-%   * [Ref2]: NB-IoT smart grid → $4.50/dev/mes (138× más caro)
+%   * [Ref1]: LoRaWAN AMI → 2000 ms latencia (8$\times$ peor)
+%   * [Ref2]: NB-IoT smart grid → $4.50/dev/mes (138$\times$ más caro)
 %   * [Ref3]: Wi-Fi mesh + cloud → 99.3% disponibilidad (similar)
 % - Contribuciones únicas:
 %   1. Arquitectura híbrida Thread + HaLow (novel)
@@ -1136,7 +1136,7 @@ La Hipótesis H8 (\textit{"Edge reduce tráfico WAN >70\%"}) presenta un resulta
 \begin{itemize}
     \item \textbf{P95 latencia:} 10 ms (95\% transacciones $\leq$10 ms)
     \item \textbf{Media:} 8$\pm$2 ms (n=2,000 transacciones, 30 días)
-    \item \textbf{Caso uso validado:} Detección fraude spike consumo implementada en Rule Chain Edge: Si \texttt{power\_w > 3 × avg\_last\_24h} $\rightarrow$ Alarma local 8 ms + SMS operador 12 ms (total 20 ms). Cumple requisito IEEE 2030.5 Demand Response <50 ms con margen 2.5$\times$.
+    \item \textbf{Caso uso validado:} Detección fraude spike consumo implementada en Rule Chain Edge: Si \texttt{power\_w > 3 $\times$ avg\_last\_24h} $\rightarrow$ Alarma local 8 ms + SMS operador 12 ms (total 20 ms). Cumple requisito IEEE 2030.5 Demand Response <50 ms con margen 2.5$\times$.
 \end{itemize}
 
 \textbf{Conclusión H3:} \textbf{VALIDADA}. Latencia edge 10 ms P95 cumple objetivo, habilita casos uso tiempo real con margen 5$\times$ vs requisito IEEE 2030.5 (50 ms).
@@ -1298,7 +1298,7 @@ Latencia Thread medida 11\textpm3 ms hop (OTBR $\rightarrow$ nodo lejano 320m), 
 \textbf{3. Processing} & 
 \textbf{Edge Processing:} ThingsBoard Edge 3.6.2 Rule Engine (Complex Event Processing), 72 rule nodes activos, detección anomalías consumo >3$\times$ promedio histórico, transformaciones OBIS $\rightarrow$ IEEE 2030.5 MMR.
 \newline
-\textbf{Cloud Processing:} ThingsBoard Server AWS m5.xlarge (4 vCPU, 16 GB RAM), Kafka 3.4 streams (topic partitioning 8×), aggregation queries TimescaleDB continuous aggregates. & 
+\textbf{Cloud Processing:} ThingsBoard Server AWS m5.xlarge (4 vCPU, 16 GB RAM), Kafka 3.4 streams (topic partitioning 8$\times$), aggregation queries TimescaleDB continuous aggregates. & 
 Latencia edge processing 8\textpm2 ms promedio (P95: 10 ms, n=2,000 transacciones), cumple objetivo <10 ms casos uso tiempo real. Throughput edge 129,588 mensajes / 72h prueba estrés (99.99\% success rate). Cloud processing latency 45\textpm12 ms (agregación TimescaleDB hourly rollups). \\
 \addlinespace[0.3cm]
 

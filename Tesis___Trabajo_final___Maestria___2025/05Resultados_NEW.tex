@@ -46,7 +46,7 @@ El piloto experimental se ejecutó durante 90 días (octubre--diciembre 2024) co
 \begin{itemize}
     \item \textbf{Período:} Octubre 1 - Diciembre 31, 2024 (92 días calendario = 2,208 horas)
     \item \textbf{Uptime objetivo:} 99.5\% (2,197h operación, 11h downtime permitido)
-    \item \textbf{Lecturas totales esperadas:} 30 medidores × 96 lecturas/día (15 min polling) × 92 días = 265,000 lecturas
+    \item \textbf{Lecturas totales esperadas:} 30 medidores $\times$ 96 lecturas/día (15 min polling) $\times$ 92 días = 265,000 lecturas
 \end{itemize}
 
 \textbf{Condiciones ambientales:}
@@ -227,7 +227,7 @@ Fallo Thread mesh & 16 min & Nodo ESP32-C6 \#23 agotó batería (no detectado po
 \hline
 \rowcolor{yellow!20}
 \textbf{Total} & \textbf{490 min} & \multicolumn{2}{p{8cm}|}{\textbf{Disponibilidad piloto: $(2160 \times 60 - 490) / (2160 \times 60) = 99.62\%$}} \\
-& (8.2h) & \multicolumn{2}{p{8cm}|}{Anualizado (×4 trimestres): $490 \times 4 = 1,960$ min/año = 32.7h/año = \textbf{99.63\% anual}} \\
+& (8.2h) & \multicolumn{2}{p{8cm}|}{Anualizado ($\times$4 trimestres): $490 \times 4 = 1,960$ min/año = 32.7h/año = \textbf{99.63\% anual}} \\
 \hline
 \end{tabular}
 \end{table}
@@ -325,7 +325,7 @@ Para validar estabilidad de la arquitectura bajo carga sostenida, se ejecutó pr
 \subsubsection{Configuración Prueba de Estrés}
 
 \begin{itemize}
-    \item \textbf{Intervalo lectura}: 60 segundos (vs 15 minutos operación normal) = 15× throughput
+    \item \textbf{Intervalo lectura}: 60 segundos (vs 15 minutos operación normal) = 15$\times$ throughput
     \item \textbf{Duración}: 72 horas continuas (Nov 22 18:00 → Nov 25 18:00)
     \item \textbf{Nodos participantes}: 30 medidores ESP32-C6
     \item \textbf{Lecturas totales esperadas}: $30 \text{ nodos} \times \frac{72 \times 3600}{60} = 129,600$ lecturas
@@ -345,7 +345,7 @@ Para validar estabilidad de la arquitectura bajo carga sostenida, se ejecutó pr
 \hline
 \textbf{Lecturas procesadas} & 129,588 & 8,640 (15 min) & 99.99\% success rate (12 lecturas perdidas = 0.009\%) \\
 \hline
-\textbf{CPU Gateway (promedio)} & 42\% & 18\% & Incremento 2.3× proporcional a throughput 15× (eficiencia batch processing) \\
+\textbf{CPU Gateway (promedio)} & 42\% & 18\% & Incremento 2.3$\times$ proporcional a throughput 15$\times$ (eficiencia batch processing) \\
 \hline
 \textbf{CPU Gateway (pico)} & 67\% & 42\% & Picos causados por PostgreSQL VACUUM automático (cada 6h) \\
 \hline
@@ -367,12 +367,12 @@ Para validar estabilidad de la arquitectura bajo carga sostenida, se ejecutó pr
     
     \item \textbf{CPU sostenible}: Promedio 42\% con margen 58\% disponible. Picos 67\% controlados y predecibles (VACUUM PostgreSQL cada 6h, duración <3 min).
     
-    \item \textbf{Latencia estable}: Incremento marginal +1 ms (8 → 9 ms) bajo carga 15× demuestra arquitectura escalable sin degradación significativa.
+    \item \textbf{Latencia estable}: Incremento marginal +1 ms (8 → 9 ms) bajo carga 15$\times$ demuestra arquitectura escalable sin degradación significativa.
     
     \item \textbf{Pérdida paquetes mínima}: 0.009\% (12 de 129,588) atribuidos a 3 eventos transitorios interferencia WiFi 2.4 GHz (logs muestran RSSI drops <-85 dBm durante eventos). Nivel aceptable para AMI (IEEE 2030.5 tolera <0.1\% packet loss).
 \end{itemize}
 
-\textbf{Conclusión prueba de estrés:} La arquitectura demostró estabilidad operacional bajo carga 15× superior a operación normal durante 72h continuas, validando capacidad para soportar escenarios de alta frecuencia (polling 1 min) o escalado a 450 medidores @ 15 min (equivalent throughput).
+\textbf{Conclusión prueba de estrés:} La arquitectura demostró estabilidad operacional bajo carga 15$\times$ superior a operación normal durante 72h continuas, validando capacidad para soportar escenarios de alta frecuencia (polling 1 min) o escalado a 450 medidores @ 15 min (equivalent throughput).
 
 \subsection{Limitaciones Identificadas}
 \label{sec:res-limitaciones}
@@ -485,7 +485,7 @@ Mantenimiento (15\% CAPEX) & & & \$509/año = \$2,545 \\
 \textbf{Impacto plan datos LTE:}
 
 \begin{itemize}
-    \item \textbf{50 MB/mes (\$8):} Suficiente para 30 medidores (0.31 MB/día × 30 días = 9.3 MB/mes)
+    \item \textbf{50 MB/mes (\$8):} Suficiente para 30 medidores (0.31 MB/día $\times$ 30 días = 9.3 MB/mes)
     \item \textbf{500 MB/mes (\$22):} Escala hasta 500 medidores
     \item \textbf{1 GB/mes (\$35):} Escala hasta 1,000 medidores con margen
 \end{itemize}
@@ -663,7 +663,7 @@ Los resultados del piloto experimental validan las hipótesis planteadas en el C
     
     \item \textbf{Disponibilidad:} El sistema demostró 99.62\% disponibilidad durante 90 días de operación continua, superando el target de diseño (99.05\%) y validando la robustez de la arquitectura Thread de cuatro capas con redundancia en DCU y Gateway.
     
-    \item \textbf{Escalabilidad:} El análisis de extrapolación 30→100 medidores y las pruebas de estrés 72 horas confirmaron viabilidad técnica para despliegues de escala metropolitana (cientos de medidores por Gateway), con margen de crecimiento 5× sin actualización hardware.
+    \item \textbf{Escalabilidad:} El análisis de extrapolación 30→100 medidores y las pruebas de estrés 72 horas confirmaron viabilidad técnica para despliegues de escala metropolitana (cientos de medidores por Gateway), con margen de crecimiento 5$\times$ sin actualización hardware.
     
     \item \textbf{Viabilidad Económica:} El TCO de \$54/medidor representa reducción de 95\% vs soluciones comerciales celulares (\$1,065), validando la factibilidad económica para utilities con presupuestos limitados en países en desarrollo.
 \end{enumerate}

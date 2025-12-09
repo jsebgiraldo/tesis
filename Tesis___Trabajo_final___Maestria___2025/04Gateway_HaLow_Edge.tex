@@ -39,8 +39,8 @@ El Gateway desempeña tres roles arquitectónicos críticos: (1) \textbf{Thread 
         \end{itemize}
     \item \textbf{Interfaces USB:}
         \begin{itemize}
-        \item 2× USB 3.0 (5 Gbps): Puerto 1 ocupado por nRF52840 Dongle (OTBR), Puerto 2 reservado para SSD NVMe externo (expansión futura)
-        \item 2× USB 2.0 (480 Mbps): Puerto 1 ocupado por módulo Quectel LTE, Puerto 2 libre
+        \item 2$\times$ USB 3.0 (5 Gbps): Puerto 1 ocupado por nRF52840 Dongle (OTBR), Puerto 2 reservado para SSD NVMe externo (expansión futura)
+        \item 2$\times$ USB 2.0 (480 Mbps): Puerto 1 ocupado por módulo Quectel LTE, Puerto 2 libre
         \end{itemize}
     \item \textbf{GPIO:} 40 pines (26 GPIO disponibles), utilizados para: (1) Reed switch detección tamper físico (GPIO 17), (2) LED status multicolor (GPIO 22/23/24), (3) Botón reset manual (GPIO 27)
     \item \textbf{Sistema Operativo:} Ubuntu Server 22.04.3 LTS ARM64, kernel 5.15.0-1048-raspi, Docker 24.0.7, Docker Compose 2.23.0
@@ -63,7 +63,7 @@ Raspberry Pi 4 seleccionado tras análisis comparativo con plataformas alternati
 \rowcolor{gray!20}
 \textbf{Característica} & \textbf{Raspberry Pi 4 4GB} & \textbf{Odroid N2+ 4GB} & \textbf{Orange Pi 5 4GB} & \textbf{x86 Mini-PC} \\\\
 \hline
-\textbf{CPU} & Cortex-A72 4×1.5 GHz & Cortex-A73 4×1.8 GHz & RK3588S 8×2.4 GHz & Intel N100 4×3.4 GHz \\\\
+\textbf{CPU} & Cortex-A72 4$\times$1.5 GHz & Cortex-A73 4$\times$1.8 GHz & RK3588S 8$\times$2.4 GHz & Intel N100 4$\times$3.4 GHz \\\\
 \hline
 \textbf{RAM} & 4 GB LPDDR4-3200 & 4 GB DDR4-2666 & 4 GB LPDDR4-4266 & 8 GB DDR4-3200 \\\\
 \hline
@@ -87,7 +87,7 @@ Raspberry Pi 4 seleccionado tras análisis comparativo con plataformas alternati
 
 \textbf{Decisión final: Raspberry Pi 4} por cinco ventajas críticas que superan desventajas de CPU menos potente: (1) \textbf{Precio óptimo} \$55 vs \$75-180 alternativas = 27-69\% ahorro CAPEX, despliegue 10 gateways ahorra \$200-1,250, (2) \textbf{Consumo energético} 8.5W vs 12-25W = 29-66\% reducción, OPEX 5 años: \$37 RPi vs \$52-109 alternativas @ \$0.15/kWh (ahorro \$15-72 por gateway), (3) \textbf{Ecosistema Docker ARM64} maduro con imágenes oficiales ThingsBoard, PostgreSQL, Mosquitto sin recompilación, (4) \textbf{Disponibilidad global} con stock Digi-Key/Mouser vs importación directa China (lead time 2-4 semanas Odroid/OrangePi), (5) \textbf{Operación sin ventilador} con disipador pasivo aluminio (temperatura 52°C vs 68-72°C alternativas con throttling térmico).
 
-\textbf{Trade-offs aceptados:} CPU Cortex-A72 1.5 GHz menos potente que alternativas (benchmarks: Odroid N2+ 40\% más rápido, Orange Pi 5 2.8× más rápido, x86 Mini-PC 4.5× más rápido), pero \textbf{suficiente para carga objetivo} 1,000 medidores @ 15 min = 1.1 msg/s promedio, validado stress test 30 medidores @ 60s polling = 0.5 msg/s con CPU 42\% utilización. RAM 4 GB límite vs 8 GB x86, pero stack Docker configurado límites agregados 3.5 GB sin OOM errors durante piloto 90 días.
+\textbf{Trade-offs aceptados:} CPU Cortex-A72 1.5 GHz menos potente que alternativas (benchmarks: Odroid N2+ 40\% más rápido, Orange Pi 5 2.8$\times$ más rápido, x86 Mini-PC 4.5$\times$ más rápido), pero \textbf{suficiente para carga objetivo} 1,000 medidores @ 15 min = 1.1 msg/s promedio, validado stress test 30 medidores @ 60s polling = 0.5 msg/s con CPU 42\% utilización. RAM 4 GB límite vs 8 GB x86, pero stack Docker configurado límites agregados 3.5 GB sin OOM errors durante piloto 90 días.
 
 \subsection{Arquitectura de Software}
 \label{sec:gateway-software}
@@ -124,7 +124,7 @@ La arquitectura de software del Gateway implementa seis microservicios container
 \textbf{4. Node-RED 3.1:}
 \begin{itemize}
     \item \textbf{Función:} Rule Engine visual flow-based para procesamiento edge: filtrado datos no-críticos (60\% mensajes descartados si \texttt{voltage} dentro rango 207-253V), detección anomalías threshold-based (\texttt{voltage sag/swell}, \texttt{over-current}, \texttt{temperature >60°C}), agregación temporal (4 lecturas 15-min $\rightarrow$ 1 promedio horario)
-    \item \textbf{Flujos implementados:} 12 flows con 87 nodos total: (1) Fraud detection (consumo negativo, energy rollback), (2) Voltage quality monitoring (sag/swell/interruption), (3) Power factor correction alerts (PF <0.85 3 veces consecutivas), (4) Billing pre-calculation (\texttt{cost\_usd = energy\_kwh} × \texttt{tariff})
+    \item \textbf{Flujos implementados:} 12 flows con 87 nodos total: (1) Fraud detection (consumo negativo, energy rollback), (2) Voltage quality monitoring (sag/swell/interruption), (3) Power factor correction alerts (PF <0.85 3 veces consecutivas), (4) Billing pre-calculation (\texttt{cost\_usd = energy\_kwh} $\times$ \texttt{tariff})
     \item \textbf{Latencia procesamiento:} 2-4 ms por mensaje (benchmark Node.js V8 single-threaded), suficiente para requisito edge <10 ms
     \item \textbf{Recursos:} CPU 0.5 cores, RAM 256 MB, persistencia flows 50 MB
 \end{itemize}
@@ -437,7 +437,7 @@ Done
 
 El Nivel 2 de la arquitectura implementa infraestructura de distribución Wi-Fi HaLow (IEEE 802.11ah) operando en banda sub-1 GHz (902-928 MHz ISM región América) como backhaul de última milla entre Gateway Edge y múltiples Border Routers Thread distribuidos geográficamente. HaLow proporciona tres ventajas críticas sobre Wi-Fi tradicional 2.4/5 GHz: (1) \textbf{Alcance extendido} hasta 1.2 km línea de vista vs 100 m Wi-Fi 802.11n/ac, habilitado por propagación Fresnel favorable sub-1 GHz y potencia TX +23 dBm (200 mW) vs +20 dBm Wi-Fi, (2) \textbf{Penetración indoor superior} con atenuación paredes concreto -8 dB @ 900 MHz vs -15 dB @ 2.4 GHz (47\% reducción pérdida), y (3) \textbf{Eficiencia espectral} para redes densas mediante mecanismos RAW (Restricted Access Window) y TWT (Target Wake Time) que reducen colisiones CSMA/CA 60\% comparado EDCA puro.
 
-La implementación desplegó topología mesh IEEE 802.11s con protocolo HWMP (Hybrid Wireless Mesh Protocol) para path selection automático, eliminando cableado estructurado punto-a-punto y reduciendo CAPEX 65\% vs enlaces Ethernet cableados (costo cableado Cat6 outdoor \$2.5/metro × 2400 metros = \$6,000 vs 3× routers MikroTik Tube AHM @ \$89 = \$267). Red mesh proporciona redundancia automática: fallo de un mesh point no interrumpe conectividad, HWMP redirige tráfico por rutas alternativas con convergencia <2 segundos.
+La implementación desplegó topología mesh IEEE 802.11s con protocolo HWMP (Hybrid Wireless Mesh Protocol) para path selection automático, eliminando cableado estructurado punto-a-punto y reduciendo CAPEX 65\% vs enlaces Ethernet cableados (costo cableado Cat6 outdoor \$2.5/metro $\times$ 2400 metros = \$6,000 vs 3$\times$ routers MikroTik Tube AHM @ \$89 = \$267). Red mesh proporciona redundancia automática: fallo de un mesh point no interrumpe conectividad, HWMP redirige tráfico por rutas alternativas con convergencia <2 segundos.
 
 \subsection{Fundamentos IEEE 802.11ah (Wi-Fi HaLow)}
 \label{sec:gateway-halow-fundamentos}
@@ -499,7 +499,7 @@ Implementación piloto configura:
 }
 \end{table}
 
-\textbf{Decisión final HaLow} por tres ventajas críticas que superan desventajas de throughput menor y costo módulo: (1) \textbf{Alcance 1.2 km} vs 100 m Wi-Fi tradicional = 12× mejora, elimina necesidad repetidores intermedios (ahorro \$200-400 por hop), (2) \textbf{Penetración indoor -8 dB} vs -15 dB 2.4 GHz permite conectividad indoor-outdoor sin antenas externas, (3) \textbf{Eficiencia red densa} con RAW soporta 150+ Border Routers Thread por AP sin degradación (validado stress test 30 STAs simultáneos, packet loss <0.1\%). Throughput 4 Mbps suficiente para requisito AMI 100 medidores × 200 bytes × 4 msgs/hora = 22 kbps promedio (180× margen).
+\textbf{Decisión final HaLow} por tres ventajas críticas que superan desventajas de throughput menor y costo módulo: (1) \textbf{Alcance 1.2 km} vs 100 m Wi-Fi tradicional = 12$\times$ mejora, elimina necesidad repetidores intermedios (ahorro \$200-400 por hop), (2) \textbf{Penetración indoor -8 dB} vs -15 dB 2.4 GHz permite conectividad indoor-outdoor sin antenas externas, (3) \textbf{Eficiencia red densa} con RAW soporta 150+ Border Routers Thread por AP sin degradación (validado stress test 30 STAs simultáneos, packet loss <0.1\%). Throughput 4 Mbps suficiente para requisito AMI 100 medidores $\times$ 200 bytes $\times$ 4 msgs/hora = 22 kbps promedio (180$\times$ margen).
 
 \subsection{Configuración de Mesh 802.11s}
 \label{sec:gateway-halow-mesh}
@@ -946,7 +946,7 @@ ThingsBoard Edge implementa 4 Rule Chains críticos ejecutados localmente en el 
     \item \textbf{Originator Attributes Node:} Lee atributo \texttt{aggregation\_enabled} del device (default: true)
     \item \textbf{Script Transform Node (JavaScript):}
 \begin{verbatim}
-// Agregación ventana deslizante 15 minutos (4× samples)
+// Agregación ventana deslizante 15 minutos (4$\times$ samples)
 var agg_buffer = metadata.agg_buffer || [];
 agg_buffer.push({
     timestamp: msg.ts,
@@ -955,7 +955,7 @@ agg_buffer.push({
     energy: msg.energy_kwh
 });
 
-if (agg_buffer.length >= 4) {  // 4 samples × 15 min = 1 hora
+if (agg_buffer.length >= 4) {  // 4 samples $\times$ 15 min = 1 hora
     // Calcular promedios
     var avg_voltage = agg_buffer.reduce((sum,s) => 
         sum + s.voltage, 0) / 4;
@@ -1057,7 +1057,7 @@ return {msg: msg, metadata: metadata, msgType: 'SUCCESS'};
     \begin{itemize}
         \item Topic: \texttt{v1/devices/me/rpc/request/\{requestId\}}
         \item Payload: \texttt{\{"method": "setRelayState", "params": \{"state": true\}\}}
-        \item Timeout: 60s esperando ACK, retry 2× con backoff exponencial 5s/10s
+        \item Timeout: 60s esperando ACK, retry 2$\times$ con backoff exponencial 5s/10s
     \end{itemize}
 \end{enumerate}
 
@@ -1197,9 +1197,9 @@ Este capítulo presentó la implementación completa del Gateway Inteligente y R
     
     \item \textbf{OpenThread Border Router (OTBR):} Implementación completa NAT64/DNS64 permite conectividad Thread mesh (Nivel 1 nodos) $\rightarrow$ IPv6/IPv4 internet. Thread Commissioner automatiza comisionado 30 nodos piloto, tiempo promedio 2.8$\pm$0.4s por nodo, tasa éxito 100\% (30/30 first-attempt). OTBR valida latencia Thread $\rightarrow$ Internet 44.7 ms promedio (dentro requisito <500 ms IEC 62056 AMI).
     
-    \item \textbf{Red HaLow IEEE 802.11ah (NOVEDAD PRINCIPAL):} Primera implementación documentada malla 802.11s HaLow para AMI en literatura científica. Topología 3× MikroTik Tube AHM (\$267 CAPEX total) logra: (a) Alcance 1.2 km LOS validado (RSSI -93 dBm con 2 dB margen vs sensibilidad MCS3), (b) Throughput 4.2 Mbps @ 4 MHz bandwidth MCS7, (c) Latencia RTT 11.3 ms P50 / 14.2 ms P95 (dentro <20 ms requisito IEEE 2030.5 Demand Response). Protocolo HWMP (Hybrid Wireless Mesh Protocol) con métrica airtime cost optimiza path selection multi-hop. RAW (Restricted Access Window) reduce packet loss 93\% (4.2\% $\rightarrow$ 0.3\%) en burst simultáneo 30 Border Routers vs EDCA puro. Cobertura 92\% área 0.8 km² barrio piloto con RSSI >-85 dBm (suficiente MCS5+ 2 Mbps).
+    \item \textbf{Red HaLow IEEE 802.11ah (NOVEDAD PRINCIPAL):} Primera implementación documentada malla 802.11s HaLow para AMI en literatura científica. Topología 3$\times$ MikroTik Tube AHM (\$267 CAPEX total) logra: (a) Alcance 1.2 km LOS validado (RSSI -93 dBm con 2 dB margen vs sensibilidad MCS3), (b) Throughput 4.2 Mbps @ 4 MHz bandwidth MCS7, (c) Latencia RTT 11.3 ms P50 / 14.2 ms P95 (dentro <20 ms requisito IEEE 2030.5 Demand Response). Protocolo HWMP (Hybrid Wireless Mesh Protocol) con métrica airtime cost optimiza path selection multi-hop. RAW (Restricted Access Window) reduce packet loss 93\% (4.2\% $\rightarrow$ 0.3\%) en burst simultáneo 30 Border Routers vs EDCA puro. Cobertura 92\% área 0.8 km² barrio piloto con RSSI >-85 dBm (suficiente MCS5+ 2 Mbps).
     
-    \item \textbf{ThingsBoard Edge:} Plataforma edge open-source (Zero OPEX licencia) logra reducción 72\% tráfico WAN mediante Rule Chains locales (9,600 msgs/día ingreso $\rightarrow$ 2,640 msgs/día sincronización cloud), ahorro 6.8 MB/día datos LTE por Gateway. Buffer offline PostgreSQL 7 días (128 GB SD card capacidad 20M msgs, 626× margen vs 67K msgs piloto) validado durante 3 eventos desconexión WAN (87 min downtime acumulado) con 100\% preservación datos. Dashboards locales permiten operadores campo trabajar sin conectividad internet. Comparativa vs AWS Greengrass (\$2.20/device/mes) y Azure IoT Edge (\$1.50/device/mes) confirma ThingsBoard Edge ahorro 100\% OPEX (open-source) para 192 devices piloto.
+    \item \textbf{ThingsBoard Edge:} Plataforma edge open-source (Zero OPEX licencia) logra reducción 72\% tráfico WAN mediante Rule Chains locales (9,600 msgs/día ingreso $\rightarrow$ 2,640 msgs/día sincronización cloud), ahorro 6.8 MB/día datos LTE por Gateway. Buffer offline PostgreSQL 7 días (128 GB SD card capacidad 20M msgs, 626$\times$ margen vs 67K msgs piloto) validado durante 3 eventos desconexión WAN (87 min downtime acumulado) con 100\% preservación datos. Dashboards locales permiten operadores campo trabajar sin conectividad internet. Comparativa vs AWS Greengrass (\$2.20/device/mes) y Azure IoT Edge (\$1.50/device/mes) confirma ThingsBoard Edge ahorro 100\% OPEX (open-source) para 192 devices piloto.
 \end{enumerate}
 
 \textbf{Regla de Exclusión aplicada - HaLow y OTBR exhaustados:}
