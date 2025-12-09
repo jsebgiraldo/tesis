@@ -290,29 +290,29 @@ Complementando la revisión del estado del arte académico (\S\ref{sec:marco-est
 \textbf{Costo total de propiedad (TCO 5 años):} El análisis de costo para deployment de 100 gateways edge revela:
 
 \begin{itemize}
-\item \textbf{CAPEX hardware:} \$2,500-4,000 USD por unidad × 100 = \$250,000-400,000 USD (según configuración LTE single/dual radio)
-\item \textbf{CAPEX software:} Licencias IOx Advanced \$1,200/dispositivo × 100 = \$120,000 USD
-\item \textbf{OPEX conectividad:} Plan LTE M2M \$25/mes × 100 × 60 meses = \$150,000 USD
-\item \textbf{OPEX licencias:} SmartNet soporte 15\% CAPEX anual × 5 años = \$278,000 USD (15\% × \$370K promedio)
+\item \textbf{CAPEX hardware:} \$2,500-4,000 USD por unidad $\times$ 100 = \$250,000-400,000 USD (según configuración LTE single/dual radio)
+\item \textbf{CAPEX software:} Licencias IOx Advanced \$1,200/dispositivo $\times$ 100 = \$120,000 USD
+\item \textbf{OPEX conectividad:} Plan LTE M2M \$25/mes $\times$ 100 $\times$ 60 meses = \$150,000 USD
+\item \textbf{OPEX licencias:} SmartNet soporte 15\% CAPEX anual $\times$ 5 años = \$278,000 USD (15\% $\times$ \$370K promedio)
 \item \textbf{TCO 5 años:} \$798,000 USD → \textbf{\$7,980/gateway} promedio
 \end{itemize}
 
-\textbf{Análisis crítico - Razones de descarte:} Aunque el IR829 proporciona robustez industrial probada y capacidades de routing empresarial, tres limitaciones fundamentales justifican su exclusión para esta tesis: (1) \textit{Costo prohibitivo para economías emergentes:} TCO 5 años de \$7,980/gateway excede en 40-60× el presupuesto típico de utilities Latinoamericanas (\$100-200/gateway objetivo), (2) \textit{Ausencia de soporte nativo IEEE 2030.5 y LwM2M:} La integración con protocolos Smart Energy mandatorios requiere desarrollo custom, contradiciendo la premisa de solución llave-en-mano, (3) \textit{Vendor lock-in severo:} Dependencia de ecosistema propietario Cisco (Kinetic, DNA Center, Smart Licensing) impide portabilidad y genera OPEX perpetuo no-cancelable. La arquitectura propuesta con Raspberry Pi 4 + ThingsBoard Edge + OpenThread Border Router implementa capacidades equivalentes (edge analytics, offline buffering, failover LTE) con TCO 5 años de \$124/gateway (\textbf{98.4\% reducción de costo}), eliminando licencias propietarias y habilitando migración sin fricción a plataformas alternativas.
+\textbf{Análisis crítico - Razones de descarte:} Aunque el IR829 proporciona robustez industrial probada y capacidades de routing empresarial, tres limitaciones fundamentales justifican su exclusión para esta tesis: (1) \textit{Costo prohibitivo para economías emergentes:} TCO 5 años de \$7,980/gateway excede en 40-60$\times$ el presupuesto típico de utilities Latinoamericanas (\$100-200/gateway objetivo), (2) \textit{Ausencia de soporte nativo IEEE 2030.5 y LwM2M:} La integración con protocolos Smart Energy mandatorios requiere desarrollo custom, contradiciendo la premisa de solución llave-en-mano, (3) \textit{Vendor lock-in severo:} Dependencia de ecosistema propietario Cisco (Kinetic, DNA Center, Smart Licensing) impide portabilidad y genera OPEX perpetuo no-cancelable. La arquitectura propuesta con Raspberry Pi 4 + ThingsBoard Edge + OpenThread Border Router implementa capacidades equivalentes (edge analytics, offline buffering, failover LTE) con TCO 5 años de \$124/gateway (\textbf{98.4\% reducción de costo}), eliminando licencias propietarias y habilitando migración sin fricción a plataformas alternativas.
 
 \subsection{Dell Edge Gateway 3000}
 \label{sec:marco-dell-eg3000}
 
-\textbf{Descripción técnica:} Dell Edge Gateway 3000 Series (modelos 3001/3002/3003) es plataforma edge computing compacta fanless (10×15 cm) con procesador Intel Atom E3815 single-core @ 1.46 GHz (Silvermont microarchitecture), 2 GB RAM DDR3L, 32 GB eMMC storage, y rango térmico extendido $-20^\circ$C a $+60^\circ$C (opcional $-40^\circ$C a $+70^\circ$C). Conectividad incluye 2× Gigabit Ethernet, 2× USB 2.0, módulos opcionales LTE Cat 1 (10 Mbps), Wi-Fi 802.11ac, y Bluetooth 4.1. Opera sobre Windows 10 IoT Enterprise o Ubuntu Snappy Core~\cite{dellDellEdgeGateway2024}.
+\textbf{Descripción técnica:} Dell Edge Gateway 3000 Series (modelos 3001/3002/3003) es plataforma edge computing compacta fanless (10$\times$15 cm) con procesador Intel Atom E3815 single-core @ 1.46 GHz (Silvermont microarchitecture), 2 GB RAM DDR3L, 32 GB eMMC storage, y rango térmico extendido $-20^\circ$C a $+60^\circ$C (opcional $-40^\circ$C a $+70^\circ$C). Conectividad incluye 2$\times$ Gigabit Ethernet, 2$\times$ USB 2.0, módulos opcionales LTE Cat 1 (10 Mbps), Wi-Fi 802.11ac, y Bluetooth 4.1. Opera sobre Windows 10 IoT Enterprise o Ubuntu Snappy Core~\cite{dellDellEdgeGateway2024}.
 
 \textbf{Capacidades edge computing:} La plataforma ejecuta Dell Edge Gateway Manager, framework basado en OSGi que proporciona: (1) gestión remota OTA de aplicaciones vía Dell IoT Gateway Management Console, (2) protocolos industriales pre-integrados (Modbus TCP/RTU, BACnet, SNMP), (3) SDK Java para desarrollo de aplicaciones edge. Sin embargo, presenta tres limitaciones críticas: (a) \textit{Windows IoT Enterprise no-determinístico:} El sistema operativo Windows introduce latencias variables (10-100 ms) y consumo de memoria base elevado (1.2-1.5 GB), dejando solo 500 MB disponibles para aplicaciones edge complejas como ThingsBoard, (b) \textit{Procesador sub-dimensional:} Intel Atom E3815 single-core @ 1.46 GHz proporciona ~1,500 PassMark CPU Score, insuficiente para edge analytics con >200 dispositivos concurrentes o ML inference (requiere >3,000 score), (c) \textit{Sin soporte IEEE 2030.5 nativo:} Dell Gateway Manager no incluye adaptadores Smart Energy; requiere licencias third-party como Leviton Load Control Module (\$800-1,200/gateway)~\cite{dellDellIoTGateway2023}.
 
 \textbf{Costo total de propiedad (TCO 5 años):} Análisis para 100 gateways:
 
 \begin{itemize}
-\item \textbf{CAPEX hardware:} \$1,200-2,000 USD/unidad × 100 = \$120,000-200,000 USD
-\item \textbf{CAPEX software:} Windows 10 IoT Enterprise licencias \$100/dispositivo × 100 = \$10,000 USD (alternativa Ubuntu Snappy sin costo)
-\item \textbf{OPEX conectividad:} LTE M2M \$20/mes × 100 × 60 meses = \$120,000 USD
-\item \textbf{OPEX gestión:} Dell IoT Gateway Management Console \$5/device/mes × 100 × 60 = \$30,000 USD
+\item \textbf{CAPEX hardware:} \$1,200-2,000 USD/unidad $\times$ 100 = \$120,000-200,000 USD
+\item \textbf{CAPEX software:} Windows 10 IoT Enterprise licencias \$100/dispositivo $\times$ 100 = \$10,000 USD (alternativa Ubuntu Snappy sin costo)
+\item \textbf{OPEX conectividad:} LTE M2M \$20/mes $\times$ 100 $\times$ 60 meses = \$120,000 USD
+\item \textbf{OPEX gestión:} Dell IoT Gateway Management Console \$5/device/mes $\times$ 100 $\times$ 60 = \$30,000 USD
 \item \textbf{TCO 5 años (Windows):} \$480,000 USD → \textbf{\$4,800/gateway}
 \item \textbf{TCO 5 años (Ubuntu):} \$470,000 USD → \textbf{\$4,700/gateway}
 \end{itemize}
