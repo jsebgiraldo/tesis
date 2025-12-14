@@ -7,6 +7,26 @@ Universidad Nacional de Colombia - Sede Manizales
 Maestría en Ingeniería - Automatización Industrial  
 2025
 
+## 🚀 Inicio Rápido - Nuevo PC
+
+```powershell
+# 1. Clonar repositorio
+git clone https://github.com/jsebgiraldo/tesis.git
+cd tesis
+
+# 2. Instalar MiKTeX (Windows) o TeX Live (Linux/macOS)
+#    Ver INSTALACION.md para instrucciones detalladas
+
+# 3. Compilar PDF
+cd Tesis___Trabajo_final___Maestria___2025
+pdflatex -shell-escape 0000.tex
+bibtex 0000
+pdflatex -shell-escape 0000.tex
+pdflatex -shell-escape 0000.tex
+```
+
+📖 **Guía completa de instalación:** Ver [`INSTALACION.md`](./INSTALACION.md)
+
 ## 📋 Descripción
 
 Tesis de maestría que propone, implementa y valida una arquitectura IoT de 4 niveles para infraestructuras de medición inteligente (AMI) en redes Smart Energy. La arquitectura integra Thread (802.15.4), Wi-Fi HaLow (802.11ah) y LTE Cat-M1, con edge computing basado en Docker y cumplimiento de estándares IEEE 2030.5 e ISO/IEC 30141.
