@@ -650,7 +650,7 @@ chmod 600 ca.key
 
 # Certificado CA (válido 10 años)
 openssl req -new -x509 -sha256 -key ca.key -out ca.crt -days 3650 \
-  -subj "/C=CO/ST=Antioquia/L=Medellin/O=SmartGrid CA/CN=SmartGrid Root CA"
+  -subj "/C=CO/ST=Region/L=City/O=SmartGrid CA/CN=SmartGrid Root CA"
 
 # Verificar CA
 openssl x509 -in ca.crt -text -noout
@@ -664,7 +664,7 @@ openssl ecparam -name prime256v1 -genkey -noout -out server.key
 
 # CSR (Certificate Signing Request)
 openssl req -new -sha256 -key server.key -out server.csr \
-  -subj "/C=CO/ST=Antioquia/L=Medellin/O=SmartGrid/CN=gateway.local"
+  -subj "/C=CO/ST=Region/L=City/O=SmartGrid/CN=gateway.local"
 
 # Extensiones SAN (Subject Alternative Name)
 cat > server_ext.cnf <<EOF
@@ -688,7 +688,7 @@ openssl ecparam -name prime256v1 -genkey -noout -out client.key
 
 # CSR cliente
 openssl req -new -sha256 -key client.key -out client.csr \
-  -subj "/C=CO/ST=Antioquia/L=Medellin/O=SmartGrid/CN=meter001"
+  -subj "/C=CO/ST=Region/L=City/O=SmartGrid/CN=meter001"
 
 # Extensiones cliente
 cat > client_ext.cnf <<EOF

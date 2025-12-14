@@ -1,0 +1,103 @@
+% Diagrama de topología Thread mostrando roles de dispositivos
+% Leader, Router, REED, MED, SED con sus relaciones jerárquicas
+
+\begin{figure}[H]
+\centering
+
+% ============================================================================
+% PLACEHOLDER: Insertar imagen de topología Thread aquí
+% ============================================================================
+% PROMPT PARA GENERAR LA IMAGEN:
+%
+% Crear un diagrama de red mesh Thread mostrando la jerarquía de dispositivos
+% y sus relaciones de comunicación:
+%
+% NODOS Y ROLES:
+%
+% 1. LEADER (1 nodo, centro superior):
+%    - Forma: Hexágono grande (3cm diámetro)
+%    - Color: Dorado (#FFD700) con borde grueso negro
+%    - Icono: Corona ♛ o estrella ★
+%    - Label: "Leader\nRouter ID: 1\nPartition Master"
+%    - Funciones anotadas: "Asigna Router IDs", "Propaga Network Data", "Sincronización temporal"
+%
+% 2. ROUTERS (3 nodos, distribuidos alrededor del Leader):
+%    - Forma: Hexágono mediano (2.5cm diámetro)
+%    - Color: Azul oscuro (#1565C0) con borde blanco
+%    - Label: "Router\nRID: 2/3/4\nFTD"
+%    - Funciones: "Forwarding", "Routing table", "MLE Advertisements"
+%
+% 3. REED (2 nodos, entre Routers):
+%    - Forma: Hexágono pequeño (2cm diámetro)
+%    - Color: Azul claro (#64B5F6) con borde punteado
+%    - Label: "REED\nRouter-Eligible\nStandby"
+%    - Funciones: "Routing table pasiva", "Promoción rápida"
+%
+% 4. MED - Minimal End Device (4 nodos, conectados a Routers):
+%    - Forma: Círculo (1.5cm diámetro)
+%    - Color: Verde (#4CAF50)
+%    - Label: "MED\nRX Always-On\n<50ms latency"
+%    - Ícono: Sensor activo
+%
+% 5. SED - Sleepy End Device (6 nodos, conectados a Routers):
+%    - Forma: Círculo (1.5cm diámetro)
+%    - Color: Naranja (#FF9800)
+%    - Label: "SED\nPolling 5s\n<1mA avg"
+%    - Ícono: Batería/Zzzz (sleepy)
+%
+% CONEXIONES:
+%   - Leader ↔ Routers: Líneas gruesas bidireccionales (verde) "Peer links"
+%   - Router ↔ Router: Líneas medianas bidireccionales (verde) "Mesh routing"
+%   - Router ↔ REED: Líneas punteadas (azul) "Passive routing"
+%   - Router ↔ MED/SED: Líneas finas unidireccionales (naranja) "Parent-Child"
+%   - Flechas indicando "Data Poll" de SED hacia Router parent
+%   - Flechas indicando "MLE Advertisement" de Router hacia neighbors
+%
+% ANOTACIONES:
+%   - Cuadro superior derecho: "Thread Partition"
+%     * Partition ID: 0x12345678
+%     * Channel: 25 (2.475 GHz)
+%     * PAN ID: 0xABCD
+%   - Cuadro inferior izquierdo: "Límites Thread 1.4 (OpenThread main)"
+%     * Max Routers: 16 por partición
+%     * Max Children per Router: 511
+%     * Max total devices: ~250 típico
+%   - Etiqueta "Network Data" con flecha desde Leader hacia Routers
+%   - Etiqueta "Keep-alive 32s" en MLE Advertisements
+%
+% ESCENARIOS VISUALIZADOS (opcional con color overlay):
+%   - Zona sombreada mostrando "Promoción REED → Router" (flecha azul punteada a sólida)
+%   - Zona sombreada mostrando "Re-parent" de SED (cambio de Router parent tras fallo)
+%
+% LEYENDA:
+%   - Hexágonos: Full Thread Devices (FTD) con capacidad routing
+%   - Círculos: End Devices (ED) sin routing, solo endpoints
+%   - Verde: Activo/Always-on
+%   - Naranja: Sleepy/Battery-powered
+%   - Azul: Standby/Elegible para promoción
+%
+% ESTILO VISUAL:
+%   - Tipografía: Sans-serif, tamaño 10pt para labels, 8pt para anotaciones
+%   - Fondo: Blanco con grid sutil opcional
+%   - Sombras suaves en nodos para profundidad
+%   - Iconos minimalistas (Material Design o similar)
+%
+% FORMATO DE SALIDA:
+%   - PNG o PDF vectorial
+%   - Dimensiones: 16cm ancho × 20cm alto (vertical)
+%   - Resolución: 300 DPI si PNG
+%
+% HERRAMIENTAS SUGERIDAS:
+%   - draw.io con biblioteca "Network Topology"
+%   - yEd Graph Editor con layout "Organic" o "Hierarchical"
+%   - Graphviz dot con custom shapes
+%   - Python networkx + matplotlib
+%   - LaTeX TikZ con shapes.geometric
+%
+% ============================================================================
+
+\includegraphics[width=0.85\textwidth]{figures/thread_topology_roles.png}
+
+\caption{Topología Thread mesh con roles jerárquicos de dispositivos. La red Thread implementa arquitectura auto-organizativa con 5 roles: (1) \textbf{Leader} único por partición, responsable de asignación de Router IDs y propagación de Network Data vía RANN periódico, (2) \textbf{Routers} (FTD) con capacidad forwarding, mantienen routing table activa y envían MLE Advertisements cada 32s para detección de fallos, (3) \textbf{REED} (Router-Eligible End Device) con routing table pasiva, permiten promoción rápida sin re-discovery cuando topología lo requiere, (4) \textbf{MED} (Minimal End Device) con RX always-on, latencia <50ms para aplicaciones tiempo real, consumo 19mA @ 3.3V, (5) \textbf{SED} (Sleepy End Device) con polling periódico 3-30s, latencia 100-3000ms, consumo <1mA promedio para aplicaciones battery-powered. Flechas verdes indican peer links mesh bidireccionales entre routers; flechas naranjas indican relaciones parent-child unidireccionales con End Devices. OpenThread main (Thread 1.4) limita 16 routers máximo por partición, cada router soporta hasta 511 children, topología típica escala 200-250 dispositivos por partición, TCP habilitado para transferencias >100 KB.}
+\label{fig:thread-topology-roles}
+\end{figure}

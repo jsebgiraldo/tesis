@@ -1,0 +1,142 @@
+% Diagrama de hardware ESP32-C6 con bloques funcionales y conexiones
+
+\begin{figure}[H]
+\centering
+
+% ============================================================================
+% PLACEHOLDER: Insertar diagrama de bloques ESP32-C6 aquí
+% ============================================================================
+% PROMPT PARA GENERAR LA IMAGEN:
+%
+% Crear un diagrama de bloques de hardware del ESP32-C6 mostrando arquitectura
+% interna y conexiones con periféricos externos:
+%
+% NÚCLEO PRINCIPAL (Centro del diagrama):
+%
+% CPU RISC-V:
+%   - Rectángulo grande central: "RISC-V RV32IMAC"
+%   - Detalles: "Single-core 160 MHz\n400 DMIPS\n32-bit RISC-V"
+%   - Color: Azul oscuro (#0D47A1)
+%   - Sub-bloques internos:
+%     * "FPU (Float Point Unit)"
+%     * "32 KB Instruction Cache"
+%     * "32 KB Data Cache"
+%
+% MEMORIA (Lado izquierdo):
+%   - "ROM: 384 KB" (bloque gris)
+%   - "SRAM: 512 KB" (bloque verde claro)
+%   - "Flash externo: 4-16 MB" (bloque amarillo, conexión SPI)
+%   - Flechas bidireccionales al CPU: "Memory Bus 32-bit"
+%
+% RADIO IEEE 802.15.4 (Parte superior):
+%   - Rectángulo destacado: "IEEE 802.15.4 Radio"
+%   - Detalles internos:
+%     * "2.4 GHz Transceiver"
+%     * "TX: +21 dBm max"
+%     * "RX: -105 dBm sensitivity"
+%     * "Thread 1.3 / Zigbee compatible"
+%   - Color: Verde (#2E7D32)
+%   - Conexión a antena externa (símbolo zig-zag)
+%   - Flecha al CPU: "MAC/PHY Interface"
+%
+% CONECTIVIDAD PERIFÉRICA (Lados derecho e inferior):
+%
+% UART (2 canales):
+%   - Pin GPIO20/21: "UART0 (console)"
+%   - Pin GPIO4/5: "UART1 (RS-485 Medidor)"
+%   - Baudrate: 115200 / 9600 bps
+%
+% SPI (2 canales):
+%   - "SPI2: Flash externo"
+%   - "SPI3: Expansión (disponible)"
+%
+% I2C:
+%   - Pin GPIO6/7: "I2C0 (sensores opcionales)"
+%   - Velocidad: 100 kHz / 400 kHz
+%
+% GPIO:
+%   - 22 pines GPIO disponibles
+%   - Anotación: "3.3V logic level, 40mA max per pin"
+%
+% ADC:
+%   - 7 canales ADC 12-bit
+%   - Rango: 0-3.3V
+%   - "Lectura opcional voltaje batería"
+%
+% PWM:
+%   - 6 canales PWM
+%   - "LED control / Motor control"
+%
+% ALIMENTACIÓN (Esquina inferior izquierda):
+%   - Rectángulo: "Power Management"
+%   - Entradas:
+%     * "USB-C: 5V (dev/debug)"
+%     * "Medidor AUX: 5V @ 100mA (producción)"
+%     * "Batería: 3.7V Li-ion (backup opcional)"
+%   - Salida: "3.3V LDO → Core + Peripherals"
+%   - Consumo anotado:
+%     * "Active TX: 190 mA @ 3.3V"
+%     * "Active RX: 90 mA @ 3.3V"
+%     * "Idle: 7 mA"
+%     * "Deep Sleep: 7 μA"
+%
+% SEGURIDAD (Esquina superior derecha):
+%   - Bloque: "Security Features"
+%   - Detalles:
+%     * "Secure Boot"
+%     * "Flash Encryption"
+%     * "AES-128/256 Hardware"
+%     * "SHA-256 Hardware"
+%     * "RSA/ECC accelerator"
+%     * "RNG (Random Number Generator)"
+%
+% CONEXIONES EXTERNAS DESTACADAS:
+%
+% 1. Medidor Inteligente (flecha desde UART1):
+%    - Cable: "RS-485 Half-Duplex"
+%    - Protocolo: "DLMS/COSEM over HDLC"
+%    - Icono: Medidor trifásico con display
+%
+% 2. Antena IEEE 802.15.4 (desde Radio):
+%    - Antena PCB integrada o conector U.FL
+%    - "Thread mesh → DCU Border Router"
+%
+% 3. LED Status (desde GPIO):
+%    - RGB LED indicando estados
+%
+% 4. Botón Reset/Flash (GPIO9):
+%    - Pulsador físico
+%
+% ANOTACIONES TÉCNICAS:
+%   - Package: QFN 5×5 mm, 32 pins
+%   - Temperatura: -40°C a +85°C
+%   - Certificaciones: FCC, CE, IC para radio
+%   - SDK: ESP-IDF 5.1+, Arduino compatible
+%
+% ESTILO VISUAL:
+%   - Diagrama de bloques tipo datasheet
+%   - Rectángulos con bordes redondeados
+%   - Colores diferenciando categorías (CPU, memoria, radio, periféricos)
+%   - Flechas con grosor indicando bus width (grueso=32-bit, medio=8-bit, fino=señal)
+%   - Tipografía: Sans-serif, 9pt para labels, 7pt para especificaciones
+%   - Fondo blanco, grid sutil opcional
+%
+% FORMATO DE SALIDA:
+%   - PNG o PDF vectorial
+%   - Dimensiones: 18cm ancho × 14cm alto (horizontal)
+%   - Resolución: 300 DPI si PNG
+%
+% HERRAMIENTAS SUGERIDAS:
+%   - draw.io con plantilla "Block Diagram"
+%   - Microsoft Visio con SmartArt "Block Diagram"
+%   - Inkscape o Adobe Illustrator
+%   - Fritzing (para aspecto más físico)
+%   - LaTeX TikZ con tikz-shapes library
+%
+% ============================================================================
+
+\includegraphics[width=\textwidth]{figures/esp32c6_block_diagram.png}
+
+\caption{Diagrama de bloques de hardware ESP32-C6 con arquitectura interna y conexiones periféricas. El SoC integra CPU RISC-V RV32IMAC single-core @ 160 MHz (400 DMIPS) con 512 KB SRAM on-chip y 4 MB flash externo SPI. Radio IEEE 802.15.4 de 2.4 GHz con soporte Thread 1.3/Zigbee 3.0, sensibilidad RX -105 dBm, potencia TX configurable hasta +21 dBm, habilita comunicación mesh low-power con alcance 30-50m indoor típico. Conectividad periférica: 2× UART (console + RS-485 medidor @ 9600 bps), 2× SPI (flash + expansión), 1× I2C (sensores), 22× GPIO, 7× ADC 12-bit, 6× PWM. Alimentación: 5V desde puerto auxiliar medidor (100 mA límite) regulado a 3.3V LDO, consumo activo TX 190 mA pico, idle 7 mA, deep sleep 7 μA para operación battery-powered. Seguridad hardware: Secure Boot, Flash Encryption, AES-128/256 accelerator, SHA-256 engine, RSA/ECC crypto, RNG. Package QFN 5×5mm 32-pin, rango temperatura -40°C a +85°C, certificaciones FCC/CE/IC. SDK oficial ESP-IDF 5.1+ con soporte OpenThread stack nativo.}
+\label{fig:esp32c6-block-diagram}
+\end{figure}

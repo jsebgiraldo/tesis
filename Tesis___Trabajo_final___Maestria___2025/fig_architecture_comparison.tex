@@ -1,0 +1,238 @@
+% Comparación arquitecturas: Centralizada vs Edge vs Híbrida
+
+\begin{figure}[H]
+\centering
+
+% ============================================================================
+% PLACEHOLDER: Insertar comparación de arquitecturas aquí
+% ============================================================================
+% PROMPT PARA GENERAR LA IMAGEN:
+%
+% Crear diagrama comparativo lado-a-lado de 3 arquitecturas IoT para AMI
+% (Advanced Metering Infrastructure): Centralizada, Edge Computing, Híbrida.
+%
+% LAYOUT GENERAL:
+%   - 3 paneles verticales de igual tamaño (columnas)
+%   - Cada panel: 5cm ancho × 16cm alto
+%   - Dimensiones totales: 16cm ancho × 18cm alto (con títulos y tabla)
+%
+%
+% PANEL 1: ARQUITECTURA CENTRALIZADA (Cloud-only)
+%
+% Título panel: "Arquitectura Centralizada"
+%
+% Capa 1 (inferior): MEDIDORES
+%   - 6 iconos medidor (pequeños 0.8cm)
+%   - Dispersos geográficamente
+%   - Etiqueta: "30 Medidores inteligentes"
+%
+% Capa 2: GATEWAY BÁSICO
+%   - Rectángulo gris simple: "Gateway\nRelay-only"
+%   - Función: Solo forwarding, sin procesamiento
+%   - Tamaño: 1.5cm × 1cm
+%
+% Capa 3: RED WAN
+%   - Nube de internet (icon)
+%   - Etiqueta: "Internet WAN\n(HaLow → 4G/Fiber)"
+%   - Latencia anotada: "+150-300ms"
+%
+% Capa 4 (superior): CLOUD DATACENTER
+%   - Rectángulo grande azul: "Cloud Server"
+%   - Servicios dentro (bullet list):
+%     * Parsing DLMS
+%     * Transformación datos
+%     * Agregación
+%     * Almacenamiento DB
+%     * Analytics
+%     * Dashboards
+%   - Tamaño: 3cm × 4cm
+%
+% Flechas flujo datos:
+%   - Medidores → Gateway: Fina negra
+%   - Gateway → Cloud: Gruesa roja (tráfico intenso)
+%   - Bidireccional: Sí (queries retornan)
+%
+% Métricas laterales (texto pequeño):
+%   - Latencia total: 450-800ms
+%   - Throughput: Limitado por WAN
+%   - Costo OPEX: Alto (ancho banda)
+%   - Disponibilidad: 95% (dependiente WAN)
+%   - Resiliencia: Baja (SPOF cloud)
+%
+% Iconos indicadores (semáforos):
+%   - Latencia: 🔴 Rojo (mala)
+%   - Costo: 🔴 Rojo (alto)
+%   - Disponibilidad: 🟡 Amarillo (media)
+%
+%
+% PANEL 2: ARQUITECTURA EDGE PURA (Propuesta tesis)
+%
+% Título panel: "Arquitectura Edge Computing"
+%
+% Capa 1 (inferior): MEDIDORES
+%   - 6 iconos medidor (0.8cm)
+%   - Etiqueta: "30 Medidores"
+%
+% Capa 2: GATEWAY EDGE (destacado verde)
+%   - Rectángulo grande verde: "Gateway Edge\nRaspberry Pi 4"
+%   - Servicios dentro (iconos pequeños):
+%     * Parsing DLMS
+%     * Transform LwM2M
+%     * Agregación local
+%     * InfluxDB local
+%     * Anomaly detection
+%     * Cache Redis
+%   - Tamaño: 3.5cm × 5cm (MÁS GRANDE que otros paneles)
+%   - CPU/RAM anotado: "4 cores, 4GB RAM"
+%
+% Capa 3: RED MESH HaLow
+%   - Iconos mesh interconectados: "HaLow 802.11ah\nPeer-to-peer mesh"
+%   - Latencia anotada: "+50-100ms"
+%
+% Capa 4 (superior): CLOUD (reducido)
+%   - Rectángulo pequeño azul claro: "Cloud\n(storage only)"
+%   - Servicios mínimos:
+%     * Almacenamiento histórico
+%     * Dashboards corporativos
+%   - Tamaño: 2cm × 2cm (PEQUEÑO)
+%
+% Flechas flujo datos:
+%   - Medidores → Gateway Edge: Gruesa verde (procesamiento local)
+%   - Gateway → Cloud: Fina gris (solo datos agregados)
+%   - Mayoría procesamiento en edge (indicado por grosor flecha)
+%
+% Métricas laterales:
+%   - Latencia total: 95-250ms ✅
+%   - Throughput: Alto (local)
+%   - Costo OPEX: Bajo (mínimo WAN)
+%   - Disponibilidad: 99% (local resiliente)
+%   - Resiliencia: Alta (peer-to-peer)
+%
+% Iconos indicadores:
+%   - Latencia: 🟢 Verde (buena)
+%   - Costo: 🟢 Verde (bajo)
+%   - Disponibilidad: 🟢 Verde (alta)
+%
+%
+% PANEL 3: ARQUITECTURA HÍBRIDA (Fog Computing)
+%
+% Título panel: "Arquitectura Híbrida"
+%
+% Capa 1 (inferior): MEDIDORES
+%   - 6 iconos medidor (0.8cm)
+%   - Etiqueta: "30 Medidores"
+%
+% Capa 2: GATEWAY + FOG NODE
+%   - 2 rectángulos:
+%     A) "Gateway básico" (gris 1.5cm × 1cm)
+%     B) "Fog Node" (amarillo 2.5cm × 2cm)
+%   - Fog Node servicios:
+%     * Agregación parcial
+%     * Filtrado
+%     * Cache temporal
+%   - Separados horizontalmente
+%
+% Capa 3: FOG LAYER (intermedia)
+%   - Rectángulo amarillo horizontal: "Fog Layer\nRegional Servers"
+%   - Servicios:
+%     * Procesamiento regional
+%     * Agregación multi-sitio
+%   - Tamaño: 3cm × 1.5cm
+%
+% Capa 4: RED WAN
+%   - Nube internet
+%   - Latencia: "+100-200ms"
+%
+% Capa 5 (superior): CLOUD
+%   - Rectángulo azul mediano: "Cloud\nCentral Analytics"
+%   - Servicios:
+%     * ML/AI training
+%     * Long-term storage
+%     * Corporate dashboards
+%   - Tamaño: 2.5cm × 3cm
+%
+% Flechas flujo datos:
+%   - Medidores → Fog: Media naranja
+%   - Fog → Cloud: Media azul
+%   - Distribución 60% fog, 40% cloud (grosor indica proporción)
+%
+% Métricas laterales:
+%   - Latencia total: 200-450ms
+%   - Throughput: Medio
+%   - Costo OPEX: Medio (fog + cloud)
+%   - Disponibilidad: 97% (dependiente fog)
+%   - Resiliencia: Media (fog SPOF regional)
+%
+% Iconos indicadores:
+%   - Latencia: 🟡 Amarillo (media)
+%   - Costo: 🟡 Amarillo (medio)
+%   - Disponibilidad: 🟡 Amarillo (media)
+%
+%
+% TABLA COMPARATIVA (debajo de los 3 paneles):
+%
+% | Criterio              | Centralizada | Edge (Tesis) | Híbrida  |
+% |-----------------------|--------------|--------------|----------|
+% | Latencia P95          | 800ms 🔴     | 250ms 🟢     | 450ms 🟡 |
+% | CAPEX                 | $150 🟢      | $420 🟡      | $580 🔴  |
+% | OPEX anual            | $180 🔴      | $45 🟢       | $95 🟡   |
+% | Disponibilidad        | 95% 🟡       | 99% 🟢       | 97% 🟡   |
+% | Ancho banda WAN       | 2.5 Mbps 🔴  | 0.3 Mbps 🟢  | 1.2 Mbps 🟡 |
+% | Procesamiento local   | 0% 🔴        | 85% 🟢       | 60% 🟡   |
+% | Resiliencia fallos    | Baja 🔴      | Alta 🟢      | Media 🟡 |
+% | Escalabilidad         | Alta 🟢      | Media 🟡     | Alta 🟢  |
+% | Complejidad deploy    | Baja 🟢      | Alta 🔴      | Media 🟡 |
+%
+% Tipografía tabla: 7pt monospace, colores semáforo en celdas
+%
+%
+% LEYENDA (esquina inferior derecha):
+%   - 🟢 Verde: Óptimo para criterio
+%   - 🟡 Amarillo: Aceptable
+%   - 🔴 Rojo: Limitante
+%
+%
+% ANOTACIONES ADICIONALES:
+%
+% Recuadro superior (resumen):
+%   "ARQUITECTURA EDGE (TESIS):"
+%   "✅ Mejor latencia (3.2× más rápido)"
+%   "✅ Menor OPEX (4× reducción ancho banda)"
+%   "✅ Mayor disponibilidad (99% vs 95%)"
+%   "✅ Resiliencia peer-to-peer mesh"
+%   "⚠️ Mayor CAPEX inicial (+$270 por gateway)"
+%   "⚠️ Escalabilidad limitada hardware edge"
+%
+%
+% ESTILO VISUAL:
+%   - Paneles: Borde negro fino (1pt), separados 0.5cm
+%   - Capas dentro de paneles: Apiladas verticalmente con flechas conectoras
+%   - Colores arquitectura:
+%     * Centralizada: Dominancia azul (cloud)
+%     * Edge: Dominancia verde (local)
+%     * Híbrida: Mix amarillo-naranja (fog) + azul (cloud)
+%   - Iconos: Line-art simples, monocromáticos
+%   - Flechas: Grosor proporcional a volumen datos (0.5pt-3pt)
+%   - Semáforos: Círculos rellenos 0.4cm diámetro
+%   - Tipografía: Sans-serif, 8pt para texto, 7pt para métricas, 10pt para títulos
+%   - Fondo: Blanco, grid sutil opcional
+%
+% FORMATO DE SALIDA:
+%   - PNG o PDF vectorial
+%   - Dimensiones: 16cm ancho × 18cm alto (vertical con tabla)
+%   - Resolución: 300 DPI si PNG
+%
+% HERRAMIENTAS SUGERIDAS:
+%   - draw.io con plantilla "Comparison Diagram"
+%   - Microsoft PowerPoint SmartArt "Matrix"
+%   - Adobe Illustrator con artboards
+%   - Python matplotlib con subplot(1,3)
+%   - LaTeX TikZ con matrix library
+%
+% ============================================================================
+
+\includegraphics[width=\textwidth]{figures/architecture_comparison.png}
+
+\caption{Comparación arquitecturas IoT para AMI (Advanced Metering Infrastructure): Centralizada cloud-only vs Edge Computing (propuesta tesis) vs Híbrida fog computing. Arquitectura Centralizada (izquierda) envía todo tráfico crudo a cloud vía WAN resultando latencia P95=800ms, alto OPEX ancho banda 2.5 Mbps, disponibilidad 95\% dependiente conectividad internet, single-point-of-failure datacenter remoto. Arquitectura Edge Computing (centro, implementada en tesis) procesa 85\% datos localmente en Gateway Edge Raspberry Pi 4 con parsing DLMS, transformación LwM2M, agregación 5-min, InfluxDB local, anomaly detection, logrando latencia P95=250ms (3.2× mejora), OPEX reducido \$45/año (ancho banda 0.3 Mbps solo datos agregados), disponibilidad 99\% con resiliencia peer-to-peer HaLow mesh, trade-off CAPEX inicial +\$270 por gateway hardware. Arquitectura Híbrida (derecha) distribuye procesamiento 60\% fog layer regional + 40\% cloud central, métricas intermedias latencia P95=450ms, OPEX \$95/año, disponibilidad 97\%, requiere infraestructura fog adicional (\$580 CAPEX). Tabla comparativa muestra arquitectura edge óptima en 6 de 9 criterios: latencia favorable, OPEX bajo, alta disponibilidad, bajo ancho banda WAN, alto procesamiento local, resiliencia elevada, con trade-offs CAPEX moderado y escalabilidad hardware limitada. Resultados validan hipótesis H1 (edge computing reduce latencia vs centralizada) y H6 (viabilidad económica con ROI 18 meses por ahorro OPEX). Elección arquitectura edge justificada para despliegues AMI distribuidos geográficamente con conectividad WAN limitada, requisitos latencia <1s, y disponibilidad >99\% SLA.}
+\label{fig:architecture-comparison}
+\end{figure}

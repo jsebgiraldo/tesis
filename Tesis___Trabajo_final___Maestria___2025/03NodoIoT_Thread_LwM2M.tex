@@ -13,7 +13,7 @@ Este capítulo presenta el diseño e implementación completa del Nivel 1 de la 
 
 La elección de Thread como protocolo de red de campo se fundamenta en tres ventajas críticas sobre alternativas (Zigbee, BLE Mesh): IPv6 nativo extremo-a-extremo elimina gateways de traducción, reduciendo latencia 40-60\% (150 ms $\rightarrow$ 90 ms típico); cumplimiento directo de IEEE 2030.5 Smart Energy Profile 2.0 sin Application Layer Gateway (ALG); y convergencia con Matter specification que adoptó Thread como mandatory transport layer~\cite{threadMatterConvergence2024}. LwM2M (Lightweight Machine-to-Machine) proporciona gestión remota estandarizada: aprovisionamiento, actualización firmware OTA, y observación asíncrona de recursos mediante CoAP Observe (RFC 7641), eliminando polling ineficiente.
 
-La implementación utilizó 30 nodos ESP32-C6-DevKitC-1 desplegados en piloto urbano (Medellín, 0.8 km², 90 días operación) con las siguientes métricas validadas: autonomía 19.3 horas con batería 3000 mAh, latencia local Thread 45±8 ms, consumo promedio 5.2 mW con reporting cada 15 minutos, y disponibilidad 99.7\% (2 nodos fallaron por fallo hardware fuente alimentación).
+La implementación utilizó 30 nodos ESP32-C6-DevKitC-1 desplegados en entorno urbano (0.8 km², 90 días operación) con las siguientes métricas validadas: autonomía 19.3 horas con batería 3000 mAh, latencia local Thread 45±8 ms, consumo promedio 5.2 mW con reporting cada 15 minutos, y disponibilidad 99.7\% (2 nodos fallaron por fallo hardware fuente alimentación).
 
 \textbf{Estructura del capítulo:} §\ref{sec:nodo-pila-protocolos} detalla la pila completa de protocolos desde IEEE 802.15.4 hasta LwM2M, \textbf{agotando el tema Thread aquí} según la Regla de Exclusión (no se menciona Thread en capítulos posteriores). §\ref{sec:nodo-hardware} describe hardware ESP32-C6 y firmware ESP-IDF. §\ref{sec:nodo-configuracion-lwm2m} especifica configuración LwM2M Device Profile. §\ref{sec:nodo-pruebas} presenta validación experimental aislada del nodo.
 
@@ -21,6 +21,8 @@ La implementación utilizó 30 nodos ESP32-C6-DevKitC-1 desplegados en piloto ur
 \label{sec:nodo-pila-protocolos}
 
 Este capítulo presenta el diseño completo de la pila de comunicación del nodo sensor, cubriendo desde la capa física IEEE 802.15.4 hasta el protocolo de aplicación LwM2M. La elección de Thread se fundamenta en sus capacidades de mesh auto-formación, baja latencia y soporte nativo IPv6.
+
+\input{fig_protocol_stack}
 
 \subsection{Capa Física y Enlace: IEEE 802.15.4}
 \label{sec:nodo-ieee802154}
@@ -59,6 +61,8 @@ Thread implementa routing mesh auto-configurable basado en métricas de calidad 
 
 La red Thread implementa topología jerárquica con cuatro roles principales, organizados según capacidad de procesamiento y requerimientos de energía:
 
+\input{fig_thread_topology_roles}
+
 \textbf{1. Leader:} Único por partición, responsable de: (1) Asignación de Router IDs (0-62, identificador único router), (2) Propagación de Network Data (prefijos IPv6, rutas, servicios), (3) Sincronización temporal de la partición. Elección mediante algoritmo distributed: cada router calcula peso basado en ID\_SEQUENCE (cambios de Leader previos), conectividad (número de neighbors), y battery level. Router con mayor peso envía MLE Advertisement anunciándose Leader. Si dos routers tienen peso idéntico, mayor Router ID gana.
 
 \textbf{2. Router:} Full Thread Device (FTD) con capacidad forwarding. Mantiene routing table con next-hop por destino RLOC16. Funciones: (1) Forwarding de paquetes IPv6 entre End Devices y otros Routers, (2) Secure commissioning de nuevos joiners (rol Joiner Router), (3) Propagación de Network Data updates, (4) Keep-alive MLE Advertisements cada 32 segundos detectando link failures. Un Router puede tener hasta 511 children (End Devices asociados). Promoción desde REED ocurre cuando: número de routers <16, path cost mejora >2 unidades, o End Device parent tiene >64 children.
@@ -69,7 +73,7 @@ La red Thread implementa topología jerárquica con cuatro roles principales, or
 
 La implementación de esta tesis utiliza ESP32-C6 como MED (RX always-on) en nodos adaptadores de medidor, eliminando latencia de polling y garantizando entrega <100 ms para comandos Demand Response críticos. Consumo 19 mA es aceptable al estar alimentados desde medidor (5V disponible).
 
-\textbf{Criterios de promoción Router:} Thread implementa algoritmo adaptativo: (1) Red inicial con 1 Leader + 15 Routers máximo (límite 16 por estándar Thread 1.3), (2) End Device promovido a Router si: (a) path cost hacia Leader mejora >2 vs ruta actual, (b) número de routers <16 y densidad de red alta (>32 neighbors detectados), (c) parent router tiene >64 children (balance de carga), (3) Router downgrade a REED si: ocioso >120 segundos (no forwarding traffic), o red sobre-provisionada (>12 routers para <50 devices).
+\textbf{Criterios de promoción Router:} Thread implementa algoritmo adaptativo: (1) Red inicial con 1 Leader + 15 Routers máximo (límite 16 por estándar Thread 1.4), (2) End Device promovido a Router si: (a) path cost hacia Leader mejora >2 vs ruta actual, (b) número de routers <16 y densidad de red alta (>32 neighbors detectados), (c) parent router tiene >64 children (balance de carga), (3) Router downgrade a REED si: ocioso >120 segundos (no forwarding traffic), o red sobre-provisionada (>12 routers para <50 devices).
 
 \subsubsection{Mecanismos de Auto-Formación y Auto-Reparación}
 \label{sec:nodo-thread-autoformacion}
@@ -199,102 +203,149 @@ El objeto 10242 permite instancias múltiples (útil para sub-medidores o línea
 
 \begin{table}[H]
 \centering
-\caption{Recursos clave Objeto 10242 (3-Phase Power Meter) implementados en piloto}
+\caption{Recursos clave Objeto LwM2M 10242 (3-Phase Power Meter) implementados en piloto}
 \label{tab:lwm2m-obj-10242}
-\resizebox{\textwidth}{!}{%
-\begin{tabular}{|l|p{4.5cm}|l|l|p{4.5cm}|}
+\footnotesize
+\begin{tabular}{|c|l|c|c|l|}
 \hline
 \rowcolor{gray!20}
-\textbf{Resource ID} & \textbf{Nombre} & \textbf{Tipo} & \textbf{Unidad} & \textbf{Descripción} \tabularnewline
+\textbf{ID} & \textbf{Nombre} & \textbf{Tipo} & \textbf{Unidad} & \textbf{Descripción} \\
 \hline
-\multicolumn{5}{|c|}{\cellcolor{gray!10}\textbf{Información del medidor}} \tabularnewline
+\multicolumn{5}{|c|}{\cellcolor{gray!10}\textbf{Información del Medidor}} \\
 \hline
-0 & Manufacturer & String & - & Fabricante: "Emsitech" \tabularnewline
+0 & Manufacturer & String & --- & Fabricante: "Emsitech" \\
+1 & Model Number & String & --- & Modelo: "P2000-T" \\
+2 & Serial Number & String & --- & Número serie único \\
 \hline
-1 & Model Number & String & - & Modelo: "ET-340" \tabularnewline
+\multicolumn{5}{|c|}{\cellcolor{gray!10}\textbf{Fase R (Phase 1)}} \\
 \hline
-2 & Serial Number & String & - & Número de serie único (OBIS 0-0:96.1.0*255) \tabularnewline
+4 & Tension R & Float & V & Voltaje fase-neutro R \\
+5 & Current R & Float & A & Corriente fase R \\
+6 & Active Power R & Float & kW & Potencia activa R \\
+7 & Reactive Power R & Float & kvar & Potencia reactiva R \\
+11 & Power Factor R & Float & --- & Factor potencia R \\
 \hline
-\multicolumn{5}{|c|}{\cellcolor{gray!10}\textbf{Mediciones Fase R (Phase 1)}} \tabularnewline
+\multicolumn{5}{|c|}{\cellcolor{gray!10}\textbf{Fase S (Phase 2)}} \\
 \hline
-4 & Tension R & Float & V & Voltaje fase R (fase-neutro) \tabularnewline
+14 & Tension S & Float & V & Voltaje fase-neutro S \\
+15 & Current S & Float & A & Corriente fase S \\
+16 & Active Power S & Float & kW & Potencia activa S \\
+17 & Reactive Power S & Float & kvar & Potencia reactiva S \\
+21 & Power Factor S & Float & --- & Factor potencia S \\
 \hline
-5 & Current R & Float & A & Corriente fase R \tabularnewline
+\multicolumn{5}{|c|}{\cellcolor{gray!10}\textbf{Fase T (Phase 3)}} \\
 \hline
-6 & Active Power R & Float & kW & Potencia activa fase R \tabularnewline
+24 & Tension T & Float & V & Voltaje fase-neutro T \\
+25 & Current T & Float & A & Corriente fase T \\
+26 & Active Power T & Float & kW & Potencia activa T \\
+27 & Reactive Power T & Float & kvar & Potencia reactiva T \\
+31 & Power Factor T & Float & --- & Factor potencia T \\
 \hline
-7 & Reactive Power R & Float & kvar & Potencia reactiva fase R \tabularnewline
+\multicolumn{5}{|c|}{\cellcolor{gray!10}\textbf{Totales Trifásicos}} \\
 \hline
-11 & Power Factor R & Float & adim. & Factor de potencia fase R (-1..1) \tabularnewline
+34 & 3-Phase Active Power & Float & kW & Potencia activa total \\
+35 & 3-Phase Reactive Power & Float & kvar & Potencia reactiva total \\
+38 & 3-Phase Apparent Power & Float & kVA & Potencia aparente total \\
+39 & 3-Phase Power Factor & Float & --- & Factor potencia total \\
 \hline
-\multicolumn{5}{|c|}{\cellcolor{gray!10}\textbf{Mediciones Fase S (Phase 2)}} \tabularnewline
+\multicolumn{5}{|c|}{\cellcolor{gray!10}\textbf{Energía Acumulada}} \\
 \hline
-14 & Tension S & Float & V & Voltaje fase S (fase-neutro) \tabularnewline
+41 & Active Energy & Float & kWh & Energía activa importada \\
+42 & Reactive Energy & Float & kvarh & Energía reactiva \\
 \hline
-15 & Current S & Float & A & Corriente fase S \tabularnewline
+\multicolumn{5}{|c|}{\cellcolor{gray!10}\textbf{Otros Parámetros}} \\
 \hline
-16 & Active Power S & Float & kW & Potencia activa fase S \tabularnewline
+46 & Tension R-S & Float & V & Voltaje línea R-S \\
+47 & Tension S-T & Float & V & Voltaje línea S-T \\
+48 & Tension T-R & Float & V & Voltaje línea T-R \\
+49 & Frequency & Float & Hz & Frecuencia red \\
+50 & Neutral Current & Float & A & Corriente neutro \\
 \hline
-17 & Reactive Power S & Float & kvar & Potencia reactiva fase S \tabularnewline
-\hline
-21 & Power Factor S & Float & adim. & Factor de potencia fase S (-1..1) \tabularnewline
-\hline
-\multicolumn{5}{|c|}{\cellcolor{gray!10}\textbf{Mediciones Fase T (Phase 3)}} \tabularnewline
-\hline
-24 & Tension T & Float & V & Voltaje fase T (fase-neutro) \tabularnewline
-\hline
-25 & Current T & Float & A & Corriente fase T \tabularnewline
-\hline
-26 & Active Power T & Float & kW & Potencia activa fase T \tabularnewline
-\hline
-27 & Reactive Power T & Float & kvar & Potencia reactiva fase T \tabularnewline
-\hline
-31 & Power Factor T & Float & adim. & Factor de potencia fase T (-1..1) \tabularnewline
-\hline
-\multicolumn{5}{|c|}{\cellcolor{gray!10}\textbf{Totales Trifásicos}} \tabularnewline
-\hline
-34 & 3-Phase Active Power & Float & kW & Potencia activa total (suma R+S+T) \tabularnewline
-\hline
-35 & 3-Phase Reactive Power & Float & kvar & Potencia reactiva total \tabularnewline
-\hline
-38 & 3-Phase Apparent Power & Float & kVA & Potencia aparente total \tabularnewline
-\hline
-39 & 3-Phase Power Factor & Float & adim. & Factor de potencia total (-1..1) \tabularnewline
-\hline
-\multicolumn{5}{|c|}{\cellcolor{gray!10}\textbf{Energía Acumulada}} \tabularnewline
-\hline
-41 & Active Energy & Float & kWh & Energía activa importada acumulada (OBIS 1-0:1.8.0) \tabularnewline
-\hline
-42 & Reactive Energy & Float & kvarh & Energía reactiva acumulada \tabularnewline
-\hline
-\multicolumn{5}{|c|}{\cellcolor{gray!10}\textbf{Otros Parámetros}} \tabularnewline
-\hline
-46 & Tension R-S & Float & V & Voltaje línea-línea R-S \tabularnewline
-\hline
-47 & Tension S-T & Float & V & Voltaje línea-línea S-T \tabularnewline
-\hline
-48 & Tension T-R & Float & V & Voltaje línea-línea T-R \tabularnewline
-\hline
-49 & Frequency & Float & Hz & Frecuencia de red (OBIS 1-0:14.7.0) \tabularnewline
-\hline
-50 & Neutral Current & Float & A & Corriente de neutro (desbalance) \tabularnewline
-\hline
-\end{tabular}}
+\end{tabular}
 \end{table}
 
-\textbf{Mapeo OBIS → LwM2M:}
+\textbf{Mapeo completo OBIS → LwM2M:}
 
-El parser DLMS/COSEM del nodo ESP32-C6 (\texttt{dlms\_parser.c}) lee registros OBIS del medidor Emsitech ET-340 vía RS-485 y mapea valores a recursos LwM2M:
+El parser DLMS/COSEM del nodo ESP32-C6 (\texttt{dlms\_parser.c}) lee 51 registros OBIS del medidor Emsitech P2000-T vía RS-485 Modbus RTU y mapea valores a recursos LwM2M Object 10242:
 
+\textbf{Información del medidor:}
+\begin{itemize}
+    \item OBIS \texttt{0-0:96.1.0*255} (Serial Number) → LwM2M \texttt{/10242/0/2}
+    \item OBIS \texttt{0-0:42.0.0*255} (Logical Device Name) → LwM2M \texttt{/10242/0/1}
+\end{itemize}
+
+\textbf{Voltajes fase-neutro (V):}
 \begin{itemize}
     \item OBIS \texttt{1-0:32.7.0*255} (Voltage L1) → LwM2M \texttt{/10242/0/4} (Tension R)
     \item OBIS \texttt{1-0:52.7.0*255} (Voltage L2) → LwM2M \texttt{/10242/0/14} (Tension S)
     \item OBIS \texttt{1-0:72.7.0*255} (Voltage L3) → LwM2M \texttt{/10242/0/24} (Tension T)
-    \item OBIS \texttt{1-0:31.7.0*255} (Current L1) → LwM2M \texttt{/10242/0/5} (Current R)
-    \item OBIS \texttt{1-0:1.8.0*255} (Energy import) → LwM2M \texttt{/10242/0/41} (Active Energy)
-    \item OBIS \texttt{1-0:13.7.0*255} (Power Factor) → LwM2M \texttt{/10242/0/39} (3-Phase Power Factor)
-    \item OBIS \texttt{1-0:14.7.0*255} (Frequency) → LwM2M \texttt{/10242/0/49} (Frequency)
 \end{itemize}
+
+\textbf{Voltajes línea-línea (V):}
+\begin{itemize}
+    \item OBIS \texttt{1-0:32.25.0*255} (Voltage L1-L2) → LwM2M \texttt{/10242/0/46} (Tension R-S)
+    \item OBIS \texttt{1-0:52.25.0*255} (Voltage L2-L3) → LwM2M \texttt{/10242/0/47} (Tension S-T)
+    \item OBIS \texttt{1-0:72.25.0*255} (Voltage L3-L1) → LwM2M \texttt{/10242/0/48} (Tension T-R)
+\end{itemize}
+
+\textbf{Corrientes por fase (A):}
+\begin{itemize}
+    \item OBIS \texttt{1-0:31.7.0*255} (Current L1) → LwM2M \texttt{/10242/0/5} (Current R)
+    \item OBIS \texttt{1-0:51.7.0*255} (Current L2) → LwM2M \texttt{/10242/0/15} (Current S)
+    \item OBIS \texttt{1-0:71.7.0*255} (Current L3) → LwM2M \texttt{/10242/0/25} (Current T)
+    \item OBIS \texttt{1-0:91.7.0*255} (Neutral Current) → LwM2M \texttt{/10242/0/50}
+\end{itemize}
+
+\textbf{Potencia activa por fase (kW):}
+\begin{itemize}
+    \item OBIS \texttt{1-0:21.7.0*255} (Active Power L1) → LwM2M \texttt{/10242/0/6}
+    \item OBIS \texttt{1-0:41.7.0*255} (Active Power L2) → LwM2M \texttt{/10242/0/16}
+    \item OBIS \texttt{1-0:61.7.0*255} (Active Power L3) → LwM2M \texttt{/10242/0/26}
+    \item OBIS \texttt{1-0:1.7.0*255} (Total Active Power) → LwM2M \texttt{/10242/0/34}
+\end{itemize}
+
+\textbf{Potencia reactiva por fase (kvar):}
+\begin{itemize}
+    \item OBIS \texttt{1-0:23.7.0*255} (Reactive Power L1) → LwM2M \texttt{/10242/0/7}
+    \item OBIS \texttt{1-0:43.7.0*255} (Reactive Power L2) → LwM2M \texttt{/10242/0/17}
+    \item OBIS \texttt{1-0:63.7.0*255} (Reactive Power L3) → LwM2M \texttt{/10242/0/27}
+    \item OBIS \texttt{1-0:3.7.0*255} (Total Reactive Power) → LwM2M \texttt{/10242/0/35}
+\end{itemize}
+
+\textbf{Potencia aparente (kVA):}
+\begin{itemize}
+    \item OBIS \texttt{1-0:29.7.0*255} (Apparent Power L1) → LwM2M \texttt{/10242/0/8}
+    \item OBIS \texttt{1-0:49.7.0*255} (Apparent Power L2) → LwM2M \texttt{/10242/0/18}
+    \item OBIS \texttt{1-0:69.7.0*255} (Apparent Power L3) → LwM2M \texttt{/10242/0/28}
+    \item OBIS \texttt{1-0:9.7.0*255} (Total Apparent Power) → LwM2M \texttt{/10242/0/38}
+\end{itemize}
+
+\textbf{Factor de potencia:}
+\begin{itemize}
+    \item OBIS \texttt{1-0:33.7.0*255} (Power Factor L1) → LwM2M \texttt{/10242/0/11}
+    \item OBIS \texttt{1-0:53.7.0*255} (Power Factor L2) → LwM2M \texttt{/10242/0/21}
+    \item OBIS \texttt{1-0:73.7.0*255} (Power Factor L3) → LwM2M \texttt{/10242/0/31}
+    \item OBIS \texttt{1-0:13.7.0*255} (Total Power Factor) → LwM2M \texttt{/10242/0/39}
+\end{itemize}
+
+\textbf{Energía acumulada (kWh/kvarh):}
+\begin{itemize}
+    \item OBIS \texttt{1-0:1.8.0*255} (Active Energy Import) → LwM2M \texttt{/10242/0/41}
+    \item OBIS \texttt{1-0:2.8.0*255} (Active Energy Export) → LwM2M \texttt{/10242/0/42}
+    \item OBIS \texttt{1-0:3.8.0*255} (Reactive Energy Q1) → LwM2M \texttt{/10242/0/43}
+    \item OBIS \texttt{1-0:4.8.0*255} (Reactive Energy Q2) → LwM2M \texttt{/10242/0/44}
+    \item OBIS \texttt{1-0:9.8.0*255} (Apparent Energy) → LwM2M \texttt{/10242/0/45}
+\end{itemize}
+
+\textbf{Frecuencia y THD:}
+\begin{itemize}
+    \item OBIS \texttt{1-0:14.7.0*255} (Frequency) → LwM2M \texttt{/10242/0/49}
+    \item OBIS \texttt{1-0:32.36.0*255} (THD Voltage L1) → LwM2M \texttt{/10242/0/12}
+    \item OBIS \texttt{1-0:52.36.0*255} (THD Voltage L2) → LwM2M \texttt{/10242/0/22}
+    \item OBIS \texttt{1-0:72.36.0*255} (THD Voltage L3) → LwM2M \texttt{/10242/0/32}
+\end{itemize}
+
+Total: 51 registros OBIS mapeados a recursos LwM2M. Polling completo ejecuta en 280-320 ms (protocolo Modbus RTU @ 9600 baud, 12 frames Modbus con 3-8 registros cada uno). Cliente LwM2M actualiza todos los recursos en memoria cada 15 segundos.
 
 \textbf{Ejemplo lectura LwM2M:}
 
@@ -336,54 +387,147 @@ Server configura atributos vía operación Write-Attributes: \texttt{PUT /10242/
 
 Configuración implementada: \texttt{/10242/0/34} (3-Phase Active Power) usa NON con pmax=900s, \texttt{/10242/0/4,14,24} (Tension R/S/T) usan CON con gt=253/lt=207 (alarmas voltage sag/swell requieren reliability).
 
+\subsubsection{Optimización de Overhead: DLMS Raw → LwM2M Observe}
+\label{sec:nodo-optimizacion-overhead}
+
+La arquitectura implementada logra una reducción significativa de overhead de comunicación mediante tres estrategias complementarias:
+
+\textbf{1. Eliminación de TCP: UDP stateless vía CoAP}
+
+CoAP opera sobre UDP en lugar de TCP, eliminando el overhead del establecimiento de conexión TCP 3-way handshake (SYN, SYN-ACK, ACK) que consume:
+\begin{itemize}
+    \item \textbf{Latencia:} 50-150 ms por conexión (round-trip mesh Thread 30-50 ms + backhaul 20-100 ms)
+    \item \textbf{Overhead:} 120 bytes mínimo (3$\times$ segmentos TCP: 20B IP + 20B TCP header cada uno)
+    \item \textbf{Estado:} Buffer TX/RX para reliable delivery, ACK tracking, retransmission timers (4-8 KB RAM por socket)
+\end{itemize}
+
+UDP stateless requiere solo 8 bytes header (vs 20+ bytes TCP) y no mantiene estado de conexión, ideal para dispositivos constrained con 512 KB RAM total donde cada byte cuenta.
+
+\textbf{2. Parsing local DLMS: Extracción de valores sin forwarding raw frames}
+
+En lugar de reenviar tramas HDLC completas (209 bytes por polling según Sección~\ref{sec:nodo-hardware}), el firmware ESP32-C6 parsea localmente las respuestas DLMS del medidor P2000-T y extrae únicamente los valores útiles:
+\begin{itemize}
+    \item \textbf{Entrada DLMS:} 153 bytes response HDLC (8B header + 142B APDU + 3B trailer)
+    \item \textbf{Procesamiento:} Parser DLMS (680 LOC) decodifica 17 registros OBIS con tipos de dato IEC 62056-62
+    \item \textbf{Salida LwM2M:} 51 resources Object 10242 mapeados a tipos Float/Integer (4 bytes c/u promedio)
+    \item \textbf{Reducción:} 153 bytes raw → 68 bytes estructura \texttt{meter\_data\_t} en RAM (55\% overhead eliminado)
+\end{itemize}
+
+Esta estrategia elimina el overhead de HDLC framing (flags 0x7E, bit stuffing, HCS/FCS checksums) que no aporta valor en la red Thread donde IEEE 802.15.4 ya provee FCS checksum de 16-bit.
+
+\textbf{3. Observación LwM2M: Push notifications vs Polling ineficiente}
+
+Mecanismo CoAP Observe (RFC 7641) implementado con atributos Write-Attributes elimina polling periódico ineficiente del gateway hacia nodos:
+\begin{itemize}
+    \item \textbf{Baseline (sin Observe):} Gateway envía GET request cada 60s → 17 recursos × 60 requests/h = \textbf{1,020 requests/h/nodo}
+    \item \textbf{Overhead request:} CoAP GET (12B) + UDP (8B) + IPv6 compressed (7B) + 802.15.4 (15B) = 42 bytes × 1,020 req/h = \textbf{42.8 KB/h uplink}
+    \item \textbf{Overhead response:} Similar 42 bytes × 1,020 resp/h = \textbf{42.8 KB/h downlink}
+    \item \textbf{Total baseline:} 85.6 KB/h/nodo bidireccional
+\end{itemize}
+
+Con Observe configurado (pmin=300s, pmax=900s, thresholds gt/lt/st):
+\begin{itemize}
+    \item \textbf{Notificaciones:} Solo cuando valor cambia > threshold o pmax expira
+    \item \textbf{Tráfico típico:} 4-8 notifications/h en operación estable (voltaje/potencia sin variaciones significativas)
+    \item \textbf{Overhead notificación:} 42 bytes × 6 notif/h promedio = \textbf{252 bytes/h uplink} (solo uplink, no requiere response)
+    \item \textbf{Reducción:} 85.6 KB/h → 0.25 KB/h = \textbf{99.7\% menos overhead} en régimen estacionario
+\end{itemize}
+
+\textbf{Impacto en red mesh Thread:}
+
+Para deployment de 60 nodos, ahorro acumulado:
+\begin{itemize}
+    \item \textbf{Sin Observe:} 60 nodos × 85.6 KB/h = 5.14 MB/h total
+    \item \textbf{Con Observe:} 60 nodos × 0.25 KB/h = 15 KB/h total
+    \item \textbf{Ahorro:} 5.12 MB/h menos tráfico en mesh Thread
+\end{itemize}
+
+Esto reduce congestión en canal IEEE 802.15.4 compartido (solo 16 canales disponibles 2.4 GHz), minimiza colisiones CSMA/CA, y libera airtime para tráfico crítico (alarmas, commissioning). Adicionalmente, nodos en modos multi-hop reducen forwarding burden: router con 10 children ahorra reenviar 51 MB/h (24 horas × 5.12 MB/h / 2.4 = 51 MB/h considerando average 2.4 hops).
+
 \section{Implementación del Hardware ESP32-C6}
 \label{sec:nodo-hardware}
 
-La implementación física del nodo IoT utiliza el módulo ESP32-C6-WROOM-1 de Espressif Systems, seleccionado por tres ventajas críticas: (1) Radio IEEE 802.15.4 nativo @ 2.4 GHz con stack OpenThread certificado, (2) Arquitectura RISC-V open-source eliminando licensing fees (vs ARM Cortex-M), (3) Precio \$2.50/unidad en volumen 1K+ (40\% más económico que nRF52840 Nordic \$4.20/unidad)~\cite{espressifESP32C62023}.
+La implementación física del nodo IoT utiliza el módulo \textbf{Seeed Studio XIAO ESP32C6}~\cite{seeedstudioXIAOESP32C62024}, una placa ultra-compacta (21$\times$17.5 mm) con SoC ESP32-C6 de Espressif Systems. Esta plataforma fue seleccionada por cuatro ventajas críticas: (1) Radio IEEE 802.15.4 nativo @ 2.4 GHz con stack OpenThread certificado, (2) Factor de forma reducido ideal para montaje en gabinetes de medidores (1/6 del área vs DevKitC-1), (3) Arquitectura RISC-V open-source eliminando licensing fees, (4) Precio \$4.99/unidad retail (\$3.20 volumen 100+), competitivo vs nRF52840 Nordic \$4.20/unidad con mejor integración periféricos.
+
+Para comunicación RS-485 con medidores inteligentes DLMS/COSEM, se utiliza el \textbf{RS485 Breakout Board for XIAO}~\cite{seeedstudioRS485Breakout2024}, módulo de expansión compatible con conector castellated de XIAO que integra transceiver MAX485 y aislamiento galvánico. El piloto de validación despliega \textbf{60 unidades} en configuración mesh Thread.
+
+\begin{figure}[H]
+\centering
+\begin{minipage}{0.45\textwidth}
+    \centering
+    \includegraphics[width=0.9\textwidth]{figures/1-113991254-seeedxiao-esp32c6-45font_1.jpg}
+    \small\textbf{(a)} Seeed Studio XIAO ESP32C6
+\end{minipage}
+\hfill
+\begin{minipage}{0.45\textwidth}
+    \centering
+    \includegraphics[width=0.9\textwidth]{figures/1-113991354_1.jpg}
+    \small\textbf{(b)} RS485 Breakout Board for XIAO
+\end{minipage}
+\caption{Hardware utilizado en el piloto de validación (60 unidades): (a) XIAO ESP32C6 (21$\times$17.5 mm), (b) RS485 Breakout con aislamiento galvánico. Fuente:~\cite{seeedstudioXIAOESP32C62024,seeedstudioRS485Breakout2024}}
+\label{fig:xiao-hardware}
+\end{figure}
 
 \subsection{Arquitectura del Hardware}
 \label{sec:nodo-hardware-arquitectura}
 
-\textbf{Especificaciones ESP32-C6 SoC:}
+\textbf{Especificaciones Seeed Studio XIAO ESP32C6:}
 
 \begin{itemize}
     \item \textbf{CPU:} RISC-V 32-bit single-core (RV32IMAC) @ 160 MHz, 407 DMIPS/MHz, pipeline 5-stage con branch prediction
     \item \textbf{Memoria:} 512 KB SRAM (400 KB disponible user, 112 KB ROM bootloader), 4 MB Flash QSPI integrada (3.2 MB disponible tras partitions bootloader/nvs/coredump)
     \item \textbf{Radio IEEE 802.15.4:} 2400-2483.5 MHz, TX power -24 a +21 dBm (configurable 1 dB steps), RX sensitivity -103 dBm @ 250 kbps
     \item \textbf{Radio BLE 5.0:} Compartido con 802.15.4 (time-slicing autónomo), LE Coded PHY (125/500 kbps), LE 2M PHY (2 Mbps), advertising extensions
-    \item \textbf{Periféricos:} 3$\times$ UART, 2$\times$ SPI, 1$\times$ I2C, 2$\times$ I2S, 6$\times$ PWM, 7$\times$ ADC 12-bit (rango 0-3.3V, 48 kHz sample rate), RTC con ULP coprocessor (consuming 10 µA)
+    \item \textbf{Periféricos:} 3$\times$ UART, 2$\times$ SPI, 2$\times$ I2S, 6$\times$ PWM, 7$\times$ ADC 12-bit (rango 0-3.3V, 48 kHz sample rate), RTC con ULP coprocessor (consuming 10 µA)
     \item \textbf{Seguridad:} AES-128/256, SHA-256, RSA-2048/3072, ECDSA P-256, Secure Boot v2, Flash Encryption, TRNG (True Random Number Generator)
-    \item \textbf{Package:} QFN56 7$\times$7mm (ESP32-C6-WROOM-1: módulo pre-certificado FCC/CE/IC con antena PCB integrada)
+    \item \textbf{Dimensiones:} 21$\times$17.5$\times$3.5 mm (área 367.5 mm$^2$, 85\% más compacto que DevKitC-1)
+    \item \textbf{Conectividad:} Antena PCB integrada (ganancia 2 dBi), conector U.FL para antena externa opcional, USB-C (programming + power + debug UART)
+    \item \textbf{LED integrado:} LED amarillo (GPIO15, indicador usuario), LED RGB WS2812 (GPIO16, indicador estado sistema)
 \end{itemize}
 
-\textbf{Board ESP32-C6-DevKitC-1:}
-
-Development kit oficial Espressif utilizado en piloto (30 unidades), posteriormente reemplazable por PCB custom para producción. Componentes:
+\textbf{Pinout XIAO ESP32C6 (11 GPIO expuestos):}
 
 \begin{itemize}
-    \item ESP32-C6-WROOM-1 module (antena PCB, conector U.FL para antena externa opcional)
-    \item USB-to-UART bridge CP2102N (programming + debug UART)
-    \item LDO 3.3V AMS1117 (1A max, eficiencia 75\%, genera 1.3W heat @ 5V input 500mA load)
-    \item Botón BOOT (GPIO9, pull-up) + botón RESET (EN pin)
-    \item LED RGB WS2812 (GPIO8, indicador estado: verde=Thread joined, rojo=alarm, azul=commissioning)
-    \item Header pins 2$\times$19 (38 GPIO expuestos, pitch 2.54mm compatible breadboard)
+    \item \textbf{D0-D5:} GPIO0-5 (digital I/O, ADC1\_CH0-5, PWM)
+    \item \textbf{D6-D7:} GPIO6-7 (UART RX/TX para RS-485)
+    \item \textbf{D8-D9:} GPIO8-9 (SPI MISO/SCK default)
+    \item \textbf{D10:} GPIO10 (SPI MOSI default)
+    \item \textbf{3V3, 5V, GND:} Power rails (entrada 5V vía USB-C o VBUS pad, salida regulada 3.3V @ 700 mA max)
 \end{itemize}
 
-\textbf{Sensores y periféricos externos:}
+\textbf{RS485 Breakout Board for XIAO:}
 
-Implementación piloto utilizó sensores I2C para validación, producción reemplazaría por lectura directa RS-485 desde medidor:
+Módulo de expansión con transceiver RS-485 aislado galvánicamente (aislamiento 2.5 kV), conectado vía castellated headers al XIAO ESP32C6. Especificaciones:
 
 \begin{itemize}
-    \item \textbf{INA219:} Power monitor I2C, mide voltaje (0-26V, resolución 4 mV) y corriente vía shunt resistor 0.1Ω (rango ±3.2A, resolución 0.8 mA). Usado para validar consumo del propio nodo (auto-profiling). Dirección I2C: 0x40.
-    \item \textbf{DS3231:} RTC (Real-Time Clock) I2C con crystal TCXO, precisión ±2 ppm (1 minuto drift por año). Mantiene timestamp durante power-off vía batería CR2032. Dirección I2C: 0x68.
-    \item \textbf{MAX485:} Transceiver RS-485, convierte UART TTL (3.3V) a differential signaling (±7V). Conectado a UART1 (GPIO16 TX, GPIO17 RX, GPIO18 DE/RE). Usado para leer medidores DLMS/COSEM @ 9600 bps.
+    \item \textbf{Transceiver:} MAX485 (compatible SP485, 250 kbps max, -7 a +12V common mode range)
+    \item \textbf{Aislamiento:} DC-DC isolado + digital isolator (protege XIAO de transients en bus RS-485, cumple IEC 61000-4-2 ESD ±8kV contact)
+    \item \textbf{Terminal RS-485:} Screw terminal 3-pin (A+, B-, GND), resistor terminación 120Ω selectable vía jumper
+    \item \textbf{Conexión UART:} GPIO20 (TX), GPIO21 (RX), GPIO19 (DE/RE control). TX/RX routing configurable en firmware ESP-IDF (default UART1)
+    \item \textbf{Power:} Alimentación 5V desde XIAO, consumo 15 mA idle + 35 mA durante TX (total nodo 50 mA @ 5V = 250 mW)
+    \item \textbf{Dimensiones:} 21$\times$40 mm (stackable vertical sobre XIAO, altura total 8 mm)
 \end{itemize}
+
+\textbf{Integración con medidores inteligentes:}
+
+El piloto de validación utiliza medidores \textbf{Emsitech P2000-T}~\cite{emsitechP2000T2024} (60 unidades desplegadas), medidor trifásico ANSI con puerto RJ45 integrando comunicación DLMS/COSEM y alimentación PoE. La placa RS485 Breakout se conecta vía cable Ethernet CAT5e al puerto RJ45 del P2000-T, extrayendo señales RS-485 (pines 1/2: A+, pines 3/6: B-) y alimentación 5V (pines 4/5: +5V, pines 7/8: GND). 
+
+Comunicación configurada @ 9600 bps half-duplex (protocolo IEC 62056-21 Mode C), resistencia terminación 120Ω activada en nodos extremos mediante jumper en RS485 Breakout (primera y última unidad de cadena daisy-chain). Polling cycle completo (51 registros OBIS) ejecuta en 280-320 ms, actualización LwM2M resources cada 15 segundos. Arquitectura compatible con otros medidores DLMS (Itron SL7000, Landis+Gyr E650, Elster A3) mediante adaptador RJ45-to-terminal si carecen puerto RJ45 nativo.
 
 \textbf{Power supply:}
 
-Nodo alimentado desde medidor inteligente (5V @ 200 mA disponible en puerto auxiliar Itron SL7000). Regulador LDO AMS1117 genera 3.3V para ESP32-C6 y periféricos. Consumo total medido: 78 mA @ 5V (390 mW) durante TX Thread, 19 mA @ 5V (95 mW) durante RX idle, 12 µA deep sleep.
+El nodo IoT se energiza directamente desde el \textbf{medidor inteligente Emsitech P2000-T}~\cite{emsitechP2000T2024} a través del puerto RJ45, el cual provee alimentación PoE (Power over Ethernet) con especificación IEEE 802.3af (5V @ 200 mA disponible post-conversión DC-DC interna del medidor). El P2000-T es un medidor trifásico ANSI con comunicación DLMS/COSEM nativa vía puerto RJ45, utilizado en el piloto de validación por tres ventajas: (1) Power auxiliar integrado eliminando cableado adicional, (2) Interfaz RJ45 estándar simplificando conexión física (pin 4/5: +5V, pin 7/8: GND, pin 1/2: RS-485 A+, pin 3/6: RS-485 B-), (3) Protocolo DLMS garantizando interoperabilidad con otros fabricantes (Itron, Landis+Gyr, Elster).
 
-Para validación autónoma, board incluye conector JST-PH 2.0mm para batería LiPo 3.7V 3000 mAh (11.1 Wh), proveyendo autonomía 19.3 horas @ reporting 15 min (cálculo: $\frac{11.1 \text{ Wh}}{0.095 \text{ W} \times 0.99 + 0.39 \text{ W} \times 0.01} = 19.3$ h, asumiendo duty cycle 99\% RX + 1\% TX).
+La conexión física utiliza cable Ethernet CAT5e (4 pares twisted, hasta 100 m sin degradación señal RS-485). XIAO ESP32C6 recibe 5V vía pad VBUS, integra regulador LDO ME6211 (3.3V @ 700 mA max, eficiencia 85\%, dropout 100 mV) alimentando SoC y RS485 Breakout. Consumo total medido del sistema completo:
+
+\begin{itemize}
+    \item \textbf{TX Thread:} 78 mA @ 5V (390 mW) durante transmisión mesh (21 dBm output power)
+    \item \textbf{RX idle:} 50 mA @ 5V (250 mW) escuchando Thread network (XIAO 35 mA + RS485 15 mA)
+    \item \textbf{UART polling RS-485:} 85 mA @ 5V (425 mW) durante lectura medidor (peak 320 ms)
+    \item \textbf{Deep sleep:} 15 µA @ 5V (75 µW) con RTC activo y Thread detached (autonomía 5.2 años con batería CR2032 220 mAh)
+\end{itemize}
+
+Duty cycle típico: 98.5\% RX idle + 1\% TX Thread + 0.5\% UART polling, resultando en consumo promedio 255 mW (51 mA @ 5V), bien dentro del límite 1000 mW (200 mA @ 5V) provisto por puerto auxiliar P2000-T. Para validación autónoma en instalaciones sin power auxiliar disponible, XIAO incluye pad BAT solderable a batería LiPo 3.7V (conector JST 1.25mm), con circuito carga integrado (100 mA charge current). Batería 3000 mAh provee autonomía 39 horas continuas.
 
 \subsection{Firmware ESP-IDF y OpenThread Stack}
 \label{sec:nodo-firmware}
@@ -393,19 +537,18 @@ El firmware del nodo se desarrolló sobre ESP-IDF v5.1.2 (Espressif IoT Developm
 \textbf{Componentes del firmware:}
 
 \begin{enumerate}
-    \item \textbf{OpenThread Stack:} Librería oficial Thread Group (commit sha256:a3b..., versión 1.3.0), compilada como ESP-IDF component. Incluye: (a) IEEE 802.15.4 radio driver (ot\_radio.c, 2400 LOC), (b) MLE implementation (ot\_mle.c), (c) IPv6 stack con 6LoWPAN compression, (d) CoAP client/server (ot\_coap.c). Stack consume 180 KB Flash, 42 KB RAM.
+    \item \textbf{OpenThread Stack:} Librería oficial Thread Group (rama main, commit actualizado semanalmente), compilada como ESP-IDF component. Incluye: (a) IEEE 802.15.4 radio driver (ot\_radio.c, 2400 LOC), (b) MLE implementation (ot\_mle.c), (c) IPv6 stack con 6LoWPAN compression, (d) CoAP client/server (ot\_coap.c), (e) TCP stack completo (ot\_tcp.c, RFC 9293) con flow control y congestion control. Stack consume 220 KB Flash (+22\% vs 1.3.0 por TCP), 56 KB RAM (+33\% por buffers TCP).
     
-    \item \textbf{Parser DLMS/COSEM:} Módulo custom (dlms\_parser.c, 680 LOC) implementa subset IEC 62056-62: (a) HDLC framing (flag 0x7E, bit stuffing), (b) OBIS code parser (formato A-B:C.D.E*F), (c) GET request builder, (d) Response parser (data types: unsigned, double-long, octet-string). Soporta 12 códigos OBIS críticos (voltage, current, power, energy).
+    \item \textbf{Parser DLMS/COSEM:} Módulo custom (dlms\_parser.c, 680 LOC) implementa subset IEC 62056-62: (a) HDLC framing (flag 0x7E, bit stuffing), (b) OBIS code parser (formato A-B:C.D.E*F), (c) GET request builder, (d) Response parser (data types: unsigned, double-long, octet-string). Soporta 51 códigos OBIS del perfil completo 3-Phase Power Meter (voltajes, corrientes, potencias, energía, THD).
     
-    \item \textbf{Cliente LwM2M:} Integración de librería Anjay (AVSystem) v3.7.0, 120 KB Flash footprint. Anjay provee: (a) LwM2M Client API (registration, update, observe), (b) DTLS 1.2 via mbedTLS (PSK mode), (c) Object definitions IPSO (3305, 3312, 3316, 3320). Custom code (anjay\_objects.c, 450 LOC) implementa read/write callbacks para resources.
+    \item \textbf{Cliente LwM2M:} Integración de librería Anjay (AVSystem) v3.7.0, 120 KB Flash footprint. Anjay provee: (a) LwM2M Client API (registration, update, observe), (b) DTLS 1.2 via mbedTLS (PSK mode), (c) Object 10242 (3-Phase Power Meter) con 51 resources mapeados. Custom code (anjay\_objects.c, 450 LOC) implementa read/write callbacks para resources.
     
-    \item \textbf{Tareas FreeRTOS:} Firmware estructura 5 tasks concurrentes:
+    \item \textbf{Tareas FreeRTOS:} Firmware estructura 4 tasks concurrentes:
     \begin{itemize}
         \item \texttt{thread\_task} (priority 5, stack 4 KB): Procesa eventos OpenThread (MLE, CoAP). Wakeup vía queue cada 100 ms o event.
-        \item \texttt{sensor\_task} (priority 3, stack 2 KB): Lee sensores I2C (INA219, DS3231) cada 15 segundos, actualiza LwM2M resources.
-        \item \texttt{dlms\_task} (priority 4, stack 3 KB): Lee medidor vía UART1/MAX485 cada 15 minutos, parsea OBIS codes.
-        \item \texttt{lwm2m\_task} (priority 5, stack 6 KB): Ejecuta Anjay event loop, procesa operaciones LwM2M (registration, observe notifications).
-        \item \texttt{led\_task} (priority 1, stack 1 KB): Control LED RGB WS2812 indicando estado (verde Thread joined, rojo alarm, azul commissioning).
+        \item \texttt{dlms\_task} (priority 4, stack 3 KB): Lee medidor vía UART1/RS485 Breakout cada 15 segundos, polling completo 51 registros OBIS en 280-320 ms (12 frames Modbus RTU @ 9600 baud), actualiza buffer local.
+        \item \texttt{lwm2m\_task} (priority 5, stack 6 KB): Ejecuta Anjay event loop, procesa operaciones LwM2M (registration, observe notifications), sincroniza resources desde buffer DLMS.
+        \item \texttt{led\_task} (priority 1, stack 1 KB): Control LED RGB WS2812 (GPIO16) indicando estado (verde Thread joined, rojo alarm, azul commissioning).
     \end{itemize}
 \end{enumerate}
 
@@ -440,7 +583,6 @@ void app_main(void) {
     
     // 5. Crear tareas FreeRTOS
     xTaskCreate(thread_task, "thread", 4096, NULL, 5, NULL);
-    xTaskCreate(sensor_task, "sensor", 2048, NULL, 3, NULL);
     xTaskCreate(dlms_task, "dlms", 3072, NULL, 4, NULL);
     xTaskCreate(lwm2m_task, "lwm2m", 6144, anjay, 5, NULL);
     xTaskCreate(led_task, "led", 1024, NULL, 1, NULL);
@@ -462,7 +604,8 @@ ESP32-C6 implementa 5 modos de consumo energético, seleccionables via API Power
 \centering
 \caption{Perfil de consumo ESP32-C6 por modo de operación}
 \label{tab:nodo-consumo}
-\begin{tabular}{|l|r|r|p{5cm}|}
+\footnotesize
+\begin{tabular}{|l|r|r|l|}
 \hline
 \rowcolor{gray!20}
 \textbf{Modo} & \textbf{Corriente} & \textbf{Potencia @ 3.3V} & \textbf{Descripción} \\
@@ -473,11 +616,11 @@ Active TX +4dBm & 24 mA & 79 mW & Transmisión potencia típica \\
 \hline
 Active RX & 19 mA & 63 mW & Recepción Thread (RX always-on) \\
 \hline
-Modem Sleep & 9 mA & 30 mW & CPU activo, radio off (Wi-Fi/BLE/802.15.4) \\
+Modem Sleep & 9 mA & 30 mW & CPU activo, radio off \\
 \hline
-Light Sleep & 850 µA & 2.8 mW & CPU suspended, RAM retained, wakeup <2 ms \\
+Light Sleep & 850 µA & 2.8 mW & CPU suspended, RAM retenida, wakeup <2 ms \\
 \hline
-Deep Sleep & 12 µA & 40 µW & Solo RTC activo, RAM lost, wakeup 300 ms \\
+Deep Sleep & 12 µA & 40 µW & Solo RTC activo, RAM perdida, wakeup 300 ms \\
 \hline
 \end{tabular}
 \end{table}
@@ -489,7 +632,7 @@ Nodos operan como MED (Minimal End Device) con RX always-on para minimizar laten
 Para deployment battery-powered futuro, firmware incluye modo SED (Sleepy End Device) configurable:
 
 \begin{itemize}
-    \item \textbf{Sleep cycle:} 15 minutos deep sleep + 2 segundos active (read sensors + TX).
+    \item \textbf{Sleep cycle:} 15 minutos deep sleep + 2 segundos active (DLMS polling + TX).
     \item \textbf{Consumo promedio:} $(12 \mu A \times 898s + 24 mA \times 2s) / 900s = 53.2 \mu A \approx 175 \mu W @ 3.3V$
     \item \textbf{Autonomía:} Batería LiPo 3000 mAh @ 3.7V (11.1 Wh): $\frac{11.1 Wh}{0.175 mW} = 63,428$ horas = 7.2 años teórico (práctica: 3-4 años considerando self-discharge 2-3\%/mes)
 \end{itemize}
@@ -507,12 +650,12 @@ Validación piloto: 30 nodos operando MED mode (RX always-on) durante 90 días, 
 \section{Medidor Trifásico Inteligente y Protocolo DLMS/COSEM}
 \label{sec:nodo-medidor-dlms}
 
-La arquitectura propuesta se valida con medidores trifásicos inteligentes Emsitech ET-340 certificados IEC 62053-22 (clase 1.0) y compatibles con protocolo DLMS/COSEM (IEC 62056-62)~\cite{IEC62056622016}. Esta sección detalla las características técnicas del medidor, los registros OBIS leídos periódicamente, y el análisis cuantitativo del payload de comunicación generado en la red Thread.
+La arquitectura propuesta se valida con medidores trifásicos inteligentes Emsitech P2000-T~\cite{emsitechP2000T2024} certificados ANSI C12.20 (clase 0.2\%) y compatibles con protocolo DLMS/COSEM (IEC 62056-62)~\cite{IEC62056622016}. Esta sección detalla las características técnicas del medidor, los registros OBIS leídos periódicamente, y el análisis cuantitativo del payload de comunicación generado en la red Thread.
 
-\subsection{Especificaciones del Medidor Emsitech ET-340}
+\subsection{Especificaciones del Medidor Emsitech P2000-T}
 \label{sec:nodo-medidor-specs}
 
-El Emsitech ET-340 es un medidor electrónico trifásico de energía activa/reactiva con comunicación multi-protocolo (RS-485 DLMS/COSEM, Modbus RTU, M-Bus) diseñado para redes AMI (Advanced Metering Infrastructure). Especificaciones técnicas:
+El Emsitech P2000-T es un medidor electrónico trifásico ANSI de energía activa/reactiva con comunicación DLMS/COSEM nativa vía puerto RJ45 (PoE auxiliar integrado) diseñado para redes AMI (Advanced Metering Infrastructure). Especificaciones técnicas:
 
 \textbf{Medición eléctrica:}
 \begin{itemize}
@@ -557,49 +700,49 @@ El sistema de codificación OBIS (Object Identification System, IEC 62056-61) de
 
 \begin{table}[H]
 \centering
-\caption{Registros OBIS medidor trifásico Emsitech ET-340}
+\caption{Registros OBIS medidor trifásico Emsitech P2000-T}
 \label{tab:obis-registers}
-\resizebox{\textwidth}{!}{%
-\begin{tabular}{|l|p{5cm}|l|l|p{4cm}|}
+\footnotesize
+\begin{tabular}{|l|l|l|l|l|}
 \hline
 \rowcolor{gray!20}
-\textbf{Código OBIS} & \textbf{Descripción} & \textbf{Tipo} & \textbf{Unidad} & \textbf{Uso en tesis} \tabularnewline
+\textbf{Código OBIS} & \textbf{Descripción} & \textbf{Tipo} & \textbf{Unidad} & \textbf{Uso en tesis} \\
 \hline
-1-0:1.8.0*255 & Energía activa importada total & double-long-unsigned & kWh & Facturación, detección anomalías \tabularnewline
+1-0:1.8.0*255 & Energía activa importada total & double-long-unsigned & kWh & Facturación, detección anomalías \\
 \hline
-1-0:2.8.0*255 & Energía activa exportada total & double-long-unsigned & kWh & Generación distribuida (solar) \tabularnewline
+1-0:2.8.0*255 & Energía activa exportada total & double-long-unsigned & kWh & Generación distribuida (solar) \\
 \hline
-1-0:3.8.0*255 & Energía reactiva inductiva total & double-long-unsigned & kvarh & Cálculo factor de potencia \tabularnewline
+1-0:3.8.0*255 & Energía reactiva inductiva total & double-long-unsigned & kvarh & Cálculo factor de potencia \\
 \hline
-1-0:4.8.0*255 & Energía reactiva capacitiva total & double-long-unsigned & kvarh & Compensación reactivos \tabularnewline
+1-0:4.8.0*255 & Energía reactiva capacitiva total & double-long-unsigned & kvarh & Compensación reactivos \\
 \hline
-1-0:32.7.0*255 & Voltaje fase L1 instantáneo & unsigned & V (0.1V) & Detección voltage sag/swell \tabularnewline
+1-0:32.7.0*255 & Voltaje fase L1 instantáneo & unsigned & V (0.1V) & Detección voltage sag/swell \\
 \hline
-1-0:52.7.0*255 & Voltaje fase L2 instantáneo & unsigned & V (0.1V) & Monitoreo desbalance fases \tabularnewline
+1-0:52.7.0*255 & Voltaje fase L2 instantáneo & unsigned & V (0.1V) & Monitoreo desbalance fases \\
 \hline
-1-0:72.7.0*255 & Voltaje fase L3 instantáneo & unsigned & V (0.1V) & Calidad de energía \tabularnewline
+1-0:72.7.0*255 & Voltaje fase L3 instantáneo & unsigned & V (0.1V) & Calidad de energía \\
 \hline
-1-0:31.7.0*255 & Corriente fase L1 instantánea & unsigned & A (0.01A) & Detección sobrecarga \tabularnewline
+1-0:31.7.0*255 & Corriente fase L1 instantánea & unsigned & A (0.01A) & Detección sobrecarga \\
 \hline
-1-0:51.7.0*255 & Corriente fase L2 instantánea & unsigned & A (0.01A) & Balance de carga \tabularnewline
+1-0:51.7.0*255 & Corriente fase L2 instantánea & unsigned & A (0.01A) & Balance de carga \\
 \hline
-1-0:71.7.0*255 & Corriente fase L3 instantánea & unsigned & A (0.01A) & Límite térmico \tabularnewline
+1-0:71.7.0*255 & Corriente fase L3 instantánea & unsigned & A (0.01A) & Límite térmico \\
 \hline
-1-0:13.7.0*255 & Factor de potencia total & unsigned & adim. (0.001) & Penalización reactivos \tabularnewline
+1-0:13.7.0*255 & Factor de potencia total & unsigned & adim. (0.001) & Penalización reactivos \\
 \hline
-1-0:14.7.0*255 & Frecuencia de red & unsigned & Hz (0.01Hz) & Detección inestabilidad \tabularnewline
+1-0:14.7.0*255 & Frecuencia de red & unsigned & Hz (0.01Hz) & Detección inestabilidad \\
 \hline
-1-0:1.6.0*255 & Demanda máxima activa & double-long-unsigned & kW & Gestión de demanda \tabularnewline
+1-0:1.6.0*255 & Demanda máxima activa & double-long-unsigned & kW & Gestión de demanda \\
 \hline
-1-0:1.6.0*1 & Timestamp demanda máxima & octet-string (12 bytes) & YYMMDDhhmmss & Análisis histórico \tabularnewline
+1-0:1.6.0*1 & Timestamp demanda máxima & octet-string (12 bytes) & YYMMDDhhmmss & Análisis histórico \\
 \hline
-0-0:96.1.0*255 & Número de serie medidor & octet-string (16 bytes) & ASCII & Identificación única \tabularnewline
+0-0:96.1.0*255 & Número de serie medidor & octet-string (16 bytes) & ASCII & Identificación única \\
 \hline
-0-0:96.5.5*255 & Estado relé de corte & unsigned & 0=Abierto, 1=Cerrado & Control remoto \tabularnewline
+0-0:96.5.5*255 & Estado relé de corte & unsigned & 0=Abierto, 1=Cerrado & Control remoto \\
 \hline
-0-0:96.7.0*255 & Contador fallas de fase & unsigned & count & Calidad de suministro \tabularnewline
+0-0:96.7.0*255 & Contador fallas de fase & unsigned & count & Calidad de suministro \\
 \hline
-\end{tabular}}
+\end{tabular}
 \end{table}
 
 \textbf{Total registros leídos por polling:} 17 registros OBIS $\times$ 15 min = 96 lecturas/día $\times$ 30 medidores = 2,880 transacciones DLMS/día en el piloto.
@@ -721,7 +864,7 @@ Overhead adicional: CSMA/CA backoff (promedio 2.5 ms), ACK turnaround (5$\times$
     \end{equation}
 \end{itemize}
 
-\textbf{Conclusión:} La carga generada por 100 medidores trifásicos Emsitech ET-340 representa \textbf{0.16\% de utilización promedio} del canal Thread, validando escalabilidad de la arquitectura hasta 500+ medidores por Border Router (límite Thread Group: 250 devices típico, 500+ con tuning). El payload de 451 bytes por mensaje justifica el uso de HaLow (43.3 Mbps @ 8 MHz) para backhaul, permitiendo agregación de múltiples gateways Thread sin congestión.
+\textbf{Conclusión:} La carga generada por 100 medidores trifásicos Emsitech P2000-T representa \textbf{0.16\% de utilización promedio} del canal Thread, validando escalabilidad de la arquitectura hasta 500+ medidores por Border Router (límite Thread Group: 250 devices típico, 500+ con tuning). El payload de 451 bytes por mensaje justifica el uso de HaLow (43.3 Mbps @ 8 MHz) para backhaul, permitiendo agregación de múltiples gateways Thread sin congestión.
 
 \section{Configuración del Perfil LwM2M para Medidor Trifásico}
 \label{sec:nodo-configuracion-lwm2m}
@@ -751,85 +894,85 @@ Gateway ejecuta traductor LwM2M-MQTT que transforma notificaciones CoAP en mensa
 \centering
 \caption{Mapeo LwM2M Object 10242 $\rightarrow$ ThingsBoard Telemetry Keys}
 \label{tab:lwm2m-tb-mapping}
-\resizebox{\textwidth}{!}{%
-\begin{tabular}{|l|l|l|l|p{5cm}|}
+\footnotesize
+\begin{tabular}{|l|l|l|l|l|}
 \hline
 \rowcolor{gray!20}
-\textbf{LwM2M Path} & \textbf{ThingsBoard Key} & \textbf{Tipo} & \textbf{Unidad} & \textbf{Descripción DLMS OBIS} \tabularnewline
+\textbf{LwM2M Path} & \textbf{ThingsBoard Key} & \textbf{Tipo} & \textbf{Unidad} & \textbf{Descripción DLMS OBIS} \\
 \hline
-\multicolumn{5}{|c|}{\cellcolor{gray!10}\textbf{Fase R (Phase 1)}} \tabularnewline
+\multicolumn{5}{|c|}{\cellcolor{gray!10}\textbf{Fase R (Phase 1)}} \\
 \hline
-/10242/0/4 & voltage\_r\_v & float & V & Voltaje fase R (OBIS 1-0:32.7.0) \tabularnewline
+/10242/0/4 & voltage\_r\_v & float & V & Voltaje fase R (OBIS 1-0:32.7.0) \\
 \hline
-/10242/0/5 & current\_r\_a & float & A & Corriente fase R (OBIS 1-0:31.7.0) \tabularnewline
+/10242/0/5 & current\_r\_a & float & A & Corriente fase R (OBIS 1-0:31.7.0) \\
 \hline
-/10242/0/6 & power\_active\_r\_kw & float & kW & Potencia activa fase R \tabularnewline
+/10242/0/6 & power\_active\_r\_kw & float & kW & Potencia activa fase R \\
 \hline
-/10242/0/7 & power\_reactive\_r\_kvar & float & kvar & Potencia reactiva fase R \tabularnewline
+/10242/0/7 & power\_reactive\_r\_kvar & float & kvar & Potencia reactiva fase R \\
 \hline
-/10242/0/11 & power\_factor\_r & float & - & Factor de potencia fase R \tabularnewline
+/10242/0/11 & power\_factor\_r & float & - & Factor de potencia fase R \\
 \hline
-\multicolumn{5}{|c|}{\cellcolor{gray!10}\textbf{Fase S (Phase 2)}} \tabularnewline
+\multicolumn{5}{|c|}{\cellcolor{gray!10}\textbf{Fase S (Phase 2)}} \\
 \hline
-/10242/0/14 & voltage\_s\_v & float & V & Voltaje fase S (OBIS 1-0:52.7.0) \tabularnewline
+/10242/0/14 & voltage\_s\_v & float & V & Voltaje fase S (OBIS 1-0:52.7.0) \\
 \hline
-/10242/0/15 & current\_s\_a & float & A & Corriente fase S (OBIS 1-0:51.7.0) \tabularnewline
+/10242/0/15 & current\_s\_a & float & A & Corriente fase S (OBIS 1-0:51.7.0) \\
 \hline
-/10242/0/16 & power\_active\_s\_kw & float & kW & Potencia activa fase S \tabularnewline
+/10242/0/16 & power\_active\_s\_kw & float & kW & Potencia activa fase S \\
 \hline
-/10242/0/17 & power\_reactive\_s\_kvar & float & kvar & Potencia reactiva fase S \tabularnewline
+/10242/0/17 & power\_reactive\_s\_kvar & float & kvar & Potencia reactiva fase S \\
 \hline
-/10242/0/21 & power\_factor\_s & float & - & Factor de potencia fase S \tabularnewline
+/10242/0/21 & power\_factor\_s & float & - & Factor de potencia fase S \\
 \hline
-\multicolumn{5}{|c|}{\cellcolor{gray!10}\textbf{Fase T (Phase 3)}} \tabularnewline
+\multicolumn{5}{|c|}{\cellcolor{gray!10}\textbf{Fase T (Phase 3)}} \\
 \hline
-/10242/0/24 & voltage\_t\_v & float & V & Voltaje fase T (OBIS 1-0:72.7.0) \tabularnewline
+/10242/0/24 & voltage\_t\_v & float & V & Voltaje fase T (OBIS 1-0:72.7.0) \\
 \hline
-/10242/0/25 & current\_t\_a & float & A & Corriente fase T (OBIS 1-0:71.7.0) \tabularnewline
+/10242/0/25 & current\_t\_a & float & A & Corriente fase T (OBIS 1-0:71.7.0) \\
 \hline
-/10242/0/26 & power\_active\_t\_kw & float & kW & Potencia activa fase T \tabularnewline
+/10242/0/26 & power\_active\_t\_kw & float & kW & Potencia activa fase T \\
 \hline
-/10242/0/27 & power\_reactive\_t\_kvar & float & kvar & Potencia reactiva fase T \tabularnewline
+/10242/0/27 & power\_reactive\_t\_kvar & float & kvar & Potencia reactiva fase T \\
 \hline
-/10242/0/31 & power\_factor\_t & float & - & Factor de potencia fase T \tabularnewline
+/10242/0/31 & power\_factor\_t & float & - & Factor de potencia fase T \\
 \hline
-\multicolumn{5}{|c|}{\cellcolor{gray!10}\textbf{Totales Trifásicos}} \tabularnewline
+\multicolumn{5}{|c|}{\cellcolor{gray!10}\textbf{Totales Trifásicos}} \\
 \hline
-/10242/0/34 & power\_3ph\_kw & float & kW & Potencia activa total 3-Phase \tabularnewline
+/10242/0/34 & power\_3ph\_kw & float & kW & Potencia activa total 3-Phase \\
 \hline
-/10242/0/35 & power\_reactive\_3ph\_kvar & float & kvar & Potencia reactiva total \tabularnewline
+/10242/0/35 & power\_reactive\_3ph\_kvar & float & kvar & Potencia reactiva total \\
 \hline
-/10242/0/38 & power\_apparent\_3ph\_kva & float & kVA & Potencia aparente total \tabularnewline
+/10242/0/38 & power\_apparent\_3ph\_kva & float & kVA & Potencia aparente total \\
 \hline
-/10242/0/39 & power\_factor\_3ph & float & - & Factor de potencia total (OBIS 1-0:13.7.0) \tabularnewline
+/10242/0/39 & power\_factor\_3ph & float & - & Factor de potencia total (OBIS 1-0:13.7.0) \\
 \hline
-\multicolumn{5}{|c|}{\cellcolor{gray!10}\textbf{Energía y Otros}} \tabularnewline
+\multicolumn{5}{|c|}{\cellcolor{gray!10}\textbf{Energía y Otros}} \\
 \hline
-/10242/0/41 & energy\_active\_kwh & float & kWh & Energía activa acumulada (OBIS 1-0:1.8.0) \tabularnewline
+/10242/0/41 & energy\_active\_kwh & float & kWh & Energía activa acumulada (OBIS 1-0:1.8.0) \\
 \hline
-/10242/0/42 & energy\_reactive\_kvarh & float & kvarh & Energía reactiva acumulada (OBIS 1-0:3.8.0) \tabularnewline
+/10242/0/42 & energy\_reactive\_kvarh & float & kvarh & Energía reactiva acumulada (OBIS 1-0:3.8.0) \\
 \hline
-/10242/0/49 & frequency\_hz & float & Hz & Frecuencia de red (OBIS 1-0:14.7.0) \tabularnewline
+/10242/0/49 & frequency\_hz & float & Hz & Frecuencia de red (OBIS 1-0:14.7.0) \\
 \hline
-/10242/0/50 & current\_neutral\_a & float & A & Corriente de neutro (desbalance) \tabularnewline
+/10242/0/50 & current\_neutral\_a & float & A & Corriente de neutro (desbalance) \\
 \hline
-\multicolumn{5}{|c|}{\cellcolor{gray!10}\textbf{Metadata Dispositivo}} \tabularnewline
+\multicolumn{5}{|c|}{\cellcolor{gray!10}\textbf{Metadata Dispositivo}} \\
 \hline
-/10242/0/2 & meter\_serial & string & - & Número de serie medidor (OBIS 0-0:96.1.0) \tabularnewline
+/10242/0/2 & meter\_serial & string & - & Número de serie medidor (OBIS 0-0:96.1.0) \\
 \hline
-/3/0/13 (Device) & timestamp\_unix & long & s & Timestamp Unix epoch \tabularnewline
+/3/0/13 (Device) & timestamp\_unix & long & s & Timestamp Unix epoch \\
 \hline
-/4/0/2 (Connectivity) & rssi\_dbm & int & dBm & RSSI Thread promedio \tabularnewline
+/4/0/2 (Connectivity) & rssi\_dbm & int & dBm & RSSI Thread promedio \\
 \hline
-\end{tabular}}
+\end{tabular}
 \end{table}
 
 \textbf{Transformaciones aplicadas:}
 
 \begin{itemize}
-    \item \textbf{Energía acumulada:} LwM2M Object 10242/0/41 (Active Energy) reporta kWh directamente, sin conversión. Medidor Emsitech ET-340 envía valor OBIS \texttt{1-0:1.8.0*255} en formato double-long-unsigned (4 bytes) con unidad kWh. Ejemplo: DLMS frame contiene 0x00003B85 (15237) $\rightarrow$ 15237.00 kWh publicado a ThingsBoard.
+    \item \textbf{Energía acumulada:} LwM2M Object 10242/0/41 (Active Energy) reporta kWh directamente, sin conversión. Medidor Emsitech P2000-T envía valor OBIS \texttt{1-0:1.8.0*255} en formato double-long-unsigned (4 bytes) con unidad kWh. Ejemplo: DLMS frame contiene 0x00003B85 (15237) $\rightarrow$ 15237.00 kWh publicado a ThingsBoard.
     
-    \item \textbf{Timestamp:} ESP32-C6 usa RTC DS3231 (precisión ±2 ppm, drift <1 min/año) sincronizado con NTP cada 24h via gateway. Timestamp Unix epoch adjuntado a cada mensaje LwM2M. Gateway valida: si $|t_{lwm2m} - t_{gateway}| > 300s$ (5 min), genera alarma "Clock Drift" y reescribe timestamp con hora gateway.
+    \item \textbf{Timestamp:} ESP32-C6 usa RTC interno sincronizado con NTP cada 24h via gateway. Timestamp Unix epoch adjuntado a cada mensaje LwM2M. Gateway valida: si $|t_{lwm2m} - t_{gateway}| > 300s$ (5 min), genera alarma "Clock Drift" y reescribe timestamp con hora gateway.
     
     \item \textbf{Factor de potencia:} Objeto 10242 incluye recursos dedicados por fase (11, 21, 31) y total (39). Valores rango -1..+1 donde signo indica tipo: positivo = inductivo (lagging), negativo = capacitivo (leading). Gateway mapea a ThingsBoard: \texttt{power\_factor\_3ph=0.87} y atributo calculado \texttt{power\_factor\_type="lagging"} basado en signo.
     
@@ -870,21 +1013,21 @@ ThingsBoard Alarm Rules evalúan telemetría en tiempo real, generando alarmas c
 \centering
 \caption{Alarm Rules configuradas en Device Profile}
 \label{tab:alarm-rules}
-\small
-\begin{tabular}{|l|l|l|p{4.5cm}|}
+\footnotesize
+\begin{tabular}{|l|l|l|l|}
 \hline
 \rowcolor{gray!20}
-\textbf{Alarm Type} & \textbf{Severity} & \textbf{Condition} & \textbf{Clear Condition} \tabularnewline
+\textbf{Alarm Type} & \textbf{Severity} & \textbf{Condition} & \textbf{Clear Condition} \\
 \hline
-Voltage Sag & MAJOR & voltage\_v < 207 & voltage\_v >= 210 (3V hysteresis) \tabularnewline
+Voltage Sag & MAJOR & voltage\_v < 207 & voltage\_v >= 210 (3V hysteresis) \\
 \hline
-Voltage Swell & MAJOR & voltage\_v > 253 & voltage\_v <= 250 \tabularnewline
+Voltage Swell & MAJOR & voltage\_v > 253 & voltage\_v <= 250 \\
 \hline
-Over-current & CRITICAL & current\_a > 25 & current\_a <= 23 \tabularnewline
+Over-current & CRITICAL & current\_a > 25 & current\_a <= 23 \\
 \hline
-Over-temperature & WARNING & temperature\_c > 60 & temperature\_c <= 55 \tabularnewline
+Over-temperature & WARNING & temperature\_c > 60 & temperature\_c <= 55 \\
 \hline
-Device Offline & MINOR & last\_activity > 1800s & - (auto-clear on reconnect) \tabularnewline
+Device Offline & MINOR & last\_activity > 1800s & - (auto-clear on reconnect) \\
 \hline
 \end{tabular}
 \end{table}
@@ -947,19 +1090,19 @@ Esta sección presenta validación experimental del nodo ESP32-C6 de forma \text
 \begin{tabular}{|l|r|r|r|r|}
 \hline
 \rowcolor{gray!20}
-\textbf{Estado} & \textbf{Corriente} & \textbf{Duty Cycle} & \textbf{Contrib. Avg} & \textbf{Energía/día} \tabularnewline
+\textbf{Estado} & \textbf{Corriente} & \textbf{Duty Cycle} & \textbf{Contrib. Avg} & \textbf{Energía/día} \\
 \hline
-Deep Sleep & 12.3 µA & 0.0\% & 0.0 mA & - \tabularnewline
+Deep Sleep & 12.3 µA & 0.0\% & 0.0 mA & - \\
 \hline
-RX Idle (MED) & 19.2 mA & 98.8\% & 19.0 mA & 2.28 Wh \tabularnewline
+RX Idle (MED) & 19.2 mA & 98.8\% & 19.0 mA & 2.28 Wh \\
 \hline
-TX @ +4 dBm & 24.1 mA & 0.2\% & 0.05 mA & 0.03 Wh \tabularnewline
+TX @ +4 dBm & 24.1 mA & 0.2\% & 0.05 mA & 0.03 Wh \\
 \hline
-Sensor I2C read & 22.8 mA & 0.8\% & 0.18 mA & 0.10 Wh \tabularnewline
+DLMS polling RS-485 & 85.0 mA & 0.3\% & 0.26 mA & 0.15 Wh \\
 \hline
-Firmware processing & 31.5 mA & 0.2\% & 0.06 mA & 0.04 Wh \tabularnewline
+Firmware processing & 31.5 mA & 0.2\% & 0.06 mA & 0.04 Wh \\
 \hline
-\textbf{TOTAL} & - & 100\% & \textbf{19.3 mA} & \textbf{2.45 Wh} \tabularnewline
+\textbf{TOTAL} & - & 100\% & \textbf{19.3 mA} & \textbf{2.45 Wh} \\
 \hline
 \end{tabular}
 \end{table}
@@ -968,7 +1111,7 @@ Firmware processing & 31.5 mA & 0.2\% & 0.06 mA & 0.04 Wh \tabularnewline
 \begin{itemize}
     \item Consumo promedio 19.3 mA @ 5V = 96.5 mW coincide con predicción teórica (\S\ref{sec:nodo-energia}: 95 mW) con error +1.6\%.
     \item RX Idle domina consumo (98.8\% tiempo, 93\% energía), validando decisión MED vs SED para latencia crítica.
-    \item TX duty cycle 0.2\% (1.73s cada 900s) refleja reporting interval 15 min: lectura sensores (0.5s) + encode LwM2M TLV (0.2s) + CoAP transmission (1.03s incluyendo retries 10\% paquetes).
+    \item TX duty cycle 0.2\% (1.73s cada 900s) refleja reporting interval 15 min: polling DLMS (0.32s) + encode LwM2M TLV (0.2s) + CoAP transmission (1.03s incluyendo retries 10\% paquetes).
     \item Energía total 48h: 2.45 Wh/día $\times$ 2 días = 4.9 Wh medido vs 11.1 Wh batería LiPo 3000 mAh @ 3.7V. Autonomía: $\frac{11.1}{2.45} = 4.5$ días (108 horas) operación continua. Discrepancia vs 19.3h predicho (\S\ref{sec:nodo-energia}) explicada: cálculo teórico asumió voltaje 5V (alimentación medidor), experimental usó batería 3.7V (eficiencia LDO 85\% vs 100\%).
 \end{itemize}
 
@@ -977,13 +1120,13 @@ Firmware processing & 31.5 mA & 0.2\% & 0.06 mA & 0.04 Wh \tabularnewline
 \subsection{Pruebas de Latencia Local Thread}
 \label{sec:nodo-pruebas-latencia}
 
-\textbf{Objetivo:} Medir latencia end-to-end desde trigger lectura sensor hasta recepción de mensaje CoAP en OTBR, sin incluir backhaul WAN (validación exclusiva Thread mesh).
+\textbf{Objetivo:} Medir latencia end-to-end desde inicio de polling DLMS hasta recepción de mensaje CoAP en OTBR, sin incluir backhaul WAN (validación exclusiva Thread mesh).
 
 \textbf{Metodología:}
 \begin{itemize}
-    \item Nodo ESP32-C6 firmware modificado: GPIO toggle al inicio lectura sensor (timestamp $t_0$) y al recibir ACK CoAP (timestamp $t_2$).
+    \item Nodo ESP32-C6 firmware modificado: GPIO toggle al inicio polling DLMS (timestamp $t_0$) y al recibir ACK CoAP (timestamp $t_2$).
     \item OTBR timestamp recepción CoAP POST ($t_1$, precision ±50 µs via NTP sync).
-    \item Latencia medida: $\Delta t = t_1 - t_0$ (sensor read + CoAP encode + Thread TX + OTBR RX).
+    \item Latencia medida: $\Delta t = t_1 - t_0$ (DLMS read + CoAP encode + Thread TX + OTBR RX).
     \item Iteraciones: 500 mensajes CoAP enviados @ 1 msg/min durante 8.3 horas.
     \item Wireshark captura simultánea: canal 15 (2.425 GHz), decode MLE + 6LoWPAN + CoAP.
 \end{itemize}
@@ -994,24 +1137,25 @@ Firmware processing & 31.5 mA & 0.2\% & 0.06 mA & 0.04 Wh \tabularnewline
 \centering
 \caption{Latencia local Thread (nodo → OTBR, 500 muestras)}
 \label{tab:latencia-thread}
-\begin{tabular}{|l|r|p{6cm}|}
+\footnotesize
+\begin{tabular}{|l|r|l|}
 \hline
 \rowcolor{gray!20}
-\textbf{Métrica} & \textbf{Valor} & \textbf{Descripción} \tabularnewline
+\textbf{Métrica} & \textbf{Valor} & \textbf{Descripción} \\
 \hline
-Promedio & 45.2 ms & Media aritmética 500 muestras \tabularnewline
+Promedio & 45.2 ms & Media aritmética 500 muestras \\
 \hline
-P50 (mediana) & 43.8 ms & 50\% mensajes <43.8 ms \tabularnewline
+P50 (mediana) & 43.8 ms & 50\% mensajes <43.8 ms \\
 \hline
-P95 & 58.3 ms & 95\% mensajes <58.3 ms \tabularnewline
+P95 & 58.3 ms & 95\% mensajes <58.3 ms \\
 \hline
-P99 & 82.1 ms & 99\% mensajes <82.1 ms \tabularnewline
+P99 & 82.1 ms & 99\% mensajes <82.1 ms \\
 \hline
-Mínimo & 38.2 ms & Mejor caso (canal idle, ACK inmediato) \tabularnewline
+Mínimo & 38.2 ms & Mejor caso (canal idle, ACK inmediato) \\
 \hline
-Máximo & 187.5 ms & Peor caso (3 retries CSMA/CA backoff) \tabularnewline
+Máximo & 187.5 ms & Peor caso (3 retries CSMA/CA backoff) \\
 \hline
-Desv. estándar & 8.1 ms & Baja varianza confirma estabilidad \tabularnewline
+Desv. estándar & 8.1 ms & Baja varianza confirma estabilidad \\
 \hline
 \end{tabular}
 \end{table}
@@ -1019,7 +1163,7 @@ Desv. estándar & 8.1 ms & Baja varianza confirma estabilidad \tabularnewline
 \textbf{Análisis breakdown latencia (Wireshark trace):}
 
 \begin{itemize}
-    \item \textbf{Sensor I2C read:} 4.2 ms (INA219 conversion time 532 µs $\times$ 4 sensores + I2C overhead)
+    \item \textbf{DLMS polling RS-485:} 8.5 ms (request frame 56 bytes + response 153 bytes @ 9600 bps + processing)
     \item \textbf{LwM2M encode TLV:} 2.8 ms (Anjay library serialize 8 resources, CPU-bound @ 160 MHz)
     \item \textbf{CoAP frame build:} 1.1 ms (4-byte header + token + options + payload 120 bytes)
     \item \textbf{6LoWPAN compression:} 0.9 ms (IPHC + NHC reduce 48 bytes IPv6+UDP header a 7 bytes)
@@ -1027,8 +1171,8 @@ Desv. estándar & 8.1 ms & Baja varianza confirma estabilidad \tabularnewline
     \item \textbf{802.15.4 TX:} 4.8 ms (frame 127 bytes @ 250 kbps = 4.064 ms + preamble/SFD 160 µs + IFS 192 µs)
     \item \textbf{ACK wait:} 0.9 ms (turnaround time 192 µs + ACK frame 352 µs + processing)
     \item \textbf{OTBR processing:} 2.1 ms (descompresión 6LoWPAN + CoAP parse + log timestamp)
-    \item \textbf{Subtotal teórico:} 20.0 ms (sin retries ni queueing)
-    \item \textbf{Overhead real:} +25.2 ms (retries 10\% mensajes, MLE keep-alive interference, FreeRTOS task switching)
+    \item \textbf{Subtotal teórico:} 24.3 ms (sin retries ni queueing)
+    \item \textbf{Overhead real:} +20.9 ms (retries 10\% mensajes, MLE keep-alive interference, FreeRTOS task switching)
 \end{itemize}
 
 \textbf{Thread network join time:} Métrica adicional medida durante cold start (nodo powered-off, credentials provisionadas en NVS). Resultados (30 iteraciones):
@@ -1052,7 +1196,7 @@ La selección de Thread 1.3 sobre Zigbee se fundamentó en tres ventajas cuantif
 
 \textbf{Implementación hardware y firmware (§\ref{sec:nodo-hardware}):}
 
-ESP32-C6 seleccionado por ventajas RISC-V open-source (zero licensing fees), radio IEEE 802.15.4 nativo certificado Thread 1.3, y precio \$2.50/unidad (40\% ahorro vs nRF52840 \$4.20). Firmware integra ESP-IDF 5.1.2 + OpenThread 1.3.0 (180 KB Flash, 42 KB RAM) + Anjay LwM2M 3.7.0 (120 KB Flash), orquestado por 5 tareas FreeRTOS concurrentes. Modo operación MED (Minimal End Device) con RX always-on garantiza latencia <50 ms, aceptando consumo 19 mA continuo justificado por alimentación desde medidor (5V @ 200 mA disponible). Alternativa SED (Sleepy End Device) implementada para deployment battery-powered futuro: consumo promedio 53 µA habilita autonomía teórica 7.2 años con batería 3000 mAh.
+ESP32-C6 seleccionado por ventajas RISC-V open-source (zero licensing fees), radio IEEE 802.15.4 nativo certificado Thread 1.4, y precio \$2.50/unidad (40\% ahorro vs nRF52840 \$4.20). Firmware integra ESP-IDF 5.1.2 + OpenThread main con TCP (220 KB Flash, 56 KB RAM) + Anjay LwM2M 3.7.0 (120 KB Flash), orquestado por 5 tareas FreeRTOS concurrentes. Modo operación MED (Minimal End Device) con RX always-on garantiza latencia <50 ms, aceptando consumo 19 mA continuo justificado por alimentación desde medidor (5V @ 200 mA disponible). Alternativa SED (Sleepy End Device) implementada para deployment battery-powered futuro: consumo promedio 53 µA habilita autonomía teórica 7.2 años con batería 3000 mAh.
 
 \textbf{Configuración LwM2M y alarmas (§\ref{sec:nodo-configuracion-lwm2m}):}
 

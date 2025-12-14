@@ -34,10 +34,10 @@
 
 % Etiqueta role
 \node[below=0.2cm of eth_tube, font=\footnotesize, text=green!50!black] {
-    \textbf{Role: Mesh Point AP}\\(modo ap-bridge 802.11s)
+    \textbf{Role: Mesh Point}\\(modo mesh 802.11s HWMP)
 };
 
-% ============ RASPBERRY PI 4 (STA CLIENT) ============
+% ============ RASPBERRY PI 4 (GATEWAY EDGE INTEGRADO) ============
 
 \node[device, fill=orange!5] (rpi) at (0,-2) {};
 \node[above=-0.1cm of rpi.north, font=\bfseries] {Raspberry Pi 4 (Gateway Edge)};
@@ -52,50 +52,40 @@
     \tiny USB Dongle\\Thread OTBR
 };
 
-% Módulo HaLow USB (cliente STA)
-\node[module, fill=cyan!20, minimum height=1.2cm] at (0,-2.5) (halow_sta) {
-    \textbf{HaLow USB}\\
-    \tiny MM6108 module\\STA mode\\(Alfa AHPE-HM)
-};
-\node[antenna, fill=red!40] at (-1.5,-2.5) (ant_rpi) {};
-\node[left=0.1cm of ant_rpi, font=\tiny] {3 dBi};
-
-% Puerto Ethernet RPi4
-\node[connector] at (0,-3.8) (eth_rpi) {ETH0\\GbE (opcional)
+% Puerto Ethernet RPi4 (conexión primaria a Tube AHM)
+\node[connector] at (0,-3.2) (eth_rpi) {ETH0\\GbE (primary)
 };
 
 % Etiqueta role
 \node[below=0.2cm of eth_rpi, font=\footnotesize, text=orange!70!black] {
-    \textbf{Role: HaLow Client STA}\\ThingsBoard Edge + OTBR
+    \textbf{Role: Edge Gateway}\\ThingsBoard Edge + OTBR
 };
 
-% ============ CONEXIÓN HALOW WIRELESS ============
+% ============ CONEXIÓN ETHERNET LOCAL ============
 
-% Enlace inalámbrico HaLow
-\draw[arrow, blue!70!black, thick, dashed] (halow_sta) -- (mm6108) 
+% Enlace Ethernet local entre RPi4 y Tube AHM
+\draw[arrow, black, thick] (eth_rpi) -- (eth_tube) 
     node[midway, right, font=\small, text width=3cm, align=left] {
-        \textbf{HaLow Link}\\
-        \tiny 915 MHz (902-928)\\
-        4 MHz BW (MCS7)\\
-        Throughput: 4 Mbps\\
-        Range: 280-520m\\
-        RSSI: -72 to -88 dBm
+        \textbf{Ethernet Local}\\
+        \tiny 1 Gbps full-duplex\\
+        Latency: <1 ms\\
+        RPi4 inyecta tráfico\\
+        agregado Thread al\\
+        backbone HaLow mesh
     };
-
-% Señales RF
-\draw[red!50, thick, dotted] (ant_tube) to[bend left=15] (ant_rpi);
 
 % ============ NOTAS ARQUITECTURA ============
 
-\node[below=1cm of rpi, font=\footnotesize, text width=12cm, align=left] {
-    \textbf{Arquitectura correcta:}\\[0.2cm]
-    $\bullet$ \textbf{Alfa Networks Tube AHM:} Router comercial MT7628 + MM6108 radio HaLow 802.11ah. AP Mesh Point modo 802.11s.\\[0.1cm]
-    $\bullet$ \textbf{Raspberry Pi 4:} Gateway edge con Docker stack (ThingsBoard Edge, OTBR, PostgreSQL). Conecta como cliente STA a APs HaLow via USB Alfa AHPE-HM.\\[0.1cm]
-    $\bullet$ \textbf{Conexi\'on wireless:} RPi4 NO usa Ethernet hacia Tube AHM. Conexi\'on 100\% inal\'ambrica HaLow (915 MHz sub-1 GHz) con alcance 280-520m.\\[0.1cm]
-    $\bullet$ \textbf{Thread Border Router:} Cada RPi4 ejecuta OTBR mediante nRF52840 USB Dongle, creando red Thread local para 10-20 nodos IoT ESP32-C6.
+\node[below=0.5cm of rpi, font=\footnotesize, text width=12cm, align=left] {
+    \textbf{Arquitectura Distributed Mesh Gateways (Peer-to-Peer):}\\[0.2cm]
+    $\bullet$ \textbf{Alfa Networks Tube AHM:} Router comercial standalone MT7628 + MM6108 radio HaLow 802.11ah. Opera en modo Mesh Point IEEE 802.11s peer con protocolo HWMP, sin jerarqu\'ia maestro-esclavo.\\[0.1cm]
+    $\bullet$ \textbf{Raspberry Pi 4:} Gateway edge con Docker stack (ThingsBoard Edge, OTBR, PostgreSQL). Integrado localmente por Ethernet GbE al puerto LAN del Tube AHM co-ubicado.\\[0.1cm]
+    $\bullet$ \textbf{Conexi\'on Ethernet local:} RPi4 conectado directamente por Ethernet al Tube AHM. Tráfico Thread agregado inyectado al backbone HaLow mesh compartido v\'ia routing HWMP cooperativo.\\[0.1cm]
+    $\bullet$ \textbf{Ventaja peer-to-peer:} Todos los Gateways Edge son Mesh Points peers equipolentes. M\'ultiples rutas redundantes entre gateways hacia Mesh Gate. Fallos de cualquier Mesh Point no interrumpen servicio de otros: HWMP re-enruta tráfico autom\'aticamente por paths alternativos disponibles en topolog\'ia full-mesh.\\[0.1cm]
+    $\bullet$ \textbf{Thread Border Router:} Cada RPi4 ejecuta OTBR mediante nRF52840 USB Dongle, creando red Thread local para 15 nodos IoT ESP32-C6.
 };
 
 \end{tikzpicture}
-\caption{Detalle hardware de conexión HaLow: Alfa Networks Tube AHM (AP Mesh) y Raspberry Pi 4 (STA Client). El Tube AHM integra procesador MT7628 con radio MM6108 actuando como AP mesh. El RPi4 se conecta inalámbricamente mediante módulo USB HaLow Alfa AHPE-HM (también con radio MM6108) en modo STA. No hay conexión Ethernet entre ambos dispositivos; el backhaul es 100\% wireless sub-1 GHz HaLow con alcance hasta 520m.}
+\caption{Detalle hardware de integración Gateway Edge en Mesh Point peer: Alfa Networks Tube AHM (Mesh Point) y Raspberry Pi 4 (Gateway Edge) co-ubicados. El Tube AHM integra procesador MT7628 con radio MM6108 actuando como Mesh Point peer activo IEEE 802.11s sin jerarquía maestro-esclavo. El RPi4 se conecta localmente por Ethernet GbE al puerto LAN del Tube AHM, inyectando tráfico Thread agregado al backbone HaLow mesh compartido. Arquitectura distributed mesh gateways peer-to-peer: todos los gateways edge son Mesh Points equipolentes que participan cooperativamente en routing HWMP, habilitando múltiples paths redundantes y re-enrutamiento automático ante fallos, mejorando disponibilidad vs arquitectura cliente STA tradicional.}
 \label{fig:halow-hardware-detail}
 \end{figure}

@@ -61,7 +61,7 @@ Este nivel comprende los dispositivos de campo que capturan telemetr�a de medi
     \item \textbf{SoC:} Espressif ESP32-C6 (RISC-V single-core 32-bit @ 160 MHz)
     \item \textbf{Memoria:} 512 KB SRAM, 4 MB Flash integrada, 16 KB SRAM RTC
     \item \textbf{Radio IEEE 802.15.4:} 2.4 GHz, potencia TX +21 dBm m�x, sensibilidad RX -100 dBm
-    \item \textbf{Stack Thread:} OpenThread 1.3.0 certified, roles FTD (Full Thread Device)
+    \item \textbf{Stack Thread:} OpenThread main (rama desarrollo activa con TCP), roles FTD (Full Thread Device)
     \item \textbf{Interfaces f�sicas:} UART $\times$ 3 (RS-485 adaptador MAX485), GPIO $\times$ 22
     \item \textbf{Alimentaci�n:} 5V @ 100 mA promedio (0.5 W) desde medidor o fuente externa
     \item \textbf{Consumo medido:} 
@@ -190,7 +190,7 @@ La arquitectura seleccion� Thread 1.4.0 sobre Zigbee 3.0 tras an�lisis compa
 \section{Implementaci�n Nivel 3: Gateway de Borde Raspberry Pi + Docker Edge}
 \label{sec:impl-nivel3-gateway}
 
-El Nivel 3 implementa inteligencia distribuida mediante gateways edge que ejecutan procesamiento local, almacenamiento persistente y sincronización bidireccional con cloud. La implementación desplegó 3 routers Alfa Networks Tube AHM formando mesh HaLow 802.11s, con 2 gateways Raspberry Pi 4 conectados como clientes STA a los 2 Mesh Points (Tube-02 y Tube-03), proporcionando cobertura 0.8 km² en ubicaciones estratégicas.
+El Nivel 3 implementa inteligencia distribuida mediante gateways edge que ejecutan procesamiento local, almacenamiento persistente y sincronización bidireccional con cloud. La implementación desplegó red mesh HaLow 802.11s peer-to-peer con 3 nodos Alfa Networks Tube AHM: 1 Mesh Gate (Tube-01) dedicado a backhaul Ethernet, y 2 Mesh Points peer (Tube-02, Tube-03) cada uno con gateway Raspberry Pi 4 integrado por Ethernet local. Arquitectura distributed mesh gateways: todos los gateways edge son Mesh Points peers equipolentes sin jerarquía, participando cooperativamente en routing HWMP con múltiples paths redundantes, proporcionando cobertura 0.8 km² con disponibilidad 99.7\% en ubicaciones estratégicas.
 
 \subsection{Especificaciones Hardware Gateway}\n\label{sec:impl-gateway-hw}\n\n\begin{itemize}\n    \item \textbf{Plataforma:} Raspberry Pi 4 Model B (4 GB RAM)\n    \item \textbf{Procesador:} Broadcom BCM2711 quad-core Cortex-A72 @ 1.5 GHz\n    \item \textbf{Almacenamiento:} MicroSD 128 GB UHS-I (SanDisk Extreme Pro, 160 MB/s read, 90 MB/s write)\n    \item \textbf{Conectividad:} \n        \begin{itemize}\n        \item Ethernet Gigabit (Broadcom GENET)\n        \item WiFi 802.11ac dual-band (2.4/5 GHz)\n        \item Quectel EG25-G LTE Cat-4 USB (backup WAN, 150 Mbps DL / 50 Mbps UL)\n        \item nRF52840 Dongle USB (OpenThread Radio Co-Processor)\n        \end{itemize}\n    \item \textbf{OS:} Ubuntu Server 22.04.3 LTS ARM64, kernel 5.15.0-1048-raspi\n    \item \textbf{Consumo:} 5V @ 3A (15W m�x), promedio operaci�n 8.5W (1.7A)\n    \item \textbf{Temperatura operaci�n:} 0-50�C (enclosure ventilado pasivo)\n\end{itemize}\n\n\subsection{Stack Docker y Microservicios Edge}\n\label{sec:impl-software-gateway}
 

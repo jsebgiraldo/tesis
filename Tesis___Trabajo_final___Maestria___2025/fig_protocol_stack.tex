@@ -1,0 +1,84 @@
+% Diagrama de pila de protocolos completa para nodos Thread
+% IEEE 802.15.4 → Thread → 6LoWPAN → CoAP → LwM2M
+
+\begin{figure}[H]
+\centering
+
+% ============================================================================
+% PLACEHOLDER: Insertar imagen de pila de protocolos aquí
+% ============================================================================
+% PROMPT PARA GENERAR LA IMAGEN:
+%
+% Crear un diagrama de arquitectura de capas (stack diagram) vertical mostrando
+% la pila completa de protocolos de comunicación para nodos IoT Thread:
+%
+% ESTRUCTURA (de abajo hacia arriba):
+%
+% CAPA 1 - FÍSICA (PHY):
+%   - Título: "IEEE 802.15.4 PHY"
+%   - Detalles: "2.4 GHz | 250 kbps | O-QPSK | Canales 11-26"
+%   - Color: Verde oscuro (#2E7D32)
+%
+% CAPA 2 - ENLACE (MAC):
+%   - Título: "IEEE 802.15.4 MAC"
+%   - Detalles: "CSMA/CA | ACK | MTU 127 bytes"
+%   - Color: Verde medio (#43A047)
+%
+% CAPA 3 - RED (Network):
+%   - Título: "OpenThread main Network Layer (IPv6 + TCP)"
+%   - Detalles: "IPv6 Mesh | HWMP Routing | MLE"
+%   - Color: Azul oscuro (#1565C0)
+%
+% CAPA 3.5 - ADAPTACIÓN:
+%   - Título: "6LoWPAN (RFC 6282)"
+%   - Detalles: "Header Compression | Fragmentation | Reassembly"
+%   - Color: Azul medio (#1976D2)
+%
+% CAPA 4 - TRANSPORTE:
+%   - Título: "UDP (User Datagram Protocol)"
+%   - Detalles: "Connectionless | Port-based multiplexing"
+%   - Color: Morado (#6A1B9A)
+%
+% CAPA 5 - APLICACIÓN (Protocol):
+%   - Título: "CoAP (RFC 7252)"
+%   - Detalles: "RESTful | Observe | Block Transfer | DTLS"
+%   - Color: Naranja (#E65100)
+%
+% CAPA 6 - APLICACIÓN (Management):
+%   - Título: "LwM2M 1.1 (OMA)"
+%   - Detalles: "Device Management | Objects & Resources | TLV/JSON"
+%   - Color: Rojo (#C62828)
+%
+% ESTILO VISUAL:
+%   - Cada capa como rectángulo de 12cm ancho × 1.8cm alto
+%   - Bordes redondeados (radius 3pt)
+%   - Sombra sutil (drop shadow)
+%   - Flechas verticales bidireccionales entre capas (↕)
+%   - Tipografía: Sans-serif, títulos en negrita
+%   - Anotaciones laterales indicando RFC/estándar correspondiente
+%
+% ELEMENTOS ADICIONALES:
+%   - Leyenda lateral derecha mostrando: "PHY/MAC", "Network", "Transport", "Application"
+%   - Medidas de overhead aproximado por capa (bytes): PHY=11, MAC=17, IPv6=40, UDP=8, CoAP=4, LwM2M variable
+%   - Flecha lateral indicando "Payload útil disponible: 102 bytes (de 127 MTU)"
+%
+% FORMATO DE SALIDA:
+%   - PNG o PDF vectorial
+%   - Resolución mínima: 300 DPI si PNG, vectorial preferido
+%   - Dimensiones: 12cm ancho × 20cm alto
+%   - Fondo blanco o transparente
+%
+% HERRAMIENTAS SUGERIDAS:
+%   - draw.io (diagrams.net) con plantilla "Network Stack"
+%   - Microsoft Visio con SmartArt "Stacked List"
+%   - Adobe Illustrator o Inkscape
+%   - Python matplotlib con patches.Rectangle
+%   - LaTeX TikZ (si prefieres código)
+%
+% ============================================================================
+
+\includegraphics[width=0.7\textwidth]{figures/protocol_stack.png}
+
+\caption{Pila completa de protocolos de comunicación para nodos IoT Thread/LwM2M. La arquitectura implementa 7 capas desde IEEE 802.15.4 PHY (capa física 2.4 GHz, 250 kbps) hasta LwM2M 1.1 (gestión de dispositivos). OpenThread main proporciona red IPv6 mesh auto-configurable sobre IEEE 802.15.4 con soporte TCP nativo (RFC 9293), con 6LoWPAN comprimiendo headers IPv6/UDP/TCP (60 bytes → 6-12 bytes típico) para maximizar payload útil. CoAP (Constrained Application Protocol) implementa RESTful sobre UDP con extensiones Observe (RFC 7641) para notificaciones asíncronas. LwM2M aprovecha CoAP para operaciones CRUD sobre objetos estandarizados (IPSO Smart Objects), habilitando gestión remota, firmware OTA y bootstrap automático. MTU efectivo: 127 bytes MAC - 25 bytes overhead = 102 bytes payload disponible para datos de aplicación.}
+\label{fig:protocol-stack}
+\end{figure}

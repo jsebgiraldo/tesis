@@ -1,4 +1,10 @@
-﻿\chapter{Resultados Experimentales y Validación End-to-End}
+﻿\input{fig_architecture_comparison}
+
+\input{fig_validation_heatmap}
+
+\input{fig_cost_breakdown}
+
+\chapter{Resultados Experimentales y Validación End-to-End}
 \label{chap:resultados}
 
 % ============================================================================
@@ -11,7 +17,7 @@
 
 Este capítulo presenta los resultados experimentales del piloto de validación implementado durante el cuarto trimestre de 2024, evaluando la arquitectura de cuatro niveles propuesta e implementada según lo documentado en los Capítulos~\ref{chap:nodo-iot} (Nivel 1: Nodo IoT Thread), \ref{chap:gateway-halow} (Niveles 2-3: Gateway HaLow + Edge Processing), y~\ref{chap:server-thingsboard} (Nivel 4: Server Cloud).
 
-El piloto experimental se ejecutó durante 90 días (octubre--diciembre 2024) con 30 medidores inteligentes desplegados en un complejo residencial de 192 apartamentos en San Javier, Medellín, Colombia. Los objetivos de validación abarcaron cuatro dimensiones críticas: (1) latencia end-to-end con procesamiento edge, (2) disponibilidad del sistema bajo condiciones reales de operación, (3) escalabilidad de la arquitectura Thread+HaLow+Edge de 30 a 100+ medidores, y (4) viabilidad económica mediante análisis Total Cost of Ownership (TCO).
+El despliegue experimental se ejecutó durante 90 días (octubre--diciembre 2024) con 30 medidores inteligentes desplegados en un complejo residencial de 192 apartamentos. Los objetivos de validación abarcaron cuatro dimensiones críticas: (1) latencia end-to-end con procesamiento edge, (2) disponibilidad del sistema bajo condiciones reales de operación, (3) escalabilidad de la arquitectura Thread+HaLow+Edge de 30 a 100+ medidores, y (4) viabilidad económica mediante análisis Total Cost of Ownership (TCO).
 
 Las hipótesis planteadas en el Capítulo~\ref{chap:introduccion} se validan mediante métricas cuantitativas obtenidas de la operación continua del sistema: latencia edge processing <10 ms, reducción tráfico WAN >70\%, TCO <\$60/dispositivo, y disponibilidad >99.5\%. La estructura del capítulo sigue la jerarquía arquitectónica de cuatro niveles: Sección~\ref{sec:resultados-metodologia} describe el setup experimental, Sección~\ref{sec:resultados-latencia} analiza latencia end-to-end, Sección~\ref{sec:resultados-disponibilidad} evalúa disponibilidad y resiliencia, Sección~\ref{sec:resultados-escalabilidad} proyecta escalabilidad técnica y económica, y Sección~\ref{sec:resultados-validacion-hipotesis} valida formalmente las hipótesis H1--H8 mediante análisis estadístico.
 
@@ -21,13 +27,13 @@ Las hipótesis planteadas en el Capítulo~\ref{chap:introduccion} se validan med
 \subsection{Setup Experimental del Piloto}
 \label{sec:resultados-setup}
 
-\textbf{Ubicación:} Complejo residencial San Javier, Medellín, Colombia (6°14'N, 75°34'W, 1,495 msnm). Sector residencial de estrato 3 con tres edificios de 3-4 pisos (Building-A, Building-B, Building-C), densidad 80 viviendas/hectárea, 192 apartamentos totales.
+\textbf{Ubicación:} Complejo residencial en zona urbana montañosa (1,495 msnm). Sector residencial con tres edificios de 3-4 pisos (Building-A, Building-B, Building-C), densidad 80 viviendas/hectárea, 192 apartamentos totales.
 
 \textbf{Infraestructura desplegada:}
 
 \begin{itemize}
     \item \textbf{30 medidores:} Itron SL7000 monofásicos (20 unidades) y trifásicos (10 unidades), instalados en cajas metálicas en fachada edificios (muestra representativa del total 192 dispositivos del proyecto completo)
-    \item \textbf{30 nodos IoT:} ESP32-C6 con Thread 1.4.0, alimentados desde puerto auxiliar medidor (5V @ 100 mA), conectados RS-485 @ 9600 bps según Capítulo~\ref{chap:nodo-iot}
+    \item \textbf{30 nodos IoT:} ESP32-C6 con OpenThread main (Thread 1.4 + TCP), alimentados desde puerto auxiliar medidor (5V @ 100 mA), conectados RS-485 @ 9600 bps según Capítulo~\ref{chap:nodo-iot}
     \item \textbf{1 Border Router:} ESP32-S3 dual-core con OpenThread Border Router (OTBR), ubicado en poste central (3m altura), cobertura 350m radio, NAT64/DNS64 configurado
     \item \textbf{1 Gateway:} Raspberry Pi 4 (4GB RAM) con ThingsBoard Edge en Docker (arquitectura Capítulo~\ref{chap:gateway-halow} §4.5), NVMe SSD 128GB, UPS Li-ion 12V 20Ah, 7-day buffer local
     \item \textbf{Backhaul:} HaLow 920 MHz @ 2 MHz BW (OTBR → Gateway, enlace 180m LoS, Alfa Network Tube-U4AHM), 4G LTE Claro Colombia (Gateway → ThingsBoard AWS, plan 2 GB/mes)
@@ -56,7 +62,7 @@ Las hipótesis planteadas en el Capítulo~\ref{chap:introduccion} se validan med
 \begin{itemize}
     \item \textbf{Temperatura:} 18--28°C (promedio 22°C), humedad relativa 60--80\% (clima tropical montañoso)
     \item \textbf{Interferencia RF:} 15 redes WiFi 2.4 GHz detectadas (canales 1, 6, 11), sin overlap Channel 25 Thread (2.475 GHz)
-    \item \textbf{Suministro eléctrico:} 3 blackouts programados Empresas Públicas de Medellín (EPM) de 2--4h c/u (Oct 15, Nov 22, Dic 10), red eléctrica estable 99.8\% uptime
+    \item \textbf{Suministro eléctrico:} 3 blackouts programados de 2--4h c/u (Oct 15, Nov 22, Dic 10), red eléctrica estable 99.8\% uptime
 \end{itemize}
 
 \subsection{Instrumentación y Mediciones}
@@ -792,7 +798,7 @@ La disponibilidad del sistema durante el piloto de 90 días (Oct--Dic 2024) se m
 \begin{itemize}
     \item \textbf{vs Objetivo diseño (99.5\%):} El sistema superó el target por +0.12 puntos porcentuales, validando las estimaciones conservadoras del modelo de confiabilidad serie presentado en los Capítulos~\ref{chap:nodo-iot}, \ref{chap:gateway-halow}, y~\ref{chap:server-thingsboard} (disponibilidad $A_{sistema} = \prod_{i=1}^{4} A_i$ con márgenes de seguridad).
     
-    \item \textbf{vs Modelo teórico (99.05\%):} El piloto superó predicción teórica por +0.57 pp. Discrepancia atribuida a: (1) SLA 4G LTE Claro Colombia entregó 99.93\% real vs 99.5\% contractual (mejor desempeño red celular sector residencial Medellín), (2) HaLow experimentó solo 1 evento interferencia vs 2/mes proyectados (entorno residencial menos congestionado que simulación urbana densa), (3) Eventos operacionales evitables (firmware update manual 120 min downtime) no representativos de deployment producción con OTA automatizado.
+    \item \textbf{vs Modelo teórico (99.05\%):} El despliegue superó predicción teórica por +0.57 pp. Discrepancia atribuida a: (1) SLA 4G LTE entregó 99.93\% real vs 99.5\% contractual (mejor desempeño red celular en zona residencial), (2) HaLow experimentó solo 1 evento interferencia vs 2/mes proyectados (entorno residencial menos congestionado que simulación urbana densa), (3) Eventos operacionales evitables (firmware update manual 120 min downtime) no representativos de deployment producción con OTA automatizado.
     
     \item \textbf{Downtime total:} 8.18 horas en 90 días = 32.7h anualizadas (vs 43.8h permitidas por SLA 99.5\%, margen 11.1h/año)
 \end{itemize}
@@ -1149,7 +1155,7 @@ La Hipótesis H8 (\textit{"Edge reduce tráfico WAN >70\%"}) presenta un resulta
 
 \begin{itemize}
     \item \textbf{Alcance máximo medido:} 1,200 m LOS (rural, sin obstáculos, MCS0 @ 2 MHz, TX power +20 dBm)
-    \item \textbf{Alcance urbano práctico:} 350 m (piloto San Javier Medellín, 2 paredes ladrillo + vegetación, RSSI -78 dBm límite, MCS3 fallback)
+    \item \textbf{Alcance urbano práctico:} 350 m (entorno residencial, 2 paredes ladrillo + vegetación, RSSI -78 dBm límite, MCS3 fallback)
     \item \textbf{Comparación WiFi 2.4 GHz:} Alcance típico 100 m LOS (802.11n), 30 m con 2 paredes ladrillo. HaLow mejora 12$\times$ alcance LOS, 11$\times$ alcance urbano.
 \end{itemize}
 
@@ -1235,7 +1241,7 @@ La Hipótesis H8 (\textit{"Edge reduce tráfico WAN >70\%"}) presenta un resulta
 \section{Conclusiones del Capítulo}
 \label{sec:resultados-conclusiones}
 
-Este capítulo presentó la validación experimental exhaustiva de la arquitectura IoT de cuatro niveles propuesta para sistemas Smart Energy, mediante un piloto real de 90 días (octubre--diciembre 2024) con 30 medidores inteligentes Itron SL7000 desplegados en un complejo residencial de 192 apartamentos en San Javier, Medellín, Colombia.
+Este capítulo presentó la validación experimental exhaustiva de la arquitectura IoT de cuatro niveles propuesta para sistemas Smart Energy, mediante un despliegue real de 90 días (octubre--diciembre 2024) con 30 medidores inteligentes Itron SL7000 desplegados en un complejo residencial de 192 apartamentos.
 
 \subsection{Hallazgos Principales}
 
@@ -1287,7 +1293,7 @@ Registros OBIS validados: 264,988 lecturas exitosas / 265,000 esperadas (99.995\
 \addlinespace[0.3cm]
 
 \textbf{2. Communication} & 
-\textbf{Field Network (HAN):} Thread 1.4.0 mesh IEEE 802.15.4 @ 2.4 GHz, AES-128-CCM-8 cifrado capa MAC, MLE routing adaptativo, Border Router ESP32-S3 OTBR.
+\textbf{Field Network (HAN):} OpenThread main (Thread 1.4 + TCP) mesh IEEE 802.15.4 @ 2.4 GHz, AES-128-CCM-8 cifrado capa MAC, MLE routing adaptativo, TCP para transferencias confiables, Border Router ESP32-S3 OTBR.
 \newline
 \textbf{Backhaul (NAN):} Wi-Fi HaLow IEEE 802.11ah @ 920 MHz, 2 MHz BW, MCS0--MCS3 adaptive, WPA3-SAE, alcance 350 m urbano.
 \newline
@@ -1384,14 +1390,14 @@ El estudio presenta las siguientes limitaciones reconocidas:
     
     \item \textbf{Duración 90 días:} Valida operación corto plazo; confiabilidad largo plazo (5+ años) y degradación hardware (baterías Li-ion, flash NAND medidores) requieren estudios longitudinales.
     
-    \item \textbf{Condiciones climáticas:} Piloto ejecutado estación seca (Q4 Medellín, humedad relativa 60--80\%); impacto lluvia intensa >100 mm/h y humedad >95\% en enlaces Thread/HaLow outdoor no evaluado (posible atenuación +3 dB agua en carcasas IP65).
+    \item \textbf{Condiciones climáticas:} Despliegue ejecutado durante estación seca (Q4, humedad relativa 60--80\%); impacto lluvia intensa >100 mm/h y humedad >95\% en enlaces Thread/HaLow outdoor no evaluado (posible atenuación +3 dB agua en carcasas IP65).
     
     \item \textbf{Overhead paquetes:} Reducción >60\% CoAP vs MQTT no medida experimentalmente (solo análisis teórico Cap 3), requiere captura Wireshark detallada headers + análisis estadístico payload ratio.
 \end{enumerate}
 
 \subsection{Posicionamiento de la Arquitectura}
 
-Los resultados experimentales posicionan la arquitectura propuesta como \textbf{alternativa viable y económicamente factible} para despliegues AMI en países en desarrollo, con capacidad de soportar aplicaciones críticas en tiempo real mediante procesamiento edge distribuido. Las limitaciones identificadas (escala piloto, duración, condiciones ambientales) establecen la agenda para trabajos futuros orientados a validación a gran escala (1,000+ medidores, múltiples ciudades, 12+ meses operación continua) y estudios longitudinales de confiabilidad (MTBF proyectado 2,160h validado, MTTF 5+ años pendiente).
+Los resultados experimentales posicionan la arquitectura propuesta como \textbf{alternativa viable y económicamente factible} para despliegues AMI en países en desarrollo, con capacidad de soportar aplicaciones críticas en tiempo real mediante procesamiento edge distribuido. Las limitaciones identificadas (escala del despliegue, duración, condiciones ambientales) establecen la agenda para trabajos futuros orientados a validación a gran escala (1,000+ medidores, múltiples ubicaciones geográficas, 12+ meses operación continua) y estudios longitudinales de confiabilidad (MTBF proyectado 2,160h validado, MTTF 5+ años pendiente).
 
 El capítulo siguiente (Capítulo 7 - Conclusiones Finales y Trabajo Futuro) sintetiza las contribuciones generales de la tesis, evalúa cumplimiento de objetivos, discute implicaciones para la industria Smart Energy, y propone líneas de investigación futura para evolución de la arquitectura hacia redes 100\% autónomas con IA edge distribuida.
 

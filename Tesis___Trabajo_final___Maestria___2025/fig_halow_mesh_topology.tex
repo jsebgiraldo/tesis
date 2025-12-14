@@ -56,34 +56,36 @@
     Red HaLow Mesh IEEE 802.11s (902-928 MHz)
 };
 
-% ============ CAPA 2: GATEWAYS RASPBERRY PI 4 (CLIENTES STA) ============
-% SOLO 2 GATEWAYS: RPi4-01 conectado a Tube-02, RPi4-02 conectado a Tube-03
+% ============ CAPA 2: GATEWAYS RASPBERRY PI 4 (PEERS EN MESH) ============
+% 2 GATEWAYS EDGE como Mesh Points PEERS (no jerarquía)
+% Conexión local Ethernet entre RPi4 y Tube AHM co-ubicado
+% TODOS los Mesh Points son peers equipolentes en la red mesh
 
-% Gateway 1 (RPi4-01) - Conectado a Mesh Point 2 (Tube-02)
-\node[gateway] (rpi01) at (-4,0) {
+% Gateway 1 (RPi4-01) - Mesh Point peer en Tube-02
+\node[gateway] (rpi01) at (-4,1) {
     \textbf{RPi4-01}\\
-    \footnotesize Gateway Edge
+    \footnotesize Mesh Point Peer
 };
 \node[below=0.1cm of rpi01, font=\tiny, text width=3.2cm, align=center] {
-    HaLow STA (wireless)\\ThingsBoard Edge\\OTBR + Docker stack
+    Gateway Edge\\ThingsBoard + OTBR\\15 nodos Thread
 };
 
-% Gateway 2 (RPi4-02) - Conectado a Mesh Point 3 (Tube-03)
-\node[gateway] (rpi02) at (4,0) {
+% Gateway 2 (RPi4-02) - Mesh Point peer en Tube-03
+\node[gateway] (rpi02) at (4,1) {
     \textbf{RPi4-02}\\
-    \footnotesize Gateway Edge
+    \footnotesize Mesh Point Peer
 };
 \node[below=0.1cm of rpi02, font=\tiny, text width=3.2cm, align=center] {
-    HaLow STA (wireless)\\ThingsBoard Edge\\OTBR + Docker stack
+    Gateway Edge\\ThingsBoard + OTBR\\15 nodos Thread
 };
 
-% Conexiones HaLow (STAs hacia APs mesh) - SOLO a Mesh Points, NO al Mesh Gate
-\draw[halow] (rpi01) -- (tube02) node[midway, right, font=\tiny] {HaLow STA};
-\draw[halow] (rpi02) -- (tube03) node[midway, right, font=\tiny] {HaLow STA};
+% Conexiones Ethernet local (RPi4 a Tube AHM co-ubicado)
+\draw[ethernet] (rpi01) -- (tube02) node[midway, right, font=\tiny] {ETH local};
+\draw[ethernet] (rpi02) -- (tube03) node[midway, right, font=\tiny] {ETH local};
 
 % Etiqueta capa gateways
 \node[left=0.5cm of rpi01, font=\small\bfseries, text=orange!70!black, rotate=90, anchor=south] {
-    2 Gateways Edge (HaLow STAs)
+    2 Gateways Edge Mesh Peers
 };
 
 % ============ CAPA 3: NODOS THREAD (ejemplo) ============
@@ -132,12 +134,11 @@
 \node[below=2cm of t02, font=\footnotesize, text width=5cm, align=left] (legend) {
     \textbf{Leyenda:}\\[0.2cm]
     \tikz\draw[mesh] (0,0) -- (0.5,0); Peer Link 802.11s\\
-    \tikz\draw[halow] (0,0) -- (0.5,0); HaLow STA to AP\\
-    \tikz\draw[threadlink] (0,0) -- (0.5,0); Thread 802.15.4\\
-    \tikz\draw[ethernet] (0,0) -- (0.5,0); Ethernet GbE
+    \tikz\draw[ethernet] (0,0) -- (0.5,0); Ethernet local\\
+    \tikz\draw[threadlink] (0,0) -- (0.5,0); Thread 802.15.4
 };
 
 \end{tikzpicture}
-\caption{Topología HaLow Mesh con Gateways Raspberry Pi 4 como clientes STA. Red HaLow (capa superior) comprende 3 routers Alfa Networks Tube AHM formando mesh IEEE 802.11s con protocolo HWMP: 1 Mesh Gate (Tube-01) con backhaul Ethernet a switch local (server on-premise conectado al mismo switch, detallado Capítulo 5), y 2 Mesh Points (Tube-02, Tube-03) relay. Gateways Raspberry Pi 4 (capa intermedia, 2 unidades) se conectan como clientes STA inalámbricos exclusivamente a los Mesh Points (NO al Mesh Gate), ejecutando ThingsBoard Edge y OTBR. Nodos Thread (capa inferior) forman mesh IEEE 802.15.4 conectado a cada gateway vía nRF52840 Dongle USB. Este capítulo enfoca en red HaLow mesh 802.11s y edge gateways; conectividad WAN se documenta Capítulo 5.}
+\caption{Topología HaLow Mesh peer-to-peer con Gateways Edge distribuidos. Red HaLow (capa superior) comprende 3 routers Alfa Networks Tube AHM formando mesh IEEE 802.11s full-mesh con protocolo HWMP: 1 Mesh Gate (Tube-01) dedicado con backhaul Ethernet a switch local (server on-premise conectado al mismo switch, detallado Capítulo 5), y 2 Mesh Points peer (Tube-02, Tube-03) con gateways RPi4 integrados por Ethernet local operando como nodos mesh equipolentes sin jerarquía. Gateways Raspberry Pi 4 (capa intermedia, RPi4-01 y RPi4-02) son Mesh Points activos que participan directamente en routing HWMP cooperativo, inyectando tráfico agregado Thread al backbone HaLow compartido, ejecutando ThingsBoard Edge y OTBR. Arquitectura distribuida peer elimina single-point-of-failure: protocolo HWMP mantiene múltiples paths redundantes entre todos los Mesh Points, re-enrutando automáticamente ante fallos de cualquier nodo. Nodos Thread (capa inferior) forman mesh IEEE 802.15.4 conectado a cada gateway vía nRF52840 Dongle USB. Este capítulo enfoca en red HaLow mesh 802.11s distribuida; conectividad WAN se documenta Capítulo 5.}
 \label{fig:halow-mesh-topology}
 \end{figure}

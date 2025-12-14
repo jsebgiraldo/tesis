@@ -352,36 +352,26 @@ La Tabla~\ref{tab:marco-comparativa-comercial} sintetiza el análisis crítico d
 \centering
 \caption{Comparación Multidimensional: Soluciones Comerciales Edge vs Arquitectura Propuesta Open-Source}
 \label{tab:marco-comparativa-comercial}
-\small
-\begin{tabular}{@{}p{3.2cm}p{2.4cm}p{2.4cm}p{2.4cm}p{2.4cm}@{}}
+\footnotesize
+\begin{tabular}{lllll}
 \toprule
 \textbf{Dimensión} & \textbf{Cisco IR829} & \textbf{Dell EG 3000} & \textbf{AWS Greengrass} & \textbf{Arquitectura Propuesta} \\ 
 \midrule
-\textbf{TCO 5 años (100 gateways)} & \$798,000 (\$7,980/gw) & \$480,000 (\$4,800/gw) & \$136,080 (\$1,361/gw) & \textbf{\$12,400 (\$124/gw)} \\
-\addlinespace[0.1cm]
-\textbf{CAPEX hardware} & \$2,500-4,000 & \$1,200-2,000 & \$75 (RPi 4) & \textbf{\$55-75 (RPi 4)} \\
-\addlinespace[0.1cm]
-\textbf{OPEX recurrente anual} & \$55,600 (licencias + LTE + soporte) & \$30,000 (LTE + gestión) & \$6,096/año (Greengrass + IoT Core + LTE) & \textbf{\$0/año (sin licencias, HaLow sin OPEX)} \\
-\addlinespace[0.1cm]
-\textbf{Cumplimiento IEEE 2030.5 nativo} & No (requiere dev custom) & No (requiere plugin \$800) & No (requiere Lambda custom) & \textbf{Sí (adapter ThingsBoard-SEP2)} \\
-\addlinespace[0.1cm]
-\textbf{Soporte LwM2M gestión} & No & No & No & \textbf{Sí (Leshan + Eclipse Wakaama)} \\
-\addlinespace[0.1cm]
-\textbf{Dashboard local offline} & Sí (IOS CLI) & Limitado (Gateway Manager UI básica) & No (solo AWS Console cloud) & \textbf{Sí (ThingsBoard UI completa)} \\
-\addlinespace[0.1cm]
-\textbf{Operación offline indefinida} & Sí & Sí & \textbf{No (max 7 días)} & \textbf{Sí (sincronización diferida)} \\
-\addlinespace[0.1cm]
-\textbf{Vendor lock-in} & Alto (ecosistema Cisco propietario) & Medio (Windows IoT licencias) & Alto (AWS services tightly-coupled) & \textbf{Nulo (open-source, APIs estándar)} \\
-\addlinespace[0.1cm]
-\textbf{Portabilidad multi-cloud} & Baja & Media & Baja (reescritura Lambda) & \textbf{Alta (MQTT/REST estándar)} \\
-\addlinespace[0.1cm]
-\textbf{Performance edge analytics} & Alta (P1020 dual-core) & Baja (Atom single-core 1.46 GHz) & Depende hardware host & \textbf{Media-Alta (RPi 4 quad-core 1.8 GHz)} \\
-\addlinespace[0.1cm]
-\textbf{Robustez térmica} & $-40^\circ$C a $+70^\circ$C (IP30) & $-40^\circ$C a $+70^\circ$C (fanless) & Depende hardware host & $-40^\circ$C a $+85^\circ$C (\textbf{RPi CM4 + IP67}) \\
-\addlinespace[0.1cm]
-\textbf{Actualizaciones OTA} & Sí (Smart Licensing) & Sí (Dell Gateway Manager) & Sí (AWS deployments) & \textbf{Sí (Ansible + script bash)} \\
-\addlinespace[0.1cm]
-\textbf{Soporte técnico} & SmartNet 24$\times$7 (\$55K/año) & ProSupport Plus (\$15K/año) & AWS Support Plan (\$15K/año mínimo) & \textbf{Comunidad + documentación} \\
+\textbf{TCO 5 años} & \$798,000 & \$480,000 & \$136,080 & \textbf{\$12,400} \\
+\textbf{(100 gateways)} & (\$7,980/gw) & (\$4,800/gw) & (\$1,361/gw) & \textbf{(\$124/gw)} \\[0.1cm]
+\textbf{CAPEX hardware} & \$2,500-4,000 & \$1,200-2,000 & \$75 (RPi 4) & \textbf{\$55-75 (RPi 4)} \\[0.1cm]
+\textbf{OPEX anual} & \$55,600 & \$30,000 & \$6,096/año & \textbf{\$0/año} \\
+& (lic. + LTE) & (LTE + gestión) & (AWS + LTE) & \textbf{(sin licencias)} \\[0.1cm]
+\textbf{IEEE 2030.5} & No (dev custom) & No (plugin \$800) & No (Lambda) & \textbf{Sí (adapter)} \\[0.1cm]
+\textbf{LwM2M} & No & No & No & \textbf{Sí (Leshan)} \\[0.1cm]
+\textbf{Dashboard local} & Sí (IOS CLI) & Limitado (UI) & No (AWS) & \textbf{Sí (ThingsBoard)} \\[0.1cm]
+\textbf{Offline indefinido} & Sí & Sí & No (max 7d) & \textbf{Sí (sync)} \\[0.1cm]
+\textbf{Vendor lock-in} & Alto (Cisco) & Medio (Win IoT) & Alto (AWS) & \textbf{Nulo (OSS)} \\[0.1cm]
+\textbf{Multi-cloud} & Baja & Media & Baja & \textbf{Alta (REST)} \\[0.1cm]
+\textbf{Performance} & Alta (P1020) & Baja (Atom) & Depende host & \textbf{Media-Alta (RPi4)} \\[0.1cm]
+\textbf{Térmica} & $-40$ a $+70^\circ$C & $-40$ a $+70^\circ$C & Depende host & $-40$ a $+85^\circ$C \\[0.1cm]
+\textbf{OTA} & Sí (Smart Lic.) & Sí (Dell Mgr) & Sí (AWS) & \textbf{Sí (Ansible)} \\[0.1cm]
+\textbf{Soporte} & \$55K/año (24×7) & \$15K/año & \$15K/año min & \textbf{Comunidad} \\
 \bottomrule
 \end{tabular}
 \end{table}

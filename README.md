@@ -11,7 +11,7 @@ Maestría en Ingeniería - Automatización Industrial
 
 Tesis de maestría que propone, implementa y valida una arquitectura IoT de 4 niveles para infraestructuras de medición inteligente (AMI) en redes Smart Energy. La arquitectura integra Thread (802.15.4), Wi-Fi HaLow (802.11ah) y LTE Cat-M1, con edge computing basado en Docker y cumplimiento de estándares IEEE 2030.5 e ISO/IEC 30141.
 
-**Piloto experimental:** 30 medidores Itron SL7000 operando durante 90 días en Medellín, Colombia.
+**Despliegue experimental:** 30 medidores Itron SL7000 operando durante 90 días en entorno urbano.
 
 ## 🏗️ Arquitectura del Sistema (4 Niveles)
 
@@ -51,7 +51,7 @@ Nivel 4 - Cloud:     [AWS] → EC2, RDS PostgreSQL, ElastiCache, MSK Kafka
 ## 🔧 Tecnologías Implementadas
 
 ### Hardware
-- **Nodos Thread:** ESP32-C6 (RISC-V, 160 MHz, Thread 1.4.0)
+- **Nodos Thread:** ESP32-C6 (RISC-V, 160 MHz, OpenThread main con TCP)
 - **Gateway Edge:** Raspberry Pi 4 (4 GB RAM, BCM2711)
 - **Radio HaLow:** Morse Micro MM6108 (920 MHz, 2/4/8 MHz BW)
 - **Modem LTE:** Quectel EG25-G (Cat-M1, eDRX + PSM)
@@ -189,7 +189,7 @@ iconv -f ISO-8859-1 -t UTF-8 archivo.tex > archivo_utf8.tex
 
 - ✅ **IEEE 2030.5-2018:** Smart Energy Profile 2.0 (SEP 2.0)
 - ✅ **ISO/IEC 30141:2024:** IoT Reference Architecture (7 FEs implementadas)
-- ✅ **Thread 1.4.0:** IPv6 mesh networking over 802.15.4
+- ✅ **OpenThread main:** IPv6 mesh networking over 802.15.4 con soporte TCP nativo
 - ✅ **IEEE 802.11ah-2016:** Wi-Fi HaLow (sub-GHz)
 - ✅ **LwM2M 1.2:** OMA SpecWorks device management
 - ✅ **MQTT 5.0:** ISO/IEC 20922

@@ -12,7 +12,7 @@
 
 Este capítulo presenta los resultados experimentales del piloto de validación implementado durante el cuarto trimestre de 2024, evaluando la arquitectura propuesta en el Capítulo~\ref{chap:arquitectura} e implementada según lo documentado en el Capítulo~\ref{chap:implementacion}.
 
-El piloto experimental se ejecutó durante 90 días (octubre--diciembre 2024) con 30 medidores Itron SL7000 desplegados en un barrio residencial de Medellín, Colombia. Los objetivos de validación abarcaron cuatro dimensiones críticas: (1) latencia end-to-end con procesamiento edge, (2) disponibilidad del sistema bajo condiciones reales, (3) escalabilidad de la arquitectura Thread de 30 a 100+ medidores, y (4) viabilidad económica (Total Cost of Ownership).
+El despliegue experimental se ejecutó durante 90 días (octubre--diciembre 2024) con 30 medidores Itron SL7000 desplegados en un barrio residencial. Los objetivos de validación abarcaron cuatro dimensiones críticas: (1) latencia end-to-end con procesamiento edge, (2) disponibilidad del sistema bajo condiciones reales, (3) escalabilidad de la arquitectura Thread de 30 a 100+ medidores, y (4) viabilidad económica (Total Cost of Ownership).
 
 \section{Setup Experimental del Piloto}
 \label{sec:res-setup}
@@ -20,13 +20,13 @@ El piloto experimental se ejecutó durante 90 días (octubre--diciembre 2024) co
 \subsection{Topología de Red Desplegada}
 \label{sec:res-topologia}
 
-\textbf{Ubicación:} Barrio Buenos Aires, Medellín, Colombia (6°14'N, 75°34'W, 1,495 msnm). Sector residencial de estrato 3 con edificios de 2-3 pisos, densidad 80 viviendas/hectárea.
+\textbf{Ubicación:} Zona urbana residencial (1,495 msnm). Sector residencial con edificios de 2-3 pisos, densidad 80 viviendas/hectárea.
 
 \textbf{Infraestructura desplegada:}
 
 \begin{itemize}
     \item \textbf{30 medidores:} Itron SL7000 monofásicos (20 unidades) y trifásicos (10 unidades), instalados en cajas metálicas en fachada edificios
-    \item \textbf{30 nodos IoT:} ESP32-C6 con Thread 1.4.0, alimentados desde puerto auxiliar medidor (5V @ 100 mA), conectados RS-485 @ 9600 bps
+    \item \textbf{30 nodos IoT:} ESP32-C6 con OpenThread main (Thread 1.4 + TCP), alimentados desde puerto auxiliar medidor (5V @ 100 mA), conectados RS-485 @ 9600 bps
     \item \textbf{1 DCU (Border Router):} ESP32-S3 dual-core con Thread OTBR, ubicado en poste central (3m altura), cobertura 350m radio
     \item \textbf{1 Gateway:} Raspberry Pi 4 (4GB RAM) con stack Docker (6 servicios: Bridge CoAP-MQTT, Mosquitto, PostgreSQL+TimescaleDB, Kafka, Node-RED, Grafana), NVMe SSD 128GB, UPS Li-ion 12V 20Ah
     \item \textbf{Backhaul:} HaLow 920 MHz @ 2 MHz BW (DCU → Gateway, enlace 180m LoS), LTE Cat-M1 Claro Colombia (Gateway → ThingsBoard AWS, plan 50 MB/mes)
@@ -48,6 +48,30 @@ El piloto experimental se ejecutó durante 90 días (octubre--diciembre 2024) co
     \item \textbf{Uptime objetivo:} 99.5\% (2,197h operación, 11h downtime permitido)
     \item \textbf{Lecturas totales esperadas:} 30 medidores $\times$ 96 lecturas/día (15 min polling) $\times$ 92 días = 265,000 lecturas
 \end{itemize}
+
+\section{Resultados de Latencia}
+\label{sec:res-latencia}
+
+Esta sección presenta los resultados de latencia end-to-end medidos durante el piloto de 90 días. Los datos fueron recolectados mediante timestamps NTP sincronizados y analizados estadísticamente para validar el cumplimiento del requisito de diseño (<10 ms para transacciones edge locales).
+
+\input{fig_latency_results}
+
+\section{Análisis de Disponibilidad}
+\label{sec:res-disponibilidad}
+
+Se presenta el análisis de disponibilidad del sistema durante el período de evaluación, incluyendo el desglose de eventos de downtime, causas raíz y métricas de confiabilidad (MTBF, MTTR). La figura siguiente muestra la línea de tiempo de 90 días con la clasificación de incidentes.
+
+\input{fig_availability_timeline}
+
+\section{Evaluación de Escalabilidad}
+\label{sec:res-escalabilidad}
+
+Esta sección documenta los resultados de las pruebas de escalabilidad, proyectando el comportamiento del sistema desde el piloto de 30 medidores hasta un despliegue de 100 medidores. Se analizan los cuellos de botella en cada segmento de red (Thread, HaLow, backhaul LTE, Gateway Edge) y se valida la capacidad de crecimiento horizontal.
+
+\input{fig_scalability_chart}
+
+\subsection{Condiciones Ambientales}
+\label{subsec:condiciones-ambientales}
 
 \textbf{Condiciones ambientales:}
 
@@ -539,7 +563,7 @@ El Gateway implementa respaldo energético mediante UPS con baterías Li-ion 12V
 \textbf{Consumo energético Gateway:}
 \begin{itemize}
     \item Raspberry Pi 4 (4GB): 5.5 W (CPU 40\% promedio)
-    \item Router MikroTik RB5009: 4 W
+    \item Router Alfa Networks AHPE230: 4 W
     \item Alfa Tube-AHM (HaLow AP): 2 W
     \item \textbf{Total sistema:} 11.5 W
 \end{itemize}
@@ -689,7 +713,7 @@ El estudio presenta las siguientes limitaciones reconocidas:
     
     \item \textbf{Duración:} 90 días validan operación a corto plazo; confiabilidad a largo plazo (5+ años) y degradación hardware requieren estudios longitudinales.
     
-    \item \textbf{Condiciones climáticas:} Piloto ejecutado durante estación seca (Q4 Medellín); impacto de lluvia intensa y humedad en enlaces Thread/HaLow no evaluado.
+    \item \textbf{Condiciones climáticas:} Despliegue ejecutado durante estación seca (Q4); impacto de lluvia intensa y humedad en enlaces Thread/HaLow no evaluado.
 \end{enumerate}
 
 \section{Conclusiones del Capítulo}
