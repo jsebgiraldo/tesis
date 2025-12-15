@@ -56,6 +56,13 @@ Thread es un protocolo IPv6 sobre IEEE 802.15.4 diseñado específicamente para 
 
 Thread implementa routing mesh auto-configurable basado en métricas de calidad de enlace (LQI) y path cost, convergiendo en <5 segundos tras cambios topológicos (nodo join/leave, link failure). El protocolo soporta hasta 250 dispositivos por partición en despliegues típicos, escalando a 500+ mediante tuning de parámetros MLE~\cite{openthread2024}.
 
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.5\textwidth]{figures/openthread-osi-model.jpg}
+\caption{Modelo OSI del stack OpenThread implementado en nodos ESP32-C6 para red AMI Thread. Arquitectura de 7 capas desde IEEE 802.15.4 PHY (capa física 2.4 GHz, 250 kbps DSSS-OQPSK) hasta LwM2M 1.1 (application layer device management). \textbf{Capas hardware offload:} PHY y MAC implementadas en radio ESP32-C6 con soporte CSMA/CA, ACK automático, y frame filtering por hardware. \textbf{Capas software OpenThread:} 6LoWPAN compression (IPv6 header 40 bytes $\rightarrow$ 2-6 bytes típico HC1/HC\_UDP), IPv6 routing con mesh discovery MLE (Mesh Link Establishment), UDP/TCP transport (RFC 9293 TCP agregado Thread 1.4), CoAP RESTful (RFC 7252) con extensiones Observe para notificaciones push. \textbf{Capa aplicación:} LwM2M client AVSystems Anjay gestiona objetos IPSO (3303 Temperature, 3305 Power Measurement, 10243 Single-Phase Meter). Stack completo consume 220 KB Flash (+22\% vs Thread 1.3.0 por TCP) y 56 KB RAM (+33\% por buffers TCP) en ESP32-C6~\cite{openthread2024}. Esta arquitectura modular permite desacoplar capas inferiores (PHY/MAC hardware-accelerated) de superiores (application layer customizable), facilitando migración entre chipsets manteniendo compatibilidad protocolar. Comparar con arquitectura Thread Group oficial Specification 1.3.0 Section 4.}
+\label{fig:openthread-osi-model}
+\end{figure}
+
 \subsubsection{Topología y Roles de Dispositivos}
 \label{sec:nodo-thread-topologia}
 
@@ -537,7 +544,7 @@ El firmware del nodo se desarrolló sobre ESP-IDF v5.1.2 (Espressif IoT Developm
 \textbf{Componentes del firmware:}
 
 \begin{enumerate}
-    \item \textbf{OpenThread Stack:} Librería oficial Thread Group (rama main, commit actualizado semanalmente), compilada como ESP-IDF component. Incluye: (a) IEEE 802.15.4 radio driver (ot\_radio.c, 2400 LOC), (b) MLE implementation (ot\_mle.c), (c) IPv6 stack con 6LoWPAN compression, (d) CoAP client/server (ot\_coap.c), (e) TCP stack completo (ot\_tcp.c, RFC 9293) con flow control y congestion control. Stack consume 220 KB Flash (+22\% vs 1.3.0 por TCP), 56 KB RAM (+33\% por buffers TCP).
+    \item \textbf{OpenThread Stack:} Librería oficial Thread Group (rama main, commit actualizado semanalmente), compilada como ESP-IDF component. Incluye: (a) IEEE 802.15.4 radio driver (ot\_radio.c, 2400 LOC), (b) MLE implementation (ot\_mle.c), (c) IPv6 stack con 6LoWPAN compression, (d) CoAP client/server (ot\_coap.c), (e) TCP stack completo (ot\_tcp.c, RFC 9293) con flow control y congestion control. Stack consume 220 KB Flash (+22\% vs 1.3.0 por TCP), 56 KB RAM (+33\% por buffers TCP). Arquitectura OSI completa del stack en Figura~\ref{fig:openthread-osi-model} (Sección~\ref{sec:nodo-thread}) muestra mapeo 7 capas desde PHY hardware-accelerated hasta LwM2M application layer.
     
     \item \textbf{Parser DLMS/COSEM:} Módulo custom (dlms\_parser.c, 680 LOC) implementa subset IEC 62056-62: (a) HDLC framing (flag 0x7E, bit stuffing), (b) OBIS code parser (formato A-B:C.D.E*F), (c) GET request builder, (d) Response parser (data types: unsigned, double-long, octet-string). Soporta 51 códigos OBIS del perfil completo 3-Phase Power Meter (voltajes, corrientes, potencias, energía, THD).
     

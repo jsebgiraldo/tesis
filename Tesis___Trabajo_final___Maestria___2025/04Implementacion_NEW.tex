@@ -1,32 +1,32 @@
-\chapter{Implementaci�n del Sistema}
+﻿\chapter{ImplementaciÃÂ¯ÃÂ¿ÃÂ½n del Sistema}
 \label{chap:implementacion}
 
 % ============================================================================
-% CAP�TULO 4: IMPLEMENTACI�N
-% Documentaci�n t�cnica por nivel arquitect�nico: Nivel 1 Nodos Thread,
+% CAPÃÂ¯ÃÂ¿ÃÂ½TULO 4: IMPLEMENTACIÃÂ¯ÃÂ¿ÃÂ½N
+% DocumentaciÃÂ¯ÃÂ¿ÃÂ½n tÃÂ¯ÃÂ¿ÃÂ½cnica por nivel arquitectÃÂ¯ÃÂ¿ÃÂ½nico: Nivel 1 Nodos Thread,
 % Nivel 2 Red Barrio HaLow, Nivel 3 Gateway Borde, Nivel 4 Cloud ThingsBoard
 % ============================================================================
 
-Este cap�tulo presenta la implementaci�n pr�ctica de la arquitectura de 4 niveles propuesta en el Cap�tulo~\ref{chap:arquitectura}. La documentaci�n sigue la estructura jer�rquica: �4.1 describe el entorno experimental y materiales utilizados, �4.2 detalla implementaci�n de nodos sensores Nivel 1 (ESP32-C6 Thread), �4.3 el gateway de borde Nivel 3 (Raspberry Pi + Docker Edge), �4.4 la infraestructura de red de barrio Nivel 2 (Router HaLow + backhaul), y �4.5 el servidor cloud Nivel 4 (ThingsBoard).\section{Entorno Experimental y Materiales}
+Este capÃÂ¯ÃÂ¿ÃÂ½tulo presenta la implementaciÃÂ¯ÃÂ¿ÃÂ½n prÃÂ¯ÃÂ¿ÃÂ½ctica de la arquitectura de 4 niveles propuesta en el CapÃÂ¯ÃÂ¿ÃÂ½tulo~\ref{chap:arquitectura}. La documentaciÃÂ¯ÃÂ¿ÃÂ½n sigue la estructura jerÃÂ¯ÃÂ¿ÃÂ½rquica: ÃÂ¯ÃÂ¿ÃÂ½4.1 describe el entorno experimental y materiales utilizados, ÃÂ¯ÃÂ¿ÃÂ½4.2 detalla implementaciÃÂ¯ÃÂ¿ÃÂ½n de nodos sensores Nivel 1 (ESP32-C6 Thread), ÃÂ¯ÃÂ¿ÃÂ½4.3 el gateway de borde Nivel 3 (Raspberry Pi + Docker Edge), ÃÂ¯ÃÂ¿ÃÂ½4.4 la infraestructura de red de barrio Nivel 2 (Router HaLow + backhaul), y ÃÂ¯ÃÂ¿ÃÂ½4.5 el servidor cloud Nivel 4 (ThingsBoard).\section{Entorno Experimental y Materiales}
 \label{sec:impl-entorno}
 
-\subsection{Ubicaci�n y Caracter�sticas del Despliegue}
+\subsection{UbicaciÃÂ¯ÃÂ¿ÃÂ½n y CaracterÃÂ¯ÃÂ¿ÃÂ½sticas del Despliegue}
 
-El despliegue experimental se realiz� en zona urbana residencial con las siguientes caracter�sticas:
+El despliegue experimental se realizÃÂ¯ÃÂ¿ÃÂ½ en zona urbana residencial con las siguientes caracterÃÂ¯ÃÂ¿ÃÂ½sticas:
 
 \begin{itemize}
-    \item \textbf{�rea cobertura:} 0.8 km�
-    \item \textbf{Topograf�a:} Monta�osa, desnivel 180 m entre puntos extremos
+    \item \textbf{ÃÂ¯ÃÂ¿ÃÂ½rea cobertura:} 0.8 kmÃÂ¯ÃÂ¿ÃÂ½
+    \item \textbf{TopografÃÂ¯ÃÂ¿ÃÂ½a:} MontaÃÂ¯ÃÂ¿ÃÂ½osa, desnivel 180 m entre puntos extremos
     \item \textbf{Construcciones:} Viviendas 2-3 pisos, paredes ladrillo/concreto
-    \item \textbf{Densidad medidores:} 240 unidades/km� (192 medidores piloto)
-    \item \textbf{Interferencia 2.4 GHz:} Alta (23 SSIDs Wi-Fi detectados promedio por ubicaci�n)
+    \item \textbf{Densidad medidores:} 240 unidades/kmÃÂ¯ÃÂ¿ÃÂ½ (192 medidores piloto)
+    \item \textbf{Interferencia 2.4 GHz:} Alta (23 SSIDs Wi-Fi detectados promedio por ubicaciÃÂ¯ÃÂ¿ÃÂ½n)
 \end{itemize}
 
 \subsection{Bill of Materials (BoM) Completo}
 
 \begin{table}[h]
 \centering
-\caption{Lista de materiales implementaci�n piloto 192 medidores}
+\caption{Lista de materiales implementaciÃÂ¯ÃÂ¿ÃÂ½n piloto 192 medidores}
 \label{tab:impl-bom}
 \begin{tabular}{|l|r|r|r|}
 \hline
@@ -49,10 +49,10 @@ Fuentes 5V/3A & 33 & \$4 & \$132 \\
 \end{tabular}
 \end{table}
 
-\section{Implementaci�n Nivel 1: Nodos Sensores Thread/ESP32-C6}
+\section{ImplementaciÃÂ¯ÃÂ¿ÃÂ½n Nivel 1: Nodos Sensores Thread/ESP32-C6}
 \label{sec:impl-nivel1-nodos}
 
-Este nivel comprende los dispositivos de campo que capturan telemetr�a de medidores y la transmiten v�a red Thread mesh hacia Border Routers. La implementaci�n utiliz� 30 nodos adaptadores ESP32-C6 desplegados en configuraci�n estrella (6 nodos/OTBR $\times$ 5 Border Routers).
+Este nivel comprende los dispositivos de campo que capturan telemetrÃÂ¯ÃÂ¿ÃÂ½a de medidores y la transmiten vÃÂ¯ÃÂ¿ÃÂ½a red Thread mesh hacia Border Routers. La implementaciÃÂ¯ÃÂ¿ÃÂ½n utilizÃÂ¯ÃÂ¿ÃÂ½ 30 nodos adaptadores ESP32-C6 desplegados en configuraciÃÂ¯ÃÂ¿ÃÂ½n estrella (6 nodos/OTBR $\times$ 5 Border Routers).
 
 \subsection{Especificaciones Hardware Nodos ESP32-C6}
 \label{sec:impl-nodos-hw}
@@ -60,10 +60,10 @@ Este nivel comprende los dispositivos de campo que capturan telemetr�a de medi
 \begin{itemize}
     \item \textbf{SoC:} Espressif ESP32-C6 (RISC-V single-core 32-bit @ 160 MHz)
     \item \textbf{Memoria:} 512 KB SRAM, 4 MB Flash integrada, 16 KB SRAM RTC
-    \item \textbf{Radio IEEE 802.15.4:} 2.4 GHz, potencia TX +21 dBm m�x, sensibilidad RX -100 dBm
+    \item \textbf{Radio IEEE 802.15.4:} 2.4 GHz, potencia TX +21 dBm mÃÂ¯ÃÂ¿ÃÂ½x, sensibilidad RX -100 dBm
     \item \textbf{Stack Thread:} OpenThread main (rama desarrollo activa con TCP), roles FTD (Full Thread Device)
-    \item \textbf{Interfaces f�sicas:} UART $\times$ 3 (RS-485 adaptador MAX485), GPIO $\times$ 22
-    \item \textbf{Alimentaci�n:} 5V @ 100 mA promedio (0.5 W) desde medidor o fuente externa
+    \item \textbf{Interfaces fÃÂ¯ÃÂ¿ÃÂ½sicas:} UART $\times$ 3 (RS-485 adaptador MAX485), GPIO $\times$ 22
+    \item \textbf{AlimentaciÃÂ¯ÃÂ¿ÃÂ½n:} 5V @ 100 mA promedio (0.5 W) desde medidor o fuente externa
     \item \textbf{Consumo medido:} 
         \begin{itemize}
         \item Sleep mode: 7 $\mu$A
@@ -71,7 +71,7 @@ Este nivel comprende los dispositivos de campo que capturan telemetr�a de medi
         \item TX Thread @ +4 dBm: 22 mA (110 mW @ 5V)
         \item Promedio duty cycle 5\%: 20 mA $\times$ 5\% + 7 $\mu$A $\times$ 95\% = 1.0 mA (5 mW)
         \end{itemize}
-    \item \textbf{Certificaciones:} FCC, CE, IC (m�dulos pre-certificados)
+    \item \textbf{Certificaciones:} FCC, CE, IC (mÃÂ¯ÃÂ¿ÃÂ½dulos pre-certificados)
 \end{itemize}
 
 \subsection{Firmware Nodos: Stack Thread + Parser DLMS}
@@ -79,104 +79,104 @@ Este nivel comprende los dispositivos de campo que capturan telemetr�a de medi
 
 El firmware implementado en ESP-IDF v5.1.2 integra tres componentes principales:
 
-\subsubsection{Integraci�n OpenThread 1.3.0}
+\subsubsection{IntegraciÃÂ¯ÃÂ¿ÃÂ½n OpenThread 1.3.0}
 
 \begin{itemize}
 \item \textbf{Rol Thread:} Full Thread Device (FTD) con capacidad router y end-device
-\item \textbf{Frecuencia operaci�n:} Canal 15 (2.425 GHz, m�nima interferencia medida en site survey)
+\item \textbf{Frecuencia operaciÃÂ¯ÃÂ¿ÃÂ½n:} Canal 15 (2.425 GHz, mÃÂ¯ÃÂ¿ÃÂ½nima interferencia medida en site survey)
 \item \textbf{Potencia TX:} +4 dBm (2.5 mW), alcance indoor 30-50 m @ PDR >95\%
-\item \textbf{Seguridad:} DTLS 1.2 con PSK pre-compartida, MLE (Mesh Link Establishment) con autenticaci�n
-\item \textbf{Configuraci�n red:} Comisionamiento v�a Thread Commissioning Protocol con credentials provisioning
+\item \textbf{Seguridad:} DTLS 1.2 con PSK pre-compartida, MLE (Mesh Link Establishment) con autenticaciÃÂ¯ÃÂ¿ÃÂ½n
+\item \textbf{ConfiguraciÃÂ¯ÃÂ¿ÃÂ½n red:} Comisionamiento vÃÂ¯ÃÂ¿ÃÂ½a Thread Commissioning Protocol con credentials provisioning
 \end{itemize}
 
 \subsubsection{Parser Protocolos Medidores}
 
-Implementaci�n de parsers para 3 protocolos de medidores:
+ImplementaciÃÂ¯ÃÂ¿ÃÂ½n de parsers para 3 protocolos de medidores:
 
 \begin{enumerate}
-\item \textbf{DLMS/COSEM (IEC 62056-62):} Lectura c�digos OBIS est�ndar
+\item \textbf{DLMS/COSEM (IEC 62056-62):} Lectura cÃÂ¯ÃÂ¿ÃÂ½digos OBIS estÃÂ¯ÃÂ¿ÃÂ½ndar
     \begin{itemize}
-    \item 1.8.0: Energ�a activa importada total (kWh)
-    \item 2.8.0: Energ�a activa exportada total (kWh)
+    \item 1.8.0: EnergÃÂ¯ÃÂ¿ÃÂ½a activa importada total (kWh)
+    \item 2.8.0: EnergÃÂ¯ÃÂ¿ÃÂ½a activa exportada total (kWh)
     \item 31.7.0: Corriente fase L1 (A)
-    \item 32.7.0: Tensi�n fase L1 (V)
+    \item 32.7.0: TensiÃÂ¯ÃÂ¿ÃÂ½n fase L1 (V)
     \end{itemize}
-\item \textbf{Modbus RTU:} Lectura holding registers (funci�n 0x03)
+\item \textbf{Modbus RTU:} Lectura holding registers (funciÃÂ¯ÃÂ¿ÃÂ½n 0x03)
 \item \textbf{IEC 62056-21 (Mode C):} Protocolo legacy medidores antiguos
 \end{enumerate}
 
 \subsubsection{Cliente CoAP + LwM2M}
 
 \begin{itemize}
-\item \textbf{Librer�a:} libcoap 4.3.1 integrada ESP-IDF
+\item \textbf{LibrerÃÂ¯ÃÂ¿ÃÂ½a:} libcoap 4.3.1 integrada ESP-IDF
 \item \textbf{Endpoints LwM2M:} 
     \begin{itemize}
     \item Object 3 (Device): manufacturer, model, firmware version
     \item Object 4 (Connectivity Monitoring): RSSI, link quality, IP address
     \item Object 3200 (Digital Input): contador pulsos medidor
-    \item Object 3203 (Voltage): tensi�n L1/L2/L3
+    \item Object 3203 (Voltage): tensiÃÂ¯ÃÂ¿ÃÂ½n L1/L2/L3
     \item Object 3305 (Power Factor): factor de potencia
     \end{itemize}
-\item \textbf{Modos transmisi�n:} CON (Confirmable) para alarmas cr�ticas, NON (Non-Confirmable) para telemetr�a peri�dica
-\item \textbf{Intervalo reporting:} 15 minutos (configurable remotamente v�a LwM2M Write)
+\item \textbf{Modos transmisiÃÂ¯ÃÂ¿ÃÂ½n:} CON (Confirmable) para alarmas crÃÂ¯ÃÂ¿ÃÂ½ticas, NON (Non-Confirmable) para telemetrÃÂ¯ÃÂ¿ÃÂ½a periÃÂ¯ÃÂ¿ÃÂ½dica
+\item \textbf{Intervalo reporting:} 15 minutos (configurable remotamente vÃÂ¯ÃÂ¿ÃÂ½a LwM2M Write)
 \end{itemize}
 
 \subsection{Deployment y Comisionamiento Nodos}
 \label{sec:impl-nodos-deployment}
 
-Procedimiento de instalaci�n ejecutado en 30 nodos:
+Procedimiento de instalaciÃÂ¯ÃÂ¿ÃÂ½n ejecutado en 30 nodos:
 
 \begin{enumerate}
 \item \textbf{Flash firmware:} esptool.py con imagen binaria pre-compilada (2.1 MB)
 \item \textbf{Provisioning Thread credentials:} Dataset Thread con Network Key, PAN ID, Extended PAN ID, Channel
-\item \textbf{Configuraci�n medidor:} Baudrate RS-485 (9600/19200 bps), slave address Modbus
-\item \textbf{Verificaci�n conectividad:} Ping CoAP a Border Router, latencia <50 ms esperada
+\item \textbf{ConfiguraciÃÂ¯ÃÂ¿ÃÂ½n medidor:} Baudrate RS-485 (9600/19200 bps), slave address Modbus
+\item \textbf{VerificaciÃÂ¯ÃÂ¿ÃÂ½n conectividad:} Ping CoAP a Border Router, latencia <50 ms esperada
 \item \textbf{Registro LwM2M:} Bootstrap server $\rightarrow$ Registration $\rightarrow$ Observe habilitado
 \end{enumerate}
 
-\textbf{Tiempo promedio instalaci�n:} 8 minutos/nodo (total 240 minutos para 30 nodos)
+\textbf{Tiempo promedio instalaciÃÂ¯ÃÂ¿ÃÂ½n:} 8 minutos/nodo (total 240 minutos para 30 nodos)
 
-\subsection{Justificaci�n Selecci�n Thread 1.4.0 vs Zigbee 3.0}
+\subsection{JustificaciÃÂ¯ÃÂ¿ÃÂ½n SelecciÃÂ¯ÃÂ¿ÃÂ½n Thread 1.4.0 vs Zigbee 3.0}
 \label{sec:impl-thread-justification}
 
-La arquitectura seleccion� Thread 1.4.0 sobre Zigbee 3.0 tras an�lisis comparativo evaluando 9 criterios t�cnicos:
+La arquitectura seleccionÃÂ¯ÃÂ¿ÃÂ½ Thread 1.4.0 sobre Zigbee 3.0 tras anÃÂ¯ÃÂ¿ÃÂ½lisis comparativo evaluando 9 criterios tÃÂ¯ÃÂ¿ÃÂ½cnicos:
 
 \begin{table}[H]
 \centering
-\caption{An�lisis comparativo Thread vs Zigbee para AMI}
+\caption{AnÃÂ¯ÃÂ¿ÃÂ½lisis comparativo Thread vs Zigbee para AMI}
 \label{tab:impl-thread-vs-zigbee}
 \resizebox{\textwidth}{!}{%
 \begin{tabular}{|l|c|c|p{6cm}|}
 \hline
 \rowcolor{gray!20}
-\textbf{Criterio} & \textbf{Thread 1.4.0} & \textbf{Zigbee 3.0} & \textbf{An�lisis y Justificaci�n} \\\\
+\textbf{Criterio} & \textbf{Thread 1.4.0} & \textbf{Zigbee 3.0} & \textbf{AnÃÂ¯ÃÂ¿ÃÂ½lisis y JustificaciÃÂ¯ÃÂ¿ÃÂ½n} \\\\
 \hline
-\textbf{IPv6 nativo E2E} & S� & No & \textbf{Thread gana}: IPv6 end-to-end elimina NAT/gateway traducci�n Zigbee, reduce latencia 40\% (150 ms $\rightarrow$ 90 ms) \\\\
+\textbf{IPv6 nativo E2E} & SÃÂ¯ÃÂ¿ÃÂ½ & No & \textbf{Thread gana}: IPv6 end-to-end elimina NAT/gateway traducciÃÂ¯ÃÂ¿ÃÂ½n Zigbee, reduce latencia 40\% (150 ms $\rightarrow$ 90 ms) \\\\
 \hline
 \textbf{IEEE 2030.5 compliance} & Directo & Gateway & Thread implementa IEEE 2030.5 nativamente, Zigbee requiere ALG (Application Layer Gateway) \\\\
 \hline
-\textbf{Latencia t�pica} & 50-90 ms & 100-150 ms & Thread menor latencia por IPv6 nativo y ausencia gateway traducci�n \\\\
+\textbf{Latencia tÃÂ¯ÃÂ¿ÃÂ½pica} & 50-90 ms & 100-150 ms & Thread menor latencia por IPv6 nativo y ausencia gateway traducciÃÂ¯ÃÂ¿ÃÂ½n \\\\
 \hline
-\textbf{Consumo energ�tico} & 5-10 mA sleep & 3-5 mA sleep & Zigbee gana, pero no cr�tico (nodos alimentados desde medidor 5V) \\\\
+\textbf{Consumo energÃÂ¯ÃÂ¿ÃÂ½tico} & 5-10 mA sleep & 3-5 mA sleep & Zigbee gana, pero no crÃÂ¯ÃÂ¿ÃÂ½tico (nodos alimentados desde medidor 5V) \\\\
 \hline
-\textbf{Costo m�dulos (2024)} & \$5-8 & \$3-5 & Zigbee 40\% m�s econ�mico, pero Thread elimina ALG (\$200-400 ahorro) \\\\
+\textbf{Costo mÃÂ¯ÃÂ¿ÃÂ½dulos (2024)} & \$5-8 & \$3-5 & Zigbee 40\% mÃÂ¯ÃÂ¿ÃÂ½s econÃÂ¯ÃÂ¿ÃÂ½mico, pero Thread elimina ALG (\$200-400 ahorro) \\\\
 \hline
 \textbf{Seguridad commissioning} & PAKE (ECC P-256) & Install Code & PAKE resiste ataques diccionario offline \\\\
 \hline
-\textbf{Ecosistema} & Emergente (Matter) & Maduro (15 a�os) & Thread respaldado Google, Apple, Amazon (Thread Group) \\\\
+\textbf{Ecosistema} & Emergente (Matter) & Maduro (15 aÃÂ¯ÃÂ¿ÃÂ½os) & Thread respaldado Google, Apple, Amazon (Thread Group) \\\\
 \hline
 \end{tabular}%
 }
 \end{table}
 
-\textbf{Decisi�n final: Thread 1.4.0} por ventajas cr�ticas:
+\textbf{DecisiÃÂ¯ÃÂ¿ÃÂ½n final: Thread 1.4.0} por ventajas crÃÂ¯ÃÂ¿ÃÂ½ticas:
 \begin{enumerate}
-    \item \textbf{IPv6 E2E}: Elimina gateway traducci�n, reduce latencia 40\% (150 ms $\rightarrow$ 90 ms)
+    \item \textbf{IPv6 E2E}: Elimina gateway traducciÃÂ¯ÃÂ¿ÃÂ½n, reduce latencia 40\% (150 ms $\rightarrow$ 90 ms)
     \item \textbf{IEEE 2030.5 nativo}: Cumplimiento directo Smart Energy Profile 2.0 sin ALG
-    \item \textbf{TCO equivalente}: Costo adicional m�dulos compensado por eliminaci�n ALG
+    \item \textbf{TCO equivalente}: Costo adicional mÃÂ¯ÃÂ¿ÃÂ½dulos compensado por eliminaciÃÂ¯ÃÂ¿ÃÂ½n ALG
 \end{enumerate}
 
-\textbf{Par�metros Thread Network piloto:}
+\textbf{ParÃÂ¯ÃÂ¿ÃÂ½metros Thread Network piloto:}
 \begin{itemize}
     \item \textbf{PAN ID:} 0xABCD, \textbf{Extended PAN ID:} 0x1234567890ABCDEF
     \item \textbf{Network Name:} ``AMI-Pilot-Q4-2024''
@@ -185,62 +185,62 @@ La arquitectura seleccion� Thread 1.4.0 sobre Zigbee 3.0 tras an�lisis compa
     \item \textbf{TX Power:} +4 dBm (balance alcance vs consumo)
 \end{itemize}
 
-\textbf{Topolog�a:} 30 nodos End Devices $\rightarrow$ 1 DCU (Border Router) $\rightarrow$ Gateway. M�ximo 1 hop Thread (latencia medida 8 ms). Escalado a 100 medidores requiere 2 DCUs (50 medidores c/u, l�mite 64 neighbors ESP32-C6).
+\textbf{TopologÃÂ¯ÃÂ¿ÃÂ½a:} 30 nodos End Devices $\rightarrow$ 1 DCU (Border Router) $\rightarrow$ Gateway. MÃÂ¯ÃÂ¿ÃÂ½ximo 1 hop Thread (latencia medida 8 ms). Escalado a 100 medidores requiere 2 DCUs (50 medidores c/u, lÃÂ¯ÃÂ¿ÃÂ½mite 64 neighbors ESP32-C6).
 
-\section{Implementaci�n Nivel 3: Gateway de Borde Raspberry Pi + Docker Edge}
+\section{ImplementaciÃÂ¯ÃÂ¿ÃÂ½n Nivel 3: Gateway de Borde Raspberry Pi + Docker Edge}
 \label{sec:impl-nivel3-gateway}
 
-El Nivel 3 implementa inteligencia distribuida mediante gateways edge que ejecutan procesamiento local, almacenamiento persistente y sincronización bidireccional con cloud. La implementación desplegó red mesh HaLow 802.11s peer-to-peer con 3 nodos Alfa Networks Tube AHM: 1 Mesh Gate (Tube-01) dedicado a backhaul Ethernet, y 2 Mesh Points peer (Tube-02, Tube-03) cada uno con gateway Raspberry Pi 4 integrado por Ethernet local. Arquitectura distributed mesh gateways: todos los gateways edge son Mesh Points peers equipolentes sin jerarquía, participando cooperativamente en routing HWMP con múltiples paths redundantes, proporcionando cobertura 0.8 km² con disponibilidad 99.7\% en ubicaciones estratégicas.
+El Nivel 3 implementa inteligencia distribuida mediante gateways edge que ejecutan procesamiento local, almacenamiento persistente y sincronizaciÃÂÃÂ³n bidireccional con cloud. La implementaciÃÂÃÂ³n desplegÃÂÃÂ³ red mesh HaLow 802.11s peer-to-peer con 3 nodos Alfa Networks Tube AHM: 1 Mesh Gate (Tube-01) dedicado a backhaul Ethernet, y 2 Mesh Points peer (Tube-02, Tube-03) cada uno con gateway Raspberry Pi 4 integrado por Ethernet local. Arquitectura distributed mesh gateways: todos los gateways edge son Mesh Points peers equipolentes sin jerarquÃÂÃÂ­a, participando cooperativamente en routing HWMP con mÃÂÃÂºltiples paths redundantes, proporcionando cobertura 0.8 kmÃÂÃÂ² con disponibilidad 99.7\% en ubicaciones estratÃÂÃÂ©gicas.
 
-\subsection{Especificaciones Hardware Gateway}\n\label{sec:impl-gateway-hw}\n\n\begin{itemize}\n    \item \textbf{Plataforma:} Raspberry Pi 4 Model B (4 GB RAM)\n    \item \textbf{Procesador:} Broadcom BCM2711 quad-core Cortex-A72 @ 1.5 GHz\n    \item \textbf{Almacenamiento:} MicroSD 128 GB UHS-I (SanDisk Extreme Pro, 160 MB/s read, 90 MB/s write)\n    \item \textbf{Conectividad:} \n        \begin{itemize}\n        \item Ethernet Gigabit (Broadcom GENET)\n        \item WiFi 802.11ac dual-band (2.4/5 GHz)\n        \item Quectel EG25-G LTE Cat-4 USB (backup WAN, 150 Mbps DL / 50 Mbps UL)\n        \item nRF52840 Dongle USB (OpenThread Radio Co-Processor)\n        \end{itemize}\n    \item \textbf{OS:} Ubuntu Server 22.04.3 LTS ARM64, kernel 5.15.0-1048-raspi\n    \item \textbf{Consumo:} 5V @ 3A (15W m�x), promedio operaci�n 8.5W (1.7A)\n    \item \textbf{Temperatura operaci�n:} 0-50�C (enclosure ventilado pasivo)\n\end{itemize}\n\n\subsection{Stack Docker y Microservicios Edge}\n\label{sec:impl-software-gateway}
+\subsection{Especificaciones Hardware Gateway}\n\label{sec:impl-gateway-hw}\n\n\begin{itemize}\n    \item \textbf{Plataforma:} Raspberry Pi 4 Model B (4 GB RAM)\n    \item \textbf{Procesador:} Broadcom BCM2711 quad-core Cortex-A72 @ 1.5 GHz\n    \item \textbf{Almacenamiento:} MicroSD 128 GB UHS-I (SanDisk Extreme Pro, 160 MB/s read, 90 MB/s write)\n    \item \textbf{Conectividad:} \n        \begin{itemize}\n        \item Ethernet Gigabit (Broadcom GENET)\n        \item WiFi 802.11ac dual-band (2.4/5 GHz)\n        \item Quectel EG25-G LTE Cat-4 USB (backup WAN, 150 Mbps DL / 50 Mbps UL)\n        \item nRF52840 Dongle USB (OpenThread Radio Co-Processor)\n        \end{itemize}\n    \item \textbf{OS:} Ubuntu Server 22.04.3 LTS ARM64, kernel 5.15.0-1048-raspi\n    \item \textbf{Consumo:} 5V @ 3A (15W mÃÂ¯ÃÂ¿ÃÂ½x), promedio operaciÃÂ¯ÃÂ¿ÃÂ½n 8.5W (1.7A)\n    \item \textbf{Temperatura operaciÃÂ¯ÃÂ¿ÃÂ½n:} 0-50ÃÂ¯ÃÂ¿ÃÂ½C (enclosure ventilado pasivo)\n\end{itemize}\n\n\subsection{Stack Docker y Microservicios Edge}\n\label{sec:impl-software-gateway}
 
-La arquitectura de software del Gateway implementa seis microservicios containerizados con Docker Compose, cada uno con l�mites de recursos y persistencia configurada:
+La arquitectura de software del Gateway implementa seis microservicios containerizados con Docker Compose, cada uno con lÃÂ¯ÃÂ¿ÃÂ½mites de recursos y persistencia configurada:
 
 \textbf{1. Bridge CoAP-MQTT (Traductor Protocolos):}
 \begin{itemize}
-    \item \textbf{Funci�n:} Recibe mensajes CoAP desde Thread mesh (puerto UDP 5683), parsea payload LwM2M TLV, publica a Mosquitto via MQTT
-    \item \textbf{Implementaci�n:} Python 3.11 + aiocoap library
+    \item \textbf{FunciÃÂ¯ÃÂ¿ÃÂ½n:} Recibe mensajes CoAP desde Thread mesh (puerto UDP 5683), parsea payload LwM2M TLV, publica a Mosquitto via MQTT
+    \item \textbf{ImplementaciÃÂ¯ÃÂ¿ÃÂ½n:} Python 3.11 + aiocoap library
     \item \textbf{Recursos:} CPU 0.5 cores, RAM 256 MB limit
     \item \textbf{Throughput:} 1,000 msgs/s (validado stress test)
 \end{itemize}
 
 \textbf{2. Mosquitto MQTT Broker:}
 \begin{itemize}
-    \item \textbf{Funci�n:} Intermediario local (broker) para buffering, QoS 1 (At Least Once), bridge a ThingsBoard cloud
-    \item \textbf{Configuraci�n:} Persistencia habilitada (disk-backed queue), max\_queued\_messages 100,000
+    \item \textbf{FunciÃÂ¯ÃÂ¿ÃÂ½n:} Intermediario local (broker) para buffering, QoS 1 (At Least Once), bridge a ThingsBoard cloud
+    \item \textbf{ConfiguraciÃÂ¯ÃÂ¿ÃÂ½n:} Persistencia habilitada (disk-backed queue), max\_queued\_messages 100,000
     \item \textbf{Recursos:} CPU 1 core, RAM 512 MB
-    \item \textbf{Uptime piloto:} 99.97\% (2 reinicios mantenimiento en 90 d�as)
+    \item \textbf{Uptime piloto:} 99.97\% (2 reinicios mantenimiento en 90 dÃÂ¯ÃÂ¿ÃÂ½as)
 \end{itemize}
 
 \textbf{3. PostgreSQL 15 + TimescaleDB 2.13:}
 \begin{itemize}
-    \item \textbf{Funci�n:} Base datos time-series con hypertables (particionamiento autom�tico por tiempo), continuous aggregates (bins 5 min, 1h, 1d), compresi�n columnar 10:1
+    \item \textbf{FunciÃÂ¯ÃÂ¿ÃÂ½n:} Base datos time-series con hypertables (particionamiento automÃÂ¯ÃÂ¿ÃÂ½tico por tiempo), continuous aggregates (bins 5 min, 1h, 1d), compresiÃÂ¯ÃÂ¿ÃÂ½n columnar 10:1
     \item \textbf{Esquema:} Tabla \texttt{telemetry} (device\_id, timestamp, voltage, current, energy, power\_factor)
-    \item \textbf{Configuraci�n:} shared\_buffers 1 GB, maintenance\_work\_mem 256 MB, checkpoint\_timeout 15 min
-    \item \textbf{Retenci�n:} 90 d�as datos granulares (15 min), 2 a�os agregados (1h bins)
+    \item \textbf{ConfiguraciÃÂ¯ÃÂ¿ÃÂ½n:} shared\_buffers 1 GB, maintenance\_work\_mem 256 MB, checkpoint\_timeout 15 min
+    \item \textbf{RetenciÃÂ¯ÃÂ¿ÃÂ½n:} 90 dÃÂ¯ÃÂ¿ÃÂ½as datos granulares (15 min), 2 aÃÂ¯ÃÂ¿ÃÂ½os agregados (1h bins)
     \item \textbf{Recursos:} CPU 2 cores, RAM 2 GB, storage 128 GB SD card UHS-I
 \end{itemize}
 
 \textbf{4. Apache Kafka 3.5:}
 \begin{itemize}
-    \item \textbf{Funci�n:} Message queue as�ncrono para eventos high-priority (alarmas, tamper), decoupling entre producers (Mosquitto) y consumers (Node-RED, TimescaleDB)
-    \item \textbf{Topics:} \texttt{telemetry.raw} (100k msgs/d�a), \texttt{alarms.critical} (5-10 msgs/d�a)
-    \item \textbf{Retenci�n:} 7 d�as (balance storage vs replay capability)
+    \item \textbf{FunciÃÂ¯ÃÂ¿ÃÂ½n:} Message queue asÃÂ¯ÃÂ¿ÃÂ½ncrono para eventos high-priority (alarmas, tamper), decoupling entre producers (Mosquitto) y consumers (Node-RED, TimescaleDB)
+    \item \textbf{Topics:} \texttt{telemetry.raw} (100k msgs/dÃÂ¯ÃÂ¿ÃÂ½a), \texttt{alarms.critical} (5-10 msgs/dÃÂ¯ÃÂ¿ÃÂ½a)
+    \item \textbf{RetenciÃÂ¯ÃÂ¿ÃÂ½n:} 7 dÃÂ¯ÃÂ¿ÃÂ½as (balance storage vs replay capability)
 \end{itemize}
 
 \textbf{5. Node-RED 3.1:}
 \begin{itemize}
-    \item \textbf{Funci�n:} Rule Engine visual para flujos edge processing (filtrado datos no-cr�ticos 60\%, detecci�n anomal�as threshold-based, agregaci�n temporal)
+    \item \textbf{FunciÃÂ¯ÃÂ¿ÃÂ½n:} Rule Engine visual para flujos edge processing (filtrado datos no-crÃÂ¯ÃÂ¿ÃÂ½ticos 60\%, detecciÃÂ¯ÃÂ¿ÃÂ½n anomalÃÂ¯ÃÂ¿ÃÂ½as threshold-based, agregaciÃÂ¯ÃÂ¿ÃÂ½n temporal)
     \item \textbf{Flujos implementados:} 12 flows (fraud detection, voltage sag/swell detection, power factor correction alerts)
     \item \textbf{Latencia procesamiento:} 2-4 ms por mensaje
 \end{itemize}
 
 \textbf{6. Grafana 10.2:}
 \begin{itemize}
-    \item \textbf{Funci�n:} Dashboards locales para operadores campo (visualizaci�n sin internet)
+    \item \textbf{FunciÃÂ¯ÃÂ¿ÃÂ½n:} Dashboards locales para operadores campo (visualizaciÃÂ¯ÃÂ¿ÃÂ½n sin internet)
     \item \textbf{Datasource:} PostgreSQL + TimescaleDB queries SQL
     \item \textbf{Dashboards:} 8 dashboards (real-time telemetry, historical trends, alarm overview, device status)
-    \item \textbf{Acceso:} Puerto 3000 (HTTP b�sico auth), no expuesto WAN
+    \item \textbf{Acceso:} Puerto 3000 (HTTP bÃÂ¯ÃÂ¿ÃÂ½sico auth), no expuesto WAN
 \end{itemize}
 
 \textbf{Docker Compose resource limits (Raspberry Pi 4 4GB):}
@@ -268,23 +268,23 @@ services:
     mem_limit: 256m
 \end{verbatim}
 
-\textbf{Validaci�n piloto:} Stack Docker oper� 90 d�as sin memory leaks (varianza RAM <5\%), CPU promedio 42\% bajo carga normal (30 medidores @ 15 min), pico 67\% stress test (60s polling).
+\textbf{ValidaciÃÂ¯ÃÂ¿ÃÂ½n piloto:} Stack Docker operÃÂ¯ÃÂ¿ÃÂ½ 90 dÃÂ¯ÃÂ¿ÃÂ½as sin memory leaks (varianza RAM <5\%), CPU promedio 42\% bajo carga normal (30 medidores @ 15 min), pico 67\% stress test (60s polling).
 
 \subsection{ThingsBoard Edge: Plataforma IoT On-Premise}
 \label{sec:impl-thingsboard-edge}
 
-La arquitectura implementa ThingsBoard Edge 3.6.2 como s�ptimo microservicio del gateway, proporcionando capacidades de gesti�n IoT distribuida: sincronizaci�n bidireccional con cloud, Rule Engine local para procesamiento edge, Asset Management jer�rquico, y dashboards web accesibles sin conectividad internet.
+La arquitectura implementa ThingsBoard Edge 3.6.2 como sÃÂ¯ÃÂ¿ÃÂ½ptimo microservicio del gateway, proporcionando capacidades de gestiÃÂ¯ÃÂ¿ÃÂ½n IoT distribuida: sincronizaciÃÂ¯ÃÂ¿ÃÂ½n bidireccional con cloud, Rule Engine local para procesamiento edge, Asset Management jerÃÂ¯ÃÂ¿ÃÂ½rquico, y dashboards web accesibles sin conectividad internet.
 
 \subsubsection{Arquitectura ThingsBoard Edge}
 
 \textbf{Componentes ThingsBoard Edge:}
 
 \begin{itemize}
-    \item \textbf{Core Service:} API REST + WebSocket server (puerto 8080), gesti�n dispositivos, telemetr�a, alarmas
+    \item \textbf{Core Service:} API REST + WebSocket server (puerto 8080), gestiÃÂ¯ÃÂ¿ÃÂ½n dispositivos, telemetrÃÂ¯ÃÂ¿ÃÂ½a, alarmas
     \item \textbf{Rule Engine Local:} Motor procesamiento eventos con nodos drag-and-drop (filtros, transformaciones, enrichment, acciones)
-    \item \textbf{Edge Sync Service:} Bidirectional sync con ThingsBoard Cloud v�a MQTT (QoS 1), maneja desconexiones WAN (buffer local 7 d�as)
-    \item \textbf{Asset Management:} Jerarqu�a Customer $\rightarrow$ Assets $\rightarrow$ Devices, atributos compartidos (location, grupo tarifario)
-    \item \textbf{Web UI:} Dashboards responsive, autenticaci�n local (OAuth2 + JWT), cach� offline (Service Worker)
+    \item \textbf{Edge Sync Service:} Bidirectional sync con ThingsBoard Cloud vÃÂ¯ÃÂ¿ÃÂ½a MQTT (QoS 1), maneja desconexiones WAN (buffer local 7 dÃÂ¯ÃÂ¿ÃÂ½as)
+    \item \textbf{Asset Management:} JerarquÃÂ¯ÃÂ¿ÃÂ½a Customer $\rightarrow$ Assets $\rightarrow$ Devices, atributos compartidos (location, grupo tarifario)
+    \item \textbf{Web UI:} Dashboards responsive, autenticaciÃÂ¯ÃÂ¿ÃÂ½n local (OAuth2 + JWT), cachÃÂ¯ÃÂ¿ÃÂ½ offline (Service Worker)
 \end{itemize}
 
 \textbf{Deployment containerizado Docker:}
@@ -313,25 +313,25 @@ services:
     mem_limit: 1536m
 \end{verbatim}
 
-\subsubsection{Configuraci�n Rule Chains Edge}
+\subsubsection{ConfiguraciÃÂ¯ÃÂ¿ÃÂ½n Rule Chains Edge}
 
 ThingsBoard Edge implementa 4 Rule Chains principales para procesamiento local:
 
-\textbf{1. Telemetry Filtering (Reducci�n 72\% tr�fico WAN):}
+\textbf{1. Telemetry Filtering (ReducciÃÂ¯ÃÂ¿ÃÂ½n 72\% trÃÂ¯ÃÂ¿ÃÂ½fico WAN):}
 
 \begin{itemize}
-    \item \textbf{Input:} Mensajes MQTT desde 100 medidores @ 15 min (9,600 msgs/d�a)
+    \item \textbf{Input:} Mensajes MQTT desde 100 medidores @ 15 min (9,600 msgs/dÃÂ¯ÃÂ¿ÃÂ½a)
     \item \textbf{Procesamiento:}
     \begin{enumerate}
-        \item \textbf{Filter Node:} Descarta telemetry no-cr�tica (voltage/current dentro rango normal 207-253V, 0-40A)
+        \item \textbf{Filter Node:} Descarta telemetry no-crÃÂ¯ÃÂ¿ÃÂ½tica (voltage/current dentro rango normal 207-253V, 0-40A)
         \item \textbf{Aggregate Node:} Agrupa 4 lecturas 15-min en promedios horarios (bins 1h)
-        \item \textbf{Change Originator:} Cambia device originator a Asset "Building-A" (agregaci�n por edificio)
+        \item \textbf{Change Originator:} Cambia device originator a Asset "Building-A" (agregaciÃÂ¯ÃÂ¿ÃÂ½n por edificio)
     \end{enumerate}
-    \item \textbf{Output:} 2,688 msgs/d�a sincronizados a cloud (72\% reducci�n vs 9,600 raw)
-    \item \textbf{Validaci�n piloto:} Medido 2,640 msgs/d�a promedio (98\% predicci�n), WAN traffic reducido de 24.6 MB/d�a a 6.9 MB/d�a
+    \item \textbf{Output:} 2,688 msgs/dÃÂ¯ÃÂ¿ÃÂ½a sincronizados a cloud (72\% reducciÃÂ¯ÃÂ¿ÃÂ½n vs 9,600 raw)
+    \item \textbf{ValidaciÃÂ¯ÃÂ¿ÃÂ½n piloto:} Medido 2,640 msgs/dÃÂ¯ÃÂ¿ÃÂ½a promedio (98\% predicciÃÂ¯ÃÂ¿ÃÂ½n), WAN traffic reducido de 24.6 MB/dÃÂ¯ÃÂ¿ÃÂ½a a 6.9 MB/dÃÂ¯ÃÂ¿ÃÂ½a
 \end{itemize}
 
-\textbf{2. Alarm Detection (Eventos cr�ticos):}
+\textbf{2. Alarm Detection (Eventos crÃÂ¯ÃÂ¿ÃÂ½ticos):}
 
 \begin{itemize}
     \item \textbf{Triggers implementados:}
@@ -341,18 +341,18 @@ ThingsBoard Edge implementa 4 Rule Chains principales para procesamiento local:
         \item Tamper event: GPIO physical switch opened $\rightarrow$ Alarm CRITICAL
         \item Device offline: Last activity >30 min $\rightarrow$ Alarm MINOR
     \end{itemize}
-    \item \textbf{Acciones:} (1) Persistencia local PostgreSQL, (2) Notificaci�n inmediata cloud (bypass filtrado), (3) SMS operador (solo CRITICAL)
+    \item \textbf{Acciones:} (1) Persistencia local PostgreSQL, (2) NotificaciÃÂ¯ÃÂ¿ÃÂ½n inmediata cloud (bypass filtrado), (3) SMS operador (solo CRITICAL)
     \item \textbf{Latencia alarma:} Trigger $\rightarrow$ Cloud notification medida 380 ms P95 (Thread 15ms + HaLow 11ms + Edge 8ms + LTE 35ms + Cloud 15ms + overhead 296ms)
 \end{itemize}
 
-\textbf{3. Data Enrichment (Contextualizaci�n):}
+\textbf{3. Data Enrichment (ContextualizaciÃÂ¯ÃÂ¿ÃÂ½n):}
 
 \begin{itemize}
-    \item \textbf{Input:} Telemetry raw con device\_id �nico (e.g., "ESP32-C6-AB12CD")
+    \item \textbf{Input:} Telemetry raw con device\_id ÃÂ¯ÃÂ¿ÃÂ½nico (e.g., "ESP32-C6-AB12CD")
     \item \textbf{Procesamiento:}
     \begin{enumerate}
-        \item \textbf{Enrich Node:} Query atributos relacionados desde Asset Management (ubicaci�n GPS, Customer name, tarifa kWh)
-        \item \textbf{Transform Script:} C�lculo facturaci�n preliminar: \texttt{cost\_usd = energy\_kwh * tariff\_usd\_per\_kwh}
+        \item \textbf{Enrich Node:} Query atributos relacionados desde Asset Management (ubicaciÃÂ¯ÃÂ¿ÃÂ½n GPS, Customer name, tarifa kWh)
+        \item \textbf{Transform Script:} CÃÂ¯ÃÂ¿ÃÂ½lculo facturaciÃÂ¯ÃÂ¿ÃÂ½n preliminar: \texttt{cost\_usd = energy\_kwh * tariff\_usd\_per\_kwh}
         \item \textbf{Save to TimescaleDB:} Persistencia local con datos enriquecidos
     \end{enumerate}
     \item \textbf{Beneficio:} Cloud recibe telemetry pre-procesada con contexto completo, reduce carga computacional cloud 40\% (validado CloudWatch metrics)
@@ -365,24 +365,24 @@ ThingsBoard Edge implementa 4 Rule Chains principales para procesamiento local:
     \item \textbf{Procesamiento:}
     \begin{enumerate}
         \item \textbf{RPC Node:} Valida command signature (HMAC-SHA256 con shared secret)
-        \item \textbf{Delay Node:} Introduce jitter aleatorio 0-30s (previene inrush simult�neo 100 devices)
-        \item \textbf{MQTT Publish:} Env�a comando a device v�a topic \texttt{v1/devices/me/rpc/request/\{requestId\}}
+        \item \textbf{Delay Node:} Introduce jitter aleatorio 0-30s (previene inrush simultÃÂ¯ÃÂ¿ÃÂ½neo 100 devices)
+        \item \textbf{MQTT Publish:} EnvÃÂ¯ÃÂ¿ÃÂ½a comando a device vÃÂ¯ÃÂ¿ÃÂ½a topic \texttt{v1/devices/me/rpc/request/\{requestId\}}
     \end{enumerate}
     \item \textbf{Timeout:} 60s esperando ACK, retry 2$\times$ con backoff exponencial 5s/10s
-    \item \textbf{Validaci�n piloto:} 42 comandos corte/reconexi�n ejecutados, success rate 97.6\% (1 fallo timeout por device offline)
+    \item \textbf{ValidaciÃÂ¯ÃÂ¿ÃÂ½n piloto:} 42 comandos corte/reconexiÃÂ¯ÃÂ¿ÃÂ½n ejecutados, success rate 97.6\% (1 fallo timeout por device offline)
 \end{itemize}
 
 \subsubsection{Asset Hierarchy y Device Profiles}
 
-\textbf{Jerarqu�a Asset Management implementada:}
+\textbf{JerarquÃÂ¯ÃÂ¿ÃÂ½a Asset Management implementada:}
 
 \begin{verbatim}
 Tenant: "Utility-Piloto"
   +- Customer: "Residencial-SanJavier" (192 usuarios)
       +- Asset: "Building-A" (64 apartamentos)
-      �   +- Device: ESP32-C6-001 (Meter SL7000-12345)
-      �   +- Device: ESP32-C6-002 (Meter SL7000-12346)
-      �   +- ...
+      ÃÂ¯ÃÂ¿ÃÂ½   +- Device: ESP32-C6-001 (Meter SL7000-12345)
+      ÃÂ¯ÃÂ¿ÃÂ½   +- Device: ESP32-C6-002 (Meter SL7000-12346)
+      ÃÂ¯ÃÂ¿ÃÂ½   +- ...
       +- Asset: "Building-B" (64 apartamentos)
       +- Asset: "Building-C" (64 apartamentos)
 \end{verbatim}
@@ -393,37 +393,37 @@ Tenant: "Utility-Piloto"
     \item \textbf{Transport:} MQTT, topic \texttt{v1/devices/me/telemetry}
     \item \textbf{Telemetry keys:} \texttt{voltage\_v}, \texttt{current\_a}, \texttt{energy\_kwh}, \texttt{power\_factor}, \texttt{rssi\_dbm}
     \item \textbf{Attributes:} \texttt{firmware\_version}, \texttt{commissioning\_date}, \texttt{meter\_serial}, \texttt{gps\_location}
-    \item \textbf{Alarm rules:} Voltage sag/swell (�10\%), Tamper detected, Device offline >30min
-    \item \textbf{Provisioning:} Device credentials pre-generados (Access Token 20 chars alfanum�rico), carga batch v�a CSV import
+    \item \textbf{Alarm rules:} Voltage sag/swell (ÃÂ¯ÃÂ¿ÃÂ½10\%), Tamper detected, Device offline >30min
+    \item \textbf{Provisioning:} Device credentials pre-generados (Access Token 20 chars alfanumÃÂ¯ÃÂ¿ÃÂ½rico), carga batch vÃÂ¯ÃÂ¿ÃÂ½a CSV import
 \end{itemize}
 
-\subsubsection{Operaci�n Offline y Sincronizaci�n}
+\subsubsection{OperaciÃÂ¯ÃÂ¿ÃÂ½n Offline y SincronizaciÃÂ¯ÃÂ¿ÃÂ½n}
 
-\textbf{Buffer local durante desconexi�n WAN:}
+\textbf{Buffer local durante desconexiÃÂ¯ÃÂ¿ÃÂ½n WAN:}
 
 \begin{itemize}
-    \item \textbf{Telemetr�a:} Persistencia PostgreSQL con retenci�n 7 d�as (capacidad 128 GB SD card suficiente para 2.88M msgs/mes $\times$ 7 d�as = 672K msgs buffered)
-    \item \textbf{Alarmas:} Notificaci�n diferida, marca \texttt{acknowledged=false} hasta sync cloud exitoso
-    \item \textbf{Dashboards:} Visualizaci�n local contin�a operativa (queries a PostgreSQL local, no requiere cloud)
-    \item \textbf{RPC commands:} Queue local hasta reconexi�n, timeout extendido 24h
+    \item \textbf{TelemetrÃÂ¯ÃÂ¿ÃÂ½a:} Persistencia PostgreSQL con retenciÃÂ¯ÃÂ¿ÃÂ½n 7 dÃÂ¯ÃÂ¿ÃÂ½as (capacidad 128 GB SD card suficiente para 2.88M msgs/mes $\times$ 7 dÃÂ¯ÃÂ¿ÃÂ½as = 672K msgs buffered)
+    \item \textbf{Alarmas:} NotificaciÃÂ¯ÃÂ¿ÃÂ½n diferida, marca \texttt{acknowledged=false} hasta sync cloud exitoso
+    \item \textbf{Dashboards:} VisualizaciÃÂ¯ÃÂ¿ÃÂ½n local continÃÂ¯ÃÂ¿ÃÂ½a operativa (queries a PostgreSQL local, no requiere cloud)
+    \item \textbf{RPC commands:} Queue local hasta reconexiÃÂ¯ÃÂ¿ÃÂ½n, timeout extendido 24h
 \end{itemize}
 
-\textbf{Mecanismo sincronizaci�n bidireccional:}
+\textbf{Mecanismo sincronizaciÃÂ¯ÃÂ¿ÃÂ½n bidireccional:}
 
 \begin{enumerate}
     \item \textbf{Edge $\rightarrow$ Cloud (uplink):} MQTT QoS 1 (At Least Once), batch 100 msgs/publish (reduce overhead TCP handshakes 99\%)
     \item \textbf{Cloud $\rightarrow$ Edge (downlink):} MQTT retained messages, Edge subscribe topic \texttt{v1/edge/\{edgeId\}/attributes}
     \item \textbf{Conflict resolution:} Last-Write-Wins con timestamp server-side (clock drift mitigado con NTP sync gateway)
-    \item \textbf{Latency sync:} Medida 2.8s promedio para propagaci�n attribute change Cloud $\rightarrow$ Edge (LTE RTT 35ms + MQTT overhead 2.7s)
+    \item \textbf{Latency sync:} Medida 2.8s promedio para propagaciÃÂ¯ÃÂ¿ÃÂ½n attribute change Cloud $\rightarrow$ Edge (LTE RTT 35ms + MQTT overhead 2.7s)
 \end{enumerate}
 
-\subsubsection{Validaci�n Operacional ThingsBoard Edge}
+\subsubsection{ValidaciÃÂ¯ÃÂ¿ÃÂ½n Operacional ThingsBoard Edge}
 
-\textbf{M�tricas piloto 90 d�as:}
+\textbf{MÃÂ¯ÃÂ¿ÃÂ½tricas piloto 90 dÃÂ¯ÃÂ¿ÃÂ½as:}
 
 \begin{itemize}
-    \item \textbf{Uptime:} 99.93\% (40 min downtime por actualizaci�n v3.6.1 $\rightarrow$ v3.6.2)
-    \item \textbf{Throughput:} 9,600 msgs/d�a ingresados, 2,640 msgs/d�a sincronizados cloud (72.5\% reducci�n)
+    \item \textbf{Uptime:} 99.93\% (40 min downtime por actualizaciÃÂ¯ÃÂ¿ÃÂ½n v3.6.1 $\rightarrow$ v3.6.2)
+    \item \textbf{Throughput:} 9,600 msgs/dÃÂ¯ÃÂ¿ÃÂ½a ingresados, 2,640 msgs/dÃÂ¯ÃÂ¿ÃÂ½a sincronizados cloud (72.5\% reducciÃÂ¯ÃÂ¿ÃÂ½n)
     \item \textbf{Latency processing:} P50 = 6 ms, P95 = 8 ms, P99 = 12 ms (Rule Engine execution medido con StatsD)
     \item \textbf{Resource usage:}
     \begin{itemize}
@@ -431,65 +431,65 @@ Tenant: "Utility-Piloto"
         \item RAM: 1.2 GB promedio (limit 1.5 GB), sin OOM errors
         \item Disk I/O: 2.4 MB/s write promedio (PostgreSQL + logs), pico 18 MB/s durante compaction
     \end{itemize}
-    \item \textbf{Eventos desconexi�n WAN:} 3 eventos (total 87 min downtime LTE), buffer local evit� p�rdida datos 100\%
+    \item \textbf{Eventos desconexiÃÂ¯ÃÂ¿ÃÂ½n WAN:} 3 eventos (total 87 min downtime LTE), buffer local evitÃÂ¯ÃÂ¿ÃÂ½ pÃÂ¯ÃÂ¿ÃÂ½rdida datos 100\%
 \end{itemize}
 
-\textbf{Comparaci�n ThingsBoard Edge vs alternativas:}
+\textbf{ComparaciÃÂ¯ÃÂ¿ÃÂ½n ThingsBoard Edge vs alternativas:}
 
 \begin{table}[H]
 \centering
-\caption{Comparaci�n plataformas Edge IoT}
+\caption{ComparaciÃÂ¯ÃÂ¿ÃÂ½n plataformas Edge IoT}
 \label{tab:impl-edge-comparison}
 \small
 \begin{tabular}{|l|c|c|c|}
 \hline
 \rowcolor{gray!20}
-\textbf{Caracter�stica} & \textbf{ThingsBoard Edge} & \textbf{AWS IoT Greengrass} & \textbf{Azure IoT Edge} \\
+\textbf{CaracterÃÂ¯ÃÂ¿ÃÂ½stica} & \textbf{ThingsBoard Edge} & \textbf{AWS IoT Greengrass} & \textbf{Azure IoT Edge} \\
 \hline
 \textbf{Licencia} & \textcolor{green}{Apache 2.0 (OSS)} & Propietaria & Propietaria \\
 \hline
 \textbf{Costo OPEX} & \textcolor{green}{\textbf{\$0/mes}} & \$0.08/device/mes & \$0.10/device/mes \\
 \hline
-\textbf{Rule Engine} & Visual (drag-drop) & Lambda functions (c�digo) & Stream Analytics (SQL) \\
+\textbf{Rule Engine} & Visual (drag-drop) & Lambda functions (cÃÂ¯ÃÂ¿ÃÂ½digo) & Stream Analytics (SQL) \\
 \hline
-\textbf{Offline operation} & \textcolor{green}{\textbf{7 d�as buffer}} & 24h (default) & 48h (configurable) \\
+\textbf{Offline operation} & \textcolor{green}{\textbf{7 dÃÂ¯ÃÂ¿ÃÂ½as buffer}} & 24h (default) & 48h (configurable) \\
 \hline
-\textbf{Dashboard local} & \textcolor{green}{\textbf{S� (web UI)}} & No (solo cloud) & No (solo cloud) \\
+\textbf{Dashboard local} & \textcolor{green}{\textbf{SÃÂ¯ÃÂ¿ÃÂ½ (web UI)}} & No (solo cloud) & No (solo cloud) \\
 \hline
 \textbf{RAM footprint} & 1.2 GB & 512 MB (minimal) & 2.5 GB \\
 \hline
 \textbf{Learning curve} & Media & Alta (Python/Node) & Alta (C\#/.NET) \\
 \hline
-\textbf{Decisi�n} & \textcolor{green}{\textbf{SELECCIONADO}} & Descartado (vendor lock) & Descartado (recursos) \\
+\textbf{DecisiÃÂ¯ÃÂ¿ÃÂ½n} & \textcolor{green}{\textbf{SELECCIONADO}} & Descartado (vendor lock) & Descartado (recursos) \\
 \hline
 \end{tabular}
 \end{table}
 
-\textbf{Conclusi�n implementaci�n ThingsBoard Edge:}
+\textbf{ConclusiÃÂ¯ÃÂ¿ÃÂ½n implementaciÃÂ¯ÃÂ¿ÃÂ½n ThingsBoard Edge:}
 
-ThingsBoard Edge demostr� ser plataforma edge �ptima para AMI por combinaci�n de: (1) Reducci�n 72\% tr�fico WAN mediante Rule Engine local, (2) Operaci�n offline 7 d�as sin p�rdida datos, (3) Dashboards locales para operadores campo sin internet, (4) Zero OPEX por licencia open-source, (5) Sincronizaci�n bidireccional robusta con manejo autom�tico desconexiones. Limitaciones: RAM footprint 1.2 GB requiere hardware =2 GB (Raspberry Pi 4 2GB m�nimo), y curva aprendizaje Rule Engine visual requiere 2-3 d�as training operadores.
+ThingsBoard Edge demostrÃÂ¯ÃÂ¿ÃÂ½ ser plataforma edge ÃÂ¯ÃÂ¿ÃÂ½ptima para AMI por combinaciÃÂ¯ÃÂ¿ÃÂ½n de: (1) ReducciÃÂ¯ÃÂ¿ÃÂ½n 72\% trÃÂ¯ÃÂ¿ÃÂ½fico WAN mediante Rule Engine local, (2) OperaciÃÂ¯ÃÂ¿ÃÂ½n offline 7 dÃÂ¯ÃÂ¿ÃÂ½as sin pÃÂ¯ÃÂ¿ÃÂ½rdida datos, (3) Dashboards locales para operadores campo sin internet, (4) Zero OPEX por licencia open-source, (5) SincronizaciÃÂ¯ÃÂ¿ÃÂ½n bidireccional robusta con manejo automÃÂ¯ÃÂ¿ÃÂ½tico desconexiones. Limitaciones: RAM footprint 1.2 GB requiere hardware =2 GB (Raspberry Pi 4 2GB mÃÂ¯ÃÂ¿ÃÂ½nimo), y curva aprendizaje Rule Engine visual requiere 2-3 dÃÂ¯ÃÂ¿ÃÂ½as training operadores.
 
-\section{Implementaci�n Nivel 2: Infraestructura Red de Barrio HaLow}
+\section{ImplementaciÃÂ¯ÃÂ¿ÃÂ½n Nivel 2: Infraestructura Red de Barrio HaLow}
 \label{sec:impl-nivel2-halow}
 
-El Nivel 2 proporciona conectividad de �ltima milla entre gateways edge (Nivel 3) y m�ltiples Border Routers Thread mediante tecnolog�a Wi-Fi HaLow (IEEE 802.11ah) operando en banda sub-GHz 902-928 MHz. La implementaci�n utiliza router Alfa Networks AHPE230 con m�dulos HaLow Alfa Tube-AHM.
+El Nivel 2 proporciona conectividad de ÃÂ¯ÃÂ¿ÃÂ½ltima milla entre gateways edge (Nivel 3) y mÃÂ¯ÃÂ¿ÃÂ½ltiples Border Routers Thread mediante tecnologÃÂ¯ÃÂ¿ÃÂ½a Wi-Fi HaLow (IEEE 802.11ah) operando en banda sub-GHz 902-928 MHz. La implementaciÃÂ¯ÃÂ¿ÃÂ½n utiliza router Alfa Networks AHPE230 con mÃÂ¯ÃÂ¿ÃÂ½dulos HaLow Alfa Tube-AHM.
 
-\subsection{Router Alfa Networks AHPE230 + M�dulos HaLow}
+\subsection{Router Alfa Networks AHPE230 + MÃÂ¯ÃÂ¿ÃÂ½dulos HaLow}
 \label{sec:impl-halow-hardware}
 
 \subsubsection{Especificaciones Alfa Networks AHPE230}
 
-\begin{itemize}\n    \item \textbf{CPU:} Qualcomm IPQ-6010 quad-core ARM Cortex-A53 @ 864 MHz\n    \item \textbf{RAM:} 512 MB DDR3\n    \item \textbf{Almacenamiento:} 128 MB NAND Flash\n    \item \textbf{Radios WiFi:} \n        \begin{itemize}\n        \item 2.4 GHz: 802.11ax 2$\times$2 MIMO (574 Mbps m�x)\n        \item 5 GHz: 802.11ax 2$\times$2 MIMO (1201 Mbps m�x)\n        \end{itemize}\n    \item \textbf{Ethernet:} 5$\times$ Gigabit (1$\times$ WAN, 4$\times$ LAN)\n    \item \textbf{USB:} 1$\times$ USB 3.0 (m�dulos HaLow Alfa Tube-AHM)\n    \item \textbf{OS:} RouterOS 7.13 (Linux kernel 5.6.3)\n    \item \textbf{Consumo:} 12V @ 2A m�x (24W), promedio 8W operaci�n\n\end{itemize}\n\n\subsubsection{M�dulos HaLow Alfa Tube-AHM (Morse Micro MM6108)}\n\n\textbf{Especificaciones chipset MM6108:}\n\begin{itemize}\n    \item \textbf{Est�ndar:} IEEE 802.11ah-2016 compliant\n    \item \textbf{Frecuencia:} 902-928 MHz (USA), configurado canal 11 (915 MHz)\n    \item \textbf{Bandwidth:} 1/2/4/8 MHz seleccionable, implementado 4 MHz (balance alcance/throughput)\n    \item \textbf{Potencia TX:} +23 dBm m�x (200 mW), configurado +20 dBm (100 mW)\n    \item \textbf{Sensibilidad RX:} -96 dBm @ MCS0 1 MHz, -91 dBm @ MCS7 4 MHz\n    \item \textbf{MCS soportados:} MCS0-MCS10, configurado MCS7 (16-QAM, rate 1/2, 4 Mbps @ 4 MHz)\n    \item \textbf{Alcance medido:} 1.2 km LOS (line-of-sight), 450 m NLOS (obstrucciones)\n    \item \textbf{Interfaz:} USB 2.0 High-Speed (480 Mbps), driver Linux mac80211\n\end{itemize}\n\n\subsection{Configuraci�n Red HaLow}\n\label{sec:impl-config-halow}\n\n\subsubsection{Par�metros Operaci�n 4 MHz}
+\begin{itemize}\n    \item \textbf{CPU:} Qualcomm IPQ-6010 quad-core ARM Cortex-A53 @ 864 MHz\n    \item \textbf{RAM:} 512 MB DDR3\n    \item \textbf{Almacenamiento:} 128 MB NAND Flash\n    \item \textbf{Radios WiFi:} \n        \begin{itemize}\n        \item 2.4 GHz: 802.11ax 2$\times$2 MIMO (574 Mbps mÃÂ¯ÃÂ¿ÃÂ½x)\n        \item 5 GHz: 802.11ax 2$\times$2 MIMO (1201 Mbps mÃÂ¯ÃÂ¿ÃÂ½x)\n        \end{itemize}\n    \item \textbf{Ethernet:} 5$\times$ Gigabit (1$\times$ WAN, 4$\times$ LAN)\n    \item \textbf{USB:} 1$\times$ USB 3.0 (mÃÂ¯ÃÂ¿ÃÂ½dulos HaLow Alfa Tube-AHM)\n    \item \textbf{OS:} RouterOS 7.13 (Linux kernel 5.6.3)\n    \item \textbf{Consumo:} 12V @ 2A mÃÂ¯ÃÂ¿ÃÂ½x (24W), promedio 8W operaciÃÂ¯ÃÂ¿ÃÂ½n\n\end{itemize}\n\n\subsubsection{MÃÂ¯ÃÂ¿ÃÂ½dulos HaLow Alfa Tube-AHM (Morse Micro MM6108)}\n\n\textbf{Especificaciones chipset MM6108:}\n\begin{itemize}\n    \item \textbf{EstÃÂ¯ÃÂ¿ÃÂ½ndar:} IEEE 802.11ah-2016 compliant\n    \item \textbf{Frecuencia:} 902-928 MHz (USA), configurado canal 11 (915 MHz)\n    \item \textbf{Bandwidth:} 1/2/4/8 MHz seleccionable, implementado 4 MHz (balance alcance/throughput)\n    \item \textbf{Potencia TX:} +23 dBm mÃÂ¯ÃÂ¿ÃÂ½x (200 mW), configurado +20 dBm (100 mW)\n    \item \textbf{Sensibilidad RX:} -96 dBm @ MCS0 1 MHz, -91 dBm @ MCS7 4 MHz\n    \item \textbf{MCS soportados:} MCS0-MCS10, configurado MCS7 (16-QAM, rate 1/2, 4 Mbps @ 4 MHz)\n    \item \textbf{Alcance medido:} 1.2 km LOS (line-of-sight), 450 m NLOS (obstrucciones)\n    \item \textbf{Interfaz:} USB 2.0 High-Speed (480 Mbps), driver Linux mac80211\n\end{itemize}\n\n\subsection{ConfiguraciÃÂ¯ÃÂ¿ÃÂ½n Red HaLow}\n\label{sec:impl-config-halow}\n\n\subsubsection{ParÃÂ¯ÃÂ¿ÃÂ½metros OperaciÃÂ¯ÃÂ¿ÃÂ½n 4 MHz}
 
 \begin{itemize}
-    \item \textbf{Banda:} 902-928 MHz ISM (USA), 917-923.5 MHz (Colombia, Resoluci�n 711 ANE 2020)
-    \item \textbf{Bandwidth:} 1 MHz (150 kbps MCS0), 2 MHz (300 kbps), 4 MHz (650 kbps) - Selecci�n din�mica seg�n carga
+    \item \textbf{Banda:} 902-928 MHz ISM (USA), 917-923.5 MHz (Colombia, ResoluciÃÂ¯ÃÂ¿ÃÂ½n 711 ANE 2020)
+    \item \textbf{Bandwidth:} 1 MHz (150 kbps MCS0), 2 MHz (300 kbps), 4 MHz (650 kbps) - SelecciÃÂ¯ÃÂ¿ÃÂ½n dinÃÂ¯ÃÂ¿ÃÂ½mica segÃÂ¯ÃÂ¿ÃÂ½n carga
     \item \textbf{TX Power:} +20 dBm (100 mW) max, configurado +17 dBm (50 mW) para compliance EIRP <30 dBm con antena 5 dBi
     \item \textbf{Alcance medido:} 350 m NLOS (2 paredes concreto), 1 km LoS (validado piloto con 3 DCUs @ 180m, 250m, 320m)
     \item \textbf{Clientes max:} 150 STAs (spec 8191 AIDs, pero throughput degrada >150 por colisiones EDCA)
 \end{itemize}
 
-\textbf{Configuraci�n OpenWRT (UCI):}
+\textbf{ConfiguraciÃÂ¯ÃÂ¿ÃÂ½n OpenWRT (UCI):}
 
 \begin{verbatim}
 # /etc/config/wireless
@@ -511,40 +511,40 @@ config wifi-iface 'default_radio0'
     option ieee80211w '2'          # PMF required
 \end{verbatim}
 
-\textbf{QoS DSCP marking (tr�fico prioritario):}
+\textbf{QoS DSCP marking (trÃÂ¯ÃÂ¿ÃÂ½fico prioritario):}
 
 \begin{itemize}
-    \item \textbf{EF (Expedited Forwarding, DSCP 46):} Alarmas cr�ticas (tamper, power outage) - Latencia <100 ms
-    \item \textbf{AF41 (Assured Forwarding, DSCP 34):} Telemetr�a tiempo real (demand response) - Latencia <500 ms
-    \item \textbf{BE (Best Effort, DSCP 0):} Telemetr�a peri�dica bulk - Sin garant�as latencia
+    \item \textbf{EF (Expedited Forwarding, DSCP 46):} Alarmas crÃÂ¯ÃÂ¿ÃÂ½ticas (tamper, power outage) - Latencia <100 ms
+    \item \textbf{AF41 (Assured Forwarding, DSCP 34):} TelemetrÃÂ¯ÃÂ¿ÃÂ½a tiempo real (demand response) - Latencia <500 ms
+    \item \textbf{BE (Best Effort, DSCP 0):} TelemetrÃÂ¯ÃÂ¿ÃÂ½a periÃÂ¯ÃÂ¿ÃÂ½dica bulk - Sin garantÃÂ¯ÃÂ¿ÃÂ½as latencia
 \end{itemize}
 
-\textbf{Validaci�n piloto HaLow:}
+\textbf{ValidaciÃÂ¯ÃÂ¿ÃÂ½n piloto HaLow:}
 
 \begin{itemize}
     \item 3 DCUs conectados (180m, 250m, 320m distancia Gateway)
     \item RSSI: -72 dBm @ 180m, -81 dBm @ 250m, -88 dBm @ 320m (umbral -95 dBm, 7-23 dB margen)
-    \item Throughput medido: 280 kbps @ 2 MHz BW (93\% eficiencia te�rica 300 kbps)
-    \item Packet loss: 0.02\% (2 de 10,000 paquetes, burst simult�neo 3 DCUs)
+    \item Throughput medido: 280 kbps @ 2 MHz BW (93\% eficiencia teÃÂ¯ÃÂ¿ÃÂ½rica 300 kbps)
+    \item Packet loss: 0.02\% (2 de 10,000 paquetes, burst simultÃÂ¯ÃÂ¿ÃÂ½neo 3 DCUs)
     \item Latency HaLow: P50 = 6 ms, P95 = 11 ms, P99 = 18 ms
 \end{itemize}
 
-\subsection{Configuraci�n LTE Cat-M1}
+\subsection{ConfiguraciÃÂ¯ÃÂ¿ÃÂ½n LTE Cat-M1}
 \label{sec:impl-config-lte}
 
-\subsubsection{M�dulo Quectel BG96 (LTE Cat-M1)}
+\subsubsection{MÃÂ¯ÃÂ¿ÃÂ½dulo Quectel BG96 (LTE Cat-M1)}
 
-La arquitectura utiliza LTE Cat-M1 (eMTC) para uplink WAN del Gateway por balance �ptimo entre throughput (375 kbps uplink), latencia (10-50 ms), y consumo energ�tico.
+La arquitectura utiliza LTE Cat-M1 (eMTC) para uplink WAN del Gateway por balance ÃÂ¯ÃÂ¿ÃÂ½ptimo entre throughput (375 kbps uplink), latencia (10-50 ms), y consumo energÃÂ¯ÃÂ¿ÃÂ½tico.
 
-\textbf{Justificaci�n t�cnica Cat-M1 vs alternativas:}
+\textbf{JustificaciÃÂ¯ÃÂ¿ÃÂ½n tÃÂ¯ÃÂ¿ÃÂ½cnica Cat-M1 vs alternativas:}
 
 \begin{itemize}
-    \item \textbf{vs NB-IoT:} Cat-M1 latencia 10-50 ms vs 1.6-10 s NB-IoT. Cr�tico para Demand Response (comandos corte/reconexi�n <500 ms SLA IEEE 2030.5)
-    \item \textbf{vs Cat-1:} Cat-M1 consumo 220 mA TX vs 500 mA Cat-1 (56\% reducci�n). OPEX \$7.5/mes vs \$20/mes Cat-1 (62\% ahorro)
+    \item \textbf{vs NB-IoT:} Cat-M1 latencia 10-50 ms vs 1.6-10 s NB-IoT. CrÃÂ¯ÃÂ¿ÃÂ½tico para Demand Response (comandos corte/reconexiÃÂ¯ÃÂ¿ÃÂ½n <500 ms SLA IEEE 2030.5)
+    \item \textbf{vs Cat-1:} Cat-M1 consumo 220 mA TX vs 500 mA Cat-1 (56\% reducciÃÂ¯ÃÂ¿ÃÂ½n). OPEX \$7.5/mes vs \$20/mes Cat-1 (62\% ahorro)
     \item \textbf{Throughput adecuado:} Gateway 1,000 medidores genera 26.4 kbps promedio, 53 kbps pico << 375 kbps Cat-M1 (7$\times$ margen)
 \end{itemize}
 
-\textbf{Configuraci�n operador:}
+\textbf{ConfiguraciÃÂ¯ÃÂ¿ÃÂ½n operador:}
 
 \begin{itemize}
     \item \textbf{Operador:} Claro Colombia (APN: \texttt{internet.comcel.com.co})
@@ -552,25 +552,25 @@ La arquitectura utiliza LTE Cat-M1 (eMTC) para uplink WAN del Gateway por balanc
     \item \textbf{RSSI piloto:} 100\% Gateways (10 unidades) lograron RSSI >-95 dBm sin antena externa
 \end{itemize}
 
-\textbf{Optimizaci�n energ�tica eDRX + PSM:}
+\textbf{OptimizaciÃÂ¯ÃÂ¿ÃÂ½n energÃÂ¯ÃÂ¿ÃÂ½tica eDRX + PSM:}
 
 \begin{itemize}
-    \item \textbf{eDRX Cycle:} 10.24 s (m�ximo Cat-M1). Gateway monitorea paging 1$\times$/10s, reduce consumo RX 99\% (60 mA $\rightarrow$ 0.58 mA)
+    \item \textbf{eDRX Cycle:} 10.24 s (mÃÂ¯ÃÂ¿ÃÂ½ximo Cat-M1). Gateway monitorea paging 1$\times$/10s, reduce consumo RX 99\% (60 mA $\rightarrow$ 0.58 mA)
     \item \textbf{PSM T3324 (Active Timer):} 30 s post-TX, Gateway reachable para downlink
     \item \textbf{PSM T3412 (Periodic TAU):} 24 h, mantiene registration celular
-    \item \textbf{Patr�n operaci�n:} TX telemetry 1$\times$/min $\rightarrow$ 30 s active $\rightarrow$ 29.5 min PSM (3 $\mu$A) $\rightarrow$ repeat
-    \item \textbf{Consumo medido:} 1.1 mA promedio (vs 60 mA always-on = 98\% reducci�n)
+    \item \textbf{PatrÃÂ¯ÃÂ¿ÃÂ½n operaciÃÂ¯ÃÂ¿ÃÂ½n:} TX telemetry 1$\times$/min $\rightarrow$ 30 s active $\rightarrow$ 29.5 min PSM (3 $\mu$A) $\rightarrow$ repeat
+    \item \textbf{Consumo medido:} 1.1 mA promedio (vs 60 mA always-on = 98\% reducciÃÂ¯ÃÂ¿ÃÂ½n)
 \end{itemize}
 
-\textbf{Validaci�n piloto 90 d�as:}
+\textbf{ValidaciÃÂ¯ÃÂ¿ÃÂ½n piloto 90 dÃÂ¯ÃÂ¿ÃÂ½as:}
 
 \begin{itemize}
-    \item Uptime 99.7\% (26 h downtime por cortes energ�a, 0 h por link LTE)
+    \item Uptime 99.7\% (26 h downtime por cortes energÃÂ¯ÃÂ¿ÃÂ½a, 0 h por link LTE)
     \item Latency DR commands: P50 = 35 ms, P95 = 180 ms, P99 = 8.2 s (95\% casos <500 ms SLA)
     \item Data consumption: 8.4 MB/mes promedio (plan 10 MB, 16\% margen)
 \end{itemize}
 
-\textbf{AT commands configuraci�n Quectel BG96:}
+\textbf{AT commands configuraciÃÂ¯ÃÂ¿ÃÂ½n Quectel BG96:}
 
 \begin{verbatim}
 AT+QCFG="band",0,2,1       # LTE Band 2 (1900 MHz) Claro Colombia
@@ -582,67 +582,67 @@ AT+CGDCONT=1,"IP","internet.comcel.com.co"  # APN Claro
 AT+QIACT=1                 # Activate PDP context
 \end{verbatim}
 
-\subsection{Implementaci�n Fibra �ptica GPON (Backhaul Troncal)}
+\subsection{ImplementaciÃÂ¯ÃÂ¿ÃÂ½n Fibra ÃÂ¯ÃÂ¿ÃÂ½ptica GPON (Backhaul Troncal)}
 \label{sec:impl-fibra-gpon}
 
-La arquitectura implementa fibra �ptica GPON (Gigabit Passive Optical Network, ITU-T G.984) como backhaul de alta capacidad para interconectar gateways distribuidos geogr�ficamente con el centro de datos centralizado. GPON proporciona 2.5 Gbps downstream compartidos entre 32 ONTs (Optical Network Terminals) mediante splitters �pticos pasivos, con latencia <5 ms entre OLT (Optical Line Terminal) en la central y ONTs en campo.
+La arquitectura implementa fibra ÃÂ¯ÃÂ¿ÃÂ½ptica GPON (Gigabit Passive Optical Network, ITU-T G.984) como backhaul de alta capacidad para interconectar gateways distribuidos geogrÃÂ¯ÃÂ¿ÃÂ½ficamente con el centro de datos centralizado. GPON proporciona 2.5 Gbps downstream compartidos entre 32 ONTs (Optical Network Terminals) mediante splitters ÃÂ¯ÃÂ¿ÃÂ½pticos pasivos, con latencia <5 ms entre OLT (Optical Line Terminal) en la central y ONTs en campo.
 
-\subsubsection{Topolog�a GPON Implementada}
+\subsubsection{TopologÃÂ¯ÃÂ¿ÃÂ½a GPON Implementada}
 
-La implementaci�n piloto despleg� arquitectura FTTN (Fiber-to-the-Node) con los siguientes elementos:
+La implementaciÃÂ¯ÃÂ¿ÃÂ½n piloto desplegÃÂ¯ÃÂ¿ÃÂ½ arquitectura FTTN (Fiber-to-the-Node) con los siguientes elementos:
 
 \begin{itemize}
-    \item \textbf{OLT Central:} Huawei MA5800-X7 instalado en subestaci�n el�ctrica principal (�nica para piloto 192 medidores)
+    \item \textbf{OLT Central:} Huawei MA5800-X7 instalado en subestaciÃÂ¯ÃÂ¿ÃÂ½n elÃÂ¯ÃÂ¿ÃÂ½ctrica principal (ÃÂ¯ÃÂ¿ÃÂ½nica para piloto 192 medidores)
     \begin{itemize}
         \item 16 puertos PON GPON Class B+ (splitters 1:32)
         \item Switching capacity 1.28 Tbps
-        \item Gesti�n SNMP v3 + Telnet/SSH
+        \item GestiÃÂ¯ÃÂ¿ÃÂ½n SNMP v3 + Telnet/SSH
         \item Costo: \$4,200 (equipamiento utility preexistente, sin CAPEX incremental piloto)
     \end{itemize}
     
-    \item \textbf{Splitters �pticos Pasivos:} 3$\times$ splitters 1:8 instalados en postes intermedios (reducci�n cableado punto-a-punto 75\%)
+    \item \textbf{Splitters ÃÂ¯ÃÂ¿ÃÂ½pticos Pasivos:} 3$\times$ splitters 1:8 instalados en postes intermedios (reducciÃÂ¯ÃÂ¿ÃÂ½n cableado punto-a-punto 75\%)
     \begin{itemize}
         \item Tipo: PLC (Planar Lightwave Circuit) 1:8 SC/APC
-        \item P�rdida inserci�n: 10.5 dB t�pica (spec 10.2-11.0 dB)
-        \item Vida �til: 25 a�os (sin partes activas)
+        \item PÃÂ¯ÃÂ¿ÃÂ½rdida inserciÃÂ¯ÃÂ¿ÃÂ½n: 10.5 dB tÃÂ¯ÃÂ¿ÃÂ½pica (spec 10.2-11.0 dB)
+        \item Vida ÃÂ¯ÃÂ¿ÃÂ½til: 25 aÃÂ¯ÃÂ¿ÃÂ½os (sin partes activas)
         \item Costo unitario: \$18 $\times$ 3 = \$54
     \end{itemize}
     
-    \item \textbf{Switch Ethernet:} 1$\times$ switch Gigabit 8 puertos instalado en ubicación Mesh Gate (Tube-01), conectando: Tube-01 (backhaul mesh), server on-premise ThingsBoard, y ONT para WAN (detalles conectividad Capítulo~\ref{chap:resultados})
+    \item \textbf{Switch Ethernet:} 1$\times$ switch Gigabit 8 puertos instalado en ubicaciÃÂÃÂ³n Mesh Gate (Tube-01), conectando: Tube-01 (backhaul mesh), server on-premise ThingsBoard, y ONT para WAN (detalles conectividad CapÃÂÃÂ­tulo~\ref{chap:resultados})
     \begin{itemize}
-        \item Est�ndar: GPON ITU-T G.984, Class B+ (20 km reach)
+        \item EstÃÂ¯ÃÂ¿ÃÂ½ndar: GPON ITU-T G.984, Class B+ (20 km reach)
         \item Interfaces: 4$\times$ GbE LAN, 2$\times$ POTS (no usado), WiFi 802.11n 2.4 GHz (disabled)
         \item Potencia TX: +2.5 dBm (1.78 mW), sensibilidad RX: -27 dBm
-        \item Consumo: 12V @ 1A (12W), promedio operaci�n 7.5W
+        \item Consumo: 12V @ 1A (12W), promedio operaciÃÂ¯ÃÂ¿ÃÂ½n 7.5W
         \item Costo unitario: \$45 $\times$ 3 = \$135
     \end{itemize}
     
-    \item \textbf{Fibra �ptica:} 2.4 km fibra SM G.652D (monomodo est�ndar)
+    \item \textbf{Fibra ÃÂ¯ÃÂ¿ÃÂ½ptica:} 2.4 km fibra SM G.652D (monomodo estÃÂ¯ÃÂ¿ÃÂ½ndar)
     \begin{itemize}
-        \item Configuraci�n: 12 hilos (2 dedicados piloto, 10 reserva expansi�n)
-        \item Instalaci�n: A�rea en postes existentes (aprovecha infraestructura el�ctrica)
-        \item Atenuaci�n medida: 0.35 dB/km @ 1490 nm (downstream), 0.4 dB/km @ 1310 nm (upstream)
-        \item Budget �ptico total: OLT TX +4 dBm - (2.4 km $\times$ 0.35 dB + 3$\times$ splitters $\times$ 10.5 dB + conectores 2 dB) = +4 - 33.3 = -29.3 dBm llegada ONT (vs -27 dBm sensibilidad = 2.3 dB margen, suficiente)
+        \item ConfiguraciÃÂ¯ÃÂ¿ÃÂ½n: 12 hilos (2 dedicados piloto, 10 reserva expansiÃÂ¯ÃÂ¿ÃÂ½n)
+        \item InstalaciÃÂ¯ÃÂ¿ÃÂ½n: AÃÂ¯ÃÂ¿ÃÂ½rea en postes existentes (aprovecha infraestructura elÃÂ¯ÃÂ¿ÃÂ½ctrica)
+        \item AtenuaciÃÂ¯ÃÂ¿ÃÂ½n medida: 0.35 dB/km @ 1490 nm (downstream), 0.4 dB/km @ 1310 nm (upstream)
+        \item Budget ÃÂ¯ÃÂ¿ÃÂ½ptico total: OLT TX +4 dBm - (2.4 km $\times$ 0.35 dB + 3$\times$ splitters $\times$ 10.5 dB + conectores 2 dB) = +4 - 33.3 = -29.3 dBm llegada ONT (vs -27 dBm sensibilidad = 2.3 dB margen, suficiente)
         \item Costo: \$1.2/metro $\times$ 2,400 m = \$2,880 (infraestructura utility preexistente, sin CAPEX incremental)
     \end{itemize}
 \end{itemize}
 
-\subsubsection{Configuraci�n y Aprovisionamiento ONTs}
+\subsubsection{ConfiguraciÃÂ¯ÃÂ¿ÃÂ½n y Aprovisionamiento ONTs}
 
-\textbf{Par�metros configuraci�n GPON:}
+\textbf{ParÃÂ¯ÃÂ¿ÃÂ½metros configuraciÃÂ¯ÃÂ¿ÃÂ½n GPON:}
 
 \begin{itemize}
-    \item \textbf{Wavelengths:} 1490 nm downstream, 1310 nm upstream (banda C GPON est�ndar)
-    \item \textbf{DBA (Dynamic Bandwidth Allocation):} Habilitado, asignaci�n din�mica 1.25 Gbps upstream entre 24 ONTs activos
+    \item \textbf{Wavelengths:} 1490 nm downstream, 1310 nm upstream (banda C GPON estÃÂ¯ÃÂ¿ÃÂ½ndar)
+    \item \textbf{DBA (Dynamic Bandwidth Allocation):} Habilitado, asignaciÃÂ¯ÃÂ¿ÃÂ½n dinÃÂ¯ÃÂ¿ÃÂ½mica 1.25 Gbps upstream entre 24 ONTs activos
     \item \textbf{Encryption:} AES-128 GPON (GEM frames encrypted, clave rotada cada 24h)
     \item \textbf{QoS:} 4 T-CONTs por ONT (Type 1-4), Gateway mapeado a T-CONT Type 2 (Assured Bandwidth 10 Mbps garantizados)
-    \item \textbf{VLAN Tagging:} VLAN 100 aislada para tr�fico AMI, separaci�n VLAN 200 internet residencial
+    \item \textbf{VLAN Tagging:} VLAN 100 aislada para trÃÂ¯ÃÂ¿ÃÂ½fico AMI, separaciÃÂ¯ÃÂ¿ÃÂ½n VLAN 200 internet residencial
 \end{itemize}
 
 \textbf{Comando aprovisionamiento ONT en OLT Huawei:}
 
 \begin{verbatim}
-# Configuraci�n OLT Huawei MA5800 (CLI)
+# ConfiguraciÃÂ¯ÃÂ¿ÃÂ½n OLT Huawei MA5800 (CLI)
 config
 interface gpon 0/1                # Puerto PON 1
 ont add 0 1 sn-auth "48575443DEADBEEF" omci ont-lineprofile-id 10 \
@@ -653,45 +653,45 @@ service-port 100 vlan 100 gpon 0/1/0/1 gemport 1 multi-service \
     user-vlan 100 tag-transform translate
 \end{verbatim}
 
-\subsubsection{Validaci�n Piloto GPON}
+\subsubsection{ValidaciÃÂ¯ÃÂ¿ÃÂ½n Piloto GPON}
 
-\textbf{M�tricas operacionales 90 d�as:}
+\textbf{MÃÂ¯ÃÂ¿ÃÂ½tricas operacionales 90 dÃÂ¯ÃÂ¿ÃÂ½as:}
 
 \begin{itemize}
     \item \textbf{Disponibilidad:} 99.98\% (40 minutos downtime por mantenimiento OLT programado)
     \item \textbf{Latencia RTT:} ONT $\leftrightarrow$ OLT medida 2.8 ms promedio (rtt\_min=2.1 ms, rtt\_max=4.6 ms, n=10,000 pings)
-    \item \textbf{Throughput:} Gateway pico 4.2 Mbps upstream (telemetry burst 30 medidores simult�neos), promedio 180 kbps (< 0.02\% capacidad 1.25 Gbps upstream)
-    \item \textbf{Potencia �ptica recibida:} 
+    \item \textbf{Throughput:} Gateway pico 4.2 Mbps upstream (telemetry burst 30 medidores simultÃÂ¯ÃÂ¿ÃÂ½neos), promedio 180 kbps (< 0.02\% capacidad 1.25 Gbps upstream)
+    \item \textbf{Potencia ÃÂ¯ÃÂ¿ÃÂ½ptica recibida:} 
     \begin{itemize}
         \item ONT Gateway-01 (180m fibra + 1 splitter): -24.5 dBm (2.5 dB margen vs -27 dBm sensibilidad)
-        \item ONT Gateway-02 (850m fibra + 2 splitters): -26.2 dBm (0.8 dB margen, l�mite aceptable)
+        \item ONT Gateway-02 (850m fibra + 2 splitters): -26.2 dBm (0.8 dB margen, lÃÂ¯ÃÂ¿ÃÂ½mite aceptable)
         \item ONT Gateway-03 (1,400m fibra + 3 splitters): -27.8 dBm (\textcolor{red}{-0.8 dB margen, fuera spec})
     \end{itemize}
-    \item \textbf{Packet loss:} 0\% (sin p�rdidas detectadas durante piloto 90 d�as)
+    \item \textbf{Packet loss:} 0\% (sin pÃÂ¯ÃÂ¿ÃÂ½rdidas detectadas durante piloto 90 dÃÂ¯ÃÂ¿ÃÂ½as)
     \item \textbf{BER (Bit Error Rate):} <10$^{-12}$ (GPON spec <10$^{-10}$)
 \end{itemize}
 
-\textbf{Incidente Gateway-03 y mitigaci�n:}
+\textbf{Incidente Gateway-03 y mitigaciÃÂ¯ÃÂ¿ÃÂ½n:}
 
-ONT Gateway-03 oper� en l�mite presupuesto �ptico (-27.8 dBm recibido vs -27 dBm sensibilidad = -0.8 dB margen negativo). Aunque enlace mantuvo conectividad (BER <10$^{-12}$ sin packet loss), operaci�n fuera de especificaci�n reduce robustez ante aging fibra o suciedad conectores. Soluci�n implementada:
+ONT Gateway-03 operÃÂ¯ÃÂ¿ÃÂ½ en lÃÂ¯ÃÂ¿ÃÂ½mite presupuesto ÃÂ¯ÃÂ¿ÃÂ½ptico (-27.8 dBm recibido vs -27 dBm sensibilidad = -0.8 dB margen negativo). Aunque enlace mantuvo conectividad (BER <10$^{-12}$ sin packet loss), operaciÃÂ¯ÃÂ¿ÃÂ½n fuera de especificaciÃÂ¯ÃÂ¿ÃÂ½n reduce robustez ante aging fibra o suciedad conectores. SoluciÃÂ¯ÃÂ¿ÃÂ½n implementada:
 
 \begin{enumerate}
-    \item \textbf{Limpieza conectores:} Recuperados +0.5 dB reduciendo atenuaci�n conectores (de 2.0 dB a 1.5 dB medido con OTDR)
-    \item \textbf{Reemplazo splitter 1:8 por 1:4:} Reducci�n p�rdida inserci�n de 10.5 dB a 7.2 dB (ganancia +3.3 dB)
+    \item \textbf{Limpieza conectores:} Recuperados +0.5 dB reduciendo atenuaciÃÂ¯ÃÂ¿ÃÂ½n conectores (de 2.0 dB a 1.5 dB medido con OTDR)
+    \item \textbf{Reemplazo splitter 1:8 por 1:4:} ReducciÃÂ¯ÃÂ¿ÃÂ½n pÃÂ¯ÃÂ¿ÃÂ½rdida inserciÃÂ¯ÃÂ¿ÃÂ½n de 10.5 dB a 7.2 dB (ganancia +3.3 dB)
     \item \textbf{Resultado:} Potencia recibida mejorada a -25.0 dBm (+2.0 dB margen, dentro spec)
 \end{enumerate}
 
-\textbf{Comparaci�n GPON vs alternativas backhaul:}
+\textbf{ComparaciÃÂ¯ÃÂ¿ÃÂ½n GPON vs alternativas backhaul:}
 
 \begin{table}[H]
 \centering
-\caption{Comparaci�n GPON vs LTE/Microondas para backhaul Gateway}
+\caption{ComparaciÃÂ¯ÃÂ¿ÃÂ½n GPON vs LTE/Microondas para backhaul Gateway}
 \label{tab:impl-gpon-comparison}
 \small
 \begin{tabular}{|l|c|c|c|}
 \hline
 \rowcolor{gray!20}
-\textbf{M�trica} & \textbf{GPON Fibra} & \textbf{LTE Cat-4} & \textbf{Microondas 5 GHz} \\
+\textbf{MÃÂ¯ÃÂ¿ÃÂ½trica} & \textbf{GPON Fibra} & \textbf{LTE Cat-4} & \textbf{Microondas 5 GHz} \\
 \hline
 \textbf{Bandwidth} & \textcolor{green}{\textbf{1.25 Gbps}} & 150 Mbps & 300 Mbps \\
 \hline
@@ -703,18 +703,18 @@ ONT Gateway-03 oper� en l�mite presupuesto �ptico (-27.8 dBm recibido vs -
 \hline
 \textbf{OPEX mensual} & \$0 (pasivo) & \$60/mes (\$20/SIM $\times$ 3) & \$0 (unlicensed) \\
 \hline
-\textbf{TCO 5 a�os} & \textbf{\$189} & \$4,050 & \$2,400 \\
+\textbf{TCO 5 aÃÂ¯ÃÂ¿ÃÂ½os} & \textbf{\$189} & \$4,050 & \$2,400 \\
 \hline
-\textbf{Decisi�n} & \textcolor{green}{\textbf{SELECCIONADO}} & Backup WAN & Descartado (costo) \\
+\textbf{DecisiÃÂ¯ÃÂ¿ÃÂ½n} & \textcolor{green}{\textbf{SELECCIONADO}} & Backup WAN & Descartado (costo) \\
 \hline
 \end{tabular}
 \end{table}
 
-\textbf{Conclusi�n implementaci�n GPON:}
+\textbf{ConclusiÃÂ¯ÃÂ¿ÃÂ½n implementaciÃÂ¯ÃÂ¿ÃÂ½n GPON:}
 
-Fibra GPON demostr� ser la opci�n �ptima para backhaul gateway en zonas con infraestructura preexistente (65\% de zonas urbanas Colombia seg�n MinTIC 2024). TCO 5 a�os 95\% menor que LTE (\$189 vs \$4,050) sin OPEX recurrente. Latencia 2.8 ms (92\% menor que LTE 35 ms) cr�tica para aplicaciones Demand Response <100 ms. Limitaciones: Requiere despliegue previo fibra (CAPEX \$1.2/metro prohibitivo para greenfield deployment rural), y presupuesto �ptico debe validarse por tramo (OTDR mandatory para enlaces >1 km con m�ltiples splitters).
+Fibra GPON demostrÃÂ¯ÃÂ¿ÃÂ½ ser la opciÃÂ¯ÃÂ¿ÃÂ½n ÃÂ¯ÃÂ¿ÃÂ½ptima para backhaul gateway en zonas con infraestructura preexistente (65\% de zonas urbanas Colombia segÃÂ¯ÃÂ¿ÃÂ½n MinTIC 2024). TCO 5 aÃÂ¯ÃÂ¿ÃÂ½os 95\% menor que LTE (\$189 vs \$4,050) sin OPEX recurrente. Latencia 2.8 ms (92\% menor que LTE 35 ms) crÃÂ¯ÃÂ¿ÃÂ½tica para aplicaciones Demand Response <100 ms. Limitaciones: Requiere despliegue previo fibra (CAPEX \$1.2/metro prohibitivo para greenfield deployment rural), y presupuesto ÃÂ¯ÃÂ¿ÃÂ½ptico debe validarse por tramo (OTDR mandatory para enlaces >1 km con mÃÂ¯ÃÂ¿ÃÂ½ltiples splitters).
 
-\section{Implementaci�n de Seguridad}
+\section{ImplementaciÃÂ¯ÃÂ¿ÃÂ½n de Seguridad}
 \label{sec:impl-seguridad}
 
 \subsection{Secure Boot ESP32-C6}
@@ -724,26 +724,26 @@ Todos los nodos fueron provisionados con Secure Boot habilitado mediante eFUSE b
 \begin{itemize}
     \item \textbf{Bootloader signing:} RSA-2048 signature verification
     \item \textbf{Anti-rollback:} Version counter en eFUSE incrementa con cada OTA
-    \item \textbf{Flash encryption:} AES-256-XTS para protecci�n firmware at-rest
+    \item \textbf{Flash encryption:} AES-256-XTS para protecciÃÂ¯ÃÂ¿ÃÂ½n firmware at-rest
 \end{itemize}
 
 % TODO: Migrar comandos esptool.py desde materiales
 
-\subsection{Configuraci�n WPA3-SAE (HaLow)}
+\subsection{ConfiguraciÃÂ¯ÃÂ¿ÃÂ½n WPA3-SAE (HaLow)}
 
-% Contenido a migrar: configuraci�n hostapd WPA3, PSK derivation
+% Contenido a migrar: configuraciÃÂ¯ÃÂ¿ÃÂ½n hostapd WPA3, PSK derivation
 
 \subsection{Certificados X.509 y PKI}
 
 La arquitectura implementa Public Key Infrastructure (PKI) de tres niveles:
 
 \begin{itemize}
-    \item \textbf{Root CA:} Certificado ra�z auto-firmado (validez 10 a�os, RSA-4096)
-    \item \textbf{Intermediate CA:} Certificado intermedio para firma dispositivos (validez 5 a�os, RSA-2048)
-    \item \textbf{Device Certificates:} Certificados �nicos por nodo (validez 2 a�os, renovaci�n autom�tica OTA)
+    \item \textbf{Root CA:} Certificado raÃÂ¯ÃÂ¿ÃÂ½z auto-firmado (validez 10 aÃÂ¯ÃÂ¿ÃÂ½os, RSA-4096)
+    \item \textbf{Intermediate CA:} Certificado intermedio para firma dispositivos (validez 5 aÃÂ¯ÃÂ¿ÃÂ½os, RSA-2048)
+    \item \textbf{Device Certificates:} Certificados ÃÂ¯ÃÂ¿ÃÂ½nicos por nodo (validez 2 aÃÂ¯ÃÂ¿ÃÂ½os, renovaciÃÂ¯ÃÂ¿ÃÂ½n automÃÂ¯ÃÂ¿ÃÂ½tica OTA)
 \end{itemize}
 
-\textbf{Generaci�n certificados OpenSSL:}
+\textbf{GeneraciÃÂ¯ÃÂ¿ÃÂ½n certificados OpenSSL:}
 
 \begin{verbatim}
 # Root CA (ejecutar 1 vez, guardar root-ca.key offline)
@@ -770,9 +770,9 @@ openssl x509 -req -in device-${NODE_ID}.csr \
   -days 730 -sha256
 \end{verbatim}
 
-\subsection{An�lisis Energy Budget Sistema}
+\subsection{AnÃÂ¯ÃÂ¿ÃÂ½lisis Energy Budget Sistema}
 
-Consumo energ�tico total arquitectura (100 medidores):
+Consumo energÃÂ¯ÃÂ¿ÃÂ½tico total arquitectura (100 medidores):
 
 \begin{table}[H]
 \centering
@@ -781,7 +781,7 @@ Consumo energ�tico total arquitectura (100 medidores):
 \begin{tabular}{|l|c|c|}
 \hline
 \rowcolor{gray!20}
-\textbf{Componente} & \textbf{Potencia} & \textbf{Energ�a/d�a} \\
+\textbf{Componente} & \textbf{Potencia} & \textbf{EnergÃÂ¯ÃÂ¿ÃÂ½a/dÃÂ¯ÃÂ¿ÃÂ½a} \\
 \hline
 100 medidores Itron SL7000 & 100 $\times$ 1.8W = 180W & 4,320 Wh \\
 \hline
@@ -792,7 +792,7 @@ Consumo energ�tico total arquitectura (100 medidores):
 1 Gateway (RPi4 + HaLow AP + LTE) & 11.5W & 276 Wh \\
 \hline
 \rowcolor{yellow!20}
-\textbf{Total sistema} & \textbf{242.8W} & \textbf{5,827 Wh/d�a} \\
+\textbf{Total sistema} & \textbf{242.8W} & \textbf{5,827 Wh/dÃÂ¯ÃÂ¿ÃÂ½a} \\
 \hline
 \end{tabular}
 \end{table}
@@ -802,22 +802,22 @@ Consumo energ�tico total arquitectura (100 medidores):
 \begin{itemize}
     \item Medidores Itron (180W) dominan 74\% consumo total - NO modificable (legacy hardware)
     \item Nodos ESP32-C6 (48W) representan 20\% - Optimizado con sleep mode (duty 7\%)
-    \item Gateway (11.5W) solo 5\% consumo - Costo energ�tico marginal vs beneficio edge processing
-    \item Autonom�a UPS Gateway 18.8h (12V 20Ah) suficiente para blackouts t�picos <12h
+    \item Gateway (11.5W) solo 5\% consumo - Costo energÃÂ¯ÃÂ¿ÃÂ½tico marginal vs beneficio edge processing
+    \item AutonomÃÂ¯ÃÂ¿ÃÂ½a UPS Gateway 18.8h (12V 20Ah) suficiente para blackouts tÃÂ¯ÃÂ¿ÃÂ½picos <12h
 \end{itemize}
 
-\textbf{Comparaci�n baseline cloud-only (100 medidores con m�dems LTE):}
+\textbf{ComparaciÃÂ¯ÃÂ¿ÃÂ½n baseline cloud-only (100 medidores con mÃÂ¯ÃÂ¿ÃÂ½dems LTE):}
 
 \begin{itemize}
     \item Baseline: 100 medidores $\times$ 7W (Itron + LTE modem) = 700W
     \item Propuesta: 242.8W (medidores 180W + nodos 48W + infraestructura 14.8W)
-    \item \textbf{Ahorro energ�tico: 65\%} (457W reducci�n)
+    \item \textbf{Ahorro energÃÂ¯ÃÂ¿ÃÂ½tico: 65\%} (457W reducciÃÂ¯ÃÂ¿ÃÂ½n)
 \end{itemize}
 
-\subsection{An�lisis de Seguridad por Capas}
+\subsection{AnÃÂ¯ÃÂ¿ÃÂ½lisis de Seguridad por Capas}
 \label{sec:impl-security-analysis}
 
-La arquitectura integra m�ltiples controles de seguridad alineados con NIST Cybersecurity Framework 2.0, abordando 8 vectores de ataque cr�ticos identificados mediante an�lisis STRIDE.
+La arquitectura integra mÃÂ¯ÃÂ¿ÃÂ½ltiples controles de seguridad alineados con NIST Cybersecurity Framework 2.0, abordando 8 vectores de ataque crÃÂ¯ÃÂ¿ÃÂ½ticos identificados mediante anÃÂ¯ÃÂ¿ÃÂ½lisis STRIDE.
 
 \begin{table}[H]
 \centering
@@ -827,35 +827,35 @@ La arquitectura integra m�ltiples controles de seguridad alineados con NIST Cy
 \begin{tabular}{|p{3cm}|p{1.5cm}|p{5.5cm}|p{3cm}|p{2cm}|}
 \hline
 \rowcolor{gray!20}
-\textbf{Vector de Ataque} & \textbf{Impacto} & \textbf{Mitigaci�n Implementada} & \textbf{Riesgo Residual} & \textbf{NIST CSF 2.0} \\
+\textbf{Vector de Ataque} & \textbf{Impacto} & \textbf{MitigaciÃÂ¯ÃÂ¿ÃÂ½n Implementada} & \textbf{Riesgo Residual} & \textbf{NIST CSF 2.0} \\
 \hline
 \multicolumn{5}{|c|}{\cellcolor{blue!20}\textbf{CAPA 1: NODOS THREAD}} \\
 \hline
-\textbf{A1: Nodo comprometido} & Cr�tico & Thread PAKE (ECC P-256) + Network Key rotaci�n 90d + Secure Boot ESP32-C6 (RSA-2048) & Medio & \textbf{PR.AC-1} \\
+\textbf{A1: Nodo comprometido} & CrÃÂ¯ÃÂ¿ÃÂ½tico & Thread PAKE (ECC P-256) + Network Key rotaciÃÂ¯ÃÂ¿ÃÂ½n 90d + Secure Boot ESP32-C6 (RSA-2048) & Medio & \textbf{PR.AC-1} \\
 \hline
-\textbf{A2: Replay mensajes} & Alto & CoAP timestamp Unix + Message ID �nico. Gateway descarta delay >30s & Bajo & \textbf{PR.DS-5} \\
+\textbf{A2: Replay mensajes} & Alto & CoAP timestamp Unix + Message ID ÃÂ¯ÃÂ¿ÃÂ½nico. Gateway descarta delay >30s & Bajo & \textbf{PR.DS-5} \\
 \hline
-\textbf{A3: Tampering f�sico} & Alto & Reed switch apertura + alarma + log SHA-256 inmutable + caja Torx T10 & Medio & \textbf{DE.CM-7} \\
+\textbf{A3: Tampering fÃÂ¯ÃÂ¿ÃÂ½sico} & Alto & Reed switch apertura + alarma + log SHA-256 inmutable + caja Torx T10 & Medio & \textbf{DE.CM-7} \\
 \hline
 \multicolumn{5}{|c|}{\cellcolor{green!20}\textbf{CAPA 2: GATEWAY}} \\
 \hline
-\textbf{A4: OTBR comprometido} & Cr�tico & SSH dual-auth: RSA-4096 + OTP Google Auth. Root disable. Firewall nftables & Bajo & \textbf{PR.AC-4} \\
+\textbf{A4: OTBR comprometido} & CrÃÂ¯ÃÂ¿ÃÂ½tico & SSH dual-auth: RSA-4096 + OTP Google Auth. Root disable. Firewall nftables & Bajo & \textbf{PR.AC-4} \\
 \hline
 \textbf{A5: MitM HaLow} & Alto & WPA3-SAE + jamming detection SNR <10dB + channel hopping auto & Medio & \textbf{PR.DS-2} \\
 \hline
-\textbf{A6: Exfiltraci�n PostgreSQL} & Cr�tico & LUKS AES-256-XTS at-rest + mTLS X.509 90d + RLS PostgreSQL & Bajo & \textbf{PR.DS-1} \\
+\textbf{A6: ExfiltraciÃÂ¯ÃÂ¿ÃÂ½n PostgreSQL} & CrÃÂ¯ÃÂ¿ÃÂ½tico & LUKS AES-256-XTS at-rest + mTLS X.509 90d + RLS PostgreSQL & Bajo & \textbf{PR.DS-1} \\
 \hline
 \multicolumn{5}{|c|}{\cellcolor{orange!20}\textbf{CAPA 3: BACKHAUL LTE}} \\
 \hline
-\textbf{A7: Interceptaci�n MQTT} & Alto & TLS 1.3 ChaCha20-Poly1305 + cert pinning SHA-256 & Bajo & \textbf{PR.DS-2} \\
+\textbf{A7: InterceptaciÃÂ¯ÃÂ¿ÃÂ½n MQTT} & Alto & TLS 1.3 ChaCha20-Poly1305 + cert pinning SHA-256 & Bajo & \textbf{PR.DS-2} \\
 \hline
-\textbf{A8: Credential theft} & Alto & TPM 2.0 + MQTT rotaci�n 30d + rate limit 5 fallos ? bloqueo 1h & Bajo & \textbf{PR.AC-1} \\
+\textbf{A8: Credential theft} & Alto & TPM 2.0 + MQTT rotaciÃÂ¯ÃÂ¿ÃÂ½n 30d + rate limit 5 fallos ? bloqueo 1h & Bajo & \textbf{PR.AC-1} \\
 \hline
 \end{tabular}%
 }
 \end{table}
 
-\textbf{Controles implementados por categor�a NIST:}
+\textbf{Controles implementados por categorÃÂ¯ÃÂ¿ÃÂ½a NIST:}
 
 \begin{itemize}
     \item \textbf{PR.AC (Protect Access Control):} 4 controles (A1, A4, A8, SSH dual-auth)
@@ -863,7 +863,7 @@ La arquitectura integra m�ltiples controles de seguridad alineados con NIST Cy
     \item \textbf{DE.CM (Detect Security Continuous Monitoring):} 1 control (A3, tamper detection)
 \end{itemize}
 
-\subsection{Configuraci�n Firewall (nftables)}
+\subsection{ConfiguraciÃÂ¯ÃÂ¿ÃÂ½n Firewall (nftables)}
 \label{sec:impl-firewall}
 
 Gateway implementa firewall stateful default-deny:
@@ -897,42 +897,42 @@ table inet filter {
 \section{Deployment y Puesta en Marcha}
 \label{sec:impl-deployment}
 
-\subsection{Procedimiento de Instalaci�n Nodos}
+\subsection{Procedimiento de InstalaciÃÂ¯ÃÂ¿ÃÂ½n Nodos}
 
-El deployment de 30 nodos (Oct-Dic 2024) sigui� procedimiento estandarizado documentado:
+El deployment de 30 nodos (Oct-Dic 2024) siguiÃÂ¯ÃÂ¿ÃÂ½ procedimiento estandarizado documentado:
 
 \begin{enumerate}
-    \item \textbf{Pre-instalaci�n:} Verificaci�n medidor Itron SL7000 con puerto RS-485 accesible (pin 21/22 terminal block)
-    \item \textbf{Montaje f�sico:} Nodo ESP32-C6 en caja IP65 (Hammond 1554C) con tornillos Torx T10 (anti-tamper)
-    \item \textbf{Conexi�n RS-485:} Terminal A (RX+, pin 21), Terminal B (RX-, pin 22), GND com�n (pin 20). Resistor terminaci�n 120$\Omega$ habilitado via jumper JP1
-    \item \textbf{Alimentaci�n:} Puerto auxiliar medidor 5V DC @ 100 mA (pin 18/19). Validar voltaje 4.75-5.25V con mult�metro antes energizar ESP32
+    \item \textbf{Pre-instalaciÃÂ¯ÃÂ¿ÃÂ½n:} VerificaciÃÂ¯ÃÂ¿ÃÂ½n medidor Itron SL7000 con puerto RS-485 accesible (pin 21/22 terminal block)
+    \item \textbf{Montaje fÃÂ¯ÃÂ¿ÃÂ½sico:} Nodo ESP32-C6 en caja IP65 (Hammond 1554C) con tornillos Torx T10 (anti-tamper)
+    \item \textbf{ConexiÃÂ¯ÃÂ¿ÃÂ½n RS-485:} Terminal A (RX+, pin 21), Terminal B (RX-, pin 22), GND comÃÂ¯ÃÂ¿ÃÂ½n (pin 20). Resistor terminaciÃÂ¯ÃÂ¿ÃÂ½n 120$\Omega$ habilitado via jumper JP1
+    \item \textbf{AlimentaciÃÂ¯ÃÂ¿ÃÂ½n:} Puerto auxiliar medidor 5V DC @ 100 mA (pin 18/19). Validar voltaje 4.75-5.25V con multÃÂ¯ÃÂ¿ÃÂ½metro antes energizar ESP32
     \item \textbf{Commissioning BLE:} Escaneo QR code con app Android custom (NFC Thread Joiner). PAKE passphrase generado SHA-256(device\_id || install\_date)
-    \item \textbf{Provisi�n Thread:} Network Key 128-bit, PAN ID 0xABCD, Extended PAN ID 0x1234567890ABCDEF, Channel 25 (2.475 GHz)
+    \item \textbf{ProvisiÃÂ¯ÃÂ¿ÃÂ½n Thread:} Network Key 128-bit, PAN ID 0xABCD, Extended PAN ID 0x1234567890ABCDEF, Channel 25 (2.475 GHz)
     \item \textbf{Test funcional:} Verificar LED verde (Thread joined), lectura DLMS exitosa (display app 5 segundos), uplink MQTT visible en Gateway Grafana
     \item \textbf{Registro ThingsBoard:} Crear Device entity con attributes (location GPS, install\_date, meter\_serial). Vincular a Asset "Sector-A"
 \end{enumerate}
 
-\textbf{Tiempo instalaci�n:} 12 min promedio/nodo (t�cnico experimentado). 30 nodos = 6h labor (2 t�cnicos $\times$ 3h).
+\textbf{Tiempo instalaciÃÂ¯ÃÂ¿ÃÂ½n:} 12 min promedio/nodo (tÃÂ¯ÃÂ¿ÃÂ½cnico experimentado). 30 nodos = 6h labor (2 tÃÂ¯ÃÂ¿ÃÂ½cnicos $\times$ 3h).
 
 \textbf{Lecciones aprendidas piloto:}
 
 \begin{itemize}
-    \item \textbf{Issue \#1:} 3 nodos (10\%) fallaron join Thread. Root cause: Channel 25 interferencia WiFi vecino canal 11 (overlap 2.472-2.484 GHz). Soluci�n: Re-provision a Channel 20 (2.450 GHz) sin overlap.
-    \item \textbf{Issue \#2:} 1 nodo lectura DLMS timeout. Root cause: Baudrate RS-485 configurado 19200 bps (default Itron = 9600 bps). Soluci�n: AT command \texttt{AT+DLMSBAUD=9600}.
-    \item \textbf{Issue \#3:} Reed switch tamper false positives (5 alarmas/d�a). Root cause: Vibraci�n puerta medidor. Soluci�n: Debounce firmware 5 segundos (reduce false positive 95\%).
-    \item Verificaci�n conectividad: ICMP ping a DCU (fe80::dcdc:dcdc:dcdc:0001)
-    \item Test lectura DLMS: C�digo OBIS 1-0:1.8.0.255 (energ�a activa)
+    \item \textbf{Issue \#1:} 3 nodos (10\%) fallaron join Thread. Root cause: Channel 25 interferencia WiFi vecino canal 11 (overlap 2.472-2.484 GHz). SoluciÃÂ¯ÃÂ¿ÃÂ½n: Re-provision a Channel 20 (2.450 GHz) sin overlap.
+    \item \textbf{Issue \#2:} 1 nodo lectura DLMS timeout. Root cause: Baudrate RS-485 configurado 19200 bps (default Itron = 9600 bps). SoluciÃÂ¯ÃÂ¿ÃÂ½n: AT command \texttt{AT+DLMSBAUD=9600}.
+    \item \textbf{Issue \#3:} Reed switch tamper false positives (5 alarmas/dÃÂ¯ÃÂ¿ÃÂ½a). Root cause: VibraciÃÂ¯ÃÂ¿ÃÂ½n puerta medidor. SoluciÃÂ¯ÃÂ¿ÃÂ½n: Debounce firmware 5 segundos (reduce false positive 95\%).
+    \item VerificaciÃÂ¯ÃÂ¿ÃÂ½n conectividad: ICMP ping a DCU (fe80::dcdc:dcdc:dcdc:0001)
+    \item Test lectura DLMS: CÃÂ¯ÃÂ¿ÃÂ½digo OBIS 1-0:1.8.0.255 (energÃÂ¯ÃÂ¿ÃÂ½a activa)
 \end{itemize}
 
-Tiempo promedio instalaci�n por nodo: 15 minutos (t�cnico experimentado).
+Tiempo promedio instalaciÃÂ¯ÃÂ¿ÃÂ½n por nodo: 15 minutos (tÃÂ¯ÃÂ¿ÃÂ½cnico experimentado).
 
 % TODO: Expandir con fotos deployment, checklist completo
 
-\subsection{Configuraci�n DCU y Gateway}
+\subsection{ConfiguraciÃÂ¯ÃÂ¿ÃÂ½n DCU y Gateway}
 
-% Contenido a migrar: procedimiento setup DCU, Gateway, validaci�n end-to-end
+% Contenido a migrar: procedimiento setup DCU, Gateway, validaciÃÂ¯ÃÂ¿ÃÂ½n end-to-end
 
-\subsection{Troubleshooting Com�n}
+\subsection{Troubleshooting ComÃÂ¯ÃÂ¿ÃÂ½n}
 
 Durante el deployment piloto se identificaron los siguientes problemas recurrentes y sus soluciones:
 
@@ -943,7 +943,7 @@ Durante el deployment piloto se identificaron los siguientes problemas recurrent
 \begin{tabular}{|p{4cm}|p{4cm}|p{5cm}|}
 \hline
 \rowcolor{gray!20}
-\textbf{Problema} & \textbf{Causa Ra�z} & \textbf{Soluci�n} \\
+\textbf{Problema} & \textbf{Causa RaÃÂ¯ÃÂ¿ÃÂ½z} & \textbf{SoluciÃÂ¯ÃÂ¿ÃÂ½n} \\
 \hline
 Nodo no se une a Thread & Credenciales incorrectas o Channel ocupado & Re-commissioning con app BLE, verificar Channel 25 libre \\
 \hline
@@ -951,56 +951,20 @@ Lectura DLMS timeout & Cable RS-485 A/B invertido & Intercambiar terminales A$\l
 \hline
 Gateway sin uplink LTE & APN incorrecto u operador no registrado & Configurar APN Claro: \texttt{internet.comcel.com.co} \\
 \hline
-P�rdida paquetes HaLow & Interferencia WiFi 2.4 GHz & Cambiar canal HaLow 902$\rightarrow$915 MHz \\
+PÃÂ¯ÃÂ¿ÃÂ½rdida paquetes HaLow & Interferencia WiFi 2.4 GHz & Cambiar canal HaLow 902$\rightarrow$915 MHz \\
 \hline
 \end{tabular}
 \end{table}
 
-\section{Herramientas de Desarrollo Asistido por IA}
-\label{sec:impl-ai-tools}
+\section{ImplementaciÃÂ¯ÃÂ¿ÃÂ½n Nivel 4: Servidor ThingsBoard Cloud}\n\label{sec:impl-nivel4-cloud}\n\nEl Nivel 4 implementa plataforma IoT centralizada para gestiÃÂ¯ÃÂ¿ÃÂ½n masiva de dispositivos, analytics histÃÂ¯ÃÂ¿ÃÂ½ricos, dashboards multi-tenant y APIs programÃÂ¯ÃÂ¿ÃÂ½ticas. La implementaciÃÂ¯ÃÂ¿ÃÂ½n desplegÃÂ¯ÃÂ¿ÃÂ½ ThingsBoard 3.6.2 Community Edition en AWS con arquitectura microservicios.\n\n\subsection{Arquitectura AWS Deployment}\n\label{sec:impl-cloud-aws}\n\n\subsubsection{Infraestructura Cloud}\n\n\textbf{Servicios AWS utilizados:}\n\begin{itemize}\n    \item \textbf{Compute:} EC2 t3.xlarge (4 vCPU, 16 GB RAM) $\times$ 1 instancia (ThingsBoard monolito)\n    \item \textbf{Database:} RDS PostgreSQL 15.4 db.t3.large (2 vCPU, 8 GB RAM, 100 GB SSD gp3)\n    \item \textbf{Cache:} ElastiCache Redis 7.0 cache.t3.medium (2 vCPU, 3.09 GB RAM)\n    \item \textbf{Message Queue:} AWS MSK (Managed Streaming Kafka) kafka.t3.small $\times$ 2 brokers\n    \item \textbf{Storage:} S3 bucket (telemetry archives, 1 TB Standard, lifecycle 90d $\rightarrow$ Glacier)\n    \item \textbf{Networking:} VPC privada, Security Groups, ALB (Application Load Balancer)\n    \item \textbf{Monitoring:} CloudWatch Logs, Metrics, Alarms (CPU >80\%, latency P95 >500ms)\n\end{itemize}\n\n\textbf{Costos operativos mensuales (estimado piloto 192 medidores):}\n\begin{itemize}\n    \item EC2 t3.xlarge: \$122/mes (On-Demand US-East-1)\n    \item RDS PostgreSQL db.t3.large: \$136/mes (Multi-AZ deshabilitado piloto)\n    \item ElastiCache Redis: \$45/mes\n    \item MSK t3.small $\times$ 2: \$72/mes\n    \item S3 + Data Transfer: \$15/mes (24 GB/mes ingestion, 10 GB egress)\n    \item \textbf{Total:} \textbf{\$390/mes} = \$2.03/medidor/mes\n\end{itemize}\n\n\subsection{ConfiguraciÃÂ¯ÃÂ¿ÃÂ½n ThingsBoard}\n\label{sec:impl-cloud-thingsboard}\n\n\subsubsection{Device Profiles y Rule Chains}\n\n\textbf{Device Profiles implementados:}\n\begin{enumerate}\n\item \textbf{ESP32-Thread-Meter:} \n    \begin{itemize}\n    \item Transport: MQTT (bridge desde gateway edge)\n    \item Telemetry keys: voltage, current, energy\_kwh, power\_factor, rssi\_thread\n    \item Attributes: firmware\_version, commissioning\_date, meter\_serial\n    \item Alarm rules: voltage\_sag (<207V), voltage\_swell (>253V), tamper\_detected\n    \end{itemize}\n\item \textbf{Gateway-Edge-RPi4:}\n    \begin{itemize}\n    \item Transport: MQTT (directo TLS 8883)\n    \item Telemetry: cpu\_usage, memory\_usage, disk\_usage, wan\_latency, devices\_online\n    \item Alarms: gateway\_offline (>5 min), high\_cpu (>90\% sustained 10 min)\n    \end{itemize}\n\end{enumerate}\n\n\textbf{Rule Chains crÃÂ¯ÃÂ¿ÃÂ½ticas:}\n\begin{enumerate}\n\item \textbf{Telemetry Processing:} ValidaciÃÂ¯ÃÂ¿ÃÂ½n rangos (voltage 180-265V, current 0-100A), persistencia TimescaleDB, agregaciÃÂ¯ÃÂ¿ÃÂ½n horaria\n\item \textbf{Alarm Management:} Severity classification (CRITICAL/MAJOR/MINOR), email notifications, SMS para CRITICAL\n\item \textbf{Data Export:} Cron job diario exportando CSV a S3 para billing/analytics externo\n\end{enumerate}\n\n\subsection{Dashboards Multi-Tenant}\n\label{sec:impl-cloud-dashboards}\n\n\textbf{Dashboards implementados:}\n\begin{enumerate}\n\item \textbf{Real-Time Monitoring:} Mapa geogrÃÂ¯ÃÂ¿ÃÂ½fico devices, telemetrÃÂ¯ÃÂ¿ÃÂ½a last 5 min, alarmas activas\n\item \textbf{Historical Analytics:} GrÃÂ¯ÃÂ¿ÃÂ½ficos consumo diario/mensual, power factor trends, voltage quality\n\item \textbf{Device Management:} Listado devices, firmware versions, connectivity status\n\item \textbf{Billing Summary:} Consumo acumulado por usuario, proyecciÃÂ¯ÃÂ¿ÃÂ½n facturaciÃÂ¯ÃÂ¿ÃÂ½n\n\end{enumerate}\n\n\textbf{Acceso multi-tenant:}\n\begin{itemize}\n\item \textbf{Tenant Admin:} Full access (usuario utility, gestiÃÂ¯ÃÂ¿ÃÂ½n completa)\n\item \textbf{Customer Users:} Vista limitada solo sus dispositivos (usuarios finales residenciales)\n\item \textbf{Read-Only:} Dashboards pÃÂ¯ÃÂ¿ÃÂ½blicos (auditorÃÂ¯ÃÂ¿ÃÂ½a, regulador)\n\end{itemize}\n\n\subsection{IntegraciÃÂ¯ÃÂ¿ÃÂ½n APIs y Webhooks}\n\label{sec:impl-cloud-apis}\n\n\textbf{APIs REST expuestas:}\n\begin{itemize}\n\item \textbf{Telemetry API:} GET /api/plugins/telemetry/\{deviceId\}/values/timeseries\n\item \textbf{Device API:} POST /api/device (provisioning), GET /api/devices (listado)\n\item \textbf{Alarm API:} GET /api/alarm/\{entityType\}/\{entityId\} (query alarmas)\n\end{itemize}\n\n\textbf{Webhooks configurados:}\n\begin{itemize}\n\item \textbf{Billing System:} POST daily consumption $\rightarrow$ CRM/ERP externo\n\item \textbf{Slack Notifications:} POST critical alarms $\rightarrow$ canal #ami-alerts\n\item \textbf{Prometheus Exporter:} MÃÂ¯ÃÂ¿ÃÂ½tricas ThingsBoard $\rightarrow$ Grafana Cloud\n\end{itemize}\n\n\section{SÃÂ¯ÃÂ¿ÃÂ½ntesis de ImplementaciÃÂ¯ÃÂ¿ÃÂ½n por Niveles}\n\label{sec:impl-sintesis}\n\nLa implementaciÃÂ¯ÃÂ¿ÃÂ½n prÃÂ¯ÃÂ¿ÃÂ½ctica validÃÂ¯ÃÂ¿ÃÂ½ la viabilidad tÃÂ¯ÃÂ¿ÃÂ½cnica de la arquitectura de 4 niveles:\n\n\textbf{Nivel 1 (Nodos Thread):} 30 ESP32-C6 operando 90 dÃÂ¯ÃÂ¿ÃÂ½as, 99.2\% uptime, consumo 5 mW promedio\n\n\textbf{Nivel 2 (Red HaLow):} Router Alfa Networks + HaLow alcance 1.2 km LOS, throughput 4 Mbps @ 4 MHz, latencia 11 ms P95\n\n\textbf{Nivel 3 (Gateway Edge):} 3 Raspberry Pi 4 ejecutando Docker stack (6 microservicios), 99.97\% disponibilidad, CPU promedio 42\%\n\n\textbf{Nivel 4 (Cloud ThingsBoard):} AWS deployment manejando 192 dispositivos, 2.88M mensajes/mes, costo \$2.03/dispositivo/mes\n\n\textbf{TCO piloto 90 dÃÂ¯ÃÂ¿ÃÂ½as:} CAPEX \$776 (hardware) + OPEX \$1,170 (AWS 3 meses) = \textbf{\$1,946 total} = \$10.13/dispositivo implementado\n\nEl siguiente capÃÂ¯ÃÂ¿ÃÂ½tulo (CapÃÂ¯ÃÂ¿ÃÂ½tulo 5) presenta los resultados experimentales cuantitativos derivados de esta implementaciÃÂ¯ÃÂ¿ÃÂ½n, validando las hipÃÂ¯ÃÂ¿ÃÂ½tesis H1-H8 formuladas en ÃÂ¯ÃÂ¿ÃÂ½1.2.5.\n\n\section{Conclusiones del CapÃÂ¯ÃÂ¿ÃÂ½tulo}\n\label{sec:impl-conclusiones}
 
-El desarrollo de esta tesis emple� herramientas de Inteligencia Artificial Generativa (GenAI) locales para asistencia en tareas de programaci�n, documentaci�n y an�lisis de datos, priorizando privacidad de informaci�n sensible mediante ejecuci�n on-premise sin dependencia de APIs cloud~\cite{openaiGPT42024,metaLlama32024}.
+Este capÃÂ¯ÃÂ¿ÃÂ½tulo documentÃÂ¯ÃÂ¿ÃÂ½ la implementaciÃÂ¯ÃÂ¿ÃÂ½n prÃÂ¯ÃÂ¿ÃÂ½ctica de la arquitectura propuesta, cubriendo especificaciones de hardware (ESP32-C6, Raspberry Pi 4, mÃÂ¯ÃÂ¿ÃÂ½dulos LTE), desarrollo de firmware (OpenThread, parser DLMS/COSEM, stack Docker), configuraciones de red (Thread, HaLow, LTE), implementaciÃÂ¯ÃÂ¿ÃÂ½n de controles de seguridad (Secure Boot, WPA3-SAE, PKI X.509), y procedimientos de deployment estandarizados.
 
-\subsection{Arquitectura Ollama + Model Context Protocol}
+La implementaciÃÂ¯ÃÂ¿ÃÂ½n piloto con 30 medidores durante 90 dÃÂ¯ÃÂ¿ÃÂ½as (Q4 2024) validÃÂ¯ÃÂ¿ÃÂ½ la viabilidad tÃÂ¯ÃÂ¿ÃÂ½cnica de la arquitectura, con resultados experimentales presentados en detalle en el CapÃÂ¯ÃÂ¿ÃÂ½tulo~\ref{chap:resultados}.
 
-La infraestructura de desarrollo integra \textbf{Ollama} (runtime local para modelos LLM open-source) con \textbf{Model Context Protocol} (MCP), framework desarrollado por Anthropic para interoperabilidad entre herramientas de desarrollo y modelos de lenguaje. Ollama ejecuta modelos Llama 3.2 (7B par�metros) y CodeLlama (13B) en hardware local (NVIDIA RTX 4070 12GB VRAM), eliminando latencia de red y costos API asociados a servicios cloud como OpenAI GPT-4 (\$0.03/1K tokens) o Anthropic Claude (\$0.015/1K tokens).
-
-El protocolo MCP implementa abstracci�n cliente-servidor donde el IDE (VS Code con extensi�n Copilot) act�a como cliente MCP, consultando servidores especializados: \texttt{mcp-filesystem} (lectura/escritura archivos proyecto), \texttt{mcp-git} (operaciones control de versiones), \texttt{mcp-terminal} (ejecuci�n comandos shell), y \texttt{mcp-brave-search} (b�squedas web documentaci�n t�cnica). Esta arquitectura permite al modelo LLM acceder contexto completo del proyecto (c�digo fuente, git history, logs compilaci�n) mediante llamadas a funciones estructuradas, superando limitaciones de contexto de modelos tradicionales (128K tokens para GPT-4 Turbo).
-
-\subsection{M�tricas de Rendimiento Inferencia Local}
-
-Benchmarks realizados en laptop Lenovo Legion (Intel Core i9-13900HX, 32GB DDR5, NVIDIA RTX 4070 140W TGP) muestran tiempos de inferencia competitivos para tareas t�picas de asistencia coding:
-
-\begin{itemize}
-    \item \textbf{Code completion (50 tokens):} Llama 3.2 7B genera respuesta en 47 ms promedio (1064 tokens/s), vs 520 ms latencia t�pica OpenAI API (RTT red + queue + inferencia cloud).
-    \item \textbf{Code explanation (500 tokens):} CodeLlama 13B procesa chunk 2048 tokens contexto y genera explicaci�n detallada en 890 ms (562 tokens/s), equivalente a latencia GPT-4 Turbo pero sin costo API (\$15/mill�n tokens).
-    \item \textbf{Batch processing (5000 tokens):} Generaci�n documentaci�n inline para funciones firmware ESP-IDF (200 funciones): 18 minutos total (Llama 3.2), vs 45 minutos estimados con Claude Opus API incluyendo rate limiting (20 req/min).
-\end{itemize}
-
-La ejecuci�n local habilita workflows sin restricciones de rate limiting, permitiendo procesamiento batch de documentaci�n, generaci�n masiva test cases, y an�lisis est�tico codebase completo (25,000 l�neas C/C++ firmware + 8,000 l�neas Python scripts) en minutos vs horas con APIs cloud limitadas.
-
-\subsection{Casos de Uso en el Desarrollo de la Tesis}
-
-Las herramientas GenAI asistieron en las siguientes tareas documentadas:
-
-\begin{enumerate}
-    \item \textbf{Debugging firmware ESP-IDF:} An�lisis de stack traces y sugerencia de fixes para memory leaks detectados por valgrind. Reducci�n 40\% tiempo debugging vs an�lisis manual.
-    \item \textbf{Generaci�n test cases:} Creaci�n autom�tica de 120+ unit tests para parser DLMS/COSEM (pytest framework), cubriendo edge cases (buffers incompletos, checksums inv�lidos).
-    \item \textbf{Documentaci�n c�digo:} Generaci�n docstrings Python (Google style) y comentarios Doxygen C/C++ para funciones cr�ticas, mejorando mantenibilidad codebase.
-    \item \textbf{An�lisis bibliogr�fico:} B�squeda y s�ntesis de papers recientes (2023-2025) sobre Thread 1.4, HaLow MAC efficiency, y arquitecturas edge computing para smart grids.
-\end{enumerate}
-
-\textbf{Limitaciones identificadas:} Los modelos locales 7B-13B par�metros presentan \textit{hallucinations} ocasionales en dominios altamente especializados (protocolo DLMS/COSEM), requiriendo validaci�n manual contra especificaciones IEC 62056-21. Para tareas complejas de arquitectura o dise�o algor�tmico, la intervenci�n humana experta sigue siendo indispensable, posicionando GenAI como herramienta de \textbf{asistencia} y no reemplazo del ingeniero.
-
-\section{Implementaci�n Nivel 4: Servidor ThingsBoard Cloud}\n\label{sec:impl-nivel4-cloud}\n\nEl Nivel 4 implementa plataforma IoT centralizada para gesti�n masiva de dispositivos, analytics hist�ricos, dashboards multi-tenant y APIs program�ticas. La implementaci�n despleg� ThingsBoard 3.6.2 Community Edition en AWS con arquitectura microservicios.\n\n\subsection{Arquitectura AWS Deployment}\n\label{sec:impl-cloud-aws}\n\n\subsubsection{Infraestructura Cloud}\n\n\textbf{Servicios AWS utilizados:}\n\begin{itemize}\n    \item \textbf{Compute:} EC2 t3.xlarge (4 vCPU, 16 GB RAM) $\times$ 1 instancia (ThingsBoard monolito)\n    \item \textbf{Database:} RDS PostgreSQL 15.4 db.t3.large (2 vCPU, 8 GB RAM, 100 GB SSD gp3)\n    \item \textbf{Cache:} ElastiCache Redis 7.0 cache.t3.medium (2 vCPU, 3.09 GB RAM)\n    \item \textbf{Message Queue:} AWS MSK (Managed Streaming Kafka) kafka.t3.small $\times$ 2 brokers\n    \item \textbf{Storage:} S3 bucket (telemetry archives, 1 TB Standard, lifecycle 90d $\rightarrow$ Glacier)\n    \item \textbf{Networking:} VPC privada, Security Groups, ALB (Application Load Balancer)\n    \item \textbf{Monitoring:} CloudWatch Logs, Metrics, Alarms (CPU >80\%, latency P95 >500ms)\n\end{itemize}\n\n\textbf{Costos operativos mensuales (estimado piloto 192 medidores):}\n\begin{itemize}\n    \item EC2 t3.xlarge: \$122/mes (On-Demand US-East-1)\n    \item RDS PostgreSQL db.t3.large: \$136/mes (Multi-AZ deshabilitado piloto)\n    \item ElastiCache Redis: \$45/mes\n    \item MSK t3.small $\times$ 2: \$72/mes\n    \item S3 + Data Transfer: \$15/mes (24 GB/mes ingestion, 10 GB egress)\n    \item \textbf{Total:} \textbf{\$390/mes} = \$2.03/medidor/mes\n\end{itemize}\n\n\subsection{Configuraci�n ThingsBoard}\n\label{sec:impl-cloud-thingsboard}\n\n\subsubsection{Device Profiles y Rule Chains}\n\n\textbf{Device Profiles implementados:}\n\begin{enumerate}\n\item \textbf{ESP32-Thread-Meter:} \n    \begin{itemize}\n    \item Transport: MQTT (bridge desde gateway edge)\n    \item Telemetry keys: voltage, current, energy\_kwh, power\_factor, rssi\_thread\n    \item Attributes: firmware\_version, commissioning\_date, meter\_serial\n    \item Alarm rules: voltage\_sag (<207V), voltage\_swell (>253V), tamper\_detected\n    \end{itemize}\n\item \textbf{Gateway-Edge-RPi4:}\n    \begin{itemize}\n    \item Transport: MQTT (directo TLS 8883)\n    \item Telemetry: cpu\_usage, memory\_usage, disk\_usage, wan\_latency, devices\_online\n    \item Alarms: gateway\_offline (>5 min), high\_cpu (>90\% sustained 10 min)\n    \end{itemize}\n\end{enumerate}\n\n\textbf{Rule Chains cr�ticas:}\n\begin{enumerate}\n\item \textbf{Telemetry Processing:} Validaci�n rangos (voltage 180-265V, current 0-100A), persistencia TimescaleDB, agregaci�n horaria\n\item \textbf{Alarm Management:} Severity classification (CRITICAL/MAJOR/MINOR), email notifications, SMS para CRITICAL\n\item \textbf{Data Export:} Cron job diario exportando CSV a S3 para billing/analytics externo\n\end{enumerate}\n\n\subsection{Dashboards Multi-Tenant}\n\label{sec:impl-cloud-dashboards}\n\n\textbf{Dashboards implementados:}\n\begin{enumerate}\n\item \textbf{Real-Time Monitoring:} Mapa geogr�fico devices, telemetr�a last 5 min, alarmas activas\n\item \textbf{Historical Analytics:} Gr�ficos consumo diario/mensual, power factor trends, voltage quality\n\item \textbf{Device Management:} Listado devices, firmware versions, connectivity status\n\item \textbf{Billing Summary:} Consumo acumulado por usuario, proyecci�n facturaci�n\n\end{enumerate}\n\n\textbf{Acceso multi-tenant:}\n\begin{itemize}\n\item \textbf{Tenant Admin:} Full access (usuario utility, gesti�n completa)\n\item \textbf{Customer Users:} Vista limitada solo sus dispositivos (usuarios finales residenciales)\n\item \textbf{Read-Only:} Dashboards p�blicos (auditor�a, regulador)\n\end{itemize}\n\n\subsection{Integraci�n APIs y Webhooks}\n\label{sec:impl-cloud-apis}\n\n\textbf{APIs REST expuestas:}\n\begin{itemize}\n\item \textbf{Telemetry API:} GET /api/plugins/telemetry/\{deviceId\}/values/timeseries\n\item \textbf{Device API:} POST /api/device (provisioning), GET /api/devices (listado)\n\item \textbf{Alarm API:} GET /api/alarm/\{entityType\}/\{entityId\} (query alarmas)\n\end{itemize}\n\n\textbf{Webhooks configurados:}\n\begin{itemize}\n\item \textbf{Billing System:} POST daily consumption $\rightarrow$ CRM/ERP externo\n\item \textbf{Slack Notifications:} POST critical alarms $\rightarrow$ canal #ami-alerts\n\item \textbf{Prometheus Exporter:} M�tricas ThingsBoard $\rightarrow$ Grafana Cloud\n\end{itemize}\n\n\section{S�ntesis de Implementaci�n por Niveles}\n\label{sec:impl-sintesis}\n\nLa implementaci�n pr�ctica valid� la viabilidad t�cnica de la arquitectura de 4 niveles:\n\n\textbf{Nivel 1 (Nodos Thread):} 30 ESP32-C6 operando 90 d�as, 99.2\% uptime, consumo 5 mW promedio\n\n\textbf{Nivel 2 (Red HaLow):} Router Alfa Networks + HaLow alcance 1.2 km LOS, throughput 4 Mbps @ 4 MHz, latencia 11 ms P95\n\n\textbf{Nivel 3 (Gateway Edge):} 3 Raspberry Pi 4 ejecutando Docker stack (6 microservicios), 99.97\% disponibilidad, CPU promedio 42\%\n\n\textbf{Nivel 4 (Cloud ThingsBoard):} AWS deployment manejando 192 dispositivos, 2.88M mensajes/mes, costo \$2.03/dispositivo/mes\n\n\textbf{TCO piloto 90 d�as:} CAPEX \$776 (hardware) + OPEX \$1,170 (AWS 3 meses) = \textbf{\$1,946 total} = \$10.13/dispositivo implementado\n\nEl siguiente cap�tulo (Cap�tulo 5) presenta los resultados experimentales cuantitativos derivados de esta implementaci�n, validando las hip�tesis H1-H8 formuladas en �1.2.5.\n\n\section{Conclusiones del Cap�tulo}\n\label{sec:impl-conclusiones}
-
-Este cap�tulo document� la implementaci�n pr�ctica de la arquitectura propuesta, cubriendo especificaciones de hardware (ESP32-C6, Raspberry Pi 4, m�dulos LTE), desarrollo de firmware (OpenThread, parser DLMS/COSEM, stack Docker), configuraciones de red (Thread, HaLow, LTE), implementaci�n de controles de seguridad (Secure Boot, WPA3-SAE, PKI X.509), y procedimientos de deployment estandarizados.
-
-La implementaci�n piloto con 30 medidores durante 90 d�as (Q4 2024) valid� la viabilidad t�cnica de la arquitectura, con resultados experimentales presentados en detalle en el Cap�tulo~\ref{chap:resultados}.
-
-% Aspectos clave implementaci�n:
+% Aspectos clave implementaciÃÂ¯ÃÂ¿ÃÂ½n:
 % - Hardware COTS (Commercial Off-The-Shelf) reduce costos vs soluciones propietarias
-% - Firmware open-source (ESP-IDF, OpenThread) facilita auditor�a seguridad
+% - Firmware open-source (ESP-IDF, OpenThread) facilita auditorÃÂ¯ÃÂ¿ÃÂ½a seguridad
 % - Arquitectura containerizada (Docker) simplifica deployment y updates
 % - Procedimientos deployment estandarizados permiten escalado a cientos de nodos
 

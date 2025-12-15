@@ -1,0 +1,30 @@
+﻿=== ANÁLISIS EXHAUSTIVO DE TESIS - REVISIÓN TUTOR ===
+
+Fecha: 2025-12-15 15:42
+
+Total páginas PDF: 317
+
+
+--- CONTEO DE ELEMENTOS POR CAPÍTULO ---
+
+Cap6 (06Resultados_Validacion.tex):
+  Figuras: 0 | Tablas: 17 | Secciones: 11 | Subsecciones: 41
+
+Cap1 (01Introduccion.tex):
+  Figuras: 0 | Tablas: 5 | Secciones: 8 | Subsecciones: 21
+
+Cap7 (07Conclusiones_TrabajoFuturo.tex):
+  Figuras: 0 | Tablas: 0 | Secciones: 0 | Subsecciones: 0
+
+Cap2 (02MarcoTeorico_Rework.tex):
+  Figuras: 0 | Tablas: 1 | Secciones: 7 | Subsecciones: 14
+
+Cap4 (04Gateway_HaLow_Edge.tex):
+  Figuras: 6 | Tablas: 6 | Secciones: 5 | Subsecciones: 16
+
+Cap5 (05Server_ThingsBoard_Kafka.tex):
+  Figuras: 1 | Tablas: 3 | Secciones: 7 | Subsecciones: 9
+
+Cap3 (03NodoIoT_Thread_LwM2M.tex):
+  Figuras: 2 | Tablas: 7 | Secciones: 7 | Subsecciones: 13
+

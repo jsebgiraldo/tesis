@@ -28,7 +28,7 @@ Este anexo presenta el desglose detallado de las ocho hipótesis específicas qu
 \item Throughput sostenido: mensajes/segundo procesados sin pérdida durante carga pico
 \end{itemize}
 
-\textbf{Nota:} Detección de anomalías mediante modelos LLM locales (Ollama + Llama 3.2 3B) documentada en fundamentos teóricos Cap. 2 §2.5 no fue implementada en piloto actual. Integración de IA local es línea de investigación futura L6 (Cap. 7 §7.X) que requiere dataset validación 6-12 meses y upgrade hardware gateway.
+\textbf{Nota:} Detección avanzada de anomalías no fue implementada en piloto actual. Esta funcionalidad requiere dataset de validación de 6-12 meses y upgrade de hardware del gateway.
 
 \textbf{Validación experimental:} Secciones §4.5 (Gateway Edge Computing), §5.2 (Análisis Latencia)
 
@@ -112,7 +112,7 @@ Este anexo presenta el desglose detallado de las ocho hipótesis específicas qu
 
 \section{H8 - Ventaja Comparativa Integral}
 
-\textbf{Enunciado:} La arquitectura propuesta supera a arquitecturas tradicionales (cloud-centric MQTT/LTE) en al menos 5 de 7 métricas clave: latencia (<30\% baseline), overhead paquetes (<40\% baseline), tráfico WAN (<35\% baseline), disponibilidad offline (>72h vs 0h), precisión IA (>95\% vs N/A), alcance HaLow (>150\% vs WiFi), y eficiencia energética (<60\% baseline).
+\textbf{Enunciado:} La arquitectura propuesta supera a arquitecturas tradicionales (cloud-centric MQTT/LTE) en al menos 5 de 6 métricas clave: latencia (<30\% baseline), overhead paquetes (<40\% baseline), tráfico WAN (<35\% baseline), disponibilidad offline (>72h vs 0h), alcance HaLow (>150\% vs WiFi), y eficiencia energética (<60\% baseline).
 
 \textbf{Métricas de validación:}
 \begin{enumerate}
@@ -120,12 +120,11 @@ Este anexo presenta el desglose detallado de las ocho hipótesis específicas qu
 \item \textbf{Overhead}: (header\_bytes\_propuesta / payload\_bytes) / (header\_bytes\_baseline / payload\_bytes)
 \item \textbf{Tráfico WAN}: GB\_wan\_propuesta / GB\_wan\_baseline
 \item \textbf{Disponibilidad offline}: horas\_operacion\_autonoma\_propuesta vs baseline
-\item \textbf{Precisión IA}: accuracy\_deteccion\_anomalias\_propuesta vs baseline\_sin\_ia
 \item \textbf{Alcance}: distancia\_km\_halow / distancia\_km\_wifi\_24ghz
 \item \textbf{Eficiencia energética}: mJ\_por\_bit\_propuesta / mJ\_por\_bit\_baseline
 \end{enumerate}
 
-\textbf{Criterio éxito:} $\geq$5 de 7 métricas cumpliendo los umbrales especificados
+\textbf{Criterio éxito:} $\geq$5 de 6 métricas cumpliendo los umbrales especificados
 
 \textbf{Validación experimental:} Sección §5.9 (Comparación con Literatura), §5.10 (Discusión de Resultados)
 
@@ -141,7 +140,7 @@ Este anexo presenta el desglose detallado de las ocho hipótesis específicas qu
 \hline
 H1 & Stack 6LoWPAN/CoAP/LwM2M optimizado & §5.3.1 \\
 \hline
-H2 & Procesamiento Edge con IA & §5.2.2, §5.2.4 \\
+H2 & Procesamiento Edge & §5.2.2, §5.2.4 \\
 \hline
 H3 & Arquitectura Multi-Banda 802.11ah & §5.6 \\
 \hline

@@ -53,6 +53,9 @@
 
 % Otros paquetes de tablas y colores avanzados
 \usepackage{amsmath,amssymb,graphicx,rotating,float,multirow}
+% Configure graphicx to prioritize PNG over SVG (better LaTeX compatibility)
+\DeclareGraphicsExtensions{.png,.pdf,.jpg,.jpeg,.svg}
+\DeclareGraphicsRule{.svg}{png}{.png}{}
 \usepackage{longtable}
 \setlength{\LTcapwidth}{6in}
 \usepackage[utf8]{inputenc}
@@ -206,6 +209,8 @@
 \usepackage{chemformula}
 \usepackage{chemfig}
 
+% Make TikZ compatible with babel Spanish
+\usetikzlibrary{babel}
 \usetikzlibrary{calc,arrows.meta,positioning,shapes.geometric}% per right to e left to
 \tikzset{
 myedge/.style={->, -{Latex[#1]}}

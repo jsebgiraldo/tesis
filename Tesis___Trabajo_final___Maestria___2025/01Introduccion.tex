@@ -262,21 +262,21 @@ Aunque existen múltiples tecnologías para backhaul IoT y conectividad AMI, se 
 \centering
 \caption{Análisis Comparativo de Tecnologías Excluidas vs Wi-Fi HaLow}
 \label{tab:exclusiones-justificadas}
-\footnotesize
-\begin{tabular}{|l|l|l|l|}
+\small
+\begin{tabular}{|l|l|}
 \hline
 \rowcolor{gray!20}
-\textbf{Tecnología} & \textbf{Limitante Crítica} & \textbf{Impacto Cuantitativo} & \textbf{Por qué HaLow es Superior} \\
+\textbf{Tecnología} & \textbf{Limitante Crítica} \\
 \hline
-\textbf{5G/NR-Light} & OPEX recurrente operadora celular & \$15-25/dispositivo/mes = \$180K-300K/año @ 1,000 medidores. CAPEX densificación small cells \$15K-25K/celda en indoor. & HaLow: \textbf{\$0 OPEX} post-deployment (espectro no licenciado ISM 900 MHz). \textbf{Ahorro 90\% TCO 10 años} (\$107 vs \$1,800-3,000 5G). \\
+\textbf{5G/NR-Light} & OPEX \$15-25/mes/disp = \$180K-300K/año \\
 \hline
-\textbf{NB-IoT} & Throughput insuficiente para waveforms power quality & 250 kbps vs 400 kbps requeridos para transmisión simultánea 10 kHz sampling rate + overhead CoAP (\textbf{déficit 62\%}). Latencia variable 50-100 ms por scheduling red compartida. & HaLow: 43.3 Mbps @ 8 MHz BW (\textbf{173$\times$ superior}). Latencia determinística <30 ms. OPEX \$0 vs \$8-12/mes NB-IoT. \\
+\textbf{NB-IoT} & Throughput 250 kbps vs 400 kbps requeridos \\
 \hline
-\textbf{PLC (G3-PLC/PRIME)} & Limitado por topología transformadores MT/BT & Requiere bypass comunicaciones \$500-1,200/transformador. Red 100 medidores = 10 transformadores = \textbf{\$5K-12K CAPEX adicional}. Atenuación variable por distancia cable (60-90 dB/km). & HaLow: Propagación RF \textbf{transparente a transformadores}. Alcance 1 km directo sin repetidores. CAPEX \$40-60 radio vs \$500+ coupler PLC. \\
+\textbf{PLC (G3-PLC)} & Bypass \$500-1200/transformador \\
 \hline
-\textbf{Zigbee Pro (2.4 GHz)} & Alcance limitado + latencia multi-hop & 50-100 m @ 2.4 GHz requiere topología mesh multi-hop (latencia +15-30 ms/hop $\times$ 3-5 hops = +45-150 ms). Interferencia WiFi co-channel. & HaLow: 1 km alcance directo, topología star/tree \textbf{sin multi-hop}. Sub-GHz 900 MHz (mejor penetración muros, -3 dB vs -10 dB 2.4 GHz). \\
+\textbf{Zigbee Pro} & Alcance 50-100 m, multi-hop \\
 \hline
-\textbf{LoRaWAN (privado)} & Throughput extremadamente bajo & 50 kbps máximo (SF7 @ 125 kHz), 5.5 kbps típico (SF10). \textbf{Insuficiente para waveforms} (400 kbps). Latencia 1-5s por ALOHA sin CSMA. & HaLow: 250 kbps mínimo (MCS0), \textbf{45$\times$ superior} LoRa típico. CSMA/CA garantiza latencia <100 ms. \\
+\textbf{LoRaWAN} & Throughput 5.5-50 kbps insuficiente \\
 \hline
 \end{tabular}
 \end{table}

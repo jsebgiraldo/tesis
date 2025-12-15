@@ -4553,3 +4553,53 @@
   keywords = {smart meter, DLMS/COSEM, P2000-T, Emsitech, three-phase metering, PoE, RJ45, ANSI}
 }
 
+@online{thingsboardEdgeArchitecture2024,
+  title = {ThingsBoard Edge Architecture Documentation},
+  author = {{ThingsBoard Team}},
+  year = {2024},
+  url = {https://thingsboard.io/docs/edge/edge-architecture/},
+  urldate = {2024-12-15},
+  note = {Official architecture documentation for ThingsBoard Edge 3.6.2. Describes monolithic deployment (7 components, single JVM, 512 MB RAM minimum), PostgreSQL + TimescaleDB buffer (7-day configurable capacity), gRPC Cloud Manager synchronization, and offline operation capabilities. Includes comparison with microservices Cloud architecture.},
+  keywords = {ThingsBoard Edge, IoT platform, edge computing, offline buffer, PostgreSQL, gRPC, architecture}
+}
+
+@online{thingsboardEdgeFeatures2024,
+  title = {What is ThingsBoard Edge? - Getting Started Guide},
+  author = {{ThingsBoard Team}},
+  year = {2024},
+  url = {https://thingsboard.io/docs/edge/getting-started-guides/what-is-edge/},
+  urldate = {2024-12-15},
+  note = {Features overview of ThingsBoard Edge including: offline operation with local PostgreSQL buffer, data filtering Rule Engine (reducing WAN traffic 65-80\%), local alarm detection (<10 ms latency), local dashboards (web UI Express.js), and batch configuration updates from Cloud. Includes official SVG diagrams for offline networking, data filtering, alarm processing, and batch updates used in thesis Chapter 4.},
+  keywords = {ThingsBoard Edge, edge features, offline operation, data filtering, local alarms, Rule Engine, dashboard}
+}
+
+@online{thingsboardCloudArchitecture2024,
+  title = {ThingsBoard Cloud - Microservices Architecture},
+  author = {{ThingsBoard Team}},
+  year = {2024},
+  url = {https://thingsboard.io/docs/reference/msa/},
+  urldate = {2024-12-15},
+  note = {Microservices architecture documentation for ThingsBoard Cloud 3.6.2. Describes Docker Compose deployment (12 containers), Kafka message broker (8 partitions, 2 brokers), PostgreSQL RDS Multi-AZ persistence, Redis ElastiCache, and horizontal scaling capabilities (10,000+ devices). Includes official SVG diagram contrasting with Edge monolithic architecture. Used for thesis Chapter 5 Cloud platform implementation.},
+  keywords = {ThingsBoard Cloud, microservices, Docker Compose, Kafka, PostgreSQL, horizontal scaling, cloud architecture}
+}
+
+@online{awsGreengrassPricing2024,
+  title = {AWS IoT Greengrass Pricing},
+  author = {{Amazon Web Services}},
+  year = {2024},
+  url = {https://aws.amazon.com/iot-greengrass/pricing/},
+  urldate = {2024-12-15},
+  note = {Official AWS IoT Greengrass pricing: \$2.20/device/month for first 10,000 devices (\$0.16 per device for 10K-100K devices). Includes Greengrass Core software, Lambda@Edge runtime, and Fleet configuration management. Compared with ThingsBoard Edge (\$0 OPEX, Apache 2.0 license) in thesis cost analysis.},
+  keywords = {AWS Greengrass, pricing, OPEX, IoT edge, cost comparison}
+}
+
+@online{azureIoTEdgePricing2024,
+  title = {Azure IoT Edge Pricing},
+  author = {{Microsoft Azure}},
+  year = {2024},
+  url = {https://azure.microsoft.com/en-us/pricing/details/iot-edge/},
+  urldate = {2024-12-15},
+  note = {Official Azure IoT Edge pricing: \$1.50/device/month (includes module runtime, IoT Hub device twin synchronization, and container orchestration). Does not include Azure IoT Hub messages (\$0.50 per 1M messages). Compared with ThingsBoard Edge open-source license in thesis vendor evaluation.},
+  keywords = {Azure IoT Edge, pricing, OPEX, Microsoft, cost comparison, IoT platform}
+}
+

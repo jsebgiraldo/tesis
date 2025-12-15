@@ -1,5 +1,5 @@
-% Diagrama detallado de conexión hardware Alfa Networks Tube AHM con Raspberry Pi 4
-% Muestra configuración física: Tube AHM como AP HaLow, RPi4 como STA con módulo HaLow USB
+% Diagrama detallado de conexion hardware Alfa Networks Tube AHM con Raspberry Pi 4
+% Muestra configuracion fisica: Tube AHM como AP HaLow, RPi4 como STA con modulo HaLow USB
 
 \begin{figure}[H]
 \centering
@@ -52,7 +52,7 @@
     \tiny USB Dongle\\Thread OTBR
 };
 
-% Puerto Ethernet RPi4 (conexión primaria a Tube AHM)
+% Puerto Ethernet RPi4 (conexion primaria a Tube AHM)
 \node[connector] at (0,-3.2) (eth_rpi) {ETH0\\GbE (primary)
 };
 
@@ -61,7 +61,7 @@
     \textbf{Role: Edge Gateway}\\ThingsBoard Edge + OTBR
 };
 
-% ============ CONEXIÓN ETHERNET LOCAL ============
+% ============ CONEXION ETHERNET LOCAL ============
 
 % Enlace Ethernet local entre RPi4 y Tube AHM
 \draw[arrow, black, thick] (eth_rpi) -- (eth_tube) 
@@ -77,11 +77,11 @@
 % ============ NOTAS ARQUITECTURA ============
 
 \node[below=0.5cm of rpi, font=\footnotesize, text width=12cm, align=left] {
-    \textbf{Arquitectura Distributed Mesh Gateways (Peer-to-Peer):}\\[0.2cm]
-    $\bullet$ \textbf{Alfa Networks Tube AHM:} Router comercial standalone MT7628 + MM6108 radio HaLow 802.11ah. Opera en modo Mesh Point IEEE 802.11s peer con protocolo HWMP, sin jerarqu\'ia maestro-esclavo.\\[0.1cm]
+    $\bullet$ \textbf{Arquitectura Distributed Mesh Gateways (Peer-to-Peer):}\\[0.2cm]
+    $\bullet$ \textbf{Alfa Networks Tube AHM:} Router comercial standalone MT7628 + MM6108 radio HaLow 802.11ah. Opera en modo Mesh Point IEEE 802.11s peer con protocolo HWMP, sin jerarquía maestro-esclavo.\\[0.1cm]
     $\bullet$ \textbf{Raspberry Pi 4:} Gateway edge con Docker stack (ThingsBoard Edge, OTBR, PostgreSQL). Integrado localmente por Ethernet GbE al puerto LAN del Tube AHM co-ubicado.\\[0.1cm]
-    $\bullet$ \textbf{Conexi\'on Ethernet local:} RPi4 conectado directamente por Ethernet al Tube AHM. Tráfico Thread agregado inyectado al backbone HaLow mesh compartido v\'ia routing HWMP cooperativo.\\[0.1cm]
-    $\bullet$ \textbf{Ventaja peer-to-peer:} Todos los Gateways Edge son Mesh Points peers equipolentes. M\'ultiples rutas redundantes entre gateways hacia Mesh Gate. Fallos de cualquier Mesh Point no interrumpen servicio de otros: HWMP re-enruta tráfico autom\'aticamente por paths alternativos disponibles en topolog\'ia full-mesh.\\[0.1cm]
+    $\bullet$ \textbf{Conexión Ethernet local:} RPi4 conectado directamente por Ethernet al Tube AHM. Tráfico Thread agregado inyectado al backbone HaLow mesh compartido vía routing HWMP cooperativo.\\[0.1cm]
+    $\bullet$ \textbf{Ventaja peer-to-peer:} Todos los Gateways Edge son Mesh Points peers equipolentes. Múltiples rutas redundantes entre gateways hacia Mesh Gate. Fallos de cualquier Mesh Point no interrumpen servicio de otros: HWMP re-enruta tráfico automáticamente por paths alternativos disponibles en topología full-mesh.\\[0.1cm]
     $\bullet$ \textbf{Thread Border Router:} Cada RPi4 ejecuta OTBR mediante nRF52840 USB Dongle, creando red Thread local para 15 nodos IoT ESP32-C6.
 };
 
