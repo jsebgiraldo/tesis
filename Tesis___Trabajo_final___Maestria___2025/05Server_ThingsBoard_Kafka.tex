@@ -33,7 +33,7 @@ Kafka maneja ingest concurrente desde múltiples Gateways Edge (QoS 1 MQTT), des
 
 \begin{itemize}
     \item \S\ref{sec:server-infraestructura}: Infraestructura hardware AWS (EC2, RDS, MSK), arquitectura Kafka (topics, partitions, consumer groups), balanceo carga HAProxy
-    \item \S\ref{sec:server-tb-server}: Despliegue ThingsBoard microservicios (Docker Compose 12 containers), PostgreSQL+TimescaleDB schema, backup/recovery
+    \item \S\ref{sec:server-tb-server}: Despliegue ThingsBoard microservicios (Docker Compose 12 containers, Figura~\ref{fig:thingsboard-architecture}), PostgreSQL+TimescaleDB schema, backup/recovery
     \item \S\ref{sec:server-logica}: Lógica negocio (Asset Model, Rule Chains billing/alarmas/analytics), dashboards multi-tenant
     \item \S\ref{sec:server-conclusiones}: Síntesis contribuciones capítulo, transición Cap 6 Resultados
 \end{itemize}
@@ -400,21 +400,190 @@ Prueba carga simulando 500 devices @ 1 msg/s (500 msgs/s total):
 \subsection{Arquitectura de Microservicios}
 \label{sec:server-tb-arquitectura}
 
-% TODO: MIGRAR y EXPANDIR (600 palabras NUEVAS)
-% - Microservicios ThingsBoard:
-%   1. tb-core (8 instances, stateless)
-%   2. tb-rule-engine (4 instances)
-%   3. tb-web-ui (Nginx, 2 instances)
-%   4. tb-js-executor (Node.js, 4 instances)
-%   5. tb-mqtt-transport (2 instances)
-%   6. tb-http-transport (2 instances)
-%   7. tb-coap-transport (1 instance)
-%   8. postgresql (primary + replica)
-%   9. redis (cache + session)
-%   10. kafka (3 brokers)
-%   11. zookeeper (3 nodes)
-%   12. prometheus + grafana (monitoring)
-% Figura: Arquitectura microservicios ThingsBoard
+ThingsBoard 3.6.2 Community Edition implementa una arquitectura de microservicios distribuida basada en containers Docker, diseñada para escalabilidad horizontal, alta disponibilidad y procesamiento de eventos masivo. La Figura~\ref{fig:thingsboard-architecture} ilustra los 12 componentes principales desplegados en AWS EC2.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.95\textwidth]{figures/thingsboard-architecture.svg}
+\caption{Arquitectura de microservicios ThingsBoard 3.6.2 desplegada en AWS. La plataforma integra 4 capas: (1) \textbf{Transport Layer} para ingesta multi-protocolo (MQTT/HTTP/CoAP), (2) \textbf{Core Services} con Actor System para procesamiento concurrente y Rule Engine para lógica de negocio, (3) \textbf{Data Layer} con PostgreSQL+TimescaleDB para persistencia time-series, Redis para cache, y Kafka como message broker, (4) \textbf{API Layer} con REST/WebSocket para dashboards y integraciones externas. Arquitectura permite escalado horizontal de cada capa independientemente según carga (transport layer 2 instancias, core services 8 instancias piloto, expansión a 32+ instancias producción).}
+\label{fig:thingsboard-architecture}
+\end{figure}
+
+\subsubsection{Capa de Transporte (Transport Layer)}
+
+La capa de transporte desacopla los protocolos de comunicación IoT del core de procesamiento, permitiendo agregar nuevos protocolos sin modificar la lógica de negocio.
+
+\textbf{Microservicios transport desplegados (piloto):}
+
+\begin{enumerate}
+    \item \textbf{tb-mqtt-transport (2 instancias):}
+    \begin{itemize}
+        \item Función: Broker MQTT sobre TCP 1883 (no-TLS) y 8883 (TLS 1.3), maneja conexiones persistentes devices, QoS 0-1 support
+        \item Protocolo: MQTT 3.1.1 y 5.0, topics pattern \texttt{v1/devices/me/\{telemetry|attributes\}}
+        \item Autenticación: Device access token (20 chars alfanumérico), validación contra PostgreSQL \texttt{device\_credentials}
+        \item Load balancing: AWS ALB round-robin con sticky sessions habilitado (MQTT session state)
+        \item Throughput validado: 1,200 msgs/s por instancia (piloto: 0.03 msgs/s promedio, margen 40,000×)
+        \item Recursos: CPU 0.5 core, RAM 512 MB por instancia
+    \end{itemize}
+    
+    \item \textbf{tb-http-transport (1 instancia):}
+    \begin{itemize}
+        \item Función: REST API HTTP/HTTPS para telemetría y atributos, stateless (no WebSocket)
+        \item Endpoints: \texttt{POST /api/v1/\{token\}/telemetry}, \texttt{GET /api/v1/\{token\}/attributes}
+        \item Uso: Devices con conectividad intermitente (batch uploads), debugging (curl/Postman)
+        \item Throughput: 500 requests/s (piloto: 5 requests/día provisioning, API admin uso exclusivo)
+    \end{itemize}
+    
+    \item \textbf{tb-coap-transport (1 instancia):}
+    \begin{itemize}
+        \item Función: CoAP sobre UDP 5683, optimizado NB-IoT/LTE-M (overhead reducido vs HTTP)
+        \item Implementación: Californium framework Java, block-wise transfer (1024 bytes)
+        \item Estado: Desplegado pero no usado piloto (Thread nodes usan MQTT directo)
+    \end{itemize}
+\end{enumerate}
+
+\textbf{Flujo ingesta transport → core:} Transport layer valida credenciales device, parsea payload JSON/Protobuf, publica mensaje a Kafka topic \texttt{tb.transport.api.requests}, consume respuesta de topic \texttt{tb.transport.api.responses}, retorna ACK a device. Latencia medida transport: 8 ms P95 (validación credentials Redis cache hit).
+
+\subsubsection{Servicios Core (Core Services)}
+
+Los servicios core implementan el Actor System basado en Akka para procesamiento concurrente de millones de eventos, gestión de estado devices/assets, y ejecución del Rule Engine.
+
+\textbf{tb-core (stateless, escalable horizontalmente):}
+
+\begin{itemize}
+    \item \textbf{Componentes principales:}
+    \begin{enumerate}
+        \item \textbf{Actor System:} Modelo actor Akka (1 actor por device), procesamiento asíncrono no-bloqueante, mailbox queue 10,000 mensajes
+        \item \textbf{Device Actor:} Gestiona estado device (atributos, relaciones, alarmas), procesa telemetría secuencialmente, persiste a PostgreSQL vía JPA
+        \item \textbf{Rule Engine Actor:} Ejecuta Rule Chains configuradas por tenant, invoca tb-js-executor vía gRPC para scripts custom
+        \item \textbf{Relation Service:} Maneja grafo de relaciones Asset → Device → Telemetry, consultas BFS/DFS
+        \item \textbf{Alarm Service:} Detección condiciones alarma (thresholds, duration), ciclo de vida (created → acknowledged → cleared)
+    \end{enumerate}
+    
+    \item \textbf{Configuración piloto AWS:}
+    \begin{itemize}
+        \item Instancias: 1 instancia tb-core (suficiente 192 devices, escalado a 8 instancias para 10,000+ devices)
+        \item Recursos: CPU 2.0 cores limit, RAM 2048 MB limit
+        \item Actor pool: 192 device actors + 3 rule engine actors (1 por Rule Chain activa)
+        \item Throughput: 3,300 msgs/s teórico (Actor System benchmark), piloto 0.03 msgs/s (margen 110,000×)
+    \end{itemize}
+    
+    \item \textbf{Persistencia:}
+    \begin{itemize}
+        \item Write path: Telemetry → Actor mailbox → Batch aggregation (500 msgs o 1s timeout) → PostgreSQL COPY bulk insert
+        \item Read path: Dashboard query → Cache check Redis → PostgreSQL SELECT con índices BRIN timestamp
+        \item Cache hit rate medido: 87\% (atributos device frecuente acceso), miss penalty 12 ms PostgreSQL query
+    \end{itemize}
+\end{itemize}
+
+\textbf{tb-js-executor (Node.js 18 runtime):}
+
+\begin{itemize}
+    \item Función: Ejecuta scripts JavaScript custom en Rule Chain nodes (Transform, Filter, Enrich)
+    \item Comunicación: gRPC con tb-core (puerto 9090), pooling 4 workers por instancia
+    \item Sandbox: VM2 aislamiento, timeout 5s por script, memoria limit 128 MB per execution
+    \item Scripts implementados piloto:
+    \begin{enumerate}
+        \item \texttt{kwhCalculation.js:} Transforma current (A) + voltage (V) $\rightarrow$ energy\_kwh = (V × I × \texttt{interval\_min}) / 60,000
+        \item \texttt{billingCalculation.js:} Aplica tarifas por hora (peak/off-peak) según timestamp
+        \item \texttt{anomalyDetection.js:} Detecta outliers (Z-score >3 respecto media 7 días)
+    \end{enumerate}
+    \item Recursos: CPU 0.5 core, RAM 512 MB por instancia, 2 instancias desplegadas
+\end{itemize}
+
+\subsubsection{Capa de Datos (Data Layer)}
+
+\textbf{PostgreSQL 15.4 + TimescaleDB 2.13:}
+
+Documentado extensivamente en §\ref{sec:server-postgresql}. Resumen: 42 tablas relacionales (devices, assets, users, dashboards) + hypertable \texttt{ts\_kv} particionada por tiempo (chunks 7 días), compression policy (ratio 10:1), continuous aggregates (pre-computación hourly/daily).
+
+\textbf{Redis 7.0 (cache + session storage):}
+
+\begin{itemize}
+    \item \textbf{Uso cache:}
+    \begin{itemize}
+        \item Device attributes (lectura frecuente): TTL 5 min, eviction LRU
+        \item Credentials validation: TTL 60 min (renueva cada auth exitoso)
+        \item Dashboard queries: TTL 30s (datos real-time)
+    \end{itemize}
+    \item \textbf{Session storage:} JWT tokens (expiry 24h), OAuth2 refresh tokens
+    \item \textbf{Métricas piloto:} Hit rate 87\%, memoria usada 180 MB / 3 GB provisionados, keys stored 4,200
+    \item \textbf{Persistencia:} RDB snapshot cada 1h + AOF (Append-Only File) para durabilidad
+\end{itemize}
+
+\textbf{Apache Kafka 3.5.1:}
+
+Documentado en §\ref{sec:server-kafka}. Resumen: 8 topics (transport requests/responses, rule engine, notifications, audit logs), 8 partitions por topic, replication factor 2, retention 7 días (1.2 GB storage piloto).
+
+\subsubsection{Capa de API y UI (API/UI Layer)}
+
+\textbf{tb-web-ui (Nginx reverse proxy):}
+
+\begin{itemize}
+    \item Función: Sirve dashboards Angular SPA, reverse proxy a tb-core REST API (puerto 8080), WebSocket proxy para updates real-time
+    \item Configuración:
+    \begin{verbatim}
+upstream tb-core {
+    server tb-core-1:8080 max_fails=3 fail_timeout=30s;
+    server tb-core-2:8080 max_fails=3 fail_timeout=30s;  # Producción 8 instancias
+    keepalive 32;
+}
+location /api/ {
+    proxy_pass http://tb-core;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+}
+location /api/ws {
+    proxy_pass http://tb-core;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+}
+    \end{verbatim}
+    \item TLS termination: Certificado AWS ACM, TLS 1.3, HSTS enabled
+    \item Recursos: CPU 0.3 core, RAM 256 MB
+\end{itemize}
+
+\textbf{REST API endpoints principales:}
+
+\begin{itemize}
+    \item \texttt{GET /api/tenant/devices}: Lista devices por tenant (paginación, filtros tipo/label)
+    \item \texttt{GET /api/plugins/telemetry/DEVICE/\{id\}/values/timeseries}: Query telemetría rango temporal
+    \item \texttt{POST /api/ruleChain}: CRUD Rule Chains (drag-and-drop JSON metadata)
+    \item \texttt{POST /api/alarm/\{id\}/ack}: Acknowledge alarma (cambio estado ACTIVE\_ACK → CLEARED\_ACK)
+    \item \texttt{POST /api/rpc/twoway/\{deviceId\}}: RPC bidireccional device (actuation commands)
+\end{itemize}
+
+\textbf{Autenticación y autorización:}
+
+\begin{itemize}
+    \item \textbf{JWT tokens:} Header \texttt{Authorization: Bearer <token>}, payload contiene \texttt{userId}, \texttt{tenantId}, \texttt{authority} (TENANT\_ADMIN, CUSTOMER\_USER)
+    \item \textbf{RBAC:} Role-Based Access Control, 4 roles predefinidos (SYS\_ADMIN, TENANT\_ADMIN, CUSTOMER\_USER, GENERIC\_USER)
+    \item \textbf{Entity-level permissions:} Customer solo accede devices asignados, Tenant Admin full access devices tenant
+    \item \textbf{Audit logs:} Todas operaciones CRUD logged (tabla \texttt{audit\_log}, retención 90 días)
+\end{itemize}
+
+\textbf{Escalabilidad arquitectura microservicios:}
+
+\begin{table}[H]
+\centering
+\caption{Estrategia escalado horizontal ThingsBoard por capa según carga}
+\label{tab:thingsboard-scaling}
+\small
+\begin{tabular}{|l|c|c|l|}
+\hline
+\textbf{Capa} & \textbf{Piloto} & \textbf{Producción} & \textbf{Bottleneck indicador} \\
+\hline
+Transport (MQTT) & 2 inst. & 4-8 inst. & Conexiones activas >5,000/inst. \\
+Core (tb-core) & 1 inst. & 8-32 inst. & CPU >70\%, Actor mailbox >5,000 \\
+JS Executor & 2 inst. & 4-16 inst. & gRPC queue depth >100 \\
+PostgreSQL & 1 primary & Primary + 2 read replicas & TPS >3,000, connections >100 \\
+Redis & 1 inst. & Redis Cluster 3 nodes & Memory >80\%, evictions >100/s \\
+Kafka & 2 brokers & 3-6 brokers & Partition lag >10,000 msgs \\
+\hline
+\end{tabular}
+\end{table}
+
+La arquitectura stateless de transport y core layers permite agregar instancias en minutos mediante Docker Compose scale command o Kubernetes HPA (Horizontal Pod Autoscaler). Data layer (PostgreSQL, Kafka) requiere planificación: sharding PostgreSQL por tenant para >100,000 devices, incrementar partitions Kafka para >10,000 msgs/s.
 
 \subsection{Configuración Docker Compose}
 \label{sec:server-tb-docker}

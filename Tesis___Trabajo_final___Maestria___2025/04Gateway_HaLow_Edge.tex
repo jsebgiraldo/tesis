@@ -809,7 +809,7 @@ Conclusión validación: Red HaLow cumple requisito cobertura 90\%+ área con th
 \section{Despliegue de ThingsBoard Edge}
 \label{sec:gateway-tb-edge}
 
-ThingsBoard Edge 3.6.2 es la plataforma de procesamiento edge ejecutada en el Gateway Raspberry Pi 4, proporcionando: (1) Rule Engine local para filtrado y pre-procesamiento de telemetría, (2) Persistencia local PostgreSQL+TimescaleDB con buffer offline 7 días, (3) Dashboards locales para operadores de campo sin conectividad WAN, (4) Sincronización bidireccional automática con ThingsBoard Cloud cuando hay conectividad LTE disponible.
+ThingsBoard Edge 3.6.2 es la plataforma de procesamiento edge ejecutada en el Gateway Raspberry Pi 4, proporcionando: (1) Rule Engine local para filtrado y pre-procesamiento de telemetría, (2) Persistencia local PostgreSQL+TimescaleDB con buffer offline 7 días, (3) Dashboards locales para operadores de campo sin conectividad WAN, (4) Sincronización bidireccional automática con ThingsBoard Cloud cuando hay conectividad LTE disponible. La arquitectura Edge complementa la plataforma Cloud (Capítulo~\ref{chap:server-thingsboard}, Figura~\ref{fig:thingsboard-architecture}), implementando subset de microservicios optimizados para recursos limitados Raspberry Pi 4.
 
 \subsection{Arquitectura ThingsBoard Edge}
 \label{sec:gateway-tb-edge-arquitectura}
