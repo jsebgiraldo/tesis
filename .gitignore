@@ -244,6 +244,11 @@ $RECYCLE.BIN/
 .git/
 .gitattributes
 
+# Obsidian (versionar notas/canvas; ignorar estado local volátil)
+.obsidian/workspace*
+.obsidian/cache/
+.obsidian/graph.json.bak
+
 # LaTeX compilation logs
 compile_*.txt
 compile_log*.txt

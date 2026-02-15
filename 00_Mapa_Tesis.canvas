@@ -1,0 +1,85 @@
+{
+  "nodes": [
+    {
+      "id": "moc",
+      "type": "file",
+      "file": "00_Mapa_Tesis.md",
+      "x": -420,
+      "y": -40,
+      "width": 360,
+      "height": 120
+    },
+    {
+      "id": "c1",
+      "type": "file",
+      "file": "capitulos/01_Introduccion.md",
+      "x": 40,
+      "y": -260,
+      "width": 360,
+      "height": 120
+    },
+    {
+      "id": "c2",
+      "type": "file",
+      "file": "capitulos/02_Marco_Teorico.md",
+      "x": 40,
+      "y": -120,
+      "width": 360,
+      "height": 120
+    },
+    {
+      "id": "c3",
+      "type": "file",
+      "file": "capitulos/03_Nodo_IoT_Thread_LwM2M.md",
+      "x": 40,
+      "y": 20,
+      "width": 360,
+      "height": 120
+    },
+    {
+      "id": "c4",
+      "type": "file",
+      "file": "capitulos/04_Gateway_HaLow_Edge.md",
+      "x": 40,
+      "y": 160,
+      "width": 360,
+      "height": 120
+    },
+    {
+      "id": "c5",
+      "type": "file",
+      "file": "capitulos/05_Server_ThingsBoard_Kafka.md",
+      "x": 40,
+      "y": 300,
+      "width": 360,
+      "height": 120
+    },
+    {
+      "id": "c6",
+      "type": "file",
+      "file": "capitulos/06_Resultados_Validacion.md",
+      "x": 40,
+      "y": 440,
+      "width": 360,
+      "height": 120
+    },
+    {
+      "id": "c7",
+      "type": "file",
+      "file": "capitulos/07_Conclusiones_Trabajo_Futuro.md",
+      "x": 40,
+      "y": 580,
+      "width": 360,
+      "height": 120
+    }
+  ],
+  "edges": [
+    { "id": "e1", "fromNode": "moc", "fromSide": "right", "toNode": "c1", "toSide": "left" },
+    { "id": "e2", "fromNode": "moc", "fromSide": "right", "toNode": "c2", "toSide": "left" },
+    { "id": "e3", "fromNode": "moc", "fromSide": "right", "toNode": "c3", "toSide": "left" },
+    { "id": "e4", "fromNode": "moc", "fromSide": "right", "toNode": "c4", "toSide": "left" },
+    { "id": "e5", "fromNode": "moc", "fromSide": "right", "toNode": "c5", "toSide": "left" },
+    { "id": "e6", "fromNode": "moc", "fromSide": "right", "toNode": "c6", "toSide": "left" },
+    { "id": "e7", "fromNode": "moc", "fromSide": "right", "toNode": "c7", "toSide": "left" }
+  ]
+}
