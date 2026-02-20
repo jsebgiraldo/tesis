@@ -1,0 +1,71 @@
+/*
+ * ESP32-C6 AMI Node — Device Tree Overlay (Zephyr v4.2.0)
+ *
+ * Configura:
+ * - UART1 para RS-485 (medidor DLMS/Modbus) — TX: GPIO10, RX: GPIO11
+ * - GPIO para RS-485 DE/RE control          — GPIO4
+ * - GPIO para tamper detection              — GPIO5
+ * - LED de estado                           — GPIO8
+ *
+ * La board base (esp32c6_devkitc_hpcore) ya habilita:
+ *   ieee802154, wifi, uart0 (console), gpio0, trng0, wdt0
+ */
+
+#include <zephyr/dt-bindings/pinctrl/esp-pinctrl-common.h>
+#include <dt-bindings/pinctrl/esp32c6-pinctrl.h>
+#include <zephyr/dt-bindings/pinctrl/esp32c6-gpio-sigmap.h>
+
+/* ── Pinctrl para UART1 (RS-485) ──────────────────────────── */
+&pinctrl {
+	uart1_default: uart1_default {
+		group1 {
+			pinmux = <UART1_TX_GPIO10>;
+			output-high;
+		};
+		group2 {
+			pinmux = <UART1_RX_GPIO11>;
+			bias-pull-up;
+		};
+	};
+};
+
+/ {
+	aliases {
+		meter-uart = &uart1;
+		led0 = &led_status;
+	};
+
+	leds {
+		compatible = "gpio-leds";
+		led_status: led_0 {
+			gpios = <&gpio0 8 GPIO_ACTIVE_LOW>;
+			label = "Status LED";
+		};
+	};
+
+	/* RS-485 direction control (DE/RE pin) */
+	rs485_ctrl {
+		compatible = "gpio-keys";
+		rs485_de: rs485_de_pin {
+			gpios = <&gpio0 4 GPIO_ACTIVE_HIGH>;
+			label = "RS485 DE/RE";
+		};
+	};
+
+	/* Tamper detection switch */
+	tamper_detect {
+		compatible = "gpio-keys";
+		tamper_sw: tamper_switch {
+			gpios = <&gpio0 5 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
+			label = "Tamper Switch";
+		};
+	};
+};
+
+/* UART1: RS-485 to meter (DLMS/COSEM or Modbus RTU) */
+&uart1 {
+	status = "okay";
+	current-speed = <9600>;
+	pinctrl-0 = <&uart1_default>;
+	pinctrl-names = "default";
+};

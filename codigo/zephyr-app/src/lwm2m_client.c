@@ -9,6 +9,7 @@
  */
 
 #include <zephyr/kernel.h>
+#include <zephyr/version.h>
 #include <zephyr/logging/log.h>
 #include <zephyr/net/lwm2m.h>
 

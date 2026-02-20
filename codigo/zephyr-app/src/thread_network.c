@@ -124,5 +124,21 @@ uint16_t thread_get_rloc16(void)
 
 int8_t thread_get_rssi(void)
 {
-	return otLinkGetAverageRssi(openthread_get_default_instance());
+	int8_t avg_rssi;
+	int8_t last_rssi;
+	otError err;
+
+	err = otThreadGetParentAverageRssi(openthread_get_default_instance(),
+					   &avg_rssi);
+	if (err == OT_ERROR_NONE) {
+		return avg_rssi;
+	}
+
+	err = otThreadGetParentLastRssi(openthread_get_default_instance(),
+					&last_rssi);
+	if (err == OT_ERROR_NONE) {
+		return last_rssi;
+	}
+
+	return 0; /* No RSSI available */
 }
