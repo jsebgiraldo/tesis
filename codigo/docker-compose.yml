@@ -1,0 +1,53 @@
+# ============================================================================
+# Docker Compose — Servicios de desarrollo para AMI Thread+LwM2M
+#
+# Servicios:
+#   leshan    — Servidor LwM2M (Eclipse Leshan) — UI: http://localhost:8080
+#   otbr      — OpenThread Border Router        — UI: http://localhost:8081
+#
+# Uso:
+#   docker compose up -d
+#   docker compose logs -f leshan
+#   docker compose down
+# ============================================================================
+
+services:
+  # ── Eclipse Leshan — LwM2M Server ──────────────────────────────
+  leshan:
+    image: eclipsefoundation/leshan:latest
+    container_name: leshan-lwm2m
+    restart: unless-stopped
+    ports:
+      - "8080:8080"        # Web UI
+      - "5683:5683/udp"    # CoAP (no-sec)
+      - "5684:5684/udp"    # CoAP (DTLS)
+    networks:
+      - ami-dev
+
+  # ── OpenThread Border Router ───────────────────────────────────
+  # Requiere: nRF52840 Dongle como RCP en /dev/ttyACM0
+  # Si no tienes dongle, comenta este servicio y usa OT CLI simulado
+  otbr:
+    image: openthread/otbr:latest
+    container_name: otbr
+    restart: unless-stopped
+    privileged: true
+    sysctls:
+      - net.ipv6.conf.all.disable_ipv6=0
+      - net.ipv6.conf.all.forwarding=1
+    ports:
+      - "8081:80"          # Web UI
+    volumes:
+      - /dev:/dev
+    command: >
+      --radio-url spinel+hdlc+uart:///dev/ttyACM0?uart-baudrate=1000000
+    networks:
+      - ami-dev
+
+networks:
+  ami-dev:
+    driver: bridge
+    enable_ipv6: true
+    ipam:
+      config:
+        - subnet: fd00:db8:ami::/64

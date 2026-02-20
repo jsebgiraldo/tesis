@@ -1,0 +1,87 @@
+# ==============================================================
+# .gitignore — Tesis + Firmware Zephyr ESP32-C6
+# ==============================================================
+
+# --- LaTeX build artifacts ---
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.synctex.gz
+*.toc
+*.lof
+*.lot
+*.nav
+*.snm
+*.vrb
+*.idx
+*.ilg
+*.ind
+*.run.xml
+*.bcf
+*-blx.bib
+*.dvi
+*.ps
+# Keep .pdf for sharing compiled thesis
+# *.pdf
+
+# minted cache
+_minted-*/
+*.pyg
+*.data.minted
+
+# --- Zephyr / West build ---
+codigo/zephyr-app/build/
+codigo/zephyr-app/twister-out*/
+codigo/zephyr-app/.west/
+
+# Zephyr SDK (installed on each machine, not tracked)
+zephyr-sdk-*/
+
+# West managed modules (cloned per machine)
+# If using west workspace inside codigo/, ignore cloned repos:
+codigo/zephyr/
+codigo/modules/
+codigo/bootloader/
+codigo/tools/
+
+# --- Python ---
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+*.egg-info/
+
+# --- IDE / Editor ---
+.vscode/settings.json
+.vscode/launch.json
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# --- Docker ---
+docker-compose.override.yml
+
+# --- Logs & data (large, share via rsync not git) ---
+datos/logs_firmware/
+datos/pcaps/
+*.pcap
+*.pcapng
+
+# --- Binaries (use Releases or rsync for firmware binaries) ---
+*.bin
+*.elf
+*.hex
+*.map
+
+# --- Obsidian (optional, keep workspace config) ---
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
+.trash/
