@@ -1,0 +1,11 @@
+mainmenu "AMI Thread+LwM2M Node"
+
+config AMI_FW_VERSION
+	string "AMI node firmware version"
+	default "0.2.0"
+	help
+	  Version string for AMI firmware, reported via LwM2M Object 3
+	  (Device) and Object 5 (Firmware Update). Updated on each release.
+	  Format: MAJOR.MINOR.PATCH (semver).
+
+source "Kconfig.zephyr"

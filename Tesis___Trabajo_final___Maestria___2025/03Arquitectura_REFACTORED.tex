@@ -41,7 +41,7 @@ La arquitectura propuesta implementa cuatro niveles especializados, cada uno con
 
 \subsubsection{Nivel 1: Medidores y Nodos IoT}
 
-El primer nivel comprende los medidores inteligentes (Itron SL7000, Landis+Gyr E650) con interfaces DLMS/COSEM sobre RS-485, y los nodos adaptadores IoT basados en ESP32-C6 con radio IEEE 802.15.4 para protocolo Thread. Cada medidor se conecta mediante puerto óptico o RS-485 (9600 bps) a un nodo IoT que ejecuta firmware ESP-IDF 5.1 con stack OpenThread 1.3.0. Los nodos operan en modo \textit{Sleepy End Device} (SED) con ciclo de trabajo 0.1\% (despierta cada 15 minutos para lectura), consumiendo 233 mW promedio incluyendo medidor en standby~\cite{krawiecEnergyFootprintReliability2025}. La traducción de protocolos DLMS/COSEM a CoAP/JSON se realiza en el nodo IoT, encapsulando códigos OBIS (voltage, current, active/reactive energy) en payloads de 200 bytes que se transmiten mediante Thread mesh hacia el siguiente nivel.
+El primer nivel comprende los medidores inteligentes (Itron SL7000, Landis+Gyr E650) con interfaces DLMS/COSEM sobre RS-485, y los nodos adaptadores IoT basados en ESP32-C6 con radio IEEE 802.15.4 para protocolo Thread. Cada medidor se conecta mediante puerto óptico o RS-485 (9600 bps) a un nodo IoT que ejecuta firmware ESP-IDF 5.1 con stack OpenThread 1.3.0. Los nodos operan en modo \textit{Minimal End Device} (MED, RX always-on) alimentados directamente desde el puerto auxiliar 5V del medidor, consumiendo 135 mW promedio (27 mA) en operación continua 24/7~\cite{krawiecEnergyFootprintReliability2025}. La traducción de protocolos DLMS/COSEM a CoAP/JSON se realiza en el nodo IoT, encapsulando códigos OBIS (voltage, current, active/reactive energy) en payloads de 200 bytes que se transmiten mediante Thread mesh hacia el siguiente nivel.
 
 \subsubsection{Nivel 2: Border Router y Gateway Edge}
 
@@ -164,7 +164,7 @@ La selección de Thread 1.4.0 sobre Zigbee 3.0 (ambos basados en IEEE 802.15.4) 
 \hline
 \textbf{Costo módulos (2024)} & \$5-8 & \$3-5 & Zigbee 40\% más económico. Diferencial se reduce con adopción Matter. \\
 \hline
-\textbf{Consumo energético} & 5-10 mA sleep & 3-5 mA sleep & Zigbee menor consumo. En esta arquitectura nodos alimentados desde medidor (5V disponible), no limitante. \\
+\textbf{Consumo energético} & 19 mA activo (MED) & 3-5 mA sleep & Thread mayor consumo como MED (RX always-on). Nodos alimentados desde medidor (5V disponible), no limitante. \\
 \hline
 \textbf{Seguridad} & AES-128-CCM-8 & AES-128-CCM & Thread añade PAKE con ECC P-256 para commissioning (más robusto que Install Code Zigbee). \\
 \hline

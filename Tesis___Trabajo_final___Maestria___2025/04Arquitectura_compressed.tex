@@ -10,9 +10,9 @@ La arquitectura sigue el modelo ISO/IEC 30141 con tres capas claramente definida
 
 \subsection{Nivel 1: Nodos IoT (Sensores/Actuadores)}
 
-\textbf{Hardware}: ESP32-C6 con radio Thread 802.15.4 integrado, transceptor RS-485 (MAX485), alimentación 5V desde medidor o batería + supercap, antena PCB 2.4 GHz.
+\textbf{Hardware}: ESP32-C6 con radio Thread 802.15.4 integrado, transceptor RS-485 (MAX485), alimentación 5V directa desde puerto auxiliar del medidor, antena PCB 2.4 GHz.
 
-\textbf{Software}: OpenThread stack (ESP-IDF), cliente LwM2M AVSystems Anjay para gestión remota (objetos 3, 3303, 3304), cliente DLMS simplificado para lectura OBIS, sleep modes (<10 µA en deep sleep).
+\textbf{Software}: OpenThread stack (ESP-IDF), cliente LwM2M AVSystems Anjay para gestión remota (objetos 3, 3303, 3304), cliente DLMS simplificado para lectura OBIS. Al estar alimentado desde el medidor, el nodo opera en modo continuo (MED, RX always-on) sin modos de reposo.
 
 \textbf{Función}: Actúan como puente entre medidor (RS-485/DLMS) y red Thread mesh, leyendo perfiles de carga cada 15 min y transmitiendo vía IPv6/6LoWPAN al DCU.
 
@@ -185,7 +185,7 @@ Conformidad & IEEE 2030.5, ISO/IEC 30141 & Propietario \\
     \item \textbf{Temperatura}: Operación -10°C a +50°C, requiere cooling en exterior
     \item \textbf{Regulación}: HaLow 915-928 MHz disponible solo Región 2, verificar local
     \item \textbf{Soporte HaLow}: Driver ath11k en desarrollo activo, posibles bugs kernel 5.15
-    \item \textbf{Consumo nodo}: 50 mA activo (ESP32-C6 + RS485), requiere batería >2000 mAh
+    \item \textbf{Consumo nodo}: 27 mA promedio (ESP32-C6 + RS485 + regulador LDO), alimentado continuamente desde puerto auxiliar 5V del medidor
 \end{itemize}
 
 \subsection{Mejoras Propuestas}

@@ -15,7 +15,7 @@ target_sources(app PRIVATE
     src/lwm2m_objects.c
     src/meter_dlms.c
     src/meter_modbus.c
-    src/power_mgmt.c
+    src/fota.c
 )
 
 target_include_directories(app PRIVATE

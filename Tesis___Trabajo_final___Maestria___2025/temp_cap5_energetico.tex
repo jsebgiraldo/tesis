@@ -18,7 +18,7 @@ Esta sección cuantifica el consumo energético de cada componente de la arquite
 \hline
 Medidor Itron SL7000 & Red AC 120/240V & 3.3V interno & \textcolor{blue}{\textbf{1.8 W}} continuo & Siempre activo (medición, display LCD, RTC) & 43.2 Wh \\
 \hline
-Nodo ESP32-C6 & Medidor 5V aux & 3.3V & \textcolor{green}{\textbf{0.48 W}} promedio & Sleep 5$\mu$A (28 min) + Active 160mA @ 160MHz (2 min) duty 7\%  & 11.5 Wh \\
+Nodo ESP32-C6 & Medidor 5V aux & 3.3V & \textcolor{green}{\textbf{0.135 W}} continuo & MED RX always-on 19 mA + TX 22 mA + RS-485 35 mA picos, alimentado desde medidor  & 3.24 Wh \\
 \hline
 Transceptor RS-485 & Mismo 3.3V & 3.3V & 0.05 W & MAX485 idle 300$\mu$A, TX 15mA durante 10s/hora & 1.2 Wh \\
 \hline

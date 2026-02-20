@@ -252,3 +252,14 @@ $RECYCLE.BIN/
 # LaTeX compilation logs
 compile_*.txt
 compile_log*.txt
+
+# --- Zephyr / Firmware build artifacts ---
+codigo/zephyr-app/build/
+__pycache__/
+*.pyc
+
+# PDF revisiones (pesados, no versionar)
+rev/*.pdf
+
+# Patches temporales
+*.patch

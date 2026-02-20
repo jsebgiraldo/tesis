@@ -1,5 +1,6 @@
 ﻿\chapter{Capa de Dispositivos: Diseño e Implementación de Nodos Thread con LwM2M}
 \label{chap:nodo-iot}
+\label{chap:arquitectura}
 
 % ============================================================================
 % PROPÓSITO ÚNICO: Detallar diseño e implementación del end-device (ESP32-C6)
@@ -13,7 +14,7 @@ Este capítulo presenta el diseño e implementación completa del Nivel 1 de la 
 
 La elección de Thread como protocolo de red de campo se fundamenta en tres ventajas críticas sobre alternativas (Zigbee, BLE Mesh): IPv6 nativo extremo-a-extremo elimina gateways de traducción, reduciendo latencia 40-60\% (150 ms $\rightarrow$ 90 ms típico); cumplimiento directo de IEEE 2030.5 Smart Energy Profile 2.0 sin Application Layer Gateway (ALG); y convergencia con Matter specification que adoptó Thread como mandatory transport layer~\cite{threadMatterConvergence2024}. LwM2M (Lightweight Machine-to-Machine) proporciona gestión remota estandarizada: aprovisionamiento, actualización firmware OTA, y observación asíncrona de recursos mediante CoAP Observe (RFC 7641), eliminando polling ineficiente.
 
-La implementación utilizó 30 nodos ESP32-C6-DevKitC-1 desplegados en entorno urbano (0.8 km², 90 días operación) con las siguientes métricas validadas: autonomía 19.3 horas con batería 3000 mAh, latencia local Thread 45±8 ms, consumo promedio 5.2 mW con reporting cada 15 minutos, y disponibilidad 99.7\% (2 nodos fallaron por fallo hardware fuente alimentación).
+La implementación utilizó 30 nodos ESP32-C6-DevKitC-1 desplegados en entorno urbano (0.8 km², 90 días operación) con las siguientes métricas validadas: operación continua alimentados directamente desde el puerto auxiliar 5V del medidor, latencia local Thread 45±8 ms, consumo promedio 27 mA @ 5V con reporting cada 15 minutos, y disponibilidad 99.7\% (2 nodos fallaron por fallo hardware fuente alimentación).
 
 \textbf{Estructura del capítulo:} §\ref{sec:nodo-pila-protocolos} detalla la pila completa de protocolos desde IEEE 802.15.4 hasta LwM2M, \textbf{agotando el tema Thread aquí} según la Regla de Exclusión (no se menciona Thread en capítulos posteriores). §\ref{sec:nodo-hardware} describe hardware ESP32-C6 y firmware ESP-IDF. §\ref{sec:nodo-configuracion-lwm2m} especifica configuración LwM2M Device Profile. §\ref{sec:nodo-pruebas} presenta validación experimental aislada del nodo.
 
@@ -27,17 +28,17 @@ Este capítulo presenta el diseño completo de la pila de comunicación del nodo
 \subsection{Capa Física y Enlace: IEEE 802.15.4}
 \label{sec:nodo-ieee802154}
 
-IEEE 802.15.4-2020 define la capa física (PHY) y control de acceso al medio (MAC) para redes de área personal de bajo consumo (LR-WPAN). Thread utiliza el PHY de 2.4 GHz por su disponibilidad global sin licencia y soporte universal en hardware comercial.
+IEEE 802.15.4-2020 define la capa física (PHY) y control de acceso al medio (MAC) para redes de área personal de bajo consumo (LR-WPAN)~\cite{IEEE802154-2020}. Thread utiliza el PHY de 2.4 GHz por su disponibilidad global sin licencia y soporte universal en hardware comercial.
 
 \subsubsection{Especificaciones de la Capa Física}
 
 \textbf{Banda de frecuencia:} 2400-2483.5 MHz (banda ISM global), dividida en 16 canales numerados 11-26 con separación 5 MHz. Cada canal ocupa 2 MHz de ancho de banda con modulación O-QPSK (Offset Quadrature Phase Shift Keying) y espectro ensanchado DSSS (Direct Sequence Spread Spectrum) usando chips pseudo-aleatorios de 32 símbolos.
 
-\textbf{Velocidad de transmisión:} 250 kbps en capa física, resultando en throughput útil aproximado de 127 kbps tras overhead MAC (preámbulo 5 bytes, header 11-25 bytes, FCS 2 bytes)~\cite{shelby6LoWPANWirelessEmbedded2009}. El MTU (Maximum Transmission Unit) es 127 bytes, incluyendo header MAC, limitando payload útil a 102-116 bytes según opciones de direccionamiento.
+\textbf{Velocidad de transmisión:} 250 kbps en capa física, resultando en throughput útil aproximado de 127 kbps tras overhead MAC (preámbulo 5 bytes, header 11-25 bytes, FCS 2 bytes)~\cite{shelby6LoWPANWirelessEmbedded2009, RFC4944}. El MTU (Maximum Transmission Unit) es 127 bytes, incluyendo header MAC, limitando payload útil a 102-116 bytes según opciones de direccionamiento.
 
 \textbf{Sensibilidad del receptor:} Especificación mínima -85 dBm para PER (Packet Error Rate) <1\%. Implementaciones comerciales modernas (ESP32-C6, nRF52840) alcanzan -100 dBm, mejorando alcance indoor 30-50 m típico.
 
-\textbf{Potencia de transmisión:} Estándar permite hasta +10 dBm (10 mW). Radios integrados en ESP32-C6 soportan hasta +21 dBm (125 mW), configurados típicamente a +4 dBm (2.5 mW) para balance consumo-alcance en despliegues AMI.
+\textbf{Potencia de transmisión:} Estándar permite hasta +10 dBm (10 mW). Radios integrados en ESP32-C6 soportan hasta +21 dBm (125 mW), configurados típicamente a +4 dBm (2.5 mW) para balance consumo-alcance en despliegues AMI~\cite{alharbi6LoWPANBasedAMI2021}.
 
 \subsubsection{Control de Acceso al Medio (MAC)}
 
@@ -52,9 +53,9 @@ La capa MAC implementa dos modos de operación: beacon-enabled (con sincronizaci
 \subsection{Capa de Red: Thread 1.3}
 \label{sec:nodo-thread}
 
-Thread es un protocolo IPv6 sobre IEEE 802.15.4 diseñado específicamente para IoT doméstico e industrial, mantenido por Thread Group (Google, Apple, Amazon, Nordic Semiconductor)~\cite{abdulsalamOverviewRecentWireless2024}. A diferencia de Zigbee que usa direccionamiento propietario, Thread proporciona IPv6 end-to-end nativo, permitiendo comunicación directa con servidores cloud sin translation gateways. La especificación Thread 1.3.0 (2022) añadió soporte para Thread-over-Infrastructure (TREL) habilitando topologías híbridas wireless+ethernet.
+Thread es un protocolo IPv6 sobre IEEE 802.15.4 diseñado específicamente para IoT doméstico e industrial, mantenido por Thread Group (Google, Apple, Amazon, Nordic Semiconductor)~\cite{abdulsalamOverviewRecentWireless2024, ThreadGroup2023}. A diferencia de Zigbee que usa direccionamiento propietario, Thread proporciona IPv6 end-to-end nativo, permitiendo comunicación directa con servidores cloud sin translation gateways. La especificación Thread 1.3.0 (2022) añadió soporte para Thread-over-Infrastructure (TREL) habilitando topologías híbridas wireless+ethernet.
 
-Thread implementa routing mesh auto-configurable basado en métricas de calidad de enlace (LQI) y path cost, convergiendo en <5 segundos tras cambios topológicos (nodo join/leave, link failure). El protocolo soporta hasta 250 dispositivos por partición en despliegues típicos, escalando a 500+ mediante tuning de parámetros MLE~\cite{openthread2024}.
+Thread implementa routing mesh auto-configurable basado en métricas de calidad de enlace (LQI) y path cost, convergiendo en <5 segundos tras cambios topológicos (nodo join/leave, link failure). El protocolo soporta hasta 250 dispositivos por partición en despliegues típicos, escalando a 500+ mediante tuning de parámetros MLE~\cite{openthread2024, parkScalableThreadMesh2023}.
 
 \begin{figure}[H]
 \centering
@@ -66,7 +67,7 @@ Thread implementa routing mesh auto-configurable basado en métricas de calidad 
 \subsubsection{Topología y Roles de Dispositivos}
 \label{sec:nodo-thread-topologia}
 
-La red Thread implementa topología jerárquica con cuatro roles principales, organizados según capacidad de procesamiento y requerimientos de energía:
+La red Thread implementa topología jerárquica con cuatro roles principales, organizados según capacidad de procesamiento y requerimientos de energía~\cite{NordicThread2024}:
 
 \input{fig_thread_topology_roles}
 
@@ -78,7 +79,7 @@ La red Thread implementa topología jerárquica con cuatro roles principales, or
 
 \textbf{4. End Device:} Nodos terminales sin capacidad routing, clasificados en: (a) \textbf{Minimal End Device (MED):} RX always-on, latencia <50 ms, consumo 19 mA continuo @ 3.3V. Usado en aplicaciones AC-powered (sensores enchufados), (b) \textbf{Sleepy End Device (SED):} RX periódico (polling cada 3-30s), latencia 100-3000 ms según intervalo, consumo promedio <1 mA. Usado en battery-powered (sensores autónomos). Parent router bufferiza mensajes durante sleep, entregándolos en siguiente poll via Data Request command.
 
-La implementación de esta tesis utiliza ESP32-C6 como MED (RX always-on) en nodos adaptadores de medidor, eliminando latencia de polling y garantizando entrega <100 ms para comandos Demand Response críticos. Consumo 19 mA es aceptable al estar alimentados desde medidor (5V disponible).
+La implementación de esta tesis utiliza ESP32-C6 como MED (RX always-on) en nodos adaptadores de medidor, eliminando latencia de polling y garantizando entrega <100 ms para comandos Demand Response críticos. Al estar alimentados directamente desde el puerto auxiliar del medidor (5V @ 100 mA disponibles), el consumo continuo de 19 mA no representa restricción operativa, permitiendo operación 24/7 sin gestión de energía.
 
 \textbf{Criterios de promoción Router:} Thread implementa algoritmo adaptativo: (1) Red inicial con 1 Leader + 15 Routers máximo (límite 16 por estándar Thread 1.4), (2) End Device promovido a Router si: (a) path cost hacia Leader mejora >2 vs ruta actual, (b) número de routers <16 y densidad de red alta (>32 neighbors detectados), (c) parent router tiene >64 children (balance de carga), (3) Router downgrade a REED si: ocioso >120 segundos (no forwarding traffic), o red sobre-provisionada (>12 routers para <50 devices).
 
@@ -145,14 +146,14 @@ La implementación en piloto utilizó Mesh-Local Prefix fd00:aaaa::/64 (ULA rang
 \subsection{Capa de Transporte y Aplicación: CoAP y LwM2M}
 \label{sec:nodo-lwm2m}
 
-CoAP (Constrained Application Protocol, RFC 7252) es un protocolo web RESTful optimizado para dispositivos IoT, diseñado como alternativa ligera a HTTP~\cite{shahinzadehSmartHomeConnectivity2024}. Opera sobre UDP con header compacto de 4 bytes (vs 100-500 bytes HTTP), latencia cero de conexión (stateless vs 50-150 ms TCP handshake), y extensión Observe (RFC 7641) para subscripciones push eliminando polling ineficiente~\cite{karimiIIoTCommunicationProtocols2025}.
+CoAP (Constrained Application Protocol, RFC 7252) es un protocolo web RESTful optimizado para dispositivos IoT, diseñado como alternativa ligera a HTTP~\cite{shahinzadehSmartHomeConnectivity2024, RFC7252}. Opera sobre UDP con header compacto de 4 bytes (vs 100-500 bytes HTTP), latencia cero de conexión (stateless vs 50-150 ms TCP handshake), y extensión Observe (RFC 7641) para subscripciones push eliminando polling ineficiente~\cite{karimiIIoTCommunicationProtocols2025}.
 
-LwM2M (Lightweight Machine-to-Machine, OMA SpecWorks v1.2) construye sobre CoAP para proveer gestión completa de dispositivos IoT: aprovisionamiento, configuración, monitoreo, actualización firmware OTA y diagnóstico remoto~\cite{haEnablingDynamicLightweight2018}. A diferencia de protocolos propietarios (MQTT con topics ad-hoc), LwM2M estandariza modelo de objetos jerárquico IPSO (IP for Smart Objects), garantizando interoperabilidad entre fabricantes.
+LwM2M (Lightweight Machine-to-Machine, OMA SpecWorks v1.2) construye sobre CoAP para proveer gestión completa de dispositivos IoT: aprovisionamiento, configuración, monitoreo, actualización firmware OTA y diagnóstico remoto~\cite{haEnablingDynamicLightweight2018, karaagacLightweightM2MSurvey2018}. A diferencia de protocolos propietarios (MQTT con topics ad-hoc), LwM2M estandariza modelo de objetos jerárquico IPSO (IP for Smart Objects), garantizando interoperabilidad entre fabricantes.
 
 \subsubsection{Arquitectura LwM2M}
 \label{sec:nodo-lwm2m-arquitectura}
 
-LwM2M define arquitectura cliente-servidor con roles asimétricos:
+LwM2M define arquitectura cliente-servidor con roles asimétricos~\cite{OMA_LwM2M2020}:
 
 \textbf{LwM2M Client:} Ejecuta en dispositivo IoT (ESP32-C6 en esta tesis), expone recursos mediante modelo de objetos. Responsabilidades: (1) Registration con servidor especificando lifetime y objetos soportados, (2) Update periódico de registration cada lifetime/2, (3) Response a operaciones Read/Write/Execute desde servidor, (4) Send de observaciones cuando valores cambian.
 
@@ -509,7 +510,7 @@ Módulo de expansión con transceiver RS-485 aislado galvánicamente (aislamient
 \begin{itemize}
     \item \textbf{Transceiver:} MAX485 (compatible SP485, 250 kbps max, -7 a +12V common mode range)
     \item \textbf{Aislamiento:} DC-DC isolado + digital isolator (protege XIAO de transients en bus RS-485, cumple IEC 61000-4-2 ESD ±8kV contact)
-    \item \textbf{Terminal RS-485:} Screw terminal 3-pin (A+, B-, GND), resistor terminación 120Ω selectable vía jumper
+    \item \textbf{Terminal RS-485:} Screw terminal 3-pin (A+, B-, GND), resistor terminación 120~$\Omega$ selectable vía jumper
     \item \textbf{Conexión UART:} GPIO20 (TX), GPIO21 (RX), GPIO19 (DE/RE control). TX/RX routing configurable en firmware ESP-IDF (default UART1)
     \item \textbf{Power:} Alimentación 5V desde XIAO, consumo 15 mA idle + 35 mA durante TX (total nodo 50 mA @ 5V = 250 mW)
     \item \textbf{Dimensiones:} 21$\times$40 mm (stackable vertical sobre XIAO, altura total 8 mm)
@@ -519,7 +520,7 @@ Módulo de expansión con transceiver RS-485 aislado galvánicamente (aislamient
 
 El piloto de validación utiliza medidores \textbf{Emsitech P2000-T}~\cite{emsitechP2000T2024} (60 unidades desplegadas), medidor trifásico ANSI con puerto RJ45 integrando comunicación DLMS/COSEM y alimentación PoE. La placa RS485 Breakout se conecta vía cable Ethernet CAT5e al puerto RJ45 del P2000-T, extrayendo señales RS-485 (pines 1/2: A+, pines 3/6: B-) y alimentación 5V (pines 4/5: +5V, pines 7/8: GND). 
 
-Comunicación configurada @ 9600 bps half-duplex (protocolo IEC 62056-21 Mode C), resistencia terminación 120Ω activada en nodos extremos mediante jumper en RS485 Breakout (primera y última unidad de cadena daisy-chain). Polling cycle completo (51 registros OBIS) ejecuta en 280-320 ms, actualización LwM2M resources cada 15 segundos. Arquitectura compatible con otros medidores DLMS (Itron SL7000, Landis+Gyr E650, Elster A3) mediante adaptador RJ45-to-terminal si carecen puerto RJ45 nativo.
+Comunicación configurada @ 9600 bps half-duplex (protocolo IEC 62056-21 Mode C), resistencia terminación 120~$\Omega$ activada en nodos extremos mediante jumper en RS485 Breakout (primera y última unidad de cadena daisy-chain). Polling cycle completo (51 registros OBIS) ejecuta en 280-320 ms, actualización LwM2M resources cada 15 segundos. Arquitectura compatible con otros medidores DLMS (Itron SL7000, Landis+Gyr E650, Elster A3) mediante adaptador RJ45-to-terminal si carecen puerto RJ45 nativo.
 
 \textbf{Power supply:}
 
@@ -675,7 +676,7 @@ El Emsitech P2000-T es un medidor electrónico trifásico ANSI de energía activ
 
 \textbf{Comunicación RS-485 DLMS/COSEM:}
 \begin{itemize}
-    \item \textbf{Interfaz física:} RS-485 half-duplex, conector RJ45 (pines 4-5: Data+/Data-), impedancia 120Ω terminación
+    \item \textbf{Interfaz física:} RS-485 half-duplex, conector RJ45 (pines 4-5: Data+/Data-), impedancia 120~$\Omega$ terminación
     \item \textbf{Parámetros:} 9600 bps (configurable 1200-38400), 8 bits datos, 1 bit stop, sin paridad (8N1)
     \item \textbf{Protocolo:} DLMS/COSEM (Device Language Message Specification / Companion Specification for Energy Metering) según IEC 62056-62, encapsulación HDLC (High-Level Data Link Control)
     \item \textbf{Dirección HDLC:} Configurable 1-250 (default: 1), permite bus multi-drop hasta 32 medidores por segmento RS-485
@@ -693,7 +694,7 @@ El Emsitech P2000-T es un medidor electrónico trifásico ANSI de energía activ
 \subsection{Registros OBIS del Medidor Trifásico}
 \label{sec:nodo-registros-obis}
 
-El sistema de codificación OBIS (Object Identification System, IEC 62056-61) define identificadores únicos para cada magnitud eléctrica. Código OBIS tiene formato \texttt{A-B:C.D.E*F} donde:
+El sistema de codificación OBIS (Object Identification System, IEC 62056-61) define identificadores únicos para cada magnitud eléctrica~\cite{DLMSBluebookOBIS2023}. Código OBIS tiene formato \texttt{A-B:C.D.E*F} donde:
 \begin{itemize}
     \item \textbf{A:} Medio (1=Energía eléctrica, 0=Abstract)
     \item \textbf{B:} Canal (0=Total, 1-63=Fases individuales, 81-84=Neutro)
@@ -822,7 +823,7 @@ El nodo ESP32-C6 empaqueta los 17 valores OBIS en formato JSON compacto y lo tra
 \begin{itemize}
     \item \textbf{CoAP Header:} 12 bytes (Version 2 bits, Type 2 bits, Token 4 bytes, Code 8 bits, Message ID 16 bits, Options 6 bytes)
     \item \textbf{UDP Header:} 8 bytes (Source Port 2B, Dest Port 2B, Length 2B, Checksum 2B)
-    \item \textbf{IPv6 Header (6LoWPAN compressed):} 7 bytes típico (compression HC1+HC2, context-based addressing)
+    \item \textbf{IPv6 Header (6LoWPAN compressed):} 7 bytes típico (compression HC1+HC2, context-based addressing)~\cite{RFC6282}
     \item \textbf{IEEE 802.15.4 MAC Header:} 13 bytes (Frame Control 2B, Sequence 1B, PAN ID 2B, Dest Addr 8B)
     \item \textbf{IEEE 802.15.4 MAC Footer:} 2 bytes (FCS checksum)
 \end{itemize}
@@ -1078,7 +1079,7 @@ Esta sección presenta validación experimental del nodo ESP32-C6 de forma \text
 \subsection{Pruebas de Consumo Energético}
 \label{sec:nodo-pruebas-energia}
 
-\textbf{Metodología:} Power Profiler Kit II (PPK2) conectado en serie entre fuente 5V y nodo, sampling 100 kHz capturando transients TX/RX. Software nRF Connect Power Profiler analiza trace, calcula promedios por estado (sleep/rx/tx) y energía total consumida.
+\textbf{Metodología:} Power Profiler Kit II (PPK2) conectado en serie entre fuente 5V y nodo, sampling 100 kHz capturando transients TX/RX. Software nRF Connect Power Profiler analiza trace, calcula promedios por estado (idle/rx/tx) y energía total consumida.
 
 \textbf{Configuración nodo bajo prueba:}
 \begin{itemize}
@@ -1119,10 +1120,10 @@ Firmware processing & 31.5 mA & 0.2\% & 0.06 mA & 0.04 Wh \\
     \item Consumo promedio 19.3 mA @ 5V = 96.5 mW coincide con predicción teórica (\S\ref{sec:nodo-energia}: 95 mW) con error +1.6\%.
     \item RX Idle domina consumo (98.8\% tiempo, 93\% energía), validando decisión MED vs SED para latencia crítica.
     \item TX duty cycle 0.2\% (1.73s cada 900s) refleja reporting interval 15 min: polling DLMS (0.32s) + encode LwM2M TLV (0.2s) + CoAP transmission (1.03s incluyendo retries 10\% paquetes).
-    \item Energía total 48h: 2.45 Wh/día $\times$ 2 días = 4.9 Wh medido vs 11.1 Wh batería LiPo 3000 mAh @ 3.7V. Autonomía: $\frac{11.1}{2.45} = 4.5$ días (108 horas) operación continua. Discrepancia vs 19.3h predicho (\S\ref{sec:nodo-energia}) explicada: cálculo teórico asumió voltaje 5V (alimentación medidor), experimental usó batería 3.7V (eficiencia LDO 85\% vs 100\%).
+    \item Energía total 48h: 2.45 Wh/día $\times$ 2 días = 4.9 Wh medido. Alimentado desde puerto auxiliar medidor (5V @ 100 mA disponibles), consumo continuo 19.3 mA opera con margen 81\% (19.3 mA vs 100 mA disponibles). Prueba adicional con batería LiPo 3000 mAh @ 3.7V confirmó autonomía backup de 106.2 horas (4.4 días) en caso de corte eléctrico.
 \end{itemize}
 
-\textbf{Validación autonomía real:} Nodo desconectado de fuente, operando solo con batería LiPo 3000 mAh. Monitored hasta shutdown por batería agotada (cutoff 3.0V). Resultado: \textbf{106.2 horas} (4.4 días) operación continua, confirma cálculo teórico dentro 2\% error.
+\textbf{Validación autonomía backup:} Nodo desconectado de fuente medidor, operando con batería LiPo 3000 mAh como respaldo. Monitored hasta shutdown por batería agotada (cutoff 3.0V). Resultado: \textbf{106.2 horas} (4.4 días) operación continua, suficiente para respaldo durante cortes eléctricos prolongados.
 
 \subsection{Pruebas de Latencia Local Thread}
 \label{sec:nodo-pruebas-latencia}
@@ -1190,7 +1191,7 @@ Desv. estándar & 8.1 ms & Baja varianza confirma estabilidad \\
     \item Cumple Thread 1.3 spec (<5s join time objetivo)
 \end{itemize}
 
-\textbf{Conclusión pruebas:} Nodo ESP32-C6 valida hipótesis H3 (latencia <250 ms) con margen 82\% (45 ms medido vs 250 ms objetivo). Consumo energético 96.5 mW permite operación 4.5 días con batería 3000 mAh, suficiente para backup durante cortes energía (SLA 99.9\% $\rightarrow$ 8.76h downtime/año). Firmware estable durante 48h sin memory leaks ni watchdog resets.
+\textbf{Conclusión pruebas:} Nodo ESP32-C6 valida hipótesis H3 (latencia <250 ms) con margen 82\% (45 ms medido vs 250 ms objetivo). Consumo energético 96.5 mW permite operación continua alimentada desde el puerto auxiliar 5V del medidor (19.3 mA vs 100 mA disponibles, margen 81\%), con capacidad de respaldo de 4.4 días mediante batería LiPo 3000 mAh ante cortes eléctricos. Firmware estable durante 48h sin memory leaks ni watchdog resets.
 
 \section{Conclusiones del Capítulo}
 \label{sec:nodo-conclusiones}

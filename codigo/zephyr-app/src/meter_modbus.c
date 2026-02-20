@@ -88,7 +88,6 @@ int meter_modbus_read(struct meter_reading *reading)
 	reading->energy_kwh = 12345.678f;
 	reading->energy_exp_kwh = 0.0f;
 	reading->power_factor = 0.95f;
-	reading->pulse_count = k_uptime_get_32() / 1000;
 	reading->timestamp_ms = k_uptime_get();
 
 	LOG_DBG("Modbus (simulated): %.1fV %.2fA", reading->voltage_v,

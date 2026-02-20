@@ -53,7 +53,7 @@ La plataforma se despliega con seis servicios Docker: OpenThread Border Router (
 
 \subsection{Thread 802.15.4 (Acceso a Nodos)}
 
-Thread es un protocolo mesh IPv6 optimizado para IoT: baja latencia (<50 ms típico), bajo consumo (nodos sleep <10 µA), auto-healing con rerouting automático, y escalabilidad hasta 250 nodos por red. El gateway ejecuta OTBR para formar red Thread en canal 15 (2.435 GHz) con prefix \texttt{fd00::/64}.
+Thread es un protocolo mesh IPv6 optimizado para IoT: baja latencia (<50 ms típico), soporte para nodos de bajo consumo (SED <10 µA), auto-healing con rerouting automático, y escalabilidad hasta 250 nodos por red. En esta arquitectura los nodos operan como MED alimentados desde el medidor. El gateway ejecuta OTBR para formar red Thread en canal 15 (2.435 GHz) con prefix \texttt{fd00::/64}.
 
 \subsection{HaLow 802.11ah (Backhaul)}
 

@@ -11,7 +11,7 @@ El piloto se limitó a 30 medidores inteligentes durante 90 días (Q4 2024). Si 
 \begin{itemize}
     \item \textbf{Topología simplificada}: Piloto en edificio 4 pisos con máximo 3 hops Thread. Deployments urbanos reales pueden tener topologías $>$5 hops, aumentando latencia Thread de 15 ms medidos a potencialmente 30+ ms.
     
-    \item \textbf{Efectos long-term no evaluados}: 90 días insuficientes para evaluar: (1) Memory leaks en servicios containerizados, (2) Fragmentación Thread routing table, (3) Degradación baterías nodos por temperatura extrema (piloto operó 18-28°C, spec -20 a +60°C), (4) Drift RTC sin sincronización GPS.
+    \item \textbf{Efectos long-term no evaluados}: 90 días insuficientes para evaluar: (1) Memory leaks en servicios containerizados, (2) Fragmentación Thread routing table, (3) Estabilidad alimentación 5V del medidor bajo condiciones de temperatura extrema (piloto operó 18-28°C, spec -20 a +60°C), (4) Drift RTC sin sincronización GPS.
     
     \item \textbf{Interferencia controlada}: Zona residencial con 12 APs WiFi vecinos (interferencia moderada). Zonas urbanas densas ($>$50 APs) podrían causar congestión HaLow más severa que 99.8\% disponibilidad medida.
 \end{itemize}

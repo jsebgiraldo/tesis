@@ -198,7 +198,7 @@ La integración heterogénea de Thread (malla de corto alcance (\textit{mesh} co
 
 \begin{itemize}
 \item \textbf{Cobertura optimizada:} Thread provee malla interior densa (\textit{mesh indoor} denso) (20+ nodos dentro de edificio), HaLow extiende a 300m exterior (\textit{outdoor}) con penetración en construcciones, LTE garantiza conectividad ubicua durante mantenimiento/emergencias.
-\item \textbf{Eficiencia energética:} Dispositivos alimentados por batería (\textit{battery-powered}) en Thread con dispositivos finales en modo reposo (\textit{sleepy end devices}) (transmisión cada 60s, ciclo de trabajo (\textit{duty cycle}) 0.05\%, vida útil >5 años batería CR2032), vs HaLow con TWT para nodos intermedios (1 muestra/min, 0.2\% ciclo de trabajo, 3+ años batería 18650).
+\item \textbf{Eficiencia energética:} Nodos IoT alimentados directamente desde el puerto auxiliar 5V del medidor operan continuamente como MED (RX always-on, 27 mA promedio), eliminando necesidad de gestión de energía o baterías. Thread soporta adicionalmente roles SED (\textit{Sleepy End Device}) para otros escenarios IoT con dispositivos autónomos. HaLow con TWT habilita eficiencia en nodos intermedios (1 muestra/min, 0.2\% ciclo de trabajo).
 \item \textbf{Throughput adaptativo:} Thread limitado a 250 kbps suficiente para sensores simples (temperatura, consumo), HaLow escalando hasta 10 Mbps para agregación de medidores inteligentes con waveforms (10 kSPS), LTE Cat-M1 reservado para actualizaciones OTA firmware (100 MB típico requiere 15 min @ 1 Mbps).
 \end{itemize}
 

@@ -8,7 +8,7 @@
  * 1. Inicializar hardware (UART, GPIO, LED)
  * 2. Unirse a red Thread (OpenThread FTD)
  * 3. Registrar cliente LwM2M con servidor (Leshan/ThingsBoard)
- * 4. Loop: leer medidor → actualizar objects LwM2M → sleep
+ * 4. Loop: leer medidor → actualizar objects LwM2M → esperar intervalo
  */
 
 #include <zephyr/kernel.h>
@@ -16,12 +16,13 @@
 #include <zephyr/logging/log.h>
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/net/openthread.h>
+#include <openthread.h>  /* new module-level API (v4.2.0) */
 
 #include "thread_network.h"
 #include "lwm2m_client.h"
 #include "meter_dlms.h"
 #include "meter_modbus.h"
-#include "power_mgmt.h"
+#include "fota.h"
 
 LOG_MODULE_REGISTER(main, LOG_LEVEL_INF);
 
@@ -62,6 +63,8 @@ static volatile system_state_t current_state = STATE_INIT;
 /* --- Callback Thread state change --- */
 static void on_thread_state_changed(otChangedFlags flags, void *context)
 {
+	ARG_UNUSED(context);
+
 	if (flags & OT_CHANGED_THREAD_ROLE) {
 		otDeviceRole role = otThreadGetDeviceRole(
 			openthread_get_default_instance());
@@ -88,8 +91,8 @@ int main(void)
 {
 	int ret;
 
-	LOG_INF("=== AMI Thread+LwM2M Node v0.1.0 ===");
-	LOG_INF("Board: ESP32-C6-DevKitC-1");
+	LOG_INF("=== AMI Thread+LwM2M Node v%s ===", fota_get_current_version());
+	LOG_INF("Board: XIAO ESP32-C6");
 	LOG_INF("RTOS: Zephyr %s", KERNEL_VERSION_STRING);
 
 	/* 1. Inicializar LED de estado */
@@ -156,6 +159,15 @@ int main(void)
 		return ret;
 	}
 
+	/* 6. Inicializar FOTA (OTA firmware update via LwM2M Object 5) */
+	ret = fota_init(NULL);
+	if (ret < 0) {
+		LOG_WRN("FOTA init failed: %d (OTA disabled)", ret);
+	} else {
+		LOG_INF("FOTA: OTA enabled — fw v%s, confirmed=%d",
+			fota_get_current_version(), fota_is_confirmed());
+	}
+
 	current_state = STATE_OPERATIONAL;
 	LOG_INF("System OPERATIONAL — reading meter every %d min",
 		METER_READ_INTERVAL_MS / 60000);
@@ -172,10 +184,10 @@ int main(void)
 
 		if (ret == 0) {
 			LOG_INF("Meter: %.1f V, %.2f A, %.3f kWh, PF=%.2f",
-				reading.voltage_v,
-				reading.current_a,
-				reading.energy_kwh,
-				reading.power_factor);
+				(double)reading.voltage_v,
+				(double)reading.current_a,
+				(double)reading.energy_kwh,
+				(double)reading.power_factor);
 
 			/* Actualizar objects LwM2M (triggers Observe notify) */
 			lwm2m_update_meter_data(&reading);
@@ -184,15 +196,15 @@ int main(void)
 			if (reading.voltage_v < 207.0f ||
 			    reading.voltage_v > 253.0f) {
 				LOG_WRN("Voltage alarm: %.1f V",
-					reading.voltage_v);
+					(double)reading.voltage_v);
 				lwm2m_notify_voltage_alarm(reading.voltage_v);
 			}
 		} else {
 			LOG_WRN("Meter read failed: %d", ret);
 		}
 
-		/* Dormir hasta próxima lectura */
-		power_mgmt_sleep(METER_READ_INTERVAL_MS);
+		/* Esperar hasta próxima lectura (nodo alimentado por medidor, sin sleep) */
+		k_sleep(K_MSEC(METER_READ_INTERVAL_MS));
 	}
 
 	return 0;

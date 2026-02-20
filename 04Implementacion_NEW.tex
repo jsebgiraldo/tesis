@@ -66,10 +66,10 @@ Este nivel comprende los dispositivos de campo que capturan telemetrï¿½a de m
     \item \textbf{Alimentaciï¿½n:} 5V @ 100 mA promedio (0.5 W) desde medidor o fuente externa
     \item \textbf{Consumo medido:} 
         \begin{itemize}
-        \item Sleep mode: 7 $\mu$A
-        \item RX Thread activo: 19 mA (95 mW @ 5V)
+        \item Idle (RX always-on, MED): 19 mA (95 mW @ 5V)
         \item TX Thread @ +4 dBm: 22 mA (110 mW @ 5V)
-        \item Promedio duty cycle 5\%: 20 mA $\times$ 5\% + 7 $\mu$A $\times$ 95\% = 1.0 mA (5 mW)
+        \item RS-485 lectura activa: 35 mA pico
+        \item Promedio continuo: 27 mA (135 mW @ 5V), alimentado desde medidor
         \end{itemize}
     \item \textbf{Certificaciones:} FCC, CE, IC (mï¿½dulos pre-certificados)
 \end{itemize}
@@ -157,7 +157,7 @@ La arquitectura seleccionï¿½ Thread 1.4.0 sobre Zigbee 3.0 tras anï¿½lisis
 \hline
 \textbf{Latencia tï¿½pica} & 50-90 ms & 100-150 ms & Thread menor latencia por IPv6 nativo y ausencia gateway traducciï¿½n \\\\
 \hline
-\textbf{Consumo energï¿½tico} & 5-10 mA sleep & 3-5 mA sleep & Zigbee gana, pero no crï¿½tico (nodos alimentados desde medidor 5V) \\\\
+\textbf{Consumo energï¿½tico} & 19 mA activo & 3-5 mA sleep & Thread mayor consumo como MED (RX always-on), pero no crï¿½tico (nodos alimentados desde medidor 5V) \\\\
 \hline
 \textbf{Costo mï¿½dulos (2024)} & \$5-8 & \$3-5 & Zigbee 40\% mï¿½s econï¿½mico, pero Thread elimina ALG (\$200-400 ahorro) \\\\
 \hline
@@ -801,7 +801,7 @@ Consumo energï¿½tico total arquitectura (100 medidores):
 
 \begin{itemize}
     \item Medidores Itron (180W) dominan 74\% consumo total - NO modificable (legacy hardware)
-    \item Nodos ESP32-C6 (48W) representan 20\% - Optimizado con sleep mode (duty 7\%)
+    \item Nodos ESP32-C6 (48W) representan 20\% - Alimentados continuamente desde medidor 5V
     \item Gateway (11.5W) solo 5\% consumo - Costo energï¿½tico marginal vs beneficio edge processing
     \item Autonomï¿½a UPS Gateway 18.8h (12V 20Ah) suficiente para blackouts tï¿½picos <12h
 \end{itemize}

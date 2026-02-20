@@ -9,7 +9,7 @@
 \section{Introducción}
 \label{sec:server-intro}
 
-El Nivel 4 de la arquitectura AMI implementa la plataforma IoT centralizada para gestión masiva de dispositivos, analytics históricos, dashboards multi-tenant y APIs programáticas. Este capítulo documenta el despliegue de ThingsBoard 3.6.2 Community Edition en infraestructura cloud AWS, con Apache Kafka como backbone de streaming para ingest masiva de telemetría.
+El Nivel 4 de la arquitectura AMI implementa la plataforma IoT centralizada para gestión masiva de dispositivos, analytics históricos, dashboards multi-tenant y APIs programáticas. Este capítulo documenta el despliegue de ThingsBoard 3.6.2 Community Edition en infraestructura cloud AWS~\cite{thingsboardCloudArchitecture2024}, con Apache Kafka como backbone de streaming para ingest masiva de telemetría~\cite{apacheKafkaDocumentation2024}.
 
 \textbf{Rol del servidor central:}
 
@@ -23,11 +23,11 @@ El Nivel 4 de la arquitectura AMI implementa la plataforma IoT centralizada para
 
 \textbf{ThingsBoard como plataforma IoT multi-tenant:}
 
-ThingsBoard proporciona arquitectura multi-tenant (Tenant $\rightarrow$ Customer $\rightarrow$ Device), Rule Engine visual drag-and-drop para procesamiento eventos, y dashboards responsive con WebSocket updates real-time. Alternativas evaluadas (AWS IoT Core + Lambda, Azure IoT Hub + Functions) descartadas por OPEX 3$\times$ mayor (\$0.20/device/mes AWS IoT vs \$0.065/device/mes ThingsBoard self-hosted).
+ThingsBoard proporciona arquitectura multi-tenant (Tenant $\rightarrow$ Customer $\rightarrow$ Device), Rule Engine visual drag-and-drop para procesamiento eventos, y dashboards responsive con WebSocket updates real-time. Alternativas evaluadas (AWS IoT Core + Lambda, Azure IoT Hub + Functions) descartadas por OPEX 3$\times$ mayor (\$0.20/device/mes AWS IoT vs \$0.065/device/mes ThingsBoard self-hosted)~\cite{awsGreengrassPricing2024}.
 
 \textbf{Apache Kafka para streaming alta concurrencia:}
 
-Kafka maneja ingest concurrente desde múltiples Gateways Edge (QoS 1 MQTT), desacopla producers (Edge sync) de consumers (Rule Engine, telemetry processor), y proporciona buffer persistente 7 días (retención WAL) tolerante a fallos microservicios downstream.
+Kafka maneja ingest concurrente desde múltiples Gateways Edge (QoS 1 MQTT)~\cite{amiriDeploymentArchitecturesMQTT2024}, desacopla producers (Edge sync) de consumers (Rule Engine, telemetry processor), y proporciona buffer persistente 7 días (retención WAL) tolerante a fallos microservicios downstream~\cite{kraborKafkaPerformanceScalability2023}.
 
 \textbf{Estructura del capítulo:}
 
@@ -143,7 +143,7 @@ Kafka maneja ingest concurrente desde múltiples Gateways Edge (QoS 1 MQTT), des
 \subsection{Arquitectura Apache Kafka}
 \label{sec:server-kafka}
 
-Apache Kafka 3.5.1 actúa como backbone de streaming distribuido, manejando ingest concurrente desde 3 Gateways Edge (MQTT QoS 1 sync), buffering persistente 7 días (tolerancia fallos microservicios downstream), y desacoplamiento producers/consumers mediante topics particionados.
+Apache Kafka 3.5.1~\cite{apacheKafkaDocumentation2024} actúa como backbone de streaming distribuido, manejando ingest concurrente desde 3 Gateways Edge (MQTT QoS 1 sync), buffering persistente 7 días (tolerancia fallos microservicios downstream), y desacoplamiento producers/consumers mediante topics particionados~\cite{kraborKafkaPerformanceScalability2023}.
 
 \textbf{Componentes arquitectura Kafka AWS MSK:}
 
@@ -237,10 +237,10 @@ Apache Kafka 3.5.1 actúa como backbone de streaming distribuido, manejando inge
 \textbf{Ventajas particionamiento Kafka AMI:}
 
 \begin{itemize}
-    \item \textbf{Escalabilidad horizontal:} Añadir brokers + partitions escala throughput linealmente (Kafka benchmark: 2M msgs/s 3-broker cluster)
+    \item \textbf{Escalabilidad horizontal:} Añadir brokers + partitions escala throughput linealmente (Kafka benchmark: 2M msgs/s 3-broker cluster)~\cite{kraborKafkaPerformanceScalability2023}
     \item \textbf{Orden garantizado:} Mensajes mismo deviceId siempre en misma partition $\rightarrow$ orden temporal preservado (crítico cálculo \texttt{energy\_kwh} deltas)
     \item \textbf{Tolerancia fallos:} Replication factor 2 + ISR=1 tolera crash 1 broker sin pérdida datos
-    \item \textbf{Backpressure handling:} Consumer lento no bloquea producers (buffer Kafka 7 días), vs MQTT QoS 2 blocking ACKs
+    \item \textbf{Backpressure handling:} Consumer lento no bloquea producers (buffer Kafka 7 días), vs MQTT QoS 2 blocking ACKs~\cite{apacheKafkaDocumentation2024}
 \end{itemize}
 
 \subsubsection{Configuración de Producción}
@@ -400,13 +400,14 @@ Prueba carga simulando 500 devices @ 1 msg/s (500 msgs/s total):
 \subsection{Arquitectura de Microservicios}
 \label{sec:server-tb-arquitectura}
 
-ThingsBoard 3.6.2 Community Edition implementa una arquitectura de microservicios distribuida basada en containers Docker, diseñada para escalabilidad horizontal, alta disponibilidad y procesamiento de eventos masivo. La Figura~\ref{fig:thingsboard-architecture} ilustra los 12 componentes principales desplegados en AWS EC2.
+ThingsBoard 3.6.2 Community Edition implementa una arquitectura de microservicios distribuida basada en containers Docker~\cite{thingsboardCloudArchitecture2024,perezImplicationSoftwareContainerization2024,elakhdarExploringPotentialMicroservices2024}, diseñada para escalabilidad horizontal, alta disponibilidad y procesamiento de eventos masivo. La Figura~\ref{fig:thingsboard-architecture} ilustra los 12 componentes principales desplegados en AWS EC2.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.85\textwidth]{figures/thingsboard-architecture.png}
 \caption{Arquitectura oficial de microservicios ThingsBoard 3.6.2 desplegada en AWS (fuente: \url{thingsboard.io}). La plataforma integra 4 capas: (1) \textbf{Transport Layer} para ingesta multi-protocolo (MQTT/HTTP/CoAP), (2) \textbf{Core Services} con Actor System para procesamiento concurrente y Rule Engine para lógica de negocio, (3) \textbf{Data Layer} con PostgreSQL+TimescaleDB para persistencia time-series, Redis para cache, y Kafka como message broker distribuido con Zookeeper quorum, (4) \textbf{API Layer} con REST/WebSocket para dashboards y integraciones externas. Arquitectura permite escalado horizontal de cada capa independientemente según carga (transport layer 2 instancias, core services 8 instancias piloto, expansión a 32+ instancias producción). Contrasta con arquitectura Edge monolítica (Capítulo~\ref{chap:gateway-halow}, Figura~\ref{fig:edge-architecture-official}) optimizada para recursos limitados 256-512 MB RAM.}
 \label{fig:thingsboard-msa-architecture}
+\label{fig:thingsboard-architecture}
 \end{figure}
 
 \subsubsection{Capa de Transporte (Transport Layer)}
@@ -418,7 +419,7 @@ La capa de transporte desacopla los protocolos de comunicación IoT del core de 
 \begin{enumerate}
     \item \textbf{tb-mqtt-transport (2 instancias):}
     \begin{itemize}
-        \item Función: Broker MQTT sobre TCP 1883 (no-TLS) y 8883 (TLS 1.3), maneja conexiones persistentes devices, QoS 0-1 support
+        \item Función: Broker MQTT sobre TCP 1883 (no-TLS) y 8883 (TLS 1.3), maneja conexiones persistentes devices, QoS 0-1 support~\cite{amiriDeploymentArchitecturesMQTT2024}
         \item Protocolo: MQTT 3.1.1 y 5.0, topics pattern \texttt{v1/devices/me/\{telemetry|attributes\}}
         \item Autenticación: Device access token (20 chars alfanumérico), validación contra PostgreSQL \texttt{device\_credentials}
         \item Load balancing: AWS ALB round-robin con sticky sessions habilitado (MQTT session state)
@@ -436,13 +437,13 @@ La capa de transporte desacopla los protocolos de comunicación IoT del core de 
     
     \item \textbf{tb-coap-transport (1 instancia):}
     \begin{itemize}
-        \item Función: CoAP sobre UDP 5683, optimizado NB-IoT/LTE-M (overhead reducido vs HTTP)
+        \item Función: CoAP sobre UDP 5683~\cite{RFC7252}, optimizado NB-IoT/LTE-M (overhead reducido vs HTTP)
         \item Implementación: Californium framework Java, block-wise transfer (1024 bytes)
         \item Estado: Desplegado pero no usado piloto (Thread nodes usan MQTT directo)
     \end{itemize}
 \end{enumerate}
 
-\textbf{Flujo ingesta transport → core:} Transport layer valida credenciales device, parsea payload JSON/Protobuf, publica mensaje a Kafka topic \texttt{tb.transport.api.requests}, consume respuesta de topic \texttt{tb.transport.api.responses}, retorna ACK a device. Latencia medida transport: 8 ms P95 (validación credentials Redis cache hit).
+\textbf{Flujo ingesta transport → core:} Transport layer valida credenciales device, parsea payload JSON/Protobuf, publica mensaje a Kafka topic \texttt{tb.transport.api.requests}, consume respuesta de topic \texttt{tb.transport.api.responses}, retorna ACK a device~\cite{wulurCoordinationEdgeCloud2024}. Latencia medida transport: 8 ms P95 (validación credentials Redis cache hit).
 
 \subsubsection{Servicios Core (Core Services)}
 
@@ -583,7 +584,7 @@ Kafka & 2 brokers & 3-6 brokers & Partition lag >10,000 msgs \\
 \end{tabular}
 \end{table}
 
-La arquitectura stateless de transport y core layers permite agregar instancias en minutos mediante Docker Compose scale command o Kubernetes HPA (Horizontal Pod Autoscaler). Data layer (PostgreSQL, Kafka) requiere planificación: sharding PostgreSQL por tenant para >100,000 devices, incrementar partitions Kafka para >10,000 msgs/s.
+La arquitectura stateless de transport y core layers permite agregar instancias en minutos mediante Docker Compose scale command o Kubernetes HPA (Horizontal Pod Autoscaler)~\cite{dockerComposeDocumentation2024,pereraScalableDataanalyticCapable2024}. Data layer (PostgreSQL, Kafka) requiere planificación: sharding PostgreSQL por tenant para >100,000 devices, incrementar partitions Kafka para >10,000 msgs/s.
 
 \subsection{Configuración Docker Compose}
 \label{sec:server-tb-docker}
@@ -600,7 +601,7 @@ La arquitectura stateless de transport y core layers permite agregar instancias 
 \subsubsection{Diseño del Schema de Base de Datos}
 \label{sec:server-postgresql-schema}
 
-\textbf{AWS RDS PostgreSQL 15.4 + TimescaleDB 2.13 schema ThingsBoard:}
+\textbf{AWS RDS PostgreSQL 15.4~\cite{postgresqlDocumentation2024} + TimescaleDB 2.13~\cite{freedmanTimescaleDBSQLMade2024} schema ThingsBoard:}
 
 \begin{verbatim}
 -- Tablas relacionales principales
@@ -644,7 +645,7 @@ CREATE TABLE relation (
 \subsubsection{TimescaleDB Hypertables}
 \label{sec:server-postgresql-hypertables}
 
-\textbf{Hypertable ts\_kv (time-series key-value telemetry):}
+\textbf{Hypertable ts\_kv (time-series key-value telemetry)~\cite{freedmanTimescaleDBSQLMade2024}:}
 
 \begin{verbatim}
 -- Tabla principal telemetría
@@ -729,7 +730,7 @@ GROUP BY bucket, entity_id;
 \textbf{Performance gains continuous aggregates:}
 
 \begin{itemize}
-    \item Query "AVG voltage últimos 30 días": 8.2s (ts\_kv raw) vs 120ms (ts\_kv\_hourly), speedup 68$\times$
+    \item Query "AVG voltage últimos 30 días": 8.2s (ts\_kv raw) vs 120ms (ts\_kv\_hourly), speedup 68$\times$~\cite{freedmanTimescaleDBSQLMade2024}
     \item Storage overhead: +15\% (continuous aggregates metadata), justificado por query latency reducción
 \end{itemize}
 
@@ -868,7 +869,7 @@ return {msg: msg, metadata: metadata, msgType: "SUCCESS"};
         \hline
         \end{tabular}
         \end{table}
-        \item \textbf{Lifecycle:} NEW $\rightarrow$ ACTIVE $\rightarrow$ ACKNOWLEDGED (operador) $\rightarrow$ CLEARED (auto si condición normaliza)
+        \item \textbf{Lifecycle:} NEW $\rightarrow$ ACTIVE $\rightarrow$ ACKNOWLEDGED (operador) $\rightarrow$ CLEARED (auto si condición normaliza)~\cite{alsafranChallengesImplementingIoT2025}
         \item \textbf{Validación piloto:} 23 alarmas generadas (14 voltage\_sag, 6 high\_temperature, 3 over\_current), 100\\% notificaciones entregadas, tiempo medio ACK 18 min
     \end{itemize}
     
@@ -887,7 +888,7 @@ return {msg: msg, metadata: metadata, msgType: "SUCCESS"};
 \textbf{Dashboards implementados:}
 
 \begin{enumerate}
-    \item \textbf{Real-Time Monitoring:} Gauge widgets (voltage\_v, current\_a), line chart power\_w (last 1h), mapa geográfico devices con color status (online/offline), tabla alarmas activas (auto-refresh 5s)
+    \item \textbf{Real-Time Monitoring:} Gauge widgets (voltage\_v, current\_a), line chart power\_w (last 1h), mapa geográfico devices con color status (online/offline), tabla alarmas activas (auto-refresh 5s)~\cite{huangRealTimeMonitoring2025}
     \item \textbf{Historical Analytics:} Time-series chart energy\_kwh (30 días), bar chart consumo diario por edificio, heatmap consumo por hora del día, estadísticas totales kWh/power factor promedio
     \item \textbf{Billing Dashboard:} Gráfico barras monthly\_cost\_usd per device, proyección facturación mes actual, tabla top 10 consumers
 \end{enumerate}
@@ -934,7 +935,7 @@ return {msg: msg, metadata: metadata, msgType: "SUCCESS"};
 \section{Conclusiones del Capítulo}
 \label{sec:server-conclusiones}
 
-Este capítulo presentó el despliegue completo de la plataforma ThingsBoard Server sobre infraestructura AWS, consolidando la arquitectura de cuatro niveles propuesta en los Capítulos~\ref{chap:nodo-iot} (Nivel 1), \ref{chap:gateway-halow} (Niveles 2-3), y este capítulo (Nivel 4). La implementación integra Apache Kafka como cola de mensajería distribuida para la ingesta masiva de telemetría, PostgreSQL con extensión TimescaleDB para el almacenamiento optimizado de series temporales, y el motor de reglas de ThingsBoard para la lógica de procesamiento de negocio específica del sistema AMI.
+Este capítulo presentó el despliegue completo de la plataforma ThingsBoard Server sobre infraestructura AWS, consolidando la arquitectura de cuatro niveles propuesta en los Capítulos~\ref{chap:nodo-iot} (Nivel 1), \ref{chap:gateway-halow} (Niveles 2-3), y este capítulo (Nivel 4)~\cite{wulurCoordinationEdgeCloud2024,andriuloEdgeComputingCloud2024}. La implementación integra Apache Kafka~\cite{kraborKafkaPerformanceScalability2023} como cola de mensajería distribuida para la ingesta masiva de telemetría, PostgreSQL~\cite{postgresqlDocumentation2024} con extensión TimescaleDB~\cite{freedmanTimescaleDBSQLMade2024} para el almacenamiento optimizado de series temporales, y el motor de reglas de ThingsBoard para la lógica de procesamiento de negocio específica del sistema AMI~\cite{mccaffertyEnergyIoTArchitecture2023}.
 
 \textbf{Contribuciones técnicas del capítulo:}
 
@@ -945,7 +946,7 @@ Este capítulo presentó el despliegue completo de la plataforma ThingsBoard Ser
     
     \item \textbf{Rule Chains de negocio:} Se implementaron cuatro cadenas críticas (Procesamiento Telemetría, Gestión Alarmas, Facturación Energía, Exportación Datos) que automatizan la lógica completa del sistema AMI. La cadena de alarmas gestionó 23 eventos en el piloto (14 caídas de tensión, 6 sobre-temperatura, 3 sobre-corriente) con entrega 100\% de notificaciones y tiempo medio de reconocimiento de 18 minutos.
     
-    \item \textbf{Costo operativo competitivo:} El despliegue AWS totaliza \$390/mes (\$2.03/dispositivo/mes para 192 medidores), significativamente menor a plataformas IoT gestionadas (\$10--15/dispositivo/mes) y con TCO similar a infraestructura on-premise durante el horizonte de 3 años del proyecto piloto.
+    \item \textbf{Costo operativo competitivo:} El despliegue AWS totaliza \$390/mes (\$2.03/dispositivo/mes para 192 medidores), significativamente menor a plataformas IoT gestionadas (\$10--15/dispositivo/mes)~\cite{awsGreengrassPricing2024} y con TCO similar a infraestructura on-premise durante el horizonte de 3 años del proyecto piloto~\cite{minhEdgeComputingIoTEnabled2022}.
 \end{itemize}
 
 La arquitectura presentada en este capítulo habilita la escalabilidad horizontal mediante particionado Kafka y réplicas de lectura PostgreSQL, permitiendo extensión a decenas de miles de dispositivos sin cambios arquitectónicos fundamentales. El siguiente capítulo valida experimentalmente las hipótesis de desempeño, costo y escalabilidad formuladas en el Capítulo~\ref{chap:introduccion} mediante datos del despliegue piloto de 90 días.

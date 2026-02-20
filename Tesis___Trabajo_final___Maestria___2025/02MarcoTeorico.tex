@@ -418,7 +418,7 @@ vs 79 bytes (62\%) sin compresión → **Ganancia 14-16 bytes (18-20\% más payl
 \textbf{Trade-offs aceptados explícitamente:}
 
 \begin{itemize}
-    \item \textbf{Consumo adicional 12\%:} Thread RX corriente 6.5 mA vs Zigbee 5.8 mA (medido en nRF52840 vs CC2652R, RSSI -60 dBm, canal 15). Impacto mitigado por duty-cycle optimizado: nodos IoT AMI transmiten 1-2 segundos cada 15 minutos (sleep 99.8\% tiempo), resultando en consumo promedio ~15 µA para ambos protocolos. Diferencia 0.7 mA durante RX representa <1\% del battery budget total.
+    \item \textbf{Consumo adicional 12\%:} Thread RX corriente 6.5 mA vs Zigbee 5.8 mA (medido en nRF52840 vs CC2652R, RSSI -60 dBm, canal 15). En esta arquitectura, los nodos operan como MED (RX always-on) alimentados desde el puerto auxiliar 5V del medidor, por lo que la diferencia de consumo no es limitante. Para escenarios con dispositivos autónomos, Thread soporta modo SED con duty-cycle optimizado.
     
     \item \textbf{Menor madurez ecosystem:} Zigbee cuenta con 15+ años de deployments (Landis+Gyr, Itron meters certificados), mientras Thread es emergente (2019 specification 1.2, 2023 Matter launch). Risk mitigado por: (a) Thread Group con 300+ members (Google, Apple, Amazon, Siemens, Schneider Electric), (b) Chipsets comerciales disponibles (Nordic nRF52/nRF53, Espressif ESP32-C6/H2, Silicon Labs EFR32), (c) Certification program operativo (Thread Certified Product Registry con 200+ devices).
 \end{itemize}

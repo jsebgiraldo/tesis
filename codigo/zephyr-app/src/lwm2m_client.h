@@ -16,7 +16,6 @@ struct meter_reading {
 	float energy_kwh;     /* Energía activa importada (kWh) — OBIS 1.8.0 */
 	float energy_exp_kwh; /* Energía activa exportada (kWh) — OBIS 2.8.0 */
 	float power_factor;   /* Factor de potencia — OBIS 13.7.0 */
-	uint32_t pulse_count; /* Contador de pulsos */
 	int64_t timestamp_ms; /* Timestamp lectura (uptime ms) */
 };
 
@@ -26,9 +25,10 @@ struct meter_reading {
  * Configura Objects LwM2M:
  * - Object 3 (Device): info hardware
  * - Object 4 (Connectivity Monitoring): RSSI, link quality
- * - Object 3200 (Digital Input): pulsos medidor
- * - Object 3202 (Analog Input): voltage, current
- * - Object 3305 (Power Measurement): power factor
+ * - Object 3316 (Voltage Sensor): tensión L1
+ * - Object 3317 (Current Sensor): corriente L1
+ * - Object 3300/0 (Generic Sensor): energía importada (kWh)
+ * - Object 3300/1 (Generic Sensor): factor de potencia
  *
  * @return 0 en éxito, código de error negativo en fallo
  */

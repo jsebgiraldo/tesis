@@ -35,17 +35,28 @@
 
 %Usando el paquete Natbib
 %Cita normal \cite[página]{} y cita con paréntesis \citep[página]{}
-\usepackage{natbib}
-\bibpunct{[}{]}{;}{\&}{.}{}
-\bibliographystyle{dtvstyle}
+% Citas numéricas estilo [15]
+\usepackage[numbers,sort&compress]{natbib}
+% Configuración explícita para citas numéricas: [1,2,3]
+\bibpunct{[}{]}{,}{n}{}{,}
+% Estilo BibTeX compatible con natbib en modo numérico
+\bibliographystyle{unsrtnat}
 
 %Idioma del documento
 %Use main para el idioma principal del documento
 \usepackage[main=spanish,english,german,french,portuguese]{babel}
 
+% ==== Convenciones de idioma (ver docs_sesiones/ESTILO_IDIOMA.md) ====
+% Término en inglés en itálica
+\newcommand{\en}[1]{\textit{#1}}
+% Primera aparición: Español (Inglés)
+\newcommand{\esEn}[2]{#1 (\en{#2})}
+
 % Carácteres especiales
-\usepackage{fontenc}
-\usepackage{textgreek} % Para caracteres griegos Ω φ θ
+% Usa fuentes T1 para buena separación de palabras en español.
+\usepackage[T1]{fontenc}
+% Nota: evitamos \usepackage{textgreek} (LGR) para no depender de fuentes griegas;
+% usa símbolos en modo matemático, p.ej. $\Omega$, $\varphi$, $\theta$.
 
 % Evita ligadura li & fl
 %\usepackage{microtype}
@@ -378,7 +389,7 @@ Albert Einstein
 % NUEVA ESTRUCTURA: Enfoque por NIVELES (aprobado por tutor 27/Nov/2025)
 % ============================================================================
 \include{01Introduccion} % Cap 1: Introducción (sin cambios)
-\include{02MarcoTeorico_Rework} % Cap 2: Marco Teórico + Estado del Arte (NUEVO)
+\include{02MarcoTeorico_Rework_V2} % Cap 2: Marco Teórico (REESTRUCTURADO: 3 capas sin AI/LLM, DLMS/COSEM reemplaza IEEE 2030.5)
 \include{03NodoIoT_Thread_LwM2M} % Cap 3: Nivel 1 - Nodo IoT (Thread + LwM2M) (NUEVO)
 \include{04Gateway_HaLow_Edge} % Cap 4: Niveles 2-3 - Gateway + HaLow (NUEVO)
 \include{05Server_ThingsBoard_Kafka} % Cap 5: Nivel 4 - Server ThingsBoard (NUEVO)
@@ -417,7 +428,7 @@ Albert Einstein
 \pagestyle{plain}
 % Nombre del documento donde se almacenan las referencias
 \bibliography{Referencias}
-\nocite{*}
+% \nocite{*} % REMOVIDO: incluía TODAS las refs no citadas en la bibliografía
 % Inserta un página adicional al final en blanco 
 %\cleardoublepage
 % Para NO insertar una página adicional al final usar \clearpage

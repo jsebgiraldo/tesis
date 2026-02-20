@@ -6,9 +6,9 @@
 \begin{tikzpicture}[
     % Estilos
     device/.style={rectangle, draw=black, thick, minimum width=4cm, minimum height=3cm, rounded corners},
-    module/.style={rectangle, draw=blue!60, fill=blue!10, thick, minimum width=2.5cm, minimum height=1cm, rounded corners, font=\small},
+    module/.style={rectangle, draw=blue!60, fill=blue!10, thick, minimum width=2.5cm, minimum height=1cm, rounded corners, font=\small, align=center},
     antenna/.style={isosceles triangle, draw=red!60, fill=red!20, thick, minimum width=0.5cm, minimum height=1cm, rotate=90},
-    connector/.style={rectangle, draw=black, fill=gray!30, thick, minimum width=1.5cm, minimum height=0.4cm, font=\tiny},
+    connector/.style={rectangle, draw=black, fill=gray!30, thick, minimum width=1.5cm, minimum height=0.4cm, font=\tiny, align=center},
     arrow/.style={->, thick, >=stealth}
 ]
 
@@ -33,7 +33,7 @@
 \node[connector] at (0,2.5) (eth_tube) {ETH0\\PoE 24V};
 
 % Etiqueta role
-\node[below=0.2cm of eth_tube, font=\footnotesize, text=green!50!black] {
+\node[below=0.2cm of eth_tube, font=\footnotesize, text=green!50!black, align=center] {
     \textbf{Role: Mesh Point}\\(modo mesh 802.11s HWMP)
 };
 
@@ -57,7 +57,7 @@
 };
 
 % Etiqueta role
-\node[below=0.2cm of eth_rpi, font=\footnotesize, text=orange!70!black] {
+\node[below=0.2cm of eth_rpi, font=\footnotesize, text=orange!70!black, align=center] {
     \textbf{Role: Edge Gateway}\\ThingsBoard Edge + OTBR
 };
 
