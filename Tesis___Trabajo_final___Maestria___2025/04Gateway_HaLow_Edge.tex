@@ -1,1470 +1,440 @@
-﻿\chapter{Gateway Inteligente de Borde: Agregación Thread y Backhaul HaLow Mesh}
+\chapter[Pasarela de Borde: Thread y HaLow]{Pasarela Inteligente de Borde: Agregación Thread y Enlace Troncal HaLow}
 \label{chap:gateway-halow}
 
 % ============================================================================
-% PROPÓSITO ÚNICO: Detallar implementación del Gateway (RPi4) y red HaLow.
-% Se agota el tema 802.11ah + OTBR aquí.
+% PROPÓSITO: Detallar implementación del Gateway (RPi4 + OpenWRT + OTBR +
+% ThingsBoard Edge) y red HaLow. Se agota 802.11ah + OTBR + Edge aquí.
+% Rev11-com: reestructurado para reflejar arquitectura real desplegada.
 % ============================================================================
 
 \section{Introducción}
 \label{sec:gateway-intro}
 
-Este capítulo documenta la implementación de los Niveles 2 y 3 de la arquitectura, que comprenden la red de distribución Wi-Fi HaLow (IEEE 802.11ah) mesh 802.11s~\cite{qiaoSurveyWiFiHaLow2018} y los gateways de borde inteligentes basados en Raspberry Pi 4. \textbf{Enfoque del capítulo:} Detalla arquitectura HaLow mesh con protocolo HWMP, gateways edge RPi4 como clientes STA, y servicios locales (OTBR, ThingsBoard Edge). La infraestructura de servidor on-premise, conectividad WAN (LTE backup), y sincronización cloud se documentan en Capítulo~\ref{chap:resultados}. Los gateways desempeñan un rol dual crítico: (1) actúan como puente entre la red Thread mesh (IEEE 802.15.4) de los nodos IoT y la infraestructura IP local mediante OpenThread Border Router (OTBR), y (2) implementan inteligencia distribuida con ThingsBoard Edge para procesamiento local, agregación de datos y operación autónoma.
+Este capítulo documenta la implementación de los Niveles~2 y~3 de la arquitectura: la pasarela de borde basada en Raspberry~Pi~4 y la red de distribución Wi-Fi HaLow (IEEE~802.11ah) en malla 802.11s~\cite{qiaoSurveyWiFiHaLow2018}.  La pasarela de borde constituye el elemento central de la arquitectura, desempeñando tres funciones:
 
-La red HaLow proporciona conectividad de última milla entre gateways edge y múltiples Border Routers Thread, aprovechando las ventajas de operación sub-1 GHz: alcance extendido hasta 1.2 km en línea de vista, mejor penetración en interiores respecto a Wi-Fi tradicional 2.4 GHz, y soporte de cientos de clientes con mecanismos RAW (Restricted Access Window) que reducen colisiones en redes densas~\cite{leeWiFiHaLowLongRange2021, kimIEEE80211ahHaLow2021}. La arquitectura HaLow mesh IEEE 802.11s con protocolo HWMP (Hybrid Wireless Mesh Protocol)~\cite{enrikoWiFiHaLowLiterature2024} elimina cableado estructurado punto-a-punto, reduciendo costos de despliegue 60\% comparado con enlaces cableados Ethernet. El Mesh Gate provee backhaul Ethernet hacia switch local; la arquitectura completa de servidor on-premise (ThingsBoard, PostgreSQL, conectividad WAN LTE) se documenta en Capítulo~\ref{chap:resultados}.
+\begin{enumerate}
+    \item \textbf{Puente Thread--IP:} Mediante OpenThread Border Router (OTBR), conecta la red Thread en malla (IEEE~802.15.4) de los nodos IoT con la infraestructura IPv6 local.
+    \item \textbf{Plataforma de computación en el borde:} ThingsBoard Edge proporciona procesamiento local, gestión de dispositivos vía LwM2M, almacenamiento sin conexión y sincronización con el servidor central.
+    \item \textbf{Nodo de distribución HaLow:} La conectividad de última milla entre pasarelas utiliza Wi-Fi HaLow en banda sub-1~GHz, con alcance extendido hasta 1,2~km LOS y soporte de cientos de clientes mediante RAW~\cite{leeWiFiHaLowLongRange2021, kimIEEE80211ahHaLow2021}.
+\end{enumerate}
 
-El capítulo se estructura en cinco secciones principales: §\ref{sec:gateway-arquitectura} presenta la arquitectura hardware Raspberry Pi 4 y el stack de software Docker con 6 microservicios containerizados, §\ref{sec:gateway-otbr} documenta la implementación del OpenThread Border Router con servicios NAT64/DNS64 para interconexión Thread-IPv6, §\ref{sec:gateway-halow} detalla la red HaLow mesh con routers Alfa Networks Tube AHM y protocolo HWMP, §\ref{sec:gateway-tb-edge} describe el despliegue de ThingsBoard Edge con Rule Chains para procesamiento local y reducción 72\% del tráfico WAN, y §\ref{sec:gateway-conclusiones} sintetiza los logros y transiciones al Capítulo 5.
+La elección de Raspberry~Pi~4 como plataforma de \emph{hardware} se fundamenta en su procesador quad-core Cortex-A72, capacidad suficiente para ejecutar servicios de borde en contenedores Docker, y un ecosistema maduro con soporte ARM64.  El sistema operativo OpenWRT, compilado desde el \emph{fork} de Morse Micro, proporciona la compatibilidad nativa con radios HaLow IEEE~802.11ah, mientras que OTBR se integra como servicio del sistema para la gestión de la red Thread.
 
-\section{Arquitectura del Gateway Inteligente Raspberry Pi 4}
+\textbf{Estructura del capítulo:} §\ref{sec:gateway-arquitectura} presenta el \emph{hardware} de la pasarela y la justificación de selección.  §\ref{sec:gateway-openwrt} detalla el sistema operativo OpenWRT y su configuración para HaLow.  §\ref{sec:gateway-otbr} describe la implementación de OTBR.  §\ref{sec:gateway-tb-edge} documenta ThingsBoard Edge como plataforma de borde.  §\ref{sec:gateway-topologia} presenta la topología de red general, la implementación de la malla HaLow 802.11s y el flujo de datos extremo a extremo.  La infraestructura de servidor central se documenta en el Capítulo~\ref{chap:resultados}.
+
+%======================================================================
+\section{Arquitectura de la Pasarela Raspberry Pi 4}
 \label{sec:gateway-arquitectura}
 
-El Nivel 3 de la arquitectura implementa inteligencia distribuida mediante gateways edge~\cite{andriuloEdgeComputingCloud2024} que ejecutan procesamiento local, almacenamiento persistente y sincronización bidireccional con servidor on-premise. La implementación desplegó \textbf{red mesh HaLow IEEE 802.11s con 3 nodos} (routers Alfa Networks Tube AHM, chipset MT7628 + radio Morse Micro MM6108~\cite{morsemicroMM8108ProductBrief2025}) en ubicaciones estratégicas de alta cota, proporcionando cobertura de 0.8 km² en zona urbana residencial montañosa (desnivel 180 m entre puntos extremos). \textbf{Arquitectura distribuida peer-to-peer:} Los \textbf{2 gateways edge Raspberry Pi 4} (RPi4-01, RPi4-02) están integrados localmente por Ethernet a sus respectivos routers Tube AHM (Tube-02, Tube-03), operando como \textbf{Mesh Points activos} que participan directamente en el protocolo HWMP con capacidad dual de routing HaLow y edge computing. El tercer nodo (Tube-01) opera como \textbf{Mesh Gate dedicado} sin servicios edge co-ubicados, función exclusiva de backhaul Ethernet hacia switch local (server on-premise conectado al mismo switch). Esta arquitectura full-mesh elimina jerarquías rígidas: todos los Mesh Points son peers equipolentes que enrutan tráfico cooperativamente hacia el Mesh Gate usando path selection HWMP basado en airtime cost, habilitando múltiples rutas redundantes y balance de carga natural del tráfico Thread → HaLow → Backhaul. Este capítulo enfoca en arquitectura HaLow mesh 802.11s y gateways edge RPi4; la infraestructura de servidor on-premise y conectividad WAN se documentan en Capítulo~\ref{chap:resultados}.
+La implementación desplegó dos \textbf{pasarelas de borde Raspberry~Pi~4} (RPi4-01, RPi4-02) en un laboratorio controlado, equipadas con el módulo \textbf{Alfa Networks AHPI6108E} (formato HAT, chipset Morse Micro MM6108, interfaz SDIO)~\cite{morsemicroMM8108ProductBrief2025} que proporciona conectividad HaLow 802.11ah nativa.  Las pasarelas participan como \emph{Mesh Points} (estaciones) en una red en malla IEEE~802.11s junto con un nodo \textbf{Alfa Networks Tube~AHM} dedicado como \emph{Mesh Gate} (punto de acceso) con enlace troncal Ethernet hacia el \emph{switch} local y el servidor ThingsBoard \emph{on-premise}.
 
-Cada Gateway Raspberry Pi 4 integrado como Mesh Point desempeña cuatro roles arquitectónicos críticos: (1) \textbf{Thread Border Router} mediante nRF52840 USB Dongle~\cite{NordicThread2024} con stack OpenThread~\cite{openthread2024}, interconectando red mesh Thread local (IEEE 802.15.4, 2.4 GHz)~\cite{ThreadGroup2023} con infraestructura IP tradicional vía servicios NAT64/DNS64, (2) \textbf{Plataforma Edge Computing} ejecutando ThingsBoard Edge 3.6.2 en stack Docker con 6 microservicios para Rule Engine local, agregación temporal TimescaleDB, y buffer offline 72 horas de telemetría, (3) \textbf{Nodo Mesh Point HaLow peer} participando activamente en protocolo HWMP como igual (peer) con otros Mesh Points, enrutamiento mesh dinámico colaborativo con path selection basado en airtime cost y múltiples rutas disponibles, y (4) \textbf{Agregación Multi-Thread} consolidando telemetría de 15 nodos Thread locales antes de inyectar al backbone HaLow mesh compartido hacia Mesh Gate.
+Cada pasarela desempeña tres roles: (1)~\textbf{Thread Border Router} mediante nRF52840 USB Dongle con OpenThread~\cite{openthread2024}, ejecutado como servicio nativo de OpenWRT; (2)~\textbf{Plataforma de Computación en el Borde} con ThingsBoard Edge~3.6.2 en Docker, incluyendo transporte LwM2M integrado, motor de reglas y almacenamiento local; y (3)~\textbf{Nodo de malla HaLow nativo} mediante el módulo AHPI6108E, con enrutamiento HWMP dinámico en la red 802.11s.
 
-\textbf{Clarificación arquitectónica crítica:} Los routers Alfa Networks Tube AHM son dispositivos \textit{comerciales standalone} con procesador integrado MT7628 (MIPS @ 580 MHz) ejecutando OpenWRT 23.05~\cite{morsemicroOpenWRT2024} y radio HaLow MM6108. Cada Tube AHM funciona como \textbf{nodo mesh autónomo peer} con puerto Ethernet GbE al cual se conecta localmente el Raspberry Pi 4 correspondiente. \textbf{Topología peer-to-peer:} Los 2 Mesh Points (Tube-02 + RPi4-01, Tube-03 + RPi4-02) son peers equipolentes ejecutando servicios edge que enrutan tráfico cooperativamente, sin jerarquía maestro-esclavo. El Mesh Gate (Tube-01) opera sin RPi4 co-ubicado, dedicándose exclusivamente a routing mesh y backhaul Ethernet hacia switch local (server on-premise ThingsBoard conectado al mismo switch). Esta arquitectura de \textit{distributed mesh gateways} permite que fallos en cualquier Mesh Point no interrumpan servicio de otros gateways: protocolo HWMP re-enruta tráfico automáticamente por múltiples paths alternativos disponibles en la topología full-mesh (e.g., Tube-02 falla → tráfico de Tube-03 se enruta directo a Tube-01, o viceversa), mejorando disponibilidad 99.7\% vs arquitectura STA-cliente 97.2\% medida en piloto previo.
-
-\subsection{Especificaciones del Hardware}
+% --------------------------------------------------------------------------
+\subsection{Especificaciones del \emph{Hardware}}
 \label{sec:gateway-hardware}
 
-\textbf{Plataforma Raspberry Pi 4 Model B (4 GB RAM):}
-
-\begin{itemize}
-    \item \textbf{Procesador:} Broadcom BCM2711 quad-core ARM Cortex-A72 @ 1.5 GHz, arquitectura ARMv8-A (64-bit), caché L1 48 KB I + 32 KB D por core, caché L2 1 MB compartida
-    \item \textbf{Memoria:} 4 GB LPDDR4-3200 SDRAM (3200 MT/s, ancho de banda 12.8 GB/s), suficiente para stack Docker 7 containers con límite agregado 3.5 GB RAM
-    \item \textbf{Almacenamiento:} MicroSD 128 GB UHS-I (SanDisk Extreme Pro, velocidad lectura 160 MB/s, escritura 90 MB/s), capacidad suficiente para buffer offline 90 días telemetría 1,000 medidores (ocupación medida 2.4 GB / 128 GB = 1.9\%)
-    \item \textbf{Conectividad Red:}
-        \begin{itemize}
-        \item \textbf{Ethernet Gigabit (conexión primaria):} Broadcom GENET, throughput real 940 Mbps, conexión local directa al puerto LAN del router Alfa Networks Tube AHM co-ubicado. \textit{Esta es la conexión principal de backhaul para telemetría AMI hacia backbone HaLow mesh.}
-        \item WiFi 802.11ac dual-band (2.4/5 GHz, Cypress CYW43455), deshabilitado en producción para minimizar interferencia Thread 2.4 GHz
-        \item \textbf{HaLow 802.11ah (mesh routing):} Integrado en router Alfa Tube AHM co-ubicado (Morse Micro MM6108), modo Mesh Point 802.11s, banda 902-928 MHz @ 4 MHz BW, throughput 4 Mbps, alcance 280-520m entre Mesh Points y hacia Mesh Gate. RPi4 inyecta tráfico vía Ethernet local; Tube AHM gestiona routing mesh HWMP
-        \item Quectel EG25-G LTE Cat-4 USB (módulo externo, backup WAN secundario, throughput 150 Mbps DL / 50 Mbps UL, latencia 35-80 ms)
-        \end{itemize}
-    \item \textbf{Interfaces USB:}
-        \begin{itemize}
-        \item 2$\times$ USB 3.0 (5 Gbps): Puerto 1 ocupado por nRF52840 Dongle (OTBR), Puerto 2 reservado para SSD NVMe externo (expansión futura)
-        \item 2$\times$ USB 2.0 (480 Mbps): Puerto 1 ocupado por módulo Quectel LTE, Puerto 2 libre
-        \end{itemize}
-    \item \textbf{GPIO:} 40 pines (26 GPIO disponibles), utilizados para: (1) Reed switch detección tamper físico (GPIO 17), (2) LED status multicolor (GPIO 22/23/24), (3) Botón reset manual (GPIO 27)
-    \item \textbf{Sistema Operativo:} Ubuntu Server 22.04.3 LTS ARM64, kernel 5.15.0-1048-raspi, Docker 24.0.7, Docker Compose 2.23.0
-    \item \textbf{Consumo Energético:} Fuente oficial 5V @ 3A (15W máximo), medido operación real: 8.5W promedio (1.7A), picos 12W durante stress test (30 medidores polling 60s), sleep mode no aplicable (servicio 24/7)
-    \item \textbf{Temperatura Operación:} 0-50°C especificado, piloto midió 42-68°C CPU sin disipador, 38-52°C con disipador pasivo aluminio (suficiente, sin throttling térmico detectado)
-    \item \textbf{Precio:} Raspberry Pi 4 4GB: \$55, nRF52840 Dongle: \$10, Quectel EG25-G: \$28, MicroSD 128GB: \$22, disipador + case: \$12, \textbf{Total: \$127/gateway}
-\end{itemize}
-
-\textbf{Justificación Selección Raspberry Pi 4 vs Alternativas:}
-
-Raspberry Pi 4 seleccionado tras análisis comparativo con plataformas alternativas (Odroid N2+, Orange Pi 5, x86 Mini-PC) evaluando 7 criterios: precio, consumo energético, ecosistema Docker ARM64, disponibilidad comercial, soporte comunitario, temperatura operación sin ventilador, y experiencia previa equipo. Tabla~\ref{tab:gateway-hw-comparison} presenta comparación sistemática.
+La pasarela utiliza Raspberry~Pi~4 Model~B (4~GB LPDDR4-3200), procesador Broadcom BCM2711 quad-core Cortex-A72 @ 1,5~GHz, almacenamiento MicroSD 128~GB (SanDisk Extreme Pro), módulo \textbf{Alfa Networks AHPI6108E} (HAT, chipset MM6108, interfaz SDIO) para conectividad HaLow 802.11ah nativa (902--928~MHz, hasta 32,5~Mbps PHY), y nRF52840 USB Dongle para OTBR.  El sistema operativo es OpenWRT~23.05 (§\ref{sec:gateway-openwrt}), compilado desde el \emph{fork} de Morse Micro con controladores nativos \texttt{kmod-morse} para la radio HaLow conectada por SDIO.  Consumo medido: 8,5~W promedio, 12~W pico.
 
 \begin{table}[H]
 \centering
-\caption{Comparación Gateway Hardware: Raspberry Pi 4 vs alternativas}
+\caption{Comparación de plataformas \emph{hardware} para pasarela de borde}
 \label{tab:gateway-hw-comparison}
 \resizebox{\textwidth}{!}{%
 \begin{tabular}{|l|c|c|c|c|}
 \hline
 \rowcolor{gray!20}
-\textbf{Característica} & \textbf{Raspberry Pi 4 4GB} & \textbf{Odroid N2+ 4GB} & \textbf{Orange Pi 5 4GB} & \textbf{x86 Mini-PC} \\\\
+\textbf{Característica} & \textbf{RPi 4 4\,GB} & \textbf{Odroid N2+ 4\,GB} & \textbf{Orange Pi 5 4\,GB} & \textbf{x86 Mini-PC} \\
 \hline
-\textbf{CPU} & Cortex-A72 4$\times$1.5 GHz & Cortex-A73 4$\times$1.8 GHz & RK3588S 8$\times$2.4 GHz & Intel N100 4$\times$3.4 GHz \\\\
+CPU & Cortex-A72 4$\times$1,5\,GHz & Cortex-A73 4$\times$1,8\,GHz & RK3588S 8$\times$2,4\,GHz & N100 4$\times$3,4\,GHz \\
 \hline
-\textbf{RAM} & 4 GB LPDDR4-3200 & 4 GB DDR4-2666 & 4 GB LPDDR4-4266 & 8 GB DDR4-3200 \\\\
+Precio & \textcolor{green}{\textbf{\$55}} & \$75 & \$89 & \$180 \\
 \hline
-\textbf{Precio} & \textcolor{green}{\textbf{\$55}} & \$75 & \$89 & \$180 \\\\
+Consumo promedio & \textcolor{green}{\textbf{8,5\,W}} & 12\,W & 15\,W & 25\,W \\
 \hline
-\textbf{Consumo promedio} & \textcolor{green}{\textbf{8.5W}} & 12W & 15W & 25W \\\\
+Docker ARM64 & \textcolor{green}{\textbf{Nativo}} & Nativo & Nativo & x86 \\
 \hline
-\textbf{Docker ARM64} & \textcolor{green}{\textbf{Nativo}} (ARMv8) & Nativo & Nativo & \textcolor{orange}{x86 emulation} \\\\
+Ecosistema & \textcolor{green}{\textbf{Muy maduro}} & Maduro & Emergente & Estándar \\
 \hline
-\textbf{Ecosistema} & \textcolor{green}{\textbf{Muy maduro}} (15+ años) & Maduro (8 años) & Emergente (2 años) & Estándar x86 \\\\
+Temperatura sin ventilador & \textcolor{green}{\textbf{52\,°C}} & 68\,°C & 72\,°C & Requiere ventilador \\
 \hline
-\textbf{Disponibilidad} & \textcolor{green}{\textbf{Alta}} (stock global) & Media (importación) & Baja (China only) & Alta \\\\
-\hline
-\textbf{Temperatura sin fan} & \textcolor{green}{\textbf{52°C}} (disipador pasivo) & 68°C (throttling) & 72°C (throttling) & 45°C (ventilador req.) \\\\
-\hline
-\textbf{Decisión} & \textcolor{green}{\textbf{SELECCIONADO}} & Descartado (costo) & Descartado (disponib.) & Descartado (consumo) \\\\
+Decisión & \textcolor{green}{\textbf{SELECCIONADO}} & Descartado (costo) & Descartado (disponib.) & Descartado (consumo) \\
 \hline
 \end{tabular}%
 }
 \end{table}
 
-\textbf{Decisión final: Raspberry Pi 4} por cinco ventajas críticas que superan desventajas de CPU menos potente: (1) \textbf{Precio óptimo} \$55 vs \$75-180 alternativas = 27-69\% ahorro CAPEX, despliegue 10 gateways ahorra \$200-1,250, (2) \textbf{Consumo energético} 8.5W vs 12-25W = 29-66\% reducción, OPEX 5 años: \$37 RPi vs \$52-109 alternativas @ \$0.15/kWh (ahorro \$15-72 por gateway), (3) \textbf{Ecosistema Docker ARM64} maduro con imágenes oficiales ThingsBoard, PostgreSQL, Mosquitto sin recompilación, (4) \textbf{Disponibilidad global} con stock Digi-Key/Mouser vs importación directa China (lead time 2-4 semanas Odroid/OrangePi), (5) \textbf{Operación sin ventilador} con disipador pasivo aluminio (temperatura 52°C vs 68-72°C alternativas con throttling térmico).
+RPi4 seleccionado por precio óptimo (27--69\% ahorro CAPEX), consumo 8,5~W (29--66\% menor), ecosistema Docker ARM64 maduro (imágenes oficiales ThingsBoard, PostgreSQL), disponibilidad global y operación sin ventilador.  El compromiso aceptado es una CPU menos potente que las alternativas, pero suficiente para los servicios de borde desplegados, como se valida en §\ref{sec:gateway-tb-edge-validacion}.
 
-\textbf{Trade-offs aceptados:} CPU Cortex-A72 1.5 GHz menos potente que alternativas (benchmarks: Odroid N2+ 40\% más rápido, Orange Pi 5 2.8$\times$ más rápido, x86 Mini-PC 4.5$\times$ más rápido), pero \textbf{suficiente para carga objetivo} 1,000 medidores @ 15 min = 1.1 msg/s promedio, validado stress test 30 medidores @ 60s polling = 0.5 msg/s con CPU 42\% utilización. RAM 4 GB límite vs 8 GB x86, pero stack Docker configurado límites agregados 3.5 GB sin OOM errors durante piloto 90 días.
+%======================================================================
+\section{Sistema Operativo: OpenWRT con Soporte HaLow}
+\label{sec:gateway-openwrt}
 
-\subsection{Arquitectura de Software}
-\label{sec:gateway-software}
+La pasarela ejecuta \textbf{OpenWRT~23.05}, compilado desde el \emph{fork} oficial de Morse Micro\footnote{\url{https://github.com/MorseMicro/openwrt}}, como sistema operativo base.  La selección de OpenWRT, en lugar de distribuciones convencionales como Ubuntu Server o Raspberry Pi OS, responde a tres requisitos técnicos:
 
-La arquitectura de software del Gateway implementa seis microservicios containerizados con Docker Compose~\cite{dockerComposeDocumentation2024}, cada uno con límites de recursos CPU/RAM configurados y persistencia de datos en volúmenes Docker. El stack orquesta componentes heterogéneos (Java, Python, Node.js, C) con aislamiento de procesos~\cite{perezImplicationSoftwareContainerization2024}, logging centralizado, y reinicio automático ante fallos. Sistema operativo Ubuntu Server 22.04.3 LTS ARM64 (kernel 5.15.0-1048-raspi) proporciona base estable con soporte Long Term Support hasta 2027.
+\begin{enumerate}
+    \item \textbf{Compatibilidad nativa con radios HaLow (IEEE~802.11ah):} El \emph{fork} de Morse Micro incluye los controladores del \emph{kernel} (\texttt{kmod-morse}), \emph{firmware} binario (\texttt{morse-fw-6108}) y \emph{device tree overlays} (\texttt{mm610x-sdio}, \texttt{morse-ps}) necesarios para operar el chipset MM6108 del módulo AHPI6108E conectado por interfaz SDIO al HAT GPIO de la Raspberry~Pi~4.  Estos controladores no están disponibles en repositorios OpenWRT \emph{upstream} ni en distribuciones alternativas.
+    \item \textbf{Gestión unificada de red mediante UCI:} El sistema de configuración UCI (\emph{Unified Configuration Interface}) permite administrar las tres interfaces de red (\texttt{eth0}, \texttt{mesh0} HaLow, \texttt{wpan0} Thread), \emph{firewall}, DHCP y servicios de sistema mediante archivos declarativos en \texttt{/etc/config/}, facilitando la replicabilidad de configuraciones entre pasarelas.
+    \item \textbf{Huella reducida con soporte Docker:} OpenWRT en modo \emph{target} \texttt{bcm27xx/bcm2711} (ARM64v8) proporciona un sistema base inferior a 200~MB, dejando recursos suficientes para Docker y los servicios de borde.  El \emph{kernel} Linux~5.15 LTS con parches BCM2711 garantiza estabilidad a largo plazo.
+\end{enumerate}
 
-\input{fig_docker_stack}
+% --------------------------------------------------------------------------
+\subsection{Compilación de la Imagen}
+\label{sec:gateway-openwrt-build}
 
-\textbf{Microservicios implementados:}
+La imagen se compiló desde el repositorio del proyecto\footnote{\url{https://github.com/jsebgiraldo/openwrt}} (derivado del \emph{fork} Morse Micro) con la siguiente configuración: \emph{target} \texttt{bcm27xx/bcm2711} (Raspberry Pi 4, 64-bit ARMv8), \emph{subtarget device} \texttt{rpi-4-mmeval}, arquitectura \texttt{aarch64\_cortex-a72}, libc musl~1.2.4.  Los paquetes específicos HaLow incluidos son: \texttt{kmod-morse} (controlador 802.11ah PHY/MAC, bus SDIO), \texttt{morse-fw-6108} (\emph{firmware} para MM6108), \texttt{netifd-morse} (integración UCI) y \texttt{morse-utils} (herramientas de diagnóstico).  El procedimiento detallado de compilación e instalación se documenta en el repositorio del proyecto.
 
-\textbf{1. Bridge CoAP-MQTT (Traductor Protocolos):}
+% --------------------------------------------------------------------------
+\subsection{Configuración de Red}
+\label{sec:gateway-openwrt-red}
+
+La pasarela configura tres interfaces mediante UCI:
+
 \begin{itemize}
-    \item \textbf{Función:} Recibe mensajes CoAP~\cite{RFC7252} desde Thread mesh (puerto UDP 5683), parsea payload LwM2M TLV (Type-Length-Value), traduce a formato JSON, y publica a broker Mosquitto vía MQTT topic \texttt{v1/gateway/telemetry}
-    \item \textbf{Implementación:} Python 3.11 con librería aiocoap 0.4.5 (asynchronous CoAP), runtime asyncio event loop single-threaded
-    \item \textbf{Recursos asignados:} CPU 0.5 cores (limit), RAM 256 MB (limit), reinicio automático on-failure
-    \item \textbf{Throughput validado:} 1,000 msgs/s stress test (30 nodos @ 33 Hz polling), latencia procesamiento 1.2 ms promedio
+    \item \texttt{eth0}: Ethernet GbE, IP estática (ejemplo: \texttt{192.168.1.10/24}), métrica~100.  Interfaz de acceso a la red WAN para conectividad hacia la nube (servidor ThingsBoard) y salida a Internet.
+    \item \texttt{wpan0}: Thread IEEE~802.15.4 (gestionada por OTBR, §\ref{sec:gateway-otbr}), MTU~1280, IPv6 ULA \texttt{fd11:22::1/64}.
+    \item \texttt{mesh0}: Interfaz HaLow 802.11s nativa (\emph{chipset} MM6108 vía SDIO, §\ref{sec:gateway-halow}), puenteada con \texttt{eth0} mediante \texttt{br-lan}.  Ruta primaria de datos hacia el Mesh Gate.
 \end{itemize}
 
-\textbf{2. Mosquitto MQTT Broker:}
-\begin{itemize}
-    \item \textbf{Función:} Intermediario local (broker) para buffering mensajes, implementa QoS 1 (At Least Once) con persistencia disk-backed, bridge automático hacia ThingsBoard Cloud (TLS 1.3 puerto 8883)
-    \item \textbf{Configuración:} Persistencia habilitada (\texttt{persistence true}, ubicación \texttt{/mosquitto/data/}), \texttt{max\_queued\_messages 100,000}, \texttt{max\_inflight\_messages 20}, autosave interval 1800s
-    \item \textbf{Recursos:} CPU 1 core, RAM 512 MB, volumen persistente 2 GB
-    \item \textbf{Uptime piloto:} 99.97\% (2 reinicios mantenimiento programado en 90 días = 43 minutos downtime), sin pérdida mensajes durante reinicios (persistencia funcional)
-\end{itemize}
-
-\textbf{3. PostgreSQL 15 + TimescaleDB 2.13:}
-\begin{itemize}
-    \item \textbf{Función:} Base datos time-series con hypertables (particionamiento automático por tiempo), continuous aggregates pre-computados (bins 5 min, 1h, 1d), compresión columnar 10:1 mediante algoritmo Gorilla optimizado series temporales~\cite{freedmanTimescaleDBSQLMade2024, postgresqlDocumentation2024}
-    \item \textbf{Esquema:} Tabla \texttt{telemetry} (\texttt{device\_id UUID, timestamp TIMESTAMPTZ, voltage REAL, current REAL, energy REAL, power\_factor REAL}), hypertable con chunk interval 7 días, índices BRIN (Block Range INdexes) optimizados consultas temporales
-    \item \textbf{Configuración:} \texttt{shared\_buffers 1 GB}, \texttt{effective\_cache\_size 2 GB}, \texttt{maintenance\_work\_mem 256 MB}, \texttt{checkpoint\_timeout 15 min}, \texttt{wal\_level replica} (preparado para replicación futura)
-    \item \textbf{Retención datos:} 90 días granulares (15 min interval), 2 años agregados horarios (compresión automática tras 7 días), 5 años agregados diarios
-    \item \textbf{Recursos:} CPU 2 cores, RAM 2 GB, volumen persistente 128 GB (ocupación medida 2.4 GB piloto 90 días = 1.9\% capacidad)
-\end{itemize}
-
-\textbf{4. Node-RED 3.1:}
-\begin{itemize}
-    \item \textbf{Función:} Rule Engine visual flow-based para procesamiento edge: filtrado datos no-críticos (60\% mensajes descartados si \texttt{voltage} dentro rango 207-253V), detección anomalías threshold-based (\texttt{voltage sag/swell}, \texttt{over-current}, \texttt{temperature >60°C}), agregación temporal (4 lecturas 15-min $\rightarrow$ 1 promedio horario)
-    \item \textbf{Flujos implementados:} 12 flows con 87 nodos total: (1) Fraud detection (consumo negativo, energy rollback), (2) Voltage quality monitoring (sag/swell/interruption), (3) Power factor correction alerts (PF <0.85 3 veces consecutivas), (4) Billing pre-calculation (\texttt{cost\_usd = energy\_kwh} $\times$ \texttt{tariff})
-    \item \textbf{Latencia procesamiento:} 2-4 ms por mensaje (benchmark Node.js V8 single-threaded), suficiente para requisito edge <10 ms
-    \item \textbf{Recursos:} CPU 0.5 cores, RAM 256 MB, persistencia flows 50 MB
-\end{itemize}
-
-\textbf{5. Grafana 10.2:}
-\begin{itemize}
-    \item \textbf{Función:} Dashboards locales responsive para operadores campo, visualización sin conectividad internet mediante queries SQL directos a PostgreSQL+TimescaleDB local
-    \item \textbf{Datasource:} PostgreSQL (\texttt{localhost:5432}), queries optimizadas con continuous aggregates TimescaleDB (latencia <100 ms)
-    \item \textbf{Dashboards:} 8 dashboards implementados: (1) Real-time telemetry (refrescado 5s), (2) Historical trends (7/30/90 días), (3) Alarm overview (estados ACTIVE/CLEARED/ACKNOWLEDGED), (4) Device status (online/offline, RSSI, last activity), (5) Energy consumption per building, (6) Voltage quality metrics (SAIFI/SAIDI emulados), (7) Network topology Thread mesh, (8) Gateway health (CPU/RAM/disk/uptime)
-    \item \textbf{Acceso:} Puerto HTTP 3000, autenticación básica (usuario \texttt{admin}, password hash bcrypt), no expuesto WAN (solo LAN 192.168.1.0/24)
-    \item \textbf{Recursos:} CPU 0.5 cores, RAM 256 MB
-\end{itemize}
-
-\textbf{6. ThingsBoard Edge 3.6.2:}
-\begin{itemize}
-    \item \textbf{Función:} Plataforma IoT edge con Asset Management jerárquico, Rule Engine local (JavaScript), sincronización bidireccional con ThingsBoard Cloud, dashboards web editables drag\&drop, API REST completa
-    \item \textbf{Componentes:} Core service (Spring Boot Java), JS Executor (Node.js), MQTT/CoAP/HTTP transports, Edge Sync service (MQTT QoS 1 hacia cloud)
-    \item \textbf{Configuración:} \texttt{CLOUD\_ROUTING\_KEY} pre-compartida con cloud, \texttt{EDGE\_RPC\_PORT 7070}, datasource PostgreSQL compartido con TimescaleDB
-    \item \textbf{Recursos:} CPU 1.5 cores, RAM 1536 MB (límite configurado), volumen persistente 10 GB (logs + assets)
-    \item \textbf{Validación piloto:} Uptime 99.93\% (40 min downtime actualización v3.6.1$\rightarrow$v3.6.2), CPU 35\% promedio, RAM 1.2 GB / 1.5 GB (80\% utilización), sin OOM errors
-\end{itemize}
-
-\textbf{Docker Compose resource limits totales:}
-
-Stack completo consume CPU 5.0 cores asignados (RPi4 4 cores físicos, overcommit 25\% aceptable con scheduling CFS), RAM 3.5 GB asignados (RPi4 4 GB, margen 500 MB para OS kernel). Validación piloto: CPU 42\% promedio bajo carga normal, picos 68\% durante batch sync cloud, RAM 3.2 GB utilizada (sin swap activo), uptime stack 99.91\% (8h downtime acumulados en 90 días por mantenimiento programado).
-
-\begin{verbatim}
-services:
-  bridge-coap-mqtt:
-    cpus: 0.5
-    mem_limit: 256m
-  mosquitto:
-    cpus: 1.0
-    mem_limit: 512m
-  postgres:
-    cpus: 2.0
-    mem_limit: 2048m
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-  nodered:
-    cpus: 0.5
-    mem_limit: 256m
-  grafana:
-    cpus: 0.5
-    mem_limit: 256m
-  tb-edge:
-    cpus: 1.5
-    mem_limit: 1536m
-    volumes:
-      - tb-edge-data:/data
-\end{verbatim}
-
-\section{Implementación del OpenThread Border Router (OTBR)}
+%======================================================================
+\section{OpenThread Border Router (OTBR)}
 \label{sec:gateway-otbr}
 
-El OpenThread Border Router (OTBR) constituye el componente arquitectónico crítico que interconecta la red Thread mesh IEEE 802.15.4~\cite{IEEE802154-2020} (2.4 GHz) con infraestructura IP tradicional (Ethernet/IPv6). OTBR actúa como gateway bidireccional: (1) \textbf{Dirección Thread$\rightarrow$IP}: traduce tráfico originado en nodos Thread (direcciones IPv6 comprimidas 6LoWPAN, prefijo \texttt{fd00::/64} ULA) hacia internet público IPv4/IPv6 mediante servicios NAT64/DNS64, y (2) \textbf{Dirección IP$\rightarrow$Thread}: enruta comandos downlink RPC desde ThingsBoard Cloud hacia nodos específicos Thread mediante forwarding IPv6 nativo.
+OTBR interconecta la red Thread IEEE~802.15.4~\cite{IEEE802154-2020} con la infraestructura IP de la pasarela, actuando como puente bidireccional: traduce tráfico Thread (IPv6 6LoWPAN, prefijo \texttt{fd00::/64}) hacia IPv4/IPv6 vía NAT64/DNS64, y enruta comandos descendentes hacia los nodos Thread.  La implementación utiliza un nRF52840 USB Dongle en modo RCP (\emph{Radio Co-Processor}), donde el \emph{stack} Thread completo se ejecuta en el \emph{host} RPi4 mediante el servicio \texttt{otbr-agent}, reduciendo la latencia respecto a una implementación NCP.
 
-La implementación utiliza nRF52840 USB Dongle (Nordic Semiconductor) conectado a puerto USB 3.0 Raspberry Pi, ejecutando firmware OpenThread main en modo Radio Co-Processor (RCP). El nRF52840 opera como transceiver IEEE 802.15.4 puro (PHY+MAC offload), mientras el procesamiento de red Thread (routing, commissioning, security, TCP) se ejecuta en host Raspberry Pi mediante daemon \texttt{otbr-agent}. Esta arquitectura split reduce latencia vs implementación Network Co-Processor (NCP) que ejecuta stack completo en nRF52840 (comunicación serial UART 115200 bps cuello de botella, latencia +15-25 ms adicionales).
+La integración de OTBR en OpenWRT se realizó como servicio nativo del sistema, configurado mediante UCI y gestionado por \texttt{procd} (gestor de procesos de OpenWRT).  La configuración detallada del servicio OTBR está disponible en el repositorio del proyecto\footnote{\url{https://github.com/jsebgiraldo/openwrt}}.
 
-\textbf{Servicios provistos por OTBR:}
+Servicios provistos: (1)~enrutamiento IPv6 (prefijo Thread ULA), (2)~NAT64 con \emph{well-known prefix} \texttt{64:ff9b::/96} (RFC~6052)~\cite{RFC6052}, (3)~DNS64 (síntesis AAAA desde A), (4)~ND Proxy, (5)~Thread Commissioner (PAKE con ECC~P-256), (6)~mDNS Proxy.
 
-\begin{itemize}
-    \item \textbf{IPv6 Routing:} Propaga prefijo Thread ULA (\texttt{fd11:22::0/64}) hacia nodos mesh, enruta paquetes IPv6 entre Thread mesh y Ethernet backbone
-    \item \textbf{NAT64:} Traduce conexiones IPv6-only (nodos Thread) hacia servidores IPv4-only internet mediante well-known prefix \texttt{64:ff9b::/96} (RFC 6052)~\cite{RFC6052}
-    \item \textbf{DNS64:} Sintetiza registros AAAA (IPv6) desde registros A (IPv4) existentes, permite nodos Thread resolver dominios IPv4-only como \texttt{example.com}
-    \item \textbf{ND Proxy:} Responde Neighbor Discovery solicitudes en behalf de nodos Thread, evita flooding broadcast ND en red Ethernet
-    \item \textbf{Thread Commissioner:} Autoriza unión (join) de nuevos nodos Thread mediante protocolo PAKE (Password Authenticated Key Exchange) con ECC P-256, distribuye Network Key cifrada
-    \item \textbf{mDNS Proxy:} Publica servicios Thread (\texttt{\_meshcop.\_udp}) en LAN Ethernet vía Avahi, permite descubrimiento automático OTBR desde clientes
-\end{itemize}
-
-\subsection{Configuración de Interfaces de Red}
+% --------------------------------------------------------------------------
+\subsection{Interfaces de Red y NAT64/DNS64}
 \label{sec:gateway-otbr-interfaces}
 
-\textbf{Interfaces de red Gateway:}
+La pasarela configura dos interfaces principales para OTBR: \texttt{wpan0} (Thread IEEE~802.15.4, MTU~1280, IPv6 ULA \texttt{fd11:22::1/64}) y \texttt{eth0} (Ethernet GbE, IP estática, métrica~100).  OTBR crea un puente (\emph{backbone bridge}) entre \texttt{wpan0} y la interfaz de red troncal, permitiendo que los nodos Thread accedan a la infraestructura IPv4/IPv6.
 
-\begin{itemize}
-    \item \textbf{\texttt{wpan0}:} Interfaz Thread radio (IEEE 802.15.4), MTU 1280 bytes (IPv6 minimum), direcciones IPv6: (1) Link-Local \texttt{fe80::xxxx:xxxx:xxxx:xxxx/64} derivada de MAC EUI-64 nRF52840, (2) ULA \texttt{fd11:22::1/64} prefijo Thread mesh
-    \item \textbf{\texttt{eth0}:} Interfaz Ethernet Gigabit hacia ONT GPON, MTU 1500 bytes, IP estática \texttt{192.168.1.10/24} gateway \texttt{192.168.1.1}, DNS \texttt{8.8.8.8}
-    \item \textbf{\texttt{wwan0}:} Interfaz LTE Cat-M1 Quectel (backup WAN), MTU 1430 bytes, IP dinámica DHCP operador, metric 200 (secundario vs eth0 metric 100)
-\end{itemize}
+NAT64 se implementa mediante Tayga con \emph{prefix} \texttt{64:ff9b::/96} y \emph{masquerade} iptables hacia \texttt{eth0}, permitiendo a los nodos Thread (IPv6) comunicarse con servidores IPv4.  DNS64 sintetiza registros AAAA desde registros A cuando el dominio carece de IPv6 nativo.  Validación confirma conectividad extremo a extremo desde nodos Thread: latencia 42--48~ms hacia \texttt{8.8.8.8} vía NAT64.
 
-\textbf{Configuración \texttt{/etc/netplan/01-gateway-config.yaml} (Ubuntu):}
-
-\begin{verbatim}
-network:
-  version: 2
-  renderer: networkd
-  ethernets:
-    eth0:
-      dhcp4: no
-      addresses:
-        - 192.168.1.10/24
-      gateway4: 192.168.1.1
-      nameservers:
-        addresses: [8.8.8.8, 8.8.4.4]
-      routes:
-        - to: 0.0.0.0/0
-          via: 192.168.1.1
-          metric: 100
-    wwan0:
-      dhcp4: yes
-      routes:
-        - to: 0.0.0.0/0
-          via: 0.0.0.0  # Learned from DHCP
-          metric: 200   # Backup route
-\end{verbatim}
-
-\textbf{Configuración Thread Network Parameters \texttt{otbr-agent}:}
-
-\begin{verbatim}
-# /etc/default/otbr-agent
-OTBR_AGENT_OPTS="-I wpan0 -B eth0 spinel+hdlc+uart:///dev/ttyACM0?uart-baudrate=115200"
-
-# Thread Dataset (provisionado via otbr-agent CLI)
-sudo ot-ctl dataset init new
-sudo ot-ctl dataset networkname AMI-Pilot-Thread-2024
-sudo ot-ctl dataset channel 15      # 2.425 GHz, mínima interferencia WiFi
-sudo ot-ctl dataset panid 0xABCD
-sudo ot-ctl dataset extpanid 1234567890ABCDEF
-sudo ot-ctl dataset networkkey 00112233445566778899AABBCCDDEEFF
-sudo ot-ctl dataset commit active
-sudo ot-ctl ifconfig up
-sudo ot-ctl thread start
-\end{verbatim}
-
-\subsection{Servicios NAT64 y DNS64}
-\label{sec:gateway-otbr-nat64}
-
-\textbf{NAT64 (Network Address Translation IPv6-to-IPv4):}
-
-NAT64 permite nodos Thread IPv6-only comunicarse con servidores internet IPv4-only mediante traducción de direcciones stateful. Implementación utiliza daemon Tayga (userspace NAT64) configurado con well-known prefix \texttt{64:ff9b::/96} (RFC 6052)~\cite{RFC6052}. Cuando nodo Thread envía paquete IPv6 destino \texttt{64:ff9b::8.8.8.8} (DNS Google), Tayga traduce: (1) Header IPv6$\rightarrow$IPv4, (2) Dirección destino \texttt{64:ff9b::8.8.8.8}$\rightarrow$\texttt{8.8.8.8}, (3) Dirección origen Thread ULA$\rightarrow$IP pública Gateway (SNAT), y envía paquete IPv4 internet.
-
-\textbf{Configuración Tayga \texttt{/etc/tayga.conf}:}
-
-\begin{verbatim}
-tun-device nat64
-ipv4-addr 192.168.255.1
-prefix 64:ff9b::/96
-dynamic-pool 192.168.255.0/24
-data-dir /var/spool/tayga
-\end{verbatim}
-
-\textbf{Reglas iptables NAT64:}
-
-\begin{verbatim}
-# Masquerade tráfico IPv4 saliente interface nat64
-sudo iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
-
-# Forward entre nat64 (Tayga) y eth0 (WAN)
-sudo iptables -A FORWARD -i nat64 -o eth0 -j ACCEPT
-sudo iptables -A FORWARD -i eth0 -o nat64 -m state --state RELATED,ESTABLISHED -j ACCEPT
-\end{verbatim}
-
-\textbf{DNS64 (Síntesis AAAA desde A):}
-
-DNS64 complementa NAT64 sintetizando registros AAAA (IPv6) desde registros A (IPv4) cuando dominio no tiene AAAA nativo. Implementación usa BIND9 con módulo \texttt{dns64} habilitado. Cuando nodo Thread consulta \texttt{AAAA example.com}, BIND: (1) Consulta servidor DNS upstream \texttt{8.8.8.8}, (2) Si respuesta contiene solo registro A \texttt{93.184.216.34}, sintetiza AAAA \texttt{64:ff9b::93.184.216.34} usando prefix NAT64, (3) Retorna AAAA sintetizado a nodo Thread.
-
-\textbf{Configuración BIND9 \texttt{/etc/bind/named.conf.options}:}
-
-\begin{verbatim}
-options {
-    directory "/var/cache/bind";
-    forwarders { 8.8.8.8; 8.8.4.4; };
-    dnssec-validation auto;
-    listen-on-v6 { fd11:22::1; };  # Escucha en prefijo Thread
-    allow-query { fd11:22::/64; }; # Permite queries desde Thread mesh
-    dns64 64:ff9b::/96 {
-        clients { fd11:22::/64; };  # Aplica DNS64 solo Thread clients
-    };
-};
-\end{verbatim}
-
-\textbf{Validación NAT64+DNS64:}
-
-\begin{verbatim}
-# Desde nodo Thread (shell OpenThread CLI):
-ot> ping 64:ff9b::8.8.8.8
-16 bytes from 64:ff9b::8.8.8.8: icmp_seq=1 ttl=57 time=42ms
-16 bytes from 64:ff9b::8.8.8.8: icmp_seq=2 ttl=57 time=38ms
-
-ot> dns resolve example.com
-DNS response for example.com - 64:ff9b::5db8:d822 TTL:3600
-\end{verbatim}
-
-\subsection{Thread Commissioner y Comisionado de Nodos}
+% --------------------------------------------------------------------------
+\subsection{Comisionamiento Thread}
 \label{sec:gateway-otbr-commissioner}
 
-\textbf{Thread Commissioning Protocol:}
+El Commissioner autoriza la unión de nuevos dispositivos Thread distribuyendo credenciales (Network Key, PAN~ID, Channel) cifradas mediante PAKE con curva elíptica P-256~\cite{ThreadGroup1-4-0}.  Cada nodo Zephyr proporciona un PSKd (\emph{Pre-Shared Key for Device}); el Commissioner ejecuta el \emph{handshake} DTLS, genera la clave de sesión y envía el \emph{Dataset} cifrado.  El nodo almacena las credenciales en NVS (AES-256) y se une a la red como \emph{Full Thread Device}.
 
-Commissioning es el proceso de unir (join) nuevo dispositivo Thread a red existente de forma segura, distribuyendo credenciales (Network Key, PAN ID, Channel) cifradas mediante protocolo PAKE (Password Authenticated Key Exchange) con curva elíptica P-256~\cite{ThreadGroup1-4-0}. Thread define dos roles: (1) \textbf{Commissioner} (OTBR Gateway), autoriza joins y distribuye credenciales, y (2) \textbf{Joiner} (nodo ESP32-C6), solicita unión proporcionando PSKd (Pre-Shared Key for Device, 6-32 caracteres).
-
-Protocolo commissioning (simplificado): (1) Joiner envía \texttt{MLE Discovery Request} broadcast buscando Commissioner, (2) Commissioner responde \texttt{MLE Discovery Response} con su dirección IPv6, (3) Joiner inicia handshake DTLS con Commissioner usando PSKd, genera session key temporal vía PAKE (resiste ataques diccionario offline), (4) Commissioner envía \texttt{Joiner Entrust} mensaje cifrado con Network Key + Dataset, (5) Joiner almacena credenciales en NVS (Non-Volatile Storage) cifradas AES-256, y reinicia interface Thread uniendose como Full Thread Device.
-
-\textbf{Procedimiento comisionado 30 nodos piloto:}
-
-\begin{verbatim}
-# 1. Iniciar Commissioner en OTBR
-sudo ot-ctl commissioner start
-Commissioner: petitioning
-Done
-Commissioner: active
-
-# 2. Agregar Joiner credentials (repetir para cada nodo)
-# PSKd derivado de QR code impreso en nodo (formato: J:XXXXXX)
-sudo ot-ctl commissioner joiner add * J:AB12CD 300
-Done
-
-# 3. Flash firmware + provisioning en nodo ESP32-C6
-esptool.py --port /dev/ttyUSB0 write_flash 0x0 firmware-node-01.bin
-
-# 4. Nodo inicia commissioning automáticamente (logs nodo):
-I (2450) THREAD: Joiner start with PSKd J:AB12CD
-I (3120) THREAD: Joiner state: kStateConnect
-I (5890) THREAD: Joiner state: kStateConnected
-I (7230) THREAD: Commissioner accepted joiner
-I (8120) THREAD: Network credentials received
-I (8540) THREAD: Joiner state: kStateEntrust
-I (8980) THREAD: Commissioning complete, restarting...
-
-# 5. Verificar nodo unido (OTBR)
-sudo ot-ctl router table
-| ID | RLOC16 | Next Hop | Cost |
-|----|--------|----------|------|
-| 10 | 0x2800 | 1        | 1    |
-Done
-
-sudo ot-ctl childtable
-| ID  | RLOC16 | Timeout | Age | LQ In | C_VN | R | D | N | Extended MAC     |
-|-----|--------|---------|-----|-------|------|---|---|---|------------------|
-| 1   | 0x2801 | 240     | 18  | 3     | 131  | 1 | 1 | 1 | f1d2d2f5a0e8c3d1|
-Done
-\end{verbatim}
-
-\textbf{Tiempo promedio commissioning:} 2.8 $\pm$ 0.4 segundos por nodo (n=30 nodos piloto), incluyendo handshake DTLS+PAKE (1.2s), transferencia Dataset (0.8s), y reinicio nodo (0.8s). Tasa éxito: 100\% (30/30 nodos comisionados exitosamente en primer intento).
-
+% --------------------------------------------------------------------------
 \subsection{Validación del OTBR}
 \label{sec:gateway-otbr-validacion}
 
-\textbf{Prueba conectividad IPv6 E2E (Thread$\rightarrow$Internet):}
-
-\begin{verbatim}
-# Desde shell OpenThread nodo ESP32-C6:
-ot> ping 2001:4860:4860::8888  # Google DNS IPv6
-16 bytes from 2001:4860:4860::8888: icmp_seq=1 ttl=57 time=45ms
-16 bytes from 2001:4860:4860::8888: icmp_seq=2 ttl=57 time=42ms
-16 bytes from 2001:4860:4860::8888: icmp_seq=3 ttl=57 time=47ms
-
---- 2001:4860:4860::8888 ping statistics ---
-3 packets transmitted, 3 received, 0% packet loss, time 126ms
-rtt min/avg/max = 42/44.7/47 ms
-
-# Ping IPv4-only server via NAT64:
-ot> ping 64:ff9b::8.8.8.8
-16 bytes from 64:ff9b::8.8.8.8: icmp_seq=1 ttl=57 time=48ms
-16 bytes from 64:ff9b::8.8.8.8: icmp_seq=2 ttl=57 time=44ms
-\end{verbatim}
-
-\textbf{Análisis Wireshark 6LoWPAN decompression:}
-
-Captura tráfico interface \texttt{wpan0} (nRF52840 USB Dongle soporta monitor mode) con Wireshark 4.0 muestra compresion 6LoWPAN/LOWPAN\_IPHC~\cite{RFC4944} correcta:
+Métricas de validación en laboratorio:
 
 \begin{itemize}
-    \item \textbf{Frame IEEE 802.15.4:} 127 bytes total (Data frame type 0x01, PAN ID 0xABCD, short addresses RLOC16)
-    \item \textbf{6LoWPAN IPHC Header:} 2 bytes (dispatch 0x7E, TF/NH/HLIM/CID/SAC/SAM/DAC/DAM flags comprimidos)
-    \item \textbf{IPv6 Header (decompressed):} Source \texttt{fd11:22::f1d2:d2f5:a0e8:c3d1} (nodo Thread), Destination \texttt{64:ff9b::8.8.8.8} (NAT64 prefix)
-    \item \textbf{ICMPv6 Echo Request:} 64 bytes payload
-    \item \textbf{Compresión ratio:} 40 bytes IPv6 header + 8 bytes ICMPv6 header = 48 bytes $\rightarrow$ 2 bytes 6LoWPAN + 8 ICMPv6 = 10 bytes (79\% reducción overhead)
+    \item \textbf{Latencia de reenvío:} 2,3~ms promedio Thread$\rightarrow$Ethernet (6LoWPAN + NAT64).
+    \item \textbf{Pérdida de paquetes:} $<$0,05\%.
+    \item \textbf{Compresión 6LoWPAN/IPHC~\cite{RFC4944}:} 91\% de reducción de sobrecarga (48~bytes IPv6+ICMPv6 $\rightarrow$ 4,2$\pm$1,1~bytes).
+    \item \textbf{Huella de memoria:} \texttt{otbr-agent} 42~MB + Tayga 8~MB = 50~MB (1,2\% RAM RPi4).
 \end{itemize}
 
-\textbf{Thread Network Diagnostics:}
-
-\begin{verbatim}
-sudo ot-ctl state
-leader
-Done
-
-sudo ot-ctl networkdata show
-Prefixes:
-fd11:22:0:0::/64 paos low 2800
-Routes:
-Services:
-Done
-
-sudo ot-ctl counters
-ip4:
-TX: (Bytes: 1245678, Packets: 8234)
-RX: (Bytes: 987654, Packets: 6543)
-ip6:
-TX: (Bytes: 3456789, Packets: 23456)
-RX: (Bytes: 2345678, Packets: 18901)
-Done
-
-sudo ot-ctl thread version
-Thread Version: 4 (1.3.0)
-Done
-\end{verbatim}
-
-\textbf{Métricas piloto OTBR 90 días:}
-
-\begin{itemize}
-    \item \textbf{Uptime:} 99.95\% (4 reinicios programados = 40 min downtime)
-    \item \textbf{Latencia forwarding:} 2.3 ms promedio Thread$\rightarrow$Ethernet (medida timestamps CoAP), overhead Thread routing + 6LoWPAN + NAT64
-    \item \textbf{Throughput:} 87 kbps promedio (30 nodos @ 15 min = 0.033 msg/s/nodo), pico 420 kbps stress test (30 nodos @ 1 msg/s simultáneo)
-    \item \textbf{Packet loss:} 0.02\% (12 paquetes perdidos de 567,890 total), causados por colisiones CSMA/CA saturación canal durante stress test
-    \item \textbf{Memory footprint:} \texttt{otbr-agent} proceso 42 MB RSS, Tayga 8 MB, BIND9 64 MB = 114 MB total (2.8\% RAM RPi4 4GB)
-\end{itemize}
-
-\section{Implementación de la Malla HaLow (IEEE 802.11ah)}
-\label{sec:gateway-halow}
-
-El Nivel 2 de la arquitectura implementa infraestructura de distribución Wi-Fi HaLow (IEEE 802.11ah) operando en banda sub-1 GHz (902-928 MHz ISM región América) como backhaul de última milla entre Gateway Edge y múltiples Border Routers Thread distribuidos geográficamente. HaLow proporciona tres ventajas críticas sobre Wi-Fi tradicional 2.4/5 GHz~\cite{tianWiFiHaLowInternet2021}: (1) \textbf{Alcance extendido} hasta 1.2 km línea de vista vs 100 m Wi-Fi 802.11n/ac, habilitado por propagación Fresnel favorable sub-1 GHz y potencia TX +23 dBm (200 mW) vs +20 dBm Wi-Fi, (2) \textbf{Penetración indoor superior} con atenuación paredes concreto -8 dB @ 900 MHz vs -15 dB @ 2.4 GHz (47\% reducción pérdida)~\cite{khanWiFiHalowSignal2020}, y (3) \textbf{Eficiencia espectral} para redes densas mediante mecanismos RAW (Restricted Access Window) y TWT (Target Wake Time) que reducen colisiones CSMA/CA 60\% comparado EDCA puro.
-
-La implementación desplegó topología mesh IEEE 802.11s con protocolo HWMP (Hybrid Wireless Mesh Protocol) para path selection automático, eliminando cableado estructurado punto-a-punto y reduciendo CAPEX 65\% vs enlaces Ethernet cableados (costo cableado Cat6 outdoor \$2.5/metro $\times$ 2400 metros = \$6,000 vs 3$\times$ routers Alfa Networks Tube AHM @ \$89 = \$267). Red mesh proporciona redundancia automática: fallo de un mesh point no interrumpe conectividad, HWMP redirige tráfico por rutas alternativas con convergencia <2 segundos.
-
-\subsection{Fundamentos IEEE 802.11ah (Wi-Fi HaLow)}
-\label{sec:gateway-halow-fundamentos}
-
-\textbf{Capa Física (PHY) S1G (Sub-1 GHz):}
-
-IEEE 802.11ah define capa física S1G (Sub-1 Gigahertz) operando bandas 750-950 MHz según región: (1) USA/América: 902-928 MHz ISM (26 MHz bandwidth total), (2) Europa: 863-868 MHz (5 MHz), (3) Japón: 916.5-927.5 MHz (11 MHz), (4) China: 755-787 MHz (32 MHz). Estándar especifica canales 1/2/4/8/16 MHz bandwidth con portadoras separadas guardband 500 kHz. Modulación soporta MCS0-MCS10: BPSK (1 bit/símbolo) hasta 256-QAM (8 bits/símbolo) con code rates 1/2, 2/3, 3/4, 5/6, permitiendo throughput 150 kbps (MCS0, 1 MHz) hasta 347 Mbps (MCS10, 16 MHz, 4 spatial streams).
-
-Implementación piloto configura:
-\begin{itemize}
-    \item \textbf{Banda:} 902-928 MHz ISM (USA), compatible Colombia Resolución 711 ANE 2020 (917-923.5 MHz permitido AMI)
-    \item \textbf{Channel:} Canal 11 center frequency 915 MHz, bandwidth 4 MHz (balance alcance/throughput)
-    \item \textbf{MCS:} MCS7 (16-QAM, rate 1/2, 2 spatial streams) = 4 Mbps @ 4 MHz, sensibilidad RX -91 dBm
-    \item \textbf{Potencia TX:} +20 dBm (100 mW) configurado vs +23 dBm máximo, cumple EIRP <30 dBm con antena 5 dBi
-\end{itemize}
-
-\textbf{Mecanismos Eficiencia Energética:}
-
-\begin{itemize}
-    \item \textbf{RAW (Restricted Access Window):} Divide estaciones en grupos temporales con slots exclusivos acceso canal, reduce colisiones en redes densas >1000 STAs. Gateway configura 8 RAW groups con slot duration 2 ms, permite throughput agregado 40\% superior vs EDCA sin RAW~\cite{kimIEEE80211ahHaLow2021}.
-    \item \textbf{TWT (Target Wake Time):} Negocia wake schedules entre AP y STAs, permite STAs sleep profundo entre TWT periods. Border Routers Thread configuran TWT interval 30 segundos (wake 50 ms transmitir telemetría, sleep 29.95 s), consumo promedio 1.2 mA vs 65 mA always-on (98\% reducción).
-\end{itemize}
-
-\textbf{Comparación 802.11ah vs 802.11n/ac para AMI:}
-
-\begin{table}[H]
-\centering
-\caption{Comparación Wi-Fi HaLow (802.11ah) vs Wi-Fi tradicional (802.11n/ac) para backhaul AMI}
-\label{tab:halow-vs-wifi}
-\begin{tabular}{|l|l|l|l|}
-\hline
-\rowcolor{gray!20}
-\textbf{Característica} & \textbf{802.11ah HaLow} & \textbf{802.11n 2.4GHz} & \textbf{802.11ac 5GHz} \\
-\hline
-Frecuencia & \textcolor{green}{\textbf{900 MHz}} & 2.4 GHz & 5 GHz \\
-\hline
-Alcance LOS & \textcolor{green}{\textbf{1.2 km}} & 100-150 m & 50-80 m \\
-\hline
-Penetración & \textcolor{green}{\textbf{-8 dB}} & -15 dB & -22 dB \\
-\hline
-Throughput máx & 347 Mbps & 600 Mbps & \textcolor{green}{\textbf{1.3 Gbps}} \\
-\hline
-Throughput real & \textcolor{blue}{\textbf{4 Mbps}} & 50-100 Mbps & 200-400 Mbps \\
-\hline
-Latencia & 11 ms & 5-10 ms & 3-8 ms \\
-\hline
-STAs máx & \textcolor{green}{\textbf{8191}} & 255 & 255 \\
-\hline
-Consumo TX & \textcolor{green}{\textbf{180 mA}} & 250 mA & 320 mA \\
-\hline
-Eficiencia & \textcolor{green}{\textbf{RAW/TWT}} & EDCA & MU-MIMO \\
-\hline
-Costo módulo & \$45-89 & \$8-15 & \$12-20 \\
-\hline
-Decisión & \textcolor{green}{\textbf{SELECCIONADO}} & Descartado & Descartado \\
-\hline
-\end{tabular}
-\end{table}
-
-\textbf{Decisión final HaLow} por tres ventajas críticas que superan desventajas de throughput menor y costo módulo: (1) \textbf{Alcance 1.2 km} vs 100 m Wi-Fi tradicional = 12$\times$ mejora, elimina necesidad repetidores intermedios (ahorro \$200-400 por hop), (2) \textbf{Penetración indoor -8 dB} vs -15 dB 2.4 GHz permite conectividad indoor-outdoor sin antenas externas, (3) \textbf{Eficiencia red densa} con RAW soporta 150+ Border Routers Thread por AP sin degradación (validado stress test 30 STAs simultáneos, packet loss <0.1\%). Throughput 4 Mbps suficiente para requisito AMI 100 medidores $\times$ 200 bytes $\times$ 4 msgs/hora = 22 kbps promedio (180$\times$ margen)~\cite{halowVsLoRaWANComparison2023}.
-
-\subsection{Configuración de Mesh 802.11s}
-\label{sec:gateway-halow-mesh}
-
-IEEE 802.11s define extensiones estándar para redes mesh multi-hop, introduciendo conceptos de \textbf{Mesh Gate} (nodo con conexión wired hacia backbone), \textbf{Mesh Point} (nodo relay forwarding tráfico), y \textbf{Mesh Portal} (bridge entre mesh y red externa). Protocolo de routing \textbf{HWMP (Hybrid Wireless Mesh Protocol)} combina enfoques proactivo (mantiene rutas pre-computadas hacia Mesh Gate) y reactivo (descubre rutas on-demand hacia destinos arbitrarios), optimizando latencia vs overhead signaling~\cite{qiaoSurveyWiFiHaLow2018}.
-
-Arquitectura mesh 802.11s proporciona tres beneficios arquitectónicos críticos para AMI: (1) \textbf{Auto-configuración}: Mesh Points descubren vecinos automáticamente vía Beacon frames, establecen Peer Links mediante handshake 4-way Mesh Peering, y propagan rutas HWMP sin intervención manual, (2) \textbf{Auto-healing}: Fallo de Mesh Point intermedio detectado por timeout Keep-Alive triggers PERR (Path Error) broadcast, nodos afectados re-ejecutan HWMP path discovery convergiendo en ruta alternativa <2 segundos, y (3) \textbf{Load balancing}: HWMP Airtime metric considera frame error rate + data rate + channel utilization, distribuyendo tráfico en rutas múltiples evitando congestión single-path.
-
-\textbf{Seguridad mesh RSNA (Robust Security Network Association):}
-
-802.11s integra seguridad WPA3-SAE (Simultaneous Authentication of Equals) para autenticación peer-to-peer resistente ataques diccionario offline. SAE handshake utiliza Dragonfly key exchange (basado Diffie-Hellman con curva elíptica) generando Pairwise Master Key (PMK) compartido entre peers. Subsequent 4-way handshake deriva Pairwise Transient Key (PTK) para cifrado unicast AES-CCMP-128 y Group Temporal Key (GTK) para broadcast. Configuración piloto usa passphrase 63 caracteres alfanuméricos (384 bits entropía), resistente fuerza bruta con hardware commodity (tiempo crack estimado >10\textsuperscript{15} años @ 10\textsuperscript{9} intentos/segundo GPU).
-
-\subsubsection{Topología de la Red HaLow}
-\label{sec:gateway-halow-topologia}
-
-% Insertar diagrama de topología mesh
-\input{fig_halow_mesh_topology}
-
-\textbf{Topología física desplegada:}
-
-Implementación mesh comprende 3 routers Alfa Networks Tube AHM (Morse Micro MM6108 chipset) en configuración triangular:
-
-\begin{itemize}
-    \item \textbf{Tube-01 (Mesh Gate):} Instalado en ubicación central estratégica, conexión Ethernet GbE hacia switch local (server on-premise ThingsBoard conectado al mismo switch, arquitectura detallada Capítulo~\ref{chap:resultados}), coordenadas GPS 6.2476°N, -75.5658°W, altura 1650 msnm (azotea edificio). \textbf{Sin gateway Raspberry Pi 4 co-ubicado} (Mesh Gate dedicado exclusivamente a routing mesh y backhaul Ethernet). Role: Root mesh gate anunciando default route hacia red local via RANN (Root Announcement) periódico, destino final de todo tráfico uplink desde Mesh Points peers.
-    
-    \item \textbf{Tube-02 (Mesh Point peer + Gateway Edge):} Instalado poste eléctrico intermedio, distancia 280 m desde Tube-01, coordenadas 6.2494°N, -75.5672°W, altura 1540 msnm. \textbf{Gateway RPi4-01 integrado por Ethernet local} gestionando 15 nodos Thread, servicios ThingsBoard Edge + OTBR, inyecta telemetría agregada al backbone HaLow mesh. Role: \textbf{Mesh Point peer activo} participando en HWMP como igual con Tube-03, path selection autónomo hacia Mesh Gate (ruta directa 1 hop, o via Tube-03 si disponible con mejor métrica), puede actuar como relay para tráfico de Tube-03 si path via Tube-02 tiene menor airtime cost que path directo Tube-03 → Tube-01.
-    
-    \item \textbf{Tube-03 (Mesh Point peer + Gateway Edge):} Instalado poste extremo cobertura, distancia 520 m desde Tube-01 / 380 m desde Tube-02, coordenadas 6.2512°N, -75.5695°W, altura 1470 msnm (desnivel -180 m vs Tube-01). \textbf{Gateway RPi4-02 integrado por Ethernet local} gestionando 15 nodos Thread, servicios ThingsBoard Edge + OTBR, inyecta telemetría agregada al backbone HaLow mesh. Role: \textbf{Mesh Point peer activo} participando en HWMP como igual con Tube-02, path selection HWMP dinámico evalúa continuamente: path via Tube-02 → Tube-01 (2 hops, airtime cost acumulado) vs path directo Tube-01 (1 hop, RSSI -88 dBm, mayor airtime cost unitario), selecciona ruta óptima según condiciones RF actuales y puede actuar como relay para tráfico de Tube-02 en configuraciones alternativas.
-\end{itemize}
-
-\textbf{Peer Links establecidos:}
-
-Validación piloto confirma mesh connectivity full-mesh (3 nodos $\rightarrow$ 3 peer links bidireccionales):
-
-\begin{verbatim}
-# RouterOS CLI - Tube-01
-/interface wireless mesh print
-Flags: R - RUNNING 
- 0 R mesh1 
-     address=A4:12:CD:EF:00:01 
-     mesh-id="AMI-HaLow-Mesh" 
-     peers=2
-     peer-1: A4:12:CD:EF:00:02 rssi=-72dBm airtime-cost=512
-     peer-2: A4:12:CD:EF:00:03 rssi=-88dBm airtime-cost=2048
-\end{verbatim}
-
-Airtime cost calculado: $\text{cost} = \left[\frac{O + \frac{B_t}{r}}{1 - e_f}\right]$, donde $O$ = overhead frame (SIFS + DIFS + ACK = 364 µs), $B_t$ = test frame 1024 bytes, $r$ = data rate 4 Mbps, $e_f$ = frame error rate. Tube-02 (RSSI -72 dBm) cost 512 indica path preferred vs Tube-03 (RSSI -88 dBm) cost 2048.
-
-\subsubsection{Protocolo HWMP y Selección de Rutas}
-\label{sec:gateway-halow-hwmp}
-
-\textbf{HWMP (Hybrid Wireless Mesh Protocol) - IEEE 802.11s-2011:}
-
-HWMP combina routing proactivo (tree-based hacia root Mesh Gate) con reactivo (on-demand hacia destinos arbitrarios)~\cite{qiaoSurveyWiFiHaLow2018}:
-
-\textbf{Modo Proactivo (Root Announcement):}
-
-\begin{enumerate}
-    \item Mesh Gate (Tube-01) transmite \textbf{RANN (Root Announcement)} periódico (interval 2 segundos) broadcast con Sequence Number incremental y Metric=0.
-    \item Mesh Points (Tube-02, Tube-03) reciben RANN, actualizan tabla routing: entry [Root=Tube-01, NextHop=transmisor, Metric=costo\_acumulado, SeqNum].
-    \item Mesh Points re-transmiten RANN con Metric incrementado por Airtime Cost del link entrante, propagando hacia nodos downstream.
-    \item Resultado: Todos Mesh Points mantienen ruta pre-computada hacia Root sin delay discovery, optimiza latency uplink AMI telemetry (crítico).
-\end{enumerate}
-
-\textbf{Modo Reactivo (Path Request/Reply):}
-
-\begin{enumerate}
-    \item Nodo origen sin ruta destino transmite \textbf{PREQ (Path Request)} broadcast con Originator Address, Destination Address, Sequence Number, Metric=0.
-    \item Mesh Points intermedios reciben PREQ: (a) Actualizan reverse path hacia origen (entry [Dest=Originator, NextHop=transmisor, Metric]), (b) Re-transmiten PREQ con Metric incrementado.
-    \item Nodo destino (o intermedio con ruta válida) responde \textbf{PREP (Path Reply)} unicast hacia origen, siguiendo reverse path establecido por PREQ.
-    \item Nodos intermedios forwarding PREP actualizan forward path hacia destino original.
-    \item Resultado: Path bidireccional establecido, subsecuentes paquetes forwarded sin discovery overhead.
-\end{enumerate}
-
-\textbf{Path Error y Reconvergencia:}
-
-\begin{enumerate}
-    \item Mesh Point detecta link failure (timeout ACK 3 intentos consecutivos, frame error rate >50\%, RSSI <-95 dBm threshold).
-    \item Nodo transmite \textbf{PERR (Path Error)} broadcast indicando Unreachable Destination Address, incrementa local Sequence Number.
-    \item Nodos upstream recibiendo PERR invalidan rutas afectadas (marcan entry stale), fuerzan re-discovery PREQ siguiente paquete destino.
-    \item Convergencia medida piloto: 1.8 ± 0.3 segundos desde link failure hasta path alternativo operativo (n=12 eventos failover simulados).
-\end{enumerate}
-
-\textbf{Airtime Metric Calculation (IEEE 802.11s-2011 Annex C):}
-
-Métrica optimiza path selection considerando calidad link (frame error rate) y velocidad (data rate):
-
-\[
-\text{Airtime} = \left[\frac{O + \frac{B_t}{r}}{1 - e_f}\right] \times 1024
-\]
-
-Donde:
-\begin{itemize}
-    \item $O$ = 364 µs (overhead: SIFS 10µs + DIFS 34µs + ACK 320µs, valores 802.11ah)
-    \item $B_t$ = 1024 bytes (test frame size)
-    \item $r$ = data rate Mbps (MCS7 @ 4 MHz = 4 Mbps)
-    \item $e_f$ = frame error rate (derivado de RSSI: -72 dBm $\rightarrow$ FER 1\%, -88 dBm $\rightarrow$ FER 8\%)
-\end{itemize}
-
-Ejemplo cálculo Tube-01$\rightarrow$Tube-02:
-\[
-\text{Airtime} = \left[\frac{364 + \frac{1024 \times 8}{4}}{1 - 0.01}\right] \times 1024 = \left[\frac{364 + 2048}{0.99}\right] \times 1024 = 2497 \times 1024 \approx \textbf{512}
-\]
-
-Path Tube-01$\rightarrow$Tube-03 (RSSI -88 dBm, FER 8\%):
-\[
-\text{Airtime} = \left[\frac{364 + 2048}{0.92}\right] \times 1024 = 2687 \times 1024 \approx \textbf{2048}
-\]
-
-HWMP selecciona path Tube-01$\rightarrow$Tube-02$\rightarrow$Tube-03 (cost 512+512=1024) vs path directo Tube-01$\rightarrow$Tube-03 (cost 2048), optimizando reliability sobre hops mínimos.
-
-\subsubsection{RAW (Restricted Access Window)}
-\label{sec:gateway-halow-raw}
-
-\textbf{RAW (Restricted Access Window) - IEEE 802.11ah-2016 §10.24:}
-
-RAW mecanismo MAC optimiza eficiencia redes HaLow densas (>100 STAs) dividiendo tiempo en slots exclusivos por grupos estaciones, reduciendo colisiones CSMA/CA. AP transmite RPS (RAW Parameter Set) element en Beacon indicando: (1) RAW Duration total, (2) RAW Slot Count (número slots), (3) RAW Slot Duration, (4) RAW Group assignment (estaciones pertenecientes cada slot). STAs solo compiten acceso canal durante slot asignado, permanecen sleep resto RAW duration.
-
-\textbf{Configuración RAW piloto:}
-
-\begin{itemize}
-    \item \textbf{RAW Duration:} 100 ms (10\% beacon interval 1024 ms)
-    \item \textbf{RAW Slot Count:} 8 slots (soporte hasta 120 Border Routers Thread = 15 STAs/slot)
-    \item \textbf{RAW Slot Duration:} 12.5 ms/slot (100 ms / 8 slots)
-    \item \textbf{RAW Group assignment:} Hash(STA\_MAC\_Address) mod 8 determina slot (distribución uniforme automática)
-\end{itemize}
-
-\textbf{Beneficio RAW vs EDCA sin RAW:}
-
-Simulación ns-3 (30 STAs transmitiendo simultáneamente, payload 200 bytes, MCS7 4 Mbps):
-
-\begin{itemize}
-    \item \textbf{Sin RAW (EDCA puro):} Collision probability 38\% (11.4 paquetes/30 colisionan), throughput agregado 2.1 Mbps, latencia P95 = 42 ms
-    \item \textbf{Con RAW (8 slots):} Collision probability 6\% (1.8 paquetes/30), throughput agregado 3.4 Mbps (+62\% mejora), latencia P95 = 18 ms (-57\% reducción)
-\end{itemize}
-
-Validación piloto real (30 Border Routers, telemetría 15 min, burst simultáneo cada hora):
-\begin{itemize}
-    \item \textbf{Packet loss sin RAW:} 4.2\% (126 paquetes perdidos / 3000 transmitidos en 90 días)
-    \item \textbf{Packet loss con RAW:} 0.3\% (9 paquetes perdidos / 3000) = \textbf{93\% reducción}
-\end{itemize}
-
-\textbf{Trade-off RAW:} Incrementa latency promedio +8 ms (STAs esperan slot asignado vs competir inmediatamente EDCA), pero \textbf{reduce jitter 75\%} (latencia predecible vs exponential backoff aleatorio CSMA). Para AMI con requisito latency <500 ms pero jitter <100 ms (billing accuracy), RAW resulta óptimo.
-
-\subsection{Configuración del Router Alfa Networks Tube AHM (OpenWRT 23.05)}
-\label{sec:gateway-halow-alfa}
-
-% Nota del revisor: Enfocado a OpenWRT — se explicita plataforma en título y párrafo introductorio.
-
-Los routers Alfa Networks Tube AHM ejecutan firmware basado en OpenWRT 23.05~\cite{morsemicroOpenWRT2024} con los controladores Morse Micro para el transceptor HaLow MM6108. La configuración se realiza mediante la interfaz web LuCI o la línea de comandos UCI propias de OpenWRT, lo que permite reproducibilidad y personalización completa del stack de red inalámbrica.
-
-% Insertar diagrama de conexión hardware detallado
-\input{fig_halow_hardware_detail}
-
-\textbf{Hardware Alfa Networks Tube AHM (Morse Micro MM6108):}
-
-\begin{itemize}
-    \item \textbf{Chipset:} Morse Micro MM6108~\cite{morsemicroMM8108ProductBrief2025} (802.11ah compliant), ARM Cortex-M4 @ 120 MHz, 512 KB SRAM
-    \item \textbf{Radio:} Banda 902-928 MHz (USA), potencia TX +23 dBm max (200 mW), sensibilidad RX -96 dBm @ MCS0 1 MHz
-    \item \textbf{Antena:} Integrada omnidireccional 5 dBi, patrón radiación horizontal 360° / vertical 30°, EIRP 28 dBm (dentro límite FCC 30 dBm)
-    \item \textbf{Conectividad:} Ethernet 10/100 Mbps (PoE passivo 24V), configuración via RouterOS 7.13 CLI/WebFig
-    \item \textbf{Consumo:} 5W @ idle, 9W @ TX full power +23 dBm, alimentación PoE injector incluido
-    \item \textbf{Precio:} \$89/unidad (3 unidades piloto = \$267 CAPEX red HaLow completa)
-\end{itemize}
-
-\textbf{Script RouterOS 7.13 configuración mesh:}
-
-\begin{verbatim}
-# Configuración Tube-01 (Mesh Gate)
-/interface wireless
-set [ find default-name=wlan1 ] \\
-    disabled=no \\
-    mode=ap-bridge \\
-    ssid="AMI-HaLow-Mesh" \\
-    wireless-protocol=802.11 \\
-    band=902-928mhz \\
-    frequency=915 \\
-    channel-width=4mhz \\
-    tx-power=20 \\
-    tx-power-mode=all-rates-fixed \\
-    country=united_states3 \\
-    installation=indoor \\
-    wps-mode=disabled \\
-    security-profile=halow-wpa3
-
-/interface wireless security-profiles
-add name=halow-wpa3 \\
-    mode=dynamic-keys \\
-    authentication-types=wpa3-psk \\
-    wpa3-sae-password="63_char_passphrase_aqui_384bits_entropia" \\
-    group-ciphers=aes-ccm \\
-    unicast-ciphers=aes-ccm
-
-/interface mesh
-add name=mesh1 \\
-    interface=wlan1 \\
-    mesh-id="AMI-HaLow-Mesh" \\
-    hwmp-default-hoplimit=32 \\
-    hwmp-preq-retries=4 \\
-    hwmp-rann-interval=2s \\
-    path-timeout=30s
-
-/interface wireless set wlan1 \\
-    wds-mode=dynamic-mesh \\
-    wds-default-bridge=mesh1
-
-# Tube-01 specific: Bridge hacia Gateway RPi4
-/interface bridge
-add name=bridge-gateway
-/interface bridge port
-add bridge=bridge-gateway interface=ether1  # Ethernet hacia RPi4
-add bridge=bridge-gateway interface=mesh1   # Mesh HaLow
-
-# Tube-02/Tube-03: Idéntica config excepto sin bridge (pure mesh relay)
-\end{verbatim}
-
-\textbf{Parámetros críticos configuración:}
-
-\begin{itemize}
-    \item \textbf{Frequency 915 MHz:} Centro banda ISM 902-928 MHz, minimiza interferencia edges (902/928 MHz)
-    \item \textbf{Channel-width 4 MHz:} Balance alcance (mejor con 1-2 MHz) vs throughput (mejor con 8 MHz)
-    \item \textbf{TX-power 20 dBm:} 100 mW vs 23 dBm max, EIRP 25 dBm (antena 5 dBi) cumple FCC <30 dBm, reduce interferencia co-channel
-    \item \textbf{WPA3-SAE:} Passphrase 63 caracteres (384 bits entropía SHA-256) resiste diccionario offline
-    \item \textbf{HWMP-rann-interval 2s:} Root announcements frecuentes (overhead 400 bytes/2s = 1.6 kbps, despreciable) mejora convergencia rápida tras link failure
-\end{itemize}
-
-\subsection{Validación de la Red HaLow}
-\label{sec:gateway-halow-validacion}
-
-\textbf{Prueba Throughput TCP (iperf3):}
-
-Metodología: Cliente iperf3 Border Router Thread (conectado Tube-03) $\rightarrow$ Servidor Gateway RPi4 (conectado Tube-01), path 2-hop mesh via Tube-02, duración 60 segundos, 10 repeticiones.
-
-\begin{verbatim}
-# Servidor Gateway RPi4
-iperf3 -s -p 5201
-
-# Cliente Border Router Thread (via SSH)
-iperf3 -c 192.168.1.10 -t 60 -i 5
-\end{verbatim}
-
-\textbf{Resultados throughput:}
-
-\begin{itemize}
-    \item \textbf{Throughput promedio:} 4.2 Mbps (varianza ±0.3 Mbps)
-    \item \textbf{Throughput teórico MCS7 4 MHz:} 4.0 Mbps PHY, 3.6 Mbps MAC (overhead CSMA/CA 10\%), 4.2 Mbps medido = \textbf{117\% eficiencia teórica} (explicado: TCP window scaling + aggregation A-MPDU reduce overhead)
-    \item \textbf{Packet loss TCP:} 0.02\% (12 segmentos retransmitidos / 65,000 total)
-    \item \textbf{Jitter:} 4.2 ms (RAW reduce varianza vs EDCA)
-\end{itemize}
-
-\textbf{Prueba Latencia ICMP (ping):}
-
-Metodología: Ping continuo 5000 paquetes Border Router Thread $\rightarrow$ Gateway RPi4, payload 64 bytes, interval 200 ms.
-
-\begin{verbatim}
-# Desde Border Router Thread
-ping -c 5000 -i 0.2 192.168.1.10
-\end{verbatim}
-
-\textbf{Resultados latencia RTT:}
-
-\begin{itemize}
-    \item \textbf{RTT promedio:} 11.3 ms
-    \item \textbf{RTT mín/max:} 8.1 ms / 24.6 ms
-    \item \textbf{P50/P95/P99:} 10.8 ms / 14.2 ms / 18.7 ms
-    \item \textbf{Packet loss:} 0.04\% (2 paquetes / 5000)
-    \item \textbf{Desglose latencia:} TX Border Router 2.1 ms + HaLow transmission 4.8 ms + mesh forwarding Tube-02 1.2 ms + HaLow transmission 4.8 ms + RX Gateway 0.6 ms = 13.5 ms teórico vs 11.3 ms medido (A-MPDU aggregation reduce overhead)
-\end{itemize}
-
-\textbf{Validación Alcance LOS (Fresnel Zone):}
-
-Prueba alcance máximo con RSSI threshold -95 dBm (límite operación confiable FER <10\%):
-
-\begin{itemize}
-    \item \textbf{Tube-01 $\leftrightarrow$ Tube-02:} Distancia 280 m, RSSI -72 dBm, Fresnel zone clearance 100\% (sin obstrucciones), throughput 4.2 Mbps
-    \item \textbf{Tube-01 $\leftrightarrow$ Tube-03:} Distancia 520 m, RSSI -88 dBm, Fresnel zone 60\% clear (vegetación parcial), throughput 2.8 Mbps (MCS7 degrada a MCS5 auto)
-    \item \textbf{Prueba extensión 1.2 km:} Border Router Thread portátil movilizado hasta 1.2 km LOS desde Tube-01 (azotea $\leftrightarrow$ colina opuesta), RSSI -93 dBm (2 dB margen vs -95 dBm), throughput 1.1 Mbps (MCS3), \textbf{conectividad estable confirmada}
-\end{itemize}
-
-\textbf{Cálculo Fresnel Zone (validación obstáculos):}
-
-Radio primera zona Fresnel:
-\[
-r = \sqrt{\frac{\lambda \cdot d_1 \cdot d_2}{d_1 + d_2}}
-\]
-
-Para Tube-01 $\leftrightarrow$ Tube-03: $\lambda = \frac{c}{f} = \frac{3 \times 10^8}{915 \times 10^6} = 0.328$ m, $d_1 = d_2 = 260$ m (punto medio):
-\[
-r = \sqrt{\frac{0.328 \times 260 \times 260}{520}} = \sqrt{42.64} \approx 6.5 \text{ m}
-\]
-
-Vegetación intermedia (árboles 8-12 m altura) obstruye 40\% zona Fresnel, atenuación adicional estimada 3-5 dB (consistente con RSSI -88 dBm medido vs -83 dBm calculado free space). Solución: Podar vegetación corredor 10 m ancho mejora RSSI a -84 dBm (-4 dB ganancia), implementado mantenimiento trimestral.
-
-\textbf{Heatmap RSSI Deployment:}
-
-Site survey con receptor portátil (Alfa AWUS036AHM USB HaLow adapter + laptop) recorrió 0.8 km² barrio, registrando RSSI cada 50 m (320 puntos GPS + RSSI). Mapa interpolado Kriging muestra:
-
-\begin{itemize}
-    \item \textbf{Cobertura >-85 dBm:} 92\% área (0.74 km²), suficiente MCS5+ (2+ Mbps)
-    \item \textbf{Cobertura >-90 dBm:} 78\% área (0.62 km²), MCS3+ (800+ kbps)
-    \item \textbf{Dead zones <-95 dBm:} 8\% área (0.06 km²), ubicaciones indoor profundo (sótanos, edificios metálicos)
-\end{itemize}
-
-Conclusión validación: Red HaLow cumple requisito cobertura 90\%+ área con throughput >1 Mbps, latencia <15 ms P95, packet loss <0.1\%. Dead zones 8\% mitigados con 4to Mesh Point (Tube-04) instalación futura expansión 100+ medidores.
-
-\section{Despliegue de ThingsBoard Edge}
+%======================================================================
+\section{Plataforma de Borde: ThingsBoard Edge}
 \label{sec:gateway-tb-edge}
 
-ThingsBoard Edge 3.6.2 es la plataforma de procesamiento edge~\cite{minhEdgeComputingIoTEnabled2022} ejecutada en el Gateway Raspberry Pi 4, proporcionando: (1) Rule Engine local para filtrado y pre-procesamiento de telemetría, (2) Persistencia local PostgreSQL+TimescaleDB con buffer offline 7 días, (3) Dashboards locales para operadores de campo sin conectividad WAN, (4) Sincronización bidireccional automática con ThingsBoard Cloud cuando hay conectividad LTE disponible. La arquitectura Edge complementa la plataforma Cloud (Capítulo~\ref{chap:server-thingsboard}, Figura~\ref{fig:thingsboard-architecture}), implementando subset de microservicios optimizados para recursos limitados Raspberry Pi 4.
+ThingsBoard Edge~3.6.2 se despliega en la pasarela RPi4 mediante Docker Compose, proporcionando una plataforma completa de gestión IoT en el borde~\cite{minhEdgeComputingIoTEnabled2022}.  A diferencia de arquitecturas basadas en múltiples microservicios independientes (servidor LwM2M, \emph{broker} MQTT, base de datos, motor de reglas), ThingsBoard Edge integra todos estos componentes en una única plataforma:
 
-\subsection{Arquitectura ThingsBoard Edge}
+\begin{enumerate}
+    \item \textbf{Transporte LwM2M integrado:} Los nodos Thread se registran directamente como dispositivos ThingsBoard Edge vía el protocolo LwM2M, sin necesidad de un servidor Leshan externo ni un puente CoAP-MQTT intermedio.
+    \item \textbf{Motor de reglas local:} Cadenas de reglas JavaScript para filtrado, pre-procesamiento y generación de alarmas, ejecutadas localmente en el borde.
+    \item \textbf{Paneles de control locales:} Interfaz web accesible sin conectividad WAN, para monitoreo y resolución de problemas en sitio.
+    \item \textbf{Almacenamiento sin conexión:} PostgreSQL local con retención de 7~días, operación autónoma ante pérdida de conectividad.
+    \item \textbf{Sincronización bidireccional:} Comunicación gRPC con el servidor ThingsBoard \emph{on-premise} central para propagación de telemetría, configuración y actualizaciones.
+\end{enumerate}
+
+% --------------------------------------------------------------------------
+\subsection{Arquitectura del Despliegue Docker}
 \label{sec:gateway-tb-edge-arquitectura}
 
-ThingsBoard Edge 3.6.2 implementa una arquitectura monolítica optimizada para despliegues con recursos limitados (256-512 MB RAM mínimo), ejecutando todos los componentes en un único proceso JVM. La Figura~\ref{fig:edge-architecture-official} ilustra la arquitectura oficial ThingsBoard Edge, contrastando con la arquitectura Cloud microservicios distribuida (Capítulo~\ref{chap:server-thingsboard}, Figura~\ref{fig:thingsboard-msa-architecture}).
+El despliegue en Docker Compose comprende tres contenedores:
 
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.90\textwidth]{figures/thingsboard-edge-architecture-hq.png}
-\caption{Arquitectura oficial ThingsBoard Edge 3.6.2 (fuente: \url{thingsboard.io}). Edge despliega arquitectura monolítica en single JVM optimizada para recursos limitados (256-512 MB RAM), integrando 7 componentes principales: (1) \textbf{Transport Layer} para ingesta multi-protocolo (MQTT/HTTP/CoAP), (2) \textbf{Core Services} con Actor System para gestión devices/assets y REST API, (3) \textbf{Rule Engine} para procesamiento local con rule chain templates, (4) \textbf{Cloud Manager} para sincronización bidireccional gRPC con ThingsBoard Cloud, (5) \textbf{PostgreSQL+TimescaleDB} para persistencia local con buffer offline 7 días, (6) \textbf{Redis} para cache en memoria, (7) \textbf{Web UI} con Express.js para dashboards locales. Contrasta con Cloud (Figura~\ref{fig:thingsboard-msa-architecture}) que escala horizontalmente con múltiples instancias tb-core + Kafka broker.}
-\label{fig:edge-architecture-official}
-\end{figure}
+\begin{enumerate}
+    \item \textbf{ThingsBoard Edge 3.6.2} (\texttt{tb-edge}): Monolito JVM optimizado para ARM64, que integra: capa de transporte (LwM2M, MQTT, CoAP y HTTP), servicios centrales (\emph{Actor System}, API REST), motor de reglas JavaScript, gestor de nube (\emph{Cloud Manager}), e interfaz web (Express.js).  Puerto principal: 8080 (REST API + Web UI), puerto CoAP: 5683 (UDP), puerto LwM2M: 5685 (UDP).  RAM asignada: 1.024~MB.
 
-\textbf{Comparación Edge vs Cloud~\cite{thingsboardCloudArchitecture2024} (Tabla~\ref{tab:edge-vs-cloud-architecture}):}
+    \item \textbf{PostgreSQL 15} (\texttt{postgres}): Almacenamiento relacional y de series temporales utilizado internamente por ThingsBoard Edge para persistir telemetría, atributos de dispositivos, alarmas y configuraciones.  Puerto: 5432.  RAM asignada: 512~MB.
+
+    \item \textbf{Redis 7.0} (\texttt{redis}): Caché de sesiones, atributos de dispositivos y resultados de consultas frecuentes, reduciendo la carga sobre PostgreSQL.  Puerto: 6379.  RAM asignada: 256~MB.
+\end{enumerate}
+
+\textbf{Recursos totales del \emph{stack}:} CPU $\sim$2,5 núcleos, RAM $\sim$1,8~GB.  El sistema deja $\sim$2,2~GB de RAM libre para OTBR y servicios del sistema operativo OpenWRT.  La Figura~\ref{fig:edge-architecture-official} ilustra la arquitectura interna de ThingsBoard Edge.
+
+\input{fig_thingsboard_edge_architecture.tex}
+
+% --------------------------------------------------------------------------
+\subsection{Transporte LwM2M Integrado}
+\label{sec:gateway-tb-edge-lwm2m}
+
+ThingsBoard Edge incluye un servidor LwM2M nativo basado en la biblioteca Eclipse Leshan, gestionado internamente por la plataforma.  Este transporte permite que los nodos Thread se registren directamente como dispositivos ThingsBoard sin intermediarios externos.  El flujo de registro es:
+
+\begin{enumerate}
+    \item El nodo Zephyr, tras unirse a la red Thread (§\ref{sec:gateway-otbr}), envía un mensaje \texttt{Registration} LwM2M al servidor de la pasarela (dirección ULA del OTBR, puerto CoAP~5685).
+    \item ThingsBoard Edge recibe el registro y crea automáticamente el dispositivo, asociándolo al \emph{Device Profile} configurado con transporte LwM2M.
+    \item El \emph{Device Profile} define el mapeo entre objetos LwM2M (Objeto~10242 del medidor trifásico, Objeto~3 del dispositivo) y las claves de telemetría ThingsBoard (ver Tabla~\ref{tab:lwm2m-tb-mapping} del Capítulo~\ref{chap:nodo-iot}).
+    \item Se activan las suscripciones \emph{Observe} en los recursos configurados (\texttt{pmin=60, pmax=900, st=0.05}).
+\end{enumerate}
+
+Esta integración elimina la necesidad de un puente CoAP-MQTT externo y de un servidor Leshan \emph{standalone}, simplificando la arquitectura y reduciendo el consumo de recursos.
 
 \begin{table}[H]
 \centering
-\caption{Comparación arquitecturas ThingsBoard Edge (monolítica) vs Cloud (microservicios)}
-\label{tab:edge-vs-cloud-architecture}
+\caption{Comparación de arquitecturas de recepción LwM2M en el borde}
+\label{tab:lwm2m-transport-comparison}
+\resizebox{\textwidth}{!}{%
 \begin{tabular}{|l|l|l|}
 \hline
 \rowcolor{gray!20}
-\textbf{Criterio} & \textbf{Edge (Monolítica)} & \textbf{Cloud (Microservicios)} \\
+\textbf{Criterio} & \textbf{Leshan externo + Bridge CoAP-MQTT} & \textbf{TB Edge con LwM2M integrado} \\
 \hline
-Deployment & Single JVM, 7 componentes & Docker Compose, 12 containers \\
+Contenedores adicionales & 2 (Leshan + Bridge Python) & 0 (integrado en TB Edge) \\
 \hline
-RAM mínima & 256-512 MB (RPi 4) & 4 GB (AWS EC2 t3.xlarge) \\
+RAM adicional & $\sim$512~MB & 0 (incluido en JVM TB Edge) \\
 \hline
-Escalabilidad & Vertical, hasta 1,000 devices & Horizontal, 10,000+ devices \\
+Latencia de traducción & 5--10~ms (CoAP $\rightarrow$ JSON $\rightarrow$ MQTT) & $<$2~ms (interno JVM) \\
 \hline
-Message broker & Mosquitto MQTT embebido & Apache Kafka 3.5 \\
+Mapeo de objetos & Manual (código Python) & Declarativo (\emph{Device Profile}) \\
 \hline
-Persistencia & PostgreSQL 15 local & RDS PostgreSQL Multi-AZ \\
+Gestión de dispositivos & Separada (Leshan UI + TB UI) & Unificada (TB UI) \\
 \hline
-Rule Engine & Templates (sync desde Cloud) & Rule Chains completos \\
+Decisión & --- & \textcolor{green}{\textbf{SELECCIONADO}} \\
 \hline
-Sincronización & Cloud Manager gRPC bidireccional & N/A (servidor central) \\
-\hline
-Web UI & Express.js lightweight & Angular SPA + Nginx \\
-\hline
-HA/DR & Single instance, UPS 4h & Multi-AZ, failover <2min \\
-\hline
-Latencia & <10 ms (local) & 248 ms E2E (WAN LTE 35ms) \\
-\hline
-Costo & \$35 RPi 4 CAPEX & \$440/mes AWS OPEX \\
-\hline
-Caso de uso & Edge sites, baja latencia & Central monitoring, analytics \\
-\hline
-\end{tabular}
+\end{tabular}}%
 \end{table}
 
-\textbf{Decisión arquitectónica Edge monolítica:} ThingsBoard Edge utiliza arquitectura monolítica por diseño para minimizar overhead inter-process communication (IPC) y consumo memoria. En entorno Cloud con recursos ilimitados, arquitectura microservicios (Figura~\ref{fig:thingsboard-msa-architecture}) permite escalado horizontal independiente por capa (transport, core, rule engine). En Edge con Raspberry Pi 4 (4 GB RAM), overhead Docker networking (500 MB) + Kafka broker (2 GB) sería inviable, justificando single JVM (512 MB footprint).
-
-\textbf{Microservicios ThingsBoard Edge (7 containers Docker):}
-
-\begin{enumerate}
-    \item \textbf{tb-edge-core:} Motor principal Java Spring Boot
-    \begin{itemize}
-        \item Funciones: Actor System procesamiento paralelo telemetría, Rule Engine JS execution, REST API HTTP/8080, WebSocket dashboard updates
-        \item Recursos: CPU 1.0 core limit, RAM 1024 MB limit
-        \item Imagen: \texttt{thingsboard/tb-edge:3.6.2}
-    \end{itemize}
-    
-    \item \textbf{tb-edge-js-executor:} Runtime JavaScript Node.js v18
-    \begin{itemize}
-        \item Función: Ejecuta Rule Chain scripts (Transform, Filter, Enrich nodes)
-        \item Recursos: CPU 0.5 core limit, RAM 512 MB limit
-        \item Comunicación: gRPC con tb-edge-core (port 9090)
-    \end{itemize}
-    
-    \item \textbf{PostgreSQL 15 + TimescaleDB 2.13:}
-    \begin{itemize}
-        \item Esquema: 42 tablas (devices, assets, telemetry hypertables, alarms, \texttt{rule\_chains})
-        \item Hypertables: \texttt{ts\_kv} particionada por tiempo (chunks 7 días), compresión columnar 10:1
-        \item Recursos: CPU 1.5 cores limit, RAM 1536 MB limit, storage 128 GB (SD card)
-        \item Retención: 90 días telemetría, 365 días alarmas
-    \end{itemize}
-    
-    \item \textbf{Redis 7.0:} Cache en memoria
-    \begin{itemize}
-        \item Uso: Session storage, atributos device (frecuente lectura), cache queries
-        \item Recursos: CPU 0.2 core limit, RAM 256 MB limit
-    \end{itemize}
-    
-    \item \textbf{Mosquitto 2.0 MQTT Broker:}
-    \begin{itemize}
-        \item Configuración: QoS 1 (At Least Once), 100K messages \texttt{max\_queued}
-        \item Autenticación: Device token-based (20 chars alfanumérico)
-        \item Recursos: CPU 0.5 core, RAM 256 MB limit
-    \end{itemize}
-    
-    \item \textbf{tb-edge-transport-mqtt:} Transport layer MQTT
-    \begin{itemize}
-        \item Función: Recibe telemetría devices vía Mosquitto, enruta a tb-edge-core Actor System
-        \item Throughput: 1,200 msgs/s validado (9,600 msgs/día piloto muy por debajo de la capacidad)
-    \end{itemize}
-    
-    \item \textbf{Nginx:} Reverse proxy y TLS termination
-    \begin{itemize}
-        \item Configuración: HTTP/2, TLS 1.3, certificado Let's Encrypt
-        \item Upstream: tb-edge-core:8080 (dashboard), MQTT:1883 (telemetry)
-    \end{itemize}
-\end{enumerate}
-
-\subsection{Configuración Docker Compose}
-\label{sec:gateway-tb-edge-docker}
-
-\textbf{Archivo \texttt{docker-compose.yml} configuración:}
-
-\begin{verbatim}
-version: '3.8'
-services:
-  tb-edge-core:
-    image: thingsboard/tb-edge:3.6.2
-    restart: always
-    ports:
-      - "8080:8080"   # HTTP API + Dashboard
-      - "1883:1883"   # MQTT
-      - "5683:5683/udp"  # CoAP
-    environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/tb_edge
-      TB_QUEUE_TYPE: in-memory
-    deploy:
-      resources:
-        limits:
-          cpus: '1.0'
-          memory: 1024M
-    volumes:
-      - tb-edge-data:/data
-      - tb-edge-logs:/var/log/thingsboard
-    depends_on:
-      - postgres
-      - redis
-
-  postgres:
-    image: timescale/timescaledb:2.13.0-pg15
-    restart: always
-    environment:
-      POSTGRES_DB: tb_edge
-      POSTGRES_PASSWORD: your_secure_password
-    deploy:
-      resources:
-        limits:
-          cpus: '1.5'
-          memory: 1536M
-    volumes:
-      - postgres-data:/var/lib/postgresql/data
-
-  redis:
-    image: redis:7.0-alpine
-    restart: always
-    deploy:
-      resources:
-        limits:
-          cpus: '0.2'
-          memory: 256M
-
-volumes:
-  tb-edge-data:
-  tb-edge-logs:
-  postgres-data:
-\end{verbatim}
-
-\textbf{Comandos despliegue:}
-
-\begin{verbatim}
-# 1. Iniciar stack completo
-docker-compose up -d
-
-# 2. Verificar containers running
-docker-compose ps
-NAME                 STATUS              PORTS
-tb-edge-core         Up 2 hours          0.0.0.0:8080->8080/tcp
-postgres             Up 2 hours          5432/tcp
-redis                Up 2 hours          6379/tcp
-
-# 3. Logs troubleshooting
-docker-compose logs -f tb-edge-core
-\end{verbatim}
-
-\subsection{Rule Chains para Pre-Procesamiento}
+% --------------------------------------------------------------------------
+\subsection{Cadenas de Reglas para Pre-Procesamiento}
 \label{sec:gateway-tb-edge-rules}
 
-ThingsBoard Edge implementa 4 Rule Chains críticos ejecutados localmente en el Gateway antes de sincronización cloud, logrando reducción 72\% tráfico WAN y latencia <10 ms procesamiento edge.
+ThingsBoard Edge ejecuta cadenas de reglas (\emph{Rule Chains}) localmente, logrando reducción del tráfico WAN y latencia inferior a 10~ms.
 
-\subsubsection{Rule Chain 1: Telemetry Filtering (Agregación)}
+\textbf{RC1 --- Filtrado de Telemetría (Agregación):}  Ventana deslizante que promedia muestras periódicas, reduciendo el volumen de datos enviados al servidor central.
 
-\textbf{Objetivo:} Reducir volumen datos enviados a cloud mediante agregación temporal y filtrado valores redundantes.
+\textbf{RC2 --- Detección de Alarmas (Local):}  Disparadores configurados para: caída de tensión $<$207~V (MAJOR, sostenido $>$10~s), sobretensión $>$253~V (MAJOR), dispositivo sin conexión $>$30~min (MINOR).  Las alarmas se envían inmediatamente al servidor central, sin pasar por la agregación.
 
-\textbf{Flujo Rule Chain:}
+\textbf{RC3 --- Enriquecimiento de Datos:}  Enriquece la telemetría con metadatos del dispositivo (ubicación, cliente, tarifa) y calcula métricas derivadas.
 
-\begin{enumerate}
-    \item \textbf{Message Type Switch Node:} Filtra solo mensajes tipo \texttt{POST\_TELEMETRY}
-    \item \textbf{Originator Attributes Node:} Lee atributo \texttt{aggregation\_enabled} del device (default: true)
-    \item \textbf{Script Transform Node (JavaScript):}
-\begin{verbatim}
-// Agregación ventana deslizante 15 minutos (4$\times$ samples)
-var agg_buffer = metadata.agg_buffer || [];
-agg_buffer.push({
-    timestamp: msg.ts,
-    voltage: msg.voltage_v,
-    current: msg.current_a,
-    energy: msg.energy_kwh
-});
+\textbf{RC4 --- Comandos Descendentes:}  Valida y reenvía comandos RPC desde el servidor central hacia los nodos Thread, con fluctuación aleatoria 0--30~s para prevenir avalanchas y tiempo límite de 60~s con reintento exponencial.
 
-if (agg_buffer.length >= 4) {  // 4 samples $\times$ 15 min = 1 hora
-    // Calcular promedios
-    var avg_voltage = agg_buffer.reduce((sum,s) => 
-        sum + s.voltage, 0) / 4;
-    var avg_current = agg_buffer.reduce((sum,s) => 
-        sum + s.current, 0) / 4;
-    var total_energy = agg_buffer[3].energy - agg_buffer[0].energy;
-    
-    // Output agregado
-    var newMsg = {
-        voltage_v: avg_voltage.toFixed(2),
-        current_a: avg_current.toFixed(3),
-        energy_kwh_delta: total_energy.toFixed(4),
-        samples_count: 4
-    };
-    metadata.agg_buffer = [];  // Reset buffer
-    return {msg: newMsg, metadata: metadata, msgType: 'POST_TELEMETRY'};
-} else {
-    metadata.agg_buffer = agg_buffer;
-    return {msg: null, metadata: metadata, msgType: 'DISCARD'};
-}
-\end{verbatim}
-    \item \textbf{Save TimeSeries Node:} Persiste agregado local PostgreSQL
-    \item \textbf{Push to Cloud Node:} Envía a ThingsBoard Cloud vía MQTT
-\end{enumerate}
+% --------------------------------------------------------------------------
+\subsection{Comunicación con el Servidor ThingsBoard \emph{On-Premise}}
+\label{sec:gateway-tb-edge-onpremise}
 
-\textbf{Impacto medido:} Reducción mensajes 9,600 msgs/día $\rightarrow$ 2,640 msgs/día (72.5\% reducción), ahorro datos LTE 6.8 MB/día.
-
-\subsubsection{Rule Chain 2: Alarm Detection (Detección Local)}
-
-\textbf{Triggers implementados:}
+ThingsBoard Edge se sincroniza bidireccionalmente con un servidor ThingsBoard \emph{on-premise} desplegado en un servidor local de prueba.  La comunicación utiliza gRPC sobre el enlace WAN (malla HaLow $\rightarrow$ \emph{switch} local $\rightarrow$ servidor):
 
 \begin{itemize}
-    \item \textbf{Voltage sag:} \texttt{voltage\_v < 207V} sostenido >10s $\rightarrow$ Alarm MAJOR
-    \item \textbf{Voltage swell:} \texttt{voltage\_v > 253V} sostenido >10s $\rightarrow$ Alarm MAJOR
-    \item \textbf{Tamper event:} GPIO physical switch opened $\rightarrow$ Alarm CRITICAL
-    \item \textbf{Device offline:} Last activity >30 min $\rightarrow$ Alarm MINOR
+    \item \textbf{Edge $\rightarrow$ Servidor:} Telemetría agregada por las cadenas de reglas, alarmas, eventos de conectividad de dispositivos y estado de sincronización.  Transmisión por lotes para optimizar el uso del enlace.
+    \item \textbf{Servidor $\rightarrow$ Edge:} Configuración de \emph{Device Profiles}, plantillas de cadenas de reglas, paneles de control, actualizaciones de \emph{firmware} OTA y comandos RPC descendentes.
+    \item \textbf{Resolución de conflictos:} Política de última escritura gana con sincronización NTP ($\pm$50~ms); el servidor central es autoritativo en caso de conflicto.
 \end{itemize}
 
-\textbf{Acciones alarma:}
+La arquitectura \emph{on-premise} permite soberanía completa de datos en la infraestructura local, eliminando la dependencia de servicios en la nube pública y los costos operativos asociados.
 
-\begin{enumerate}
-    \item \textbf{Create Alarm Node:} Persistencia local PostgreSQL tabla \texttt{alarms}
-    \item \textbf{Push to Cloud Node:} Notificación inmediata cloud (bypass agregación)
-    \item \textbf{REST API Call Node:} SMS operador (solo CRITICAL vía Twilio API)
-\end{enumerate}
-
-\textbf{Latencia E2E alarma:} Trigger $\rightarrow$ Cloud notification medida 380 ms P95 (desglose: Thread 15ms + HaLow 11ms + Edge Rule Chain 8ms + LTE uplink 35ms + Cloud processing 15ms + overhead 296ms).
-
-\subsubsection{Rule Chain 3: Data Enrichment (Contextualización)}
-
-\textbf{Objetivo:} Enriquecer telemetría raw con metadatos operacionales antes de envío cloud, reducir carga computacional cloud 40\%.
-
-\textbf{Flujo procesamiento:}
-
-\begin{enumerate}
-    \item \textbf{Input:} Telemetry raw con \texttt{device\_id} único (e.g., "ESP32-C6-AB12CD")
-    \item \textbf{Originator Attributes Node:} Query atributos Asset Management:
-    \begin{itemize}
-        \item \texttt{gps\_location} (latitude, longitude)
-        \item \texttt{customer\_name} (titular cuenta)
-        \item \texttt{tariff\_usd\_per\_kwh} (tarifa vigente)
-    \end{itemize}
-    \item \textbf{Script Transform Node:} Cálculo facturación preliminar:
-\begin{verbatim}
-var cost_usd = msg.energy_kwh * metadata.tariff_usd_per_kwh;
-var newMsg = {
-    ...msg,
-    customer_name: metadata.customer_name,
-    gps_lat: metadata.gps_location.latitude,
-    gps_lon: metadata.gps_location.longitude,
-    billing_cost_usd: cost_usd.toFixed(2)
-};
-return {msg: newMsg, metadata: metadata, msgType: 'POST_TELEMETRY'};
-\end{verbatim}
-    \item \textbf{Save TimeSeries Node:} Persistencia local con datos enriquecidos
-\end{enumerate}
-
-\textbf{Beneficio validado:} Cloud recibe telemetría pre-procesada con contexto completo, reduce carga computacional cloud 40\% (medido vía AWS CloudWatch CPU metrics).
-
-\subsubsection{Rule Chain 4: Downlink Commands (Control Remoto)}
-
-\textbf{Objetivo:} Validar y ejecutar comandos RPC desde cloud con seguridad y prevención sobrecarga red.
-
-\textbf{Flujo procesamiento downlink:}
-
-\begin{enumerate}
-    \item \textbf{Input:} RPC command desde cloud (e.g., \texttt{setRelayState}, \texttt{firmwareUpdate})
-    \item \textbf{Check Relation Node:} Valida device pertenece a Asset autorizado
-    \item \textbf{Script Filter Node:} Verifica firma HMAC-SHA256:
-\begin{verbatim}
-var expected_hmac = hmac_sha256(msg.command + msg.timestamp, SECRET_KEY);
-if (msg.signature !== expected_hmac) {
-    return {msg: null, metadata: metadata, msgType: 'FAILURE'};
-}
-return {msg: msg, metadata: metadata, msgType: 'SUCCESS'};
-\end{verbatim}
-    \item \textbf{Delay Node:} Introduce jitter aleatorio 0-30s (previene thundering herd simultáneo 100 devices)
-    \item \textbf{RPC Call Node:} Envía comando a device vía MQTT topic:
-    \begin{itemize}
-        \item Topic: \texttt{v1/devices/me/rpc/request/\{requestId\}}
-        \item Payload: \texttt{\{"method": "setRelayState", "params": \{"state": true\}\}}
-        \item Timeout: 60s esperando ACK, retry 2$\times$ con backoff exponencial 5s/10s
-    \end{itemize}
-\end{enumerate}
-
-\textbf{Validación piloto:} 42 comandos corte/reconexión ejecutados durante 90 días, success rate 97.6\% (1 fallo timeout por device offline).
-
-\subsection{Operación Offline y Sincronización}
+% --------------------------------------------------------------------------
+\subsection{Operación sin Conexión y Resiliencia}
 \label{sec:gateway-tb-edge-offline}
 
-\textbf{Buffer local durante desconexión WAN (LTE):}
+\textbf{Almacenamiento sin conexión:} PostgreSQL local con retención de 7~días.  Capacidad: 128~GB SD, caudal esperado $\sim$20~MB/7~días, margen superior a 600$\times$.  Las alarmas se marcan como no procesadas (\texttt{acknowledged=false}) hasta la sincronización.  Los paneles locales continúan operativos sin conectividad WAN.
 
-\begin{itemize}
-    \item \textbf{Telemetría:} Persistencia PostgreSQL con retención 7 días configurada
-    \begin{itemize}
-        \item Capacidad almacenamiento: 128 GB SD card
-        \item Throughput piloto: 9,600 msgs/día $\times$ 7 días = 67,200 msgs buffered
-        \item Tamaño promedio mensaje: 320 bytes (JSON telemetry + metadata)
-        \item Espacio requerido: 67,200 $\times$ 320 bytes = 21.5 MB (0.017\% capacidad SD card)
-        \item Margen disponible: Soporta hasta 2.88M msgs/mes $\times$ 7 días = 20M msgs (626$\times$ capacidad piloto)
-    \end{itemize}
-    \item \textbf{Alarmas:} Notificación diferida, marca \texttt{acknowledged=false} hasta sync cloud exitoso
-    \item \textbf{Dashboards locales:} Visualización continúa operativa sin cloud (queries a PostgreSQL local)
-    \item \textbf{RPC commands:} Queue local con timeout extendido 24h (vs 60s normal)
-\end{itemize}
+\textbf{Sincronización post-reconexión:} Al restablecerse la conectividad, Edge sincroniza automáticamente los datos acumulados con el servidor central.  Validación: 100\% de datos preservados, 0~mensajes perdidos en pruebas de desconexión.
 
-\textbf{Mecanismo sincronización bidireccional:}
-
-\begin{enumerate}
-    \item \textbf{Edge $\rightarrow$ Cloud (uplink telemetry):}
-    \begin{itemize}
-        \item Protocolo: MQTT QoS 1 (At Least Once delivery guarantee)
-        \item Batch size: 100 msgs/publish (reduce overhead TCP handshakes 99\%)
-        \item Compresión: gzip level 6 (ratio 4.2:1 medido para telemetry JSON)
-        \item Rate limiting: 500 msgs/s max (evita congestión LTE)
-    \end{itemize}
-    
-    \item \textbf{Cloud $\rightarrow$ Edge (downlink attributes):}
-    \begin{itemize}
-        \item Protocolo: MQTT retained messages
-        \item Edge subscribe topic: \texttt{v1/edge/\{edgeId\}/attributes}
-        \item Polling: Cada 30s cuando conectado, cada 5 min cuando desconectado (conservar datos LTE)
-    \end{itemize}
-    
-    \item \textbf{Conflict resolution:} Last-Write-Wins con timestamp server-side
-    \begin{itemize}
-        \item Clock drift mitigado: NTP sync Gateway cada 4 horas ($\pm$ 50 ms precisión)
-        \item Servidor autoritativo: Cloud timestamp prevalece en conflictos
-    \end{itemize}
-    
-    \item \textbf{Latency sincronización:} Medida 2.8s promedio para propagación attribute change Cloud $\rightarrow$ Edge (desglose: LTE RTT 35ms + MQTT retained message delivery 2.7s + Edge processing 50ms)
-\end{enumerate}
-
-\textbf{Validación resiliencia offline:}
-
-Durante piloto 90 días ocurrieron 3 eventos desconexión WAN:
-
-\begin{itemize}
-    \item \textbf{Evento 1:} 28 min downtime (mantenimiento torre celular) - Buffer 1,120 msgs, sync exitoso 32s post-reconexión
-    \item \textbf{Evento 2:} 42 min downtime (tormenta eléctrica degradación RSSI) - Buffer 1,680 msgs, sync exitoso 48s
-    \item \textbf{Evento 3:} 17 min downtime (reboot router LTE OTA firmware) - Buffer 680 msgs, sync exitoso 19s
-    \item \textbf{Resultado:} 100\% datos preservados, 0 mensajes perdidos, operadores campo continuaron visualización dashboards locales sin interrupción
-\end{itemize}
-
-\subsection{Características Clave de ThingsBoard Edge}
-\label{sec:gateway-tb-edge-features}
-
-ThingsBoard Edge implementa 5 capacidades diferenciadas que justifican su selección sobre alternativas cloud-only (AWS IoT Core, Azure IoT Hub) o edge propietarias (AWS Greengrass~\cite{awsAWSIoTGreengrass2024}, Azure IoT Edge). Esta sección documenta las características críticas para arquitectura AMI con conectividad intermitente.
-
-\subsubsection{Despliegue Local con Buffer Offline}
-
-\textbf{Capacidad:} Procesamiento y almacenamiento local de telemetría devices sin requerir conectividad cloud. Buffer PostgreSQL local con capacidad 7 días (configurable vía parámetro \texttt{EDGE\_BUFFER\_DAYS}, ~40 MB overhead para 9,600 msgs/día piloto, <1\% SD card 128 GB) sincroniza automáticamente al restaurar conectividad WAN con ThingsBoard Cloud (Capítulo~\ref{chap:server-thingsboard}, Sección~\ref{sec:server-tb-server})~\cite{thingsboardEdgeArchitecture2024}.
-
-\textbf{Manejo overflow buffer:} ThingsBoard Edge implementa política FIFO (First-In-First-Out) con 3 niveles protección: (1) \textit{Warning threshold 80\%:} Al alcanzar 5.6 días buffer lleno (32 MB usado), Edge genera alarma MINOR y envía notificación operador vía dashboard local + email, (2) \textit{Critical threshold 95\%:} A 6.65 días (38 MB), Edge activa agregación agresiva temporal (muestras 15-min → 30-min, reduciendo ingesta 50\% adicional), (3) \textit{Buffer full 100\%:} Si alcanza 7 días sin WAN recovery, Edge elimina datos más antiguos automáticamente (FIFO deletion) preservando últimas 24h críticas intactas. Alternativa backpressure (rechazar ingesta nueva) descartada por riesgo pérdida datos real-time. Configuración piloto: thresholds 80\%/95\% con alertas email validadas funcionamiento correcto.
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.85\textwidth]{figures/tb-edge-offline.svg}
-\caption{Operación autónoma ThingsBoard Edge durante desconexión WAN prolongada (fuente: \url{thingsboard.io}). Durante outage cloud (paso 1), Edge mantiene funcionalidad completa: ingesta devices vía MQTT local, procesamiento Rule Engine, persistencia PostgreSQL (buffer 7 días = 13.4 MB datos raw + 26.6 MB overhead indexes/WAL = 40 MB total), dashboards web UI accesibles vía LAN local. Buffer acumula eventos hasta límite configurable. Al restaurar conectividad (paso 2), Cloud Manager sincroniza automáticamente delta telemetry/alarmas al Cloud vía gRPC (throughput medido 53 msgs/s), reconciliando estado sin pérdida datos. Crítico para arquitectura AMI propuesta (Capítulo~\ref{chap:arquitectura}) donde disponibilidad 99.5\% requisito operacional (Sección~\ref{sec:gateway-tb-edge-validacion}).}
-\label{fig:edge-offline-operation}
-\end{figure}
-
-\textbf{Validación piloto:} Durante 90 días operación, 3 eventos desconexión LTE (total 87 min downtime) no causaron pérdida datos. Buffer local almacenó 420 mensajes máximo (evento más largo 42 min), sincronización post-reconexión tomó 8 segundos promedio (53 msgs/s throughput gRPC).
-
-\subsubsection{Filtrado de Tráfico WAN}
-
-\textbf{Capacidad:} Rule Engine local pre-procesa telemetría antes de sincronizar cloud, reduciendo volumen datos WAN 65-80\% mediante agregación temporal, filtrado redundancias, y supresión valores dentro de rangos normales~\cite{thingsboardEdgeFeatures2024}.
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.85\textwidth]{figures/tb-edge-filtering.svg}
-\caption{Arquitectura filtrado de datos Edge → Cloud (fuente: \url{thingsboard.io}). Devices envían telemetría alta frecuencia (15 min samples) a Edge. Rule Engine local implementa 3 estrategias filtrado: (1) Agregación temporal (promedio 4 samples 15-min → 1 sample horario), (2) Supresión valores redundantes (voltage 220V ±2V omitido si cambio <1\% vs anterior), (3) Priorización eventos críticos (alarmas bypass filtrado, envío inmediato). Solo subset procesado sincroniza Cloud, reduciendo tráfico WAN 72.5\% medido piloto (9,600 msgs/día → 2,640 msgs/día), ahorrando 204 MB/mes (equivalente \$18/mes tarifa típica IoT \$0.088/MB\protect\footnotemark) por Gateway.}
-\label{fig:edge-data-filtering}
-\end{figure}
-\footnotetext{Cálculo: 6.8 MB/día × 30 días × \$0.088/MB = \$18. Tarifa basada en planes IoT América Latina típicos (rango \$0.05-0.15/MB).}
-
-\textbf{Rule Chains implementadas:}
-\begin{itemize}
-    \item \textbf{Aggregation Rule Chain:} Promedio 4 muestras 15-min → sample horario (reducción 75\%)
-    \item \textbf{Redundancy Filter:} Omite telemetry si cambio <5\% valor anterior (ahorro 40\% adicional)
-    \item \textbf{Alarm Bypass:} Eventos críticos (voltage sag/swell, tamper) bypass filtrado, envío inmediato cloud
-\end{itemize}
-
-\subsubsection{Detección de Alarmas con Latencia Ultra-Baja}
-
-\textbf{Capacidad:} Procesamiento local Rule Engine detecta condiciones alarma (voltage out-of-range, device offline, tamper events) con latencia <10 ms (validado Sección~\ref{sec:gateway-tb-edge-validacion}, P95: 8 ms), sin round-trip cloud. Notificaciones locales (SMS, email, webhook) enviadas inmediatamente desde Edge.
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.85\textwidth]{figures/tb-edge-alarm.svg}
-\caption{Flujo detección alarmas Edge con respuesta local ultra-baja latencia (fuente: \url{thingsboard.io}). Device envía telemetría con anomalía (e.g., voltage 180V < threshold 207V). Rule Engine Edge evalúa condición alarma localmente (8 ms P95 medido), crea alarma PostgreSQL local (~10 ms write), dispara acciones configuradas: (1) Notificación SMS operador vía modem 4G local, (2) Email alert vía SMTP local, (3) Webhook REST API sistema SCADA externo, (4) Sincronización alarma Cloud (no bloquea acciones locales). \textbf{Latencia E2E estimada alarma → notificación SMS: ~320 ms breakdown:} \texttt{[Device → Edge MQTT: 50ms] + [Rule Engine eval: 8ms] + [PostgreSQL write: 10ms] + [SMS modem 4G: 250ms] = 318ms total} vs 2.8s si procesamiento cloud exclusivo (device → cloud 248ms + Rule Engine 8ms + DB 10ms + cloud → SMS gateway 2.5s, 8.7× más lento). Cumple requisito Demand Response IEEE 2030.5 (<500 ms). Notificaciones email (180ms SMTP local) y webhook (95ms LAN) aún más rápidas que SMS.}
-\label{fig:edge-local-alarms}
-\end{figure}
-
-\textbf{Alarmas configuradas piloto:}
-\begin{itemize}
-    \item \textbf{Voltage sag/swell:} <207V o >253V sustained >10s → Alarm MAJOR (18 eventos 90 días, Rule Engine latencia 8 ms P95 validada)
-    \item \textbf{Device offline:} Last activity >30 min → Alarm MINOR (12 eventos, todos resueltos auto-recovery)
-    \item \textbf{Tamper physical:} GPIO switch opened → Alarm CRITICAL (0 eventos piloto, simulado testing OK)
-\end{itemize}
-
-\subsubsection{Dashboards Locales Tiempo Real}
-
-\textbf{Capacidad:} Web UI Express.js servido por Edge permite operadores campo visualizar telemetría, alarmas, y estado devices sin conectividad WAN. Dashboards responsive accesibles vía LAN local (WiFi/Ethernet) o VPN site-to-site.
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.85\textwidth]{figures/tb-edge-overview.svg}
-\caption{Topología acceso dashboards ThingsBoard Edge en arquitectura híbrida Edge-Cloud (fuente: \url{thingsboard.io}). Operadores campo acceden Edge UI vía LAN local (WiFi 192.168.1.0/24) con latencia <200 ms, sin requerir conectividad WAN. Dashboards Edge muestran telemetría tiempo real 64 devices locales, alarmas procesadas localmente, y estado sincronización cloud. Administradores remotos acceden Cloud UI para vista multi-sitio consolidada (3 Edges + dispositivos agregados). Arquitectura permite operación continua durante outages WAN: técnicos in-situ mantienen visibilidad completa vía Edge local mientras Cloud pierde conectividad temporal. Crítico para troubleshooting campo en zonas rurales con conectividad intermitente.}
-\label{fig:edge-dashboard-topology}
-\end{figure}
-
-\textbf{Casos de uso validados:}
-\begin{itemize}
-    \item \textbf{Troubleshooting in-situ:} Técnico campo accede dashboard Edge vía tablet (192.168.1.100:8080) para diagnosticar device offline, latencia UI 180 ms P95 (LAN WiFi)
-    \item \textbf{Operación offline prolongada:} Durante mantenimiento programado WAN (4h downtime), operadores continuaron monitoreo 64 devices vía dashboard local sin degradación funcionalidad
-    \item \textbf{Real-time alerts:} Widget alarmas Edge muestra eventos <1s latency (WebSocket local) vs 15-30s latency cloud (WebSocket polling 30s + 248 ms E2E)
-\end{itemize}
-
-\textbf{Impacto recursos hardware por feature:} Validación piloto Raspberry Pi 4 2GB con 64 devices activos caracterizó consumo incremental:
+% --------------------------------------------------------------------------
+\subsection{Validación Operacional}
+\label{sec:gateway-tb-edge-validacion}
 
 \begin{table}[H]
 \centering
-\caption{Overhead recursos ThingsBoard Edge por feature habilitada}
-\label{tab:edge-feature-resource-overhead}
-\small
-\begin{tabular}{|l|c|c|c|}
-\hline
-\textbf{Feature} & \textbf{RAM overhead} & \textbf{CPU overhead} & \textbf{Disk I/O} \\
-\hline
-Base Edge (sin features) & 680 MB & 18\% (idle) & 1.2 MB/s \\
-Offline buffer (PostgreSQL) & +120 MB & +5\% (writes) & +0.8 MB/s \\
-Data filtering (Rule Engine) & +80 MB (cache) & +15\% (CEP) & +0.3 MB/s \\
-Local alarms (Rule Engine) & +80 MB (state) & +8\% (eval) & +0.1 MB/s \\
-Local dashboards (Express.js) & +50 MB & +4\% (WebSocket) & +0.2 MB/s \\
-\textbf{Total piloto (4 features)} & \textbf{1,010 MB} & \textbf{50\%} & \textbf{2.6 MB/s} \\
-\hline
-\end{tabular}
-\end{table}
-
-\textbf{Nota validación:} Mediciones con 64 devices, ingesta 9,600 msgs/día, durante 90 días operación continua. RAM footprint total piloto 1.2 GB incluye overhead sistema operativo Raspberry Pi OS (190 MB). CPU promedio 35\% (50\% features + 18\% base - 33\% overlap procesamiento compartido Docker). Picos CPU 68\% durante sync batch post-desconexión WAN con 420 mensajes buffered. Hardware Raspberry Pi 4 2GB proporciona margen suficiente (800 MB RAM libre, 65\% CPU headroom) para escalar hasta 100 devices sin degradación.
-
-\subsubsection{Actualización Batch de Configuraciones}
-
-\textbf{Capacidad:} ThingsBoard Cloud permite modificar configuración (Rule Chains, dashboards, atributos devices) de múltiples Edges simultáneamente. Cambios sincronizados automáticamente vía Cloud Manager, sin requerir acceso SSH individual por Edge.
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.85\textwidth]{figures/tb-edge-batch-update.svg}
-\caption{Actualización batch de configuraciones Edge desde Cloud (fuente: \url{thingsboard.io}). Administrador modifica Rule Chain Template en Cloud (paso 1), cambios propagados automáticamente a 3 Edges registrados (paso 2) vía Cloud Manager gRPC. Cada Edge valida integridad cambio (checksum), aplica update local (paso 3), confirma ACK al Cloud. Proceso transaccional garantiza consistencia: si 1 Edge falla validación, rollback automático en todos. Crítico para gestión 100+ Edges distribuidos geográficamente, evitando intervención manual SSH por sitio (ahorro 2h labor por update).}
-\label{fig:edge-batch-update}
-\end{figure}
-
-\textbf{Updates realizados piloto:}
-\begin{itemize}
-    \item \textbf{Rule Chain update:} Modificación lógica agregación 4-samples → 6-samples (reducción adicional 33\% tráfico WAN), propagado 3 Edges en 12 segundos
-    \item \textbf{Dashboard widgets:} Agregado widget mapa calor voltage distribution, sincronizado 3 Edges sin downtime
-    \item \textbf{Atributos devices:} Cambio grupo tarifario 30 devices (peak/off-peak schedules), aplicado batch 3 Edges simultáneamente
-\end{itemize}
-
-\textbf{Performance breakdown batch update:} Medición detallada Rule Chain update (propagación 3 Edges simultáneos, payload 8.2 KB JSON compressed):
-
-\begin{enumerate}
-    \item \textbf{Propagación gRPC Cloud → Edges (paralelo):} 4.1 segundos
-    \begin{itemize}
-        \item Compresión Brotli payload cloud: 180 ms (8.2 KB → 2.1 KB, ratio 3.9:1)
-        \item Transmisión gRPC TLS 1.3 LTE (3 streams paralelos): 850 ms P95 (latencia LTE 35 ms + overhead TCP/TLS)
-        \item Descompresión Brotli payload Edge: 120 ms P95 (CPU bound RPi4)
-        \item Write PostgreSQL Edge (transacción atómica): 2.1 segundos (incluye VACUUM automático coincidente, P99: 450 ms sin VACUUM)
-        \item Notificación WebSocket operadores dashboard local: 50 ms
-    \end{itemize}
-    \item \textbf{Validación integridad (secuencial por Edge):} 6.2 segundos total (2.1s por Edge)
-    \begin{itemize}
-        \item Checksum SHA-256 payload: 80 ms
-        \item Validación schema JSON (Ajv validator): 320 ms (Rule Chain 47 nodes, 128 connections)
-        \item Test dry-run Rule Engine (simular 10 mensajes mock): 1.6 segundos
-        \item ACK confirmación Cloud: 120 ms (gRPC round-trip)
-    \end{itemize}
-    \item \textbf{Aplicación local (paralelo 3 Edges):} 1.8 segundos
-    \begin{itemize}
-        \item Hot-swap Rule Engine (reload sin downtime): 1.2 segundos
-        \item Invalidación cache Redis: 180 ms
-        \item Notificación ACK final Cloud: 420 ms (incluye confirmación 3 Edges, aggregated)
-    \end{itemize}
-    \item \textbf{Total E2E (critical path):} 12.1 segundos (4.1s propagación + 6.2s validación + 1.8s apply)
-\end{enumerate}
-
-\textbf{Análisis bottleneck:} La validación schema JSON + dry-run (1.9s) representa 51\% del tiempo secuencial por Edge. Optimización futura: paralelizar dry-run en 3 Edges (reduciría E2E a 8.0s, mejora 34\%). VACUUM PostgreSQL coincidente agregó 1.65s penalty (outlier, P50: 450 ms); configurar \texttt{autovacuum\_naptime} evitar colisión con updates críticos.
-
-\textbf{Comparación vs alternativas:}
-
-\begin{table}[H]
-\centering
-\caption{Comparación características Edge IoT: ThingsBoard vs AWS Greengrass vs Azure IoT Edge}
+\caption{Comparación de plataformas IoT de borde}
 \label{tab:edge-features-comparison}
 \small
 \begin{tabular}{|l|c|c|c|}
 \hline
 \textbf{Característica} & \textbf{TB Edge} & \textbf{Greengrass} & \textbf{Azure IoT Edge} \\
 \hline
-\multicolumn{4}{|c|}{\textit{\textbf{Capacidades Edge}}} \\
-\hline
-Offline buffer & 7+ días PostgreSQL & 2 días SQLite & 3 días local storage \\
-Local dashboards & Sí (web UI) & No & No \\
-Rule Engine & JavaScript visual & Python/Node.js código & C\#/Python código \\
-Batch config update & Sí (Cloud Manager) & Sí (Fleet config) & Sí (Module twins) \\
-Local alarms & Sí (8 ms P95) & Sí (Lambda@Edge) & Sí (custom modules) \\
-Data filtering & Built-in (Rule Chains) & Custom Lambda & Custom modules \\
+Licencia & Apache 2.0 (OSS) & Propietaria & Propietaria \\
+OPEX mensual & \$0 & \$2,20/dispositivo & \$1,50/dispositivo \\
+Almacenamiento sin conexión & 7+ días PostgreSQL & 2 días SQLite & 3 días \\
+Paneles locales & Sí (interfaz web) & No & No \\
+Transporte LwM2M & Integrado & No & No \\
+Motor de reglas & JavaScript visual & Python/Node.js & C\#/Python \\
 Sincronización & Bidireccional gRPC & Unidireccional & Bidireccional AMQP \\
-\hline
-\multicolumn{4}{|c|}{\textit{\textbf{Requisitos Hardware}}} \\
-\hline
-RAM mínima & 512 MB (1.2 GB piloto) & 256 MB (780 MB típico) & 512 MB (950 MB típico) \\
-CPU mínima & 2 cores ARM (35\% uso) & 1 core ARM & 2 cores ARM \\
-Storage mínimo & 8 GB (128 GB piloto) & 4 GB & 8 GB \\
-Hardware validado & Raspberry Pi 4 2GB & Raspberry Pi 3B+ & Raspberry Pi 4 \\
-\hline
-\multicolumn{4}{|c|}{\textit{\textbf{Modelo Económico \& Licenciamiento}}} \\
-\hline
-Licencia & Apache 2.0 (OSS) & Propietaria AWS & Propietaria Microsoft \\
-OPEX mensual & \$0 (self-hosted) & \$2.20/device & \$1.50/device \\
-CAPEX hardware & \$35 (RPi4 2GB) & \$35 (RPi3B+) & \$55 (RPi4 4GB) \\
-Vendor lock-in & No & Sí (AWS IoT Core) & Sí (Azure IoT Hub) \\
-\hline
-\multicolumn{4}{|c|}{\textit{\textbf{Ecosistema \& Soporte}}} \\
-\hline
-Documentación & Excelente (oficial) & Excelente (AWS) & Buena (Microsoft) \\
-Comunidad & Activa (GitHub 15k$\star$) & Grande (AWS ecosystem) & Media (Azure forums) \\
-Curva aprendizaje & Media (2-3 días) & Alta (4-5 días) & Alta (3-4 días) \\
+Dependencia de proveedor & No & Sí (AWS) & Sí (Azure) \\
 \hline
 \end{tabular}
 \end{table}
 
-\textbf{Justificación selección ThingsBoard Edge:} Combinación única de (1) Zero OPEX por licencia open-source~\cite{thingsboardEdgeArchitecture2024} (ahorro \$422/mes vs AWS Greengrass~\cite{awsGreengrassPricing2024} para 192 devices), (2) Dashboards locales web UI (crítico troubleshooting campo sin WAN), (3) Buffer offline 7 días validado 100\\% preservación datos, (4) Rule Engine visual (vs código Python/C\# requiere desarrolladores), (5) Sincronización bidireccional robusta con Cloud (Capítulo~\ref{chap:server-thingsboard}), (6) Hardware commodity Raspberry Pi (CAPEX \$35 vs \$300+ gateways industriales propietarios). Limitaciones: Mayor RAM footprint (1.2 GB vs 780 MB Greengrass) y curva aprendizaje Rule Engine visual (2-3 días training operadores).
+\textbf{Justificación de ThingsBoard Edge:} (1)~Cero OPEX por ser código abierto~\cite{thingsboardEdgeArchitecture2024}; (2)~transporte LwM2M integrado que simplifica la arquitectura; (3)~paneles locales para resolución de problemas sin WAN; (4)~almacenamiento sin conexión de 7~días validado; (5)~motor de reglas visual; (6)~sincronización bidireccional con servidor \emph{on-premise}~\cite{thingsboardCloudArchitecture2024}; (7)~ejecución sobre hardware genérico RPi4.
 
-\subsection{Validación Operacional ThingsBoard Edge}
-\label{sec:gateway-tb-edge-validacion}
+%======================================================================
+\section[Topología, HaLow y Flujo de Datos]{Topología de Red, Enlace Troncal HaLow y Flujo de Datos}
+\label{sec:gateway-topologia}
 
-\textbf{Métricas piloto 90 días (3 Gateways, 192 devices):}
+% --------------------------------------------------------------------------
+\subsection{Arquitectura General de Red}
+\label{sec:gateway-topologia-general}
 
-\begin{itemize}
-    \item \textbf{Uptime:} 99.93\% (40 min downtime total por actualización planificada v3.6.1 $\rightarrow$ v3.6.2)
-    \item \textbf{Throughput procesamiento:}
-    \begin{itemize}
-        \item Ingreso edge: 9,600 msgs/día (64 devices $\times$ 150 msgs/día por device)
-        \item Sincronización cloud: 2,640 msgs/día post-agregación
-        \item \textbf{Reducción WAN: 72.5\%} (ahorro 6.8 MB/día datos LTE por Gateway)
-    \end{itemize}
-    \item \textbf{Latencia procesamiento Rule Engine:}
-    \begin{itemize}
-        \item P50 (mediana): 6 ms
-        \item P95: 8 ms
-        \item P99: 12 ms
-        \item Medición: StatsD metrics exportadas a Prometheus
-    \end{itemize}
-    \item \textbf{Resource usage Raspberry Pi 4:}
-    \begin{itemize}
-        \item \textbf{CPU:} 35\% promedio (picos 68\% durante sync batch), 1.5 cores asignados Docker
-        \item \textbf{RAM:} 1.2 GB promedio (limit 1.5 GB configurado), 0 eventos OOM (Out-Of-Memory)
-        \item \textbf{Disk I/O:} 2.4 MB/s write promedio (PostgreSQL + logs), pico 18 MB/s durante VACUUM
-        \item \textbf{Network:} 42 kbps promedio uplink LTE (incluye telemetry + overhead MQTT/TLS)
-    \end{itemize}
-    \item \textbf{Eventos desconexión WAN:} 3 eventos (total 87 min downtime acumulado), buffer local evitó pérdida datos 100\%
-\end{itemize}
+La Figura~\ref{fig:network-topology} presenta la topología de red del sistema completo.  La arquitectura implementa tres segmentos de red diferenciados:
 
-\textbf{Comparación ThingsBoard Edge vs alternativas:}
+\input{fig_network_topology.tex}
+
+\begin{enumerate}
+    \item \textbf{Segmento 1 --- Red Thread (IEEE~802.15.4, 2,4~GHz):} Los nodos IoT (Capítulo~\ref{chap:nodo-iot}) se comunican con la pasarela RPi4 mediante OTBR.  Protocolo de aplicación: LwM2M sobre CoAP/UDP.  Alcance: $\sim$30~m en interiores, múltiples saltos en malla.
+
+    \item \textbf{Segmento 2 --- Red HaLow (IEEE~802.11ah, 900~MHz):} Las pasarelas RPi4, equipadas con el módulo AHPI6108E (HaLow nativo vía SDIO), participan directamente como \emph{Mesh Points} en la red 802.11s con protocolo HWMP.  Un Alfa Networks Tube~AHM dedicado actúa como \emph{Mesh Gate} con enlace troncal Ethernet hacia el \emph{switch} local.  Alcance: hasta 1,2~km LOS.
+
+    \item \textbf{Segmento 3 --- Red local Ethernet:} El servidor ThingsBoard \emph{on-premise} se conecta al \emph{switch} local.  Recibe telemetría sincronizada desde ThingsBoard Edge vía gRPC.
+\end{enumerate}
+
+A continuación se detallan la tecnología HaLow del Segmento~2, el \emph{hardware} y la topología en malla 802.11s que conforman el enlace troncal de la arquitectura.
+
+% --------------------------------------------------------------------------
+\subsection{Enlace Troncal HaLow (IEEE~802.11ah)}
+\label{sec:gateway-halow}
+
+El enlace troncal de última milla utiliza Wi-Fi HaLow (IEEE~802.11ah) en banda sub-1~GHz (902--928~MHz ISM).  HaLow ofrece tres ventajas clave sobre Wi-Fi~2,4/5~GHz~\cite{tianWiFiHaLowInternet2021}: (1)~alcance hasta 1,2~km LOS (+23~dBm TX, propagación Fresnel favorable), (2)~penetración interior superior ($-$8~dB @ 900~MHz vs $-$15~dB @ 2,4~GHz, reducción del 47\% en pérdida)~\cite{khanWiFiHalowSignal2020}, y (3)~eficiencia espectral con RAW/TWT que reducen colisiones 60\% vs EDCA puro.
+
+La topología en malla 802.11s con HWMP~\cite{qiaoSurveyWiFiHaLow2018} elimina cableado Ethernet exterior (CAPEX: 1$\times$ Tube~AHM @ \$89 + 2$\times$ AHPI6108E @ \$45 = \$179 vs \$6\,000 cableado Cat6 exterior).  Redundancia automática: fallo de un nodo en malla no interrumpe conectividad, HWMP redirige en $<$2~s.
+
+La implementación piloto configura: banda 902--928~MHz ISM (compatible ANE Resolución~711), canal~11 (915~MHz, 4~MHz BW), MCS7 (16-QAM, tasa 1/2) = 4~Mbps con sensibilidad RX $-$91~dBm, potencia TX +20~dBm (PIRE 25~dBm con antena 5~dBi, cumple FCC $<$30~dBm).
 
 \begin{table}[H]
 \centering
-\caption{Comparación plataformas Edge IoT para AMI}
-\label{tab:tbedge-comparison}
-\small
-\begin{tabular}{|l|c|c|c|}
+\caption{Comparación Wi-Fi HaLow (802.11ah) vs Wi-Fi tradicional para enlace troncal AMI}
+\label{tab:halow-vs-wifi}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{|l|l|l|l|}
 \hline
-\textbf{Característica} & \textbf{TB Edge} & \textbf{AWS Greengrass} & \textbf{Azure IoT Edge} \\
+\rowcolor{gray!20}
+\textbf{Característica} & \textbf{802.11ah HaLow} & \textbf{802.11n 2,4\,GHz} & \textbf{802.11ac 5\,GHz} \\
 \hline
-\textbf{Licencia} & Open-source & Propietaria & Propietaria \\
-\textbf{OPEX mensual} & \$0 & \$2.20/device & \$1.50/device \\
-\textbf{Lenguaje Rule Engine} & JavaScript & Python/Node.js & C\#/Python \\
-\textbf{Offline buffer} & 7+ días PostgreSQL & 2 días SQLite & 3 días local storage \\
-\textbf{Dashboards locales} & Sí (web UI) & No (solo cloud) & No (solo cloud) \\
-\textbf{RAM footprint} & 1.2 GB & 780 MB & 950 MB \\
-\textbf{Sincronización} & Bidireccional & Unidireccional & Bidireccional \\
+Frecuencia & \textcolor{green}{\textbf{900\,MHz}} & 2,4\,GHz & 5\,GHz \\
 \hline
-\end{tabular}
+Alcance LOS & \textcolor{green}{\textbf{1,2\,km}} & 100--150\,m & 50--80\,m \\
+\hline
+Penetración pared & \textcolor{green}{\textbf{$-$8\,dB}} & $-$15\,dB & $-$22\,dB \\
+\hline
+Caudal real & \textcolor{blue}{\textbf{4\,Mbps}} & 50--100\,Mbps & 200--400\,Mbps \\
+\hline
+Latencia & 11\,ms & 5--10\,ms & 3--8\,ms \\
+\hline
+EST máx & \textcolor{green}{\textbf{8191}} & 255 & 255 \\
+\hline
+Consumo TX & \textcolor{green}{\textbf{180\,mA}} & 250\,mA & 320\,mA \\
+\hline
+Eficiencia & \textcolor{green}{\textbf{RAW/TWT}} & EDCA & MU-MIMO \\
+\hline
+Costo módulo & \$45--89 & \$8--15 & \$12--20 \\
+\hline
+Decisión & \textcolor{green}{\textbf{SELECCIONADO}} & Descartado & Descartado \\
+\hline
+\end{tabular}}%
 \end{table}
 
-\textbf{Conclusión implementación ThingsBoard Edge:}
+HaLow seleccionado por: alcance 12$\times$ superior (elimina repetidores), penetración interior sin antenas externas, y eficiencia con RAW para 150+ \emph{Border Routers} Thread por AP.  Caudal de 4~Mbps suficiente: requisito AMI 100~medidores $\times$ 200~bytes $\times$ 4~mensajes/hora = 22~kbps (margen 180$\times$)~\cite{halowVsLoRaWANComparison2023}.
 
-ThingsBoard Edge demostró ser plataforma edge óptima para AMI por combinación de: (1) Reducción 72\% tráfico WAN mediante Rule Engine local, (2) Operación offline 7 días sin pérdida datos validada en 3 eventos desconexión, (3) Dashboards locales para operadores campo sin dependencia internet, (4) Zero OPEX por licencia open-source vs \$26/mes AWS Greengrass para 192 devices (ahorro 100\%), (5) Sincronización bidireccional robusta con manejo automático desconexiones. 
+% --------------------------------------------------------------------------
+\subsection{\emph{Hardware} HaLow: Módulo AHPI6108E y Punto de Acceso Tube~AHM}
+\label{sec:gateway-halow-alfa}
 
-\textbf{Limitaciones identificadas:} RAM footprint 1.2 GB requiere hardware $\geq$2 GB (Raspberry Pi 4 2GB mínimo recomendado), curva aprendizaje Rule Engine visual requiere 2-3 días training operadores, y complejidad troubleshooting stack 7 microservices Docker (mitigado con logs centralizados Grafana Loki).
-% - Uptime: 99.93% (downtime: 6 horas mantenimiento)
-% - Throughput: 9,600 → 2,640 msgs/day (72% reducción)
-% - Latency P95: 8 ms (local processing)
-% - Resource usage:
-%   * CPU: 35% average
-%   * RAM: 1.2 GB / 1.5 GB
-%   * Disk: 2.4 GB / 128 GB
-% Tabla: Comparación TB Edge vs AWS Greengrass vs Azure IoT Edge
+La red HaLow del piloto emplea dos tipos de hardware, ambos basados en el chipset Morse Micro MM6108~\cite{morsemicroMM8108ProductBrief2025}: el módulo HAT \textbf{AHPI6108E} integrado directamente en las pasarelas RPi4, y el router exterior \textbf{Tube~AHM} como punto de acceso (\emph{Mesh Gate}) dedicado.
 
-\label{sec:gateway-conclusiones}
+\textbf{Módulo Alfa Networks AHPI6108E (HAT para Raspberry~Pi):}  Placa en formato HAT (65$\times$56$\times$19~mm) que se acopla al conector GPIO de 40~pines de la Raspberry~Pi~4.  El módulo aloja el chipset MM6108 en \emph{socket} M.2/NGFF~2230 E-Key, conectado al SoC BCM2711 mediante interfaz \textbf{SDIO} nativa.  Incluye antena HaLow con cable IPEX4 (MHF4) a SMA y \emph{socket} mikroBUS con soporte SPI, I\textsuperscript{2}C y UART para expansión futura.  Especificaciones de radio: banda 902--928~MHz, potencia TX máxima +25~dBm (MCS0), +23~dBm (MCS4), sensibilidad RX $-$100~dBm @ MCS0 1~MHz / $-$84~dBm @ MCS4 4~MHz, tasa PHY hasta 32,5~Mbps.  Temperatura de operación: $-$20 a +70~°C.  El controlador \texttt{kmod-morse} de OpenWRT gestiona la radio directamente por SDIO, exponiendo la interfaz \texttt{mesh0} sin hardware intermediario.
 
-Este capítulo presentó la implementación completa del Gateway Inteligente y Red HaLow (Niveles 2-3 arquitectura AMI), demostrando viabilidad técnica y económica de edge computing para infraestructura medición avanzada.
+\textbf{Router Alfa Networks Tube~AHM (\emph{Mesh Gate}/AP):}  Router exterior certificado IP67, formato cilíndrico (176$\times$38~mm, 125~g), con antena omnidireccional integrada de 5~dBi (PIRE 28~dBm).  Procesador MT7628 (MIPS 580~MHz) con radio MM6108 802.11ah.  Interfaz Ethernet 10/100 con alimentación PoE 24~V, consumo 5--9~W.  Ejecuta OpenWRT~23.05 (\emph{fork} Morse Micro) con paquetes \texttt{kmod-morse} y \emph{firmware} \texttt{morse-fw-6108}.  En el piloto actúa exclusivamente como \emph{Mesh Gate}: nodo raíz 802.11s con enlace troncal Ethernet al \emph{switch} local y servidor \emph{on-premise}.
 
-\textbf{Contribuciones principales del capítulo:}
+\input{fig_halow_hardware_detail}
+
+\textbf{Configuración de la malla:} Canal 915~MHz (centro ISM), \texttt{htmode} S4 (4~MHz), \texttt{txpower} +20~dBm, cifrado SAE (WPA3, \emph{passphrase} 384~bits), \texttt{mesh\_id=AMI-HaLow-Mesh}.  Tube~AHM con \texttt{mesh\_gate\_announcements=1} (raíz RANN); RPi4-01 y RPi4-02 (AHPI6108E) con \texttt{mesh\_gate\_announcements=0} como \emph{Mesh Points}.  Puente \texttt{br-lan} integra \texttt{eth0} + \texttt{mesh0} en todos los nodos.
+
+% --------------------------------------------------------------------------
+\subsection{Topología Mesh 802.11s y Protocolo HWMP}
+\label{sec:gateway-halow-mesh}
+
+IEEE~802.11s define los roles: \emph{Mesh Gate} (conexión cableada), \emph{Mesh Point} (reenvío) y \emph{Mesh Portal} (puente).  El protocolo HWMP combina enrutamiento proactivo (basado en árbol vía RANN cada 2~s hacia la raíz Mesh Gate) con reactivo (PREQ/PREP bajo demanda), optimizando latencia vs sobrecarga~\cite{qiaoSurveyWiFiHaLow2018}.  Beneficios: auto-configuración (Beacon + Mesh Peering 4-way), auto-reparación (PERR \emph{broadcast} $\rightarrow$ re-descubrimiento $<$2~s), y balanceo de carga (métrica \emph{airtime}).  Seguridad: WPA3-SAE (intercambio de claves Dragonfly, AES-CCMP-128), \emph{passphrase} 63~caracteres (384~bits de entropía).
+
+\input{fig_halow_mesh_topology}
+
+\textbf{Topología desplegada:} 3~nodos HaLow en triangulación (1~Tube~AHM + 2~RPi4 con AHPI6108E):
+
+\begin{itemize}
+    \item \textbf{Tube~AHM (Mesh Gate):} Ubicación central, Ethernet hacia \emph{switch} local (servidor \emph{on-premise}), 1650~msnm.  Raíz HWMP con RANN periódico.
+    \item \textbf{RPi4-01 + AHPI6108E (Mesh Point):} 280~m desde Tube~AHM, 1540~msnm.  Pasarela de borde gestionando nodos Thread.  RSSI $-$72~dBm, costo \emph{airtime}~512.
+    \item \textbf{RPi4-02 + AHPI6108E (Mesh Point):} 520~m desde Tube~AHM / 380~m desde RPi4-01, 1470~msnm.  Pasarela de borde gestionando nodos Thread.  RSSI $-$88~dBm, costo \emph{airtime}~2048.
+\end{itemize}
+
+Malla completa: 3~nodos $\rightarrow$ 3~enlaces bidireccionales entre pares validados.
+
+\textbf{Métrica \emph{Airtime} (IEEE~802.11s Annex~C):}
+
+\[
+\text{Airtime} = \left[\frac{O + \frac{B_t}{r}}{1 - e_f}\right] \times 1024
+\]
+
+Donde $O = 364$\,\textmu s (sobrecarga SIFS+DIFS+ACK), $B_t = 1024$~bytes, $r$~= tasa de datos Mbps, $e_f$~= tasa de error de trama.  RPi4-01 (RSSI $-$72~dBm, TET~1\%): costo~512.  RPi4-02 (RSSI $-$88~dBm, TET~8\%): costo~2048.  HWMP selecciona ruta multi-salto Tube~AHM$\rightarrow$RPi4-01$\rightarrow$RPi4-02 (costo 1024) sobre directa (costo 2048), optimizando fiabilidad sobre saltos mínimos.
+
+\textbf{RAW (\emph{Restricted Access Window}):} Divide estaciones en 8~grupos temporales con ranuras exclusivas (12,5~ms/ranura, asignación Hash(MAC) mod~8).  Validación piloto 30~estaciones: pérdida de paquetes sin RAW 4,2\% $\rightarrow$ con RAW 0,3\% (\textbf{reducción del 93\%}), caudal agregado +62\%, fluctuación $-$75\%.  Compromiso: latencia promedio +8~ms, pero predecible (requisito AMI $<$500~ms cumplido)~\cite{kimIEEE80211ahHaLow2021}.
+
+% --------------------------------------------------------------------------
+\subsection{Validación de la Red HaLow}
+\label{sec:gateway-halow-validacion}
+
+\textbf{Caudal TCP (iperf3, ruta 2 saltos vía RPi4-01, 60~s, 10~repeticiones):}
+\begin{itemize}
+    \item Caudal promedio: 4,2~Mbps ($\pm$0,3), pérdida de paquetes TCP 0,02\%, fluctuación 4,2~ms.
+\end{itemize}
+
+\textbf{Latencia ICMP (5\,000~paquetes, 64~bytes, intervalo 200~ms):}
+\begin{itemize}
+    \item RTT: P50 = 10,8~ms, P95 = 14,2~ms, P99 = 18,7~ms.  Pérdida de paquetes: 0,04\%.
+\end{itemize}
+
+\textbf{Alcance LOS:}
+\begin{itemize}
+    \item Tube~AHM$\leftrightarrow$RPi4-01 (280~m): RSSI $-$72~dBm, Fresnel 100\%, 4,2~Mbps.
+    \item Tube~AHM$\leftrightarrow$RPi4-02 (520~m): RSSI $-$88~dBm, Fresnel 60\% (vegetación), 2,8~Mbps.
+    \item Extensión 1,2~km LOS: RSSI $-$93~dBm (2~dB de margen), 1,1~Mbps MCS3, \textbf{conectividad estable}.
+\end{itemize}
+
+\textbf{Cálculo Fresnel} (Tube~AHM$\leftrightarrow$RPi4-02): $r = \sqrt{\lambda d_1 d_2 / (d_1+d_2)}$ con $\lambda=0,328$~m, $d_1=d_2=260$~m $\Rightarrow$ $r \approx 6,5$~m.  Vegetación (8--12~m) obstruye 40\% zona Fresnel, atenuación 3--5~dB consistente con RSSI medido.
+
+\textbf{Conclusión:} Red HaLow cumple: caudal $>$1~Mbps en $>$90\% del área, latencia $<$15~ms P95, pérdida de paquetes $<$0,1\%.
+
+% --------------------------------------------------------------------------
+\subsection{Flujo de Datos Extremo a Extremo}
+\label{sec:gateway-flujo-datos}
+
+El flujo de datos desde el medidor hasta el servidor central sigue esta secuencia:
 
 \begin{enumerate}
-    \item \textbf{Gateway Raspberry Pi 4 + Docker:} Plataforma edge costo-efectiva (\$120 hardware) ejecutando 6 microservicios containerizados (OTBR, ThingsBoard Edge, PostgreSQL+TimescaleDB, Kafka, Zookeeper, MQTT Bridge) con consumo energético 8.5W promedio (15W pico). Validación 90 días confirma uptime 99.93\%, CPU 35\% promedio, RAM 3.2 GB / 4 GB utilizados. Alternativa comercial AWS Greengrass Core requiere hardware \$450+ (RPi4 es 73\% más económico).
-    
-    \item \textbf{OpenThread Border Router (OTBR):} Implementación completa NAT64/DNS64 permite conectividad Thread mesh (Nivel 1 nodos) $\rightarrow$ IPv6/IPv4 internet. Thread Commissioner automatiza comisionado 30 nodos piloto, tiempo promedio 2.8$\pm$0.4s por nodo, tasa éxito 100\% (30/30 first-attempt). OTBR valida latencia Thread $\rightarrow$ Internet 44.7 ms promedio (dentro requisito <500 ms IEC 62056 AMI).
-    
-    \item \textbf{Red HaLow IEEE 802.11ah (NOVEDAD PRINCIPAL):} Primera implementación documentada malla 802.11s HaLow para AMI en literatura científica. Topología 3$\times$ Alfa Networks Tube AHM (\$267 CAPEX total) logra: (a) Alcance 1.2 km LOS validado (RSSI -93 dBm con 2 dB margen vs sensibilidad MCS3), (b) Throughput 4.2 Mbps @ 4 MHz bandwidth MCS7, (c) Latencia RTT 11.3 ms P50 / 14.2 ms P95 (dentro <20 ms requisito IEEE 2030.5 Demand Response). Protocolo HWMP (Hybrid Wireless Mesh Protocol) con métrica airtime cost optimiza path selection multi-hop. RAW (Restricted Access Window) reduce packet loss 93\% (4.2\% $\rightarrow$ 0.3\%) en burst simultáneo 30 Border Routers vs EDCA puro. Cobertura 92\% área 0.8 km² barrio piloto con RSSI >-85 dBm (suficiente MCS5+ 2 Mbps).
-    
-    \item \textbf{ThingsBoard Edge:} Plataforma edge open-source (Zero OPEX licencia) logra reducción 72\% tráfico WAN mediante Rule Chains locales (9,600 msgs/día ingreso $\rightarrow$ 2,640 msgs/día sincronización cloud), ahorro 6.8 MB/día datos LTE por Gateway. Buffer offline PostgreSQL 7 días (128 GB SD card capacidad 20M msgs, 626$\times$ margen vs 67K msgs piloto) validado durante 3 eventos desconexión WAN (87 min downtime acumulado) con 100\% preservación datos. Dashboards locales permiten operadores campo trabajar sin conectividad internet. Comparativa vs AWS Greengrass (\$2.20/device/mes) y Azure IoT Edge (\$1.50/device/mes) confirma ThingsBoard Edge ahorro 100\% OPEX (open-source) para 192 devices piloto.
+    \item \textbf{Medidor $\rightarrow$ Nodo IoT} (RS-485, DLMS/COSEM): El nodo Zephyr lee registros OBIS del medidor Emsitech cada intervalo configurado.
+    \item \textbf{Nodo IoT $\rightarrow$ OTBR} (Thread/CoAP/LwM2M): El nodo envía notificaciones LwM2M (Observe) con la telemetría empaquetada en TLV, a través de la malla Thread hacia el OTBR en la RPi4.
+    \item \textbf{OTBR $\rightarrow$ ThingsBoard Edge} (IPv6 local): OTBR traduce el tráfico Thread a IPv6 local; ThingsBoard Edge recibe los mensajes CoAP/LwM2M directamente en su capa de transporte integrada.
+    \item \textbf{ThingsBoard Edge --- Procesamiento local:} El motor de reglas ejecuta las cadenas RC1--RC4 (filtrado, alarmas, enriquecimiento), persiste en PostgreSQL local y actualiza paneles.
+    \item \textbf{ThingsBoard Edge $\rightarrow$ Servidor \emph{on-premise}} (gRPC vía HaLow + Ethernet): La telemetría agregada y las alarmas se sincronizan con el servidor central mediante gRPC bidireccional, atravesando la malla HaLow hasta el Mesh Gate y de ahí por Ethernet al servidor.
 \end{enumerate}
 
-\textbf{Regla de Exclusión aplicada - HaLow y OTBR exhaustados:}
+%======================================================================
+\section{Conclusiones del Capítulo}
+\label{sec:gateway-conclusiones}
 
-Contenido IEEE 802.11ah Wi-Fi HaLow (fundamentos S1G PHY, mesh 802.11s, HWMP routing, RAW optimization, configuración Alfa Networks) y OpenThread Border Router (interfaces wpan0/eth0, NAT64/DNS64, Commissioner) presentados exhaustivamente en este capítulo. Capítulos posteriores (Cap 5 Server Cloud, Cap 6 Resultados) referencian HaLow/OTBR como tecnologías establecidas sin repetir detalles técnicos, enfocando análisis en métricas operacionales agregadas y costos deployment.
+Este capítulo presentó la implementación de la pasarela de borde y la red de distribución HaLow (Niveles~2 y~3 de la arquitectura), demostrando la viabilidad técnica y económica de computación en el borde para AMI.
 
-\textbf{Transición al Capítulo 5:}
+\textbf{Contribuciones principales:}
+\begin{enumerate}
+    \item \textbf{Pasarela RPi4 con HaLow nativo:} Plataforma de borde asequible (\$100 \emph{hardware} por pasarela), que integra radio HaLow 802.11ah mediante módulo AHPI6108E (SDIO), OTBR como servicio nativo de OpenWRT y ThingsBoard Edge en Docker, consumo 8,5~W promedio.
 
-Gateway + HaLow completan los Niveles 1-3 arquitectura (Nodo $\rightarrow$ Border Router $\rightarrow$ Gateway edge). Capítulo 5 aborda Nivel 4: Servidor ThingsBoard Cloud centralizado, incluyendo Apache Kafka para ingestión escalable, PostgreSQL cluster HA, y Rule Chains cloud para facturación/billing.
-% - Gateway RPi4 + OTBR + HaLow implementado exitosamente
-% - Red HaLow: 4 Mbps throughput, 11 ms latency, 1.2 km alcance
-% - TB Edge: 72% reducción tráfico WAN, 7 días buffer offline
-% - Siguiente capítulo: Plataforma central (Server ThingsBoard)
+    \item \textbf{OpenWRT con soporte HaLow nativo por SDIO:} Compilación personalizada desde el \emph{fork} de Morse Micro, proporcionando controladores nativos (\texttt{kmod-morse}) para la radio MM6108 del módulo AHPI6108E conectada por interfaz SDIO, configuración de red 802.11s y enrutamiento HWMP documentados.
 
+    \item \textbf{OTBR como servicio nativo:} Integración de OpenThread Border Router en OpenWRT con NAT64/DNS64, comisionamiento automatizado y validación de conectividad Thread--IPv6.
 
+    \item \textbf{ThingsBoard Edge con LwM2M integrado:} Transporte LwM2M nativo que elimina la necesidad de servidores LwM2M independientes o puentes CoAP-MQTT.  Motor de reglas local, almacenamiento sin conexión de 7~días y sincronización bidireccional con servidor \emph{on-premise}.
+
+    \item \textbf{Red HaLow 802.11ah en malla:} 1$\times$ Tube~AHM (\emph{Mesh Gate}) + 2$\times$ AHPI6108E en RPi4 (\emph{Mesh Points}) = \$179 total, con protocolo HWMP.  Alcance validado de 1,2~km LOS, caudal 4,2~Mbps, latencia 14,2~ms P95.  RAW reduce la pérdida de paquetes en un 93\% (4,2\% $\rightarrow$ 0,3\%).
+
+    \item \textbf{Flujo de datos extremo a extremo documentado:} Desde medidor (RS-485/DLMS) $\rightarrow$ nodo IoT (Thread/LwM2M) $\rightarrow$ OTBR $\rightarrow$ ThingsBoard Edge (procesamiento local) $\rightarrow$ servidor \emph{on-premise} (gRPC vía HaLow).
+\end{enumerate}
+
+\textbf{Transición al Capítulo~\ref{chap:resultados}:} Pasarela + HaLow completan los Niveles~1 a~3 (Nodo $\rightarrow$ Border Router $\rightarrow$ Pasarela de borde).  El siguiente capítulo presenta la validación experimental de extremo a extremo, evaluando latencias, disponibilidad, resiliencia y costos del sistema completo con el servidor ThingsBoard \emph{on-premise} como plataforma centralizada.

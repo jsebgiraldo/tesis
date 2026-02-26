@@ -1,228 +1,135 @@
-% Diagrama de arquitectura Docker Compose con microservicios
+% Diagrama TikZ de arquitectura Docker Compose — ThingsBoard Edge en RPi4
+% Servicios: ThingsBoard Edge 3.6.2, PostgreSQL 15, Redis 7.0
+% Rev11: Actualizado para reflejar arquitectura real desplegada (3 contenedores)
 
-\begin{figure}[H]
+\begin{figure}[ht]
 \centering
+\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[
+  % Estilos contenedores
+  containerbase/.style={rounded corners=4pt, minimum width=4.5cm, minimum height=2.8cm,
+    line width=0.8pt, font=\scriptsize, inner sep=5pt},
+  container-teal/.style={containerbase, draw=teal!70!black, fill=teal!15},
+  container-purple/.style={containerbase, draw=purple!70!black, fill=purple!15},
+  container-red/.style={containerbase, draw=red!70!black, fill=red!15},
+  containerlabel/.style={font=\scriptsize\bfseries, #1},
+  % Componente interno TB Edge
+  tbcomp/.style={draw=teal!50!black, fill=teal!8, rounded corners=2pt,
+    font=\tiny, minimum width=2.2cm, minimum height=0.5cm, inner sep=2pt},
+  % Flechas
+  dataflow/.style={-{Latex[length=2.5mm]}, line width=1pt, #1},
+  biflow/.style={{Latex[length=2.5mm]}-{Latex[length=2.5mm]}, line width=1pt, #1},
+  depflow/.style={-{Latex[length=2mm]}, line width=0.5pt, gray!60, dashed},
+  % Info
+  infobox/.style={draw=gray!40, fill=white, rounded corners=2pt,
+    font=\tiny, inner sep=3pt},
+  extnode/.style={draw=#1, fill=#1!10, rounded corners=2pt, font=\tiny,
+    text width=1.8cm, align=center, inner sep=3pt},
+]
 
-% ============================================================================
-% Figura temporalmente omitida - diagrama Docker stack pendiente
-% ============================================================================
-% PROMPT PARA GENERAR LA IMAGEN:
-%
-% Crear diagrama de arquitectura Docker Compose mostrando stack de microservicios
-% en Gateway Edge con contenedores, volúmenes, redes y dependencias:
-%
-% CONTENEDORES (6 SERVICIOS):
-%
-% 1. INFLUXDB (Base de datos time-series):
-%    - Rectángulo: 4cm × 2cm
-%    - Color: Morado (#9C27B0)
-%    - Icono: Database cilíndrica
-%    - Texto interno:
-%      * "InfluxDB 2.7"
-%      * "Port: 8086"
-%      * "Bucket: iot_metrics"
-%      * "Retention: 90d"
-%    - Volumen persistente: "influxdb_data → /var/lib/influxdb2"
-%    - Recursos: "256 MB RAM, 0.5 CPU"
-%
-% 2. MOSQUITTO (MQTT Broker):
-%    - Rectángulo: 4cm × 2cm
-%    - Color: Azul oscuro (#1565C0)
-%    - Icono: Antena broadcasting
-%    - Texto interno:
-%      * "Eclipse Mosquitto 2.0"
-%      * "Port: 1883 (MQTT)"
-%      * "Port: 8883 (MQTTS)"
-%      * "Auth: username/password"
-%    - Volumen: "mosquitto_config → /mosquitto/config"
-%    - Recursos: "64 MB RAM, 0.2 CPU"
-%
-% 3. GATEWAY_SERVICE (Aplicación principal):
-%    - Rectángulo: 5cm × 2.5cm (MÁS GRANDE, contenedor principal)
-%    - Color: Verde (#2E7D32)
-%    - Icono: Engranajes
-%    - Texto interno:
-%      * "Python 3.11 FastAPI"
-%      * "Port: 8000 (API REST)"
-%      * "Servicios:"
-%      * "  - DLMS/COSEM parser"
-%      * "  - LwM2M transform"
-%      * "  - CoAP client"
-%      * "  - Aggregation engine"
-%    - Volumen: "app_logs → /app/logs"
-%    - Recursos: "512 MB RAM, 1.0 CPU"
-%    - Dependencias: Flechas hacia InfluxDB, Mosquitto, Redis
-%
-% 4. REDIS (Cache y message queue):
-%    - Rectángulo: 3.5cm × 1.8cm
-%    - Color: Rojo (#D32F2F)
-%    - Icono: Cubo con velocidad
-%    - Texto interno:
-%      * "Redis 7.0"
-%      * "Port: 6379"
-%      * "Max memory: 128 MB"
-%      * "Eviction: allkeys-lru"
-%    - Volumen: "redis_data → /data"
-%    - Recursos: "128 MB RAM, 0.3 CPU"
-%
-% 5. GRAFANA (Dashboards):
-%    - Rectángulo: 4cm × 2cm
-%    - Color: Naranja (#FF6F00)
-%    - Icono: Gráfico de líneas
-%    - Texto interno:
-%      * "Grafana 10.2"
-%      * "Port: 3000"
-%      * "Datasource: InfluxDB"
-%      * "Dashboards: 3 preconfigured"
-%    - Volumen: "grafana_dashboards → /etc/grafana"
-%    - Recursos: "256 MB RAM, 0.4 CPU"
-%    - Dependencia: Flecha hacia InfluxDB (lectura)
-%
-% 6. NGINX (Reverse proxy):
-%    - Rectángulo: 4cm × 1.8cm
-%    - Color: Verde claro (#66BB6A)
-%    - Icono: Escudo
-%    - Texto interno:
-%      * "Nginx 1.25"
-%      * "Port: 80 → 8000 (Gateway)"
-%      * "Port: 443 → 3000 (Grafana)"
-%      * "TLS 1.3, Let's Encrypt"
-%    - Volumen: "nginx_certs → /etc/nginx/certs"
-%    - Recursos: "64 MB RAM, 0.2 CPU"
-%    - Dependencias: Flechas hacia gateway_service, Grafana
-%
-%
-% REDES DOCKER (3 REDES):
-%
-% Red "backend" (fondo azul claro translúcido):
-%   - Conecta: InfluxDB, Mosquitto, Redis, gateway_service
-%   - Aislamiento interno
-%   - Subnet: 172.20.0.0/24
-%
-% Red "frontend" (fondo verde claro translúcido):
-%   - Conecta: Nginx, gateway_service, Grafana
-%   - Expuesta al host
-%
-% Red "bridge_host" (línea punteada):
-%   - Conexión Docker host → contenedores
-%   - Puerto 80/443 mapeado a host
-%
-%
-% VOLÚMENES PERSISTENTES (iconos disco abajo):
-%   - influxdb_data (5 GB)
-%   - mosquitto_config (100 MB)
-%   - redis_data (500 MB)
-%   - app_logs (1 GB)
-%   - grafana_dashboards (200 MB)
-%   - nginx_certs (50 MB)
-%
-%
-% CONEXIONES EXTERNAS (fuera del diagrama):
-%
-% Entrada izquierda (Thread Border Router):
-%   - Flecha gruesa azul entrando a gateway_service
-%   - Etiqueta: "CoAP UDP 5683\nThread mesh → Gateway"
-%   - 30 nodos IoT enviando mensajes
-%
-% Entrada inferior (RS-485 Medidor):
-%   - Flecha gruesa naranja entrando a gateway_service
-%   - Etiqueta: "DLMS/COSEM over HDLC\nSerial /dev/ttyUSB0 @ 9600 bps"
-%
-% Salida derecha (HaLow Mesh):
-%   - Flecha gruesa verde saliendo de Nginx
-%   - Etiqueta: "HTTPS/MQTT outbound\nHaLow → Mesh Gate → Cloud"
-%
-% Salida superior (Gestión local):
-%   - Flecha punteada desde Grafana
-%   - Etiqueta: "Local dashboard\nhttp://gateway.local:3000"
-%
-%
-% ANOTACIONES TÉCNICAS:
-%
-% Recuadro superior derecho (métricas stack):
-%   "RECURSOS TOTALES STACK"
-%   "RAM: 1.28 GB (de 4 GB RPi4)"
-%   "CPU: 2.6 cores pico (de 4 cores)"
-%   "Disco: 7 GB volúmenes"
-%   "Uptime stack: 99.1%"
-%
-% Recuadro inferior izquierdo (orquestación):
-%   "DOCKER COMPOSE 2.21"
-%   "Restart policy: unless-stopped"
-%   "Health checks: 30s interval"
-%   "Logging: json-file, max 100MB"
-%   "Network mode: bridge custom"
-%
-% Flechas de dependencias:
-%   - Sólidas gruesas: Flujo datos crítico (gateway_service → InfluxDB)
-%   - Sólidas finas: Consultas (Grafana → InfluxDB)
-%   - Punteadas: Dependencias arranque (depends_on en docker-compose.yml)
-%
-%
-% ESTILO VISUAL:
-%   - Contenedores: Rectángulos con bordes redondeados, sombra sutil
-%   - Iconos: Simples line-art, 1.5cm tamaño, centrados arriba en rectángulo
-%   - Tipografía: Sans-serif, 8pt para texto interno, 9pt para etiquetas
-%   - Redes: Fondos translúcidos con borde punteado, etiqueta en esquina
-%   - Volúmenes: Iconos cilindro pequeños (1cm) debajo de contenedores con línea conectora
-%   - Flechas: Grosor indica volumen tráfico (gruesa >100 msg/min, media 10-100, fina <10)
-%   - Colores: Saturación 70%, diferenciando servicios por función (DB morado, broker azul, app verde)
-%   - Fondo: Blanco con grid sutil opcional
-%
-% LAYOUT:
-%   - Disposición: Gateway_service central, dependencias alrededor (estrella)
-%   - Capa inferior: InfluxDB, Redis (almacenamiento)
-%   - Capa lateral izq: Mosquitto (mensajería)
-%   - Capa superior: Grafana, Nginx (presentación)
-%   - Separación: 1.5cm entre contenedores
-%   - Dimensiones totales: 18cm ancho × 14cm alto
-%
-% FORMATO DE SALIDA:
-%   - PNG o PDF vectorial
-%   - Dimensiones: 18cm × 14cm (horizontal)
-%   - Resolución: 300 DPI si PNG
-%
-% HERRAMIENTAS SUGERIDAS:
-%   - draw.io con plantilla "Network Diagram"
-%   - Microsoft Visio con shapes Docker
-%   - Docker Compose Visualizer (https://github.com/pmsipilot/docker-compose-viz)
-%   - Diagrams as Code Python library (https://diagrams.mingrammer.com/)
-%   - LaTeX TikZ con shapes.geometric library
-%
-% CÓDIGO PYTHON EJEMPLO (diagrams library):
-%
-% from diagrams import Diagram, Cluster, Edge
-% from diagrams.onprem.database import Influxdb
-% from diagrams.onprem.inmemory import Redis
-% from diagrams.onprem.monitoring import Grafana
-% from diagrams.onprem.network import Nginx
-% from diagrams.generic.compute import Rack
-%
-% with Diagram("Docker Stack Gateway Edge", filename="docker_stack", 
-%              show=False, direction="TB"):
-%     
-%     with Cluster("Network: backend"):
-%         influx = Influxdb("InfluxDB 2.7\n8086")
-%         redis = Redis("Redis 7.0\n6379")
-%         mosquitto = Rack("Mosquitto\n1883")
-%         gateway = Rack("Gateway Service\nFastAPI :8000")
-%     
-%     with Cluster("Network: frontend"):
-%         nginx = Nginx("Nginx 1.25\n80/443")
-%         grafana = Grafana("Grafana 10.2\n3000")
-%     
-%     # Conexiones
-%     gateway >> Edge(label="write metrics") >> influx
-%     gateway >> Edge(label="cache") >> redis
-%     gateway >> Edge(label="publish") >> mosquitto
-%     grafana >> Edge(label="query") >> influx
-%     nginx >> Edge(label="proxy") >> [gateway, grafana]
-%
-% ============================================================================
+% === CAPA SO: OpenWRT (fondo exterior) ===
+\draw[draw=gray!50, fill=gray!5, rounded corners=8pt, line width=0.5pt] (-10.5, -2.5) rectangle (10.5, 9.5);
+\node[font=\tiny\itshape, gray!70] at (-8.5, 9.2) {Raspberry Pi 4 --- OpenWRT 23.05 (Morse Micro fork)};
 
-% Figura omitida - archivo docker_stack.png corrupto (0.1 KB)
-% TODO: Generar diagrama usando Python diagrams library o herramienta similar
+% === OTBR servicio nativo (fuera de Docker) ===
+\draw[draw=cyan!60, fill=cyan!8, rounded corners=4pt, line width=0.6pt] (-10, 7.5) rectangle (-4.5, 9);
+\node[font=\scriptsize\bfseries, cyan!50!black] at (-7.25, 8.7) {OTBR (servicio nativo OpenWRT)};
+\node[font=\tiny, text width=5cm, align=left] at (-7.25, 8.1) {nRF52840 RCP | wpan0 (Thread) | NAT64/DNS64};
 
-\caption{[FIGURA PENDIENTE] Arquitectura Docker Compose del stack de microservicios en Gateway Edge mostrando 6 contenedores orquestados con redes virtuales y volúmenes persistentes. Contenedor principal gateway\_service (Python FastAPI, 512 MB RAM, 1 CPU) implementa parsing DLMS/COSEM, transformación LwM2M, cliente CoAP, motor agregación 5-min, expone API REST puerto 8000. InfluxDB 2.7 (256 MB RAM) almacena time-series métricas con bucket iot\_metrics retention 90 días, volumen persistente 5 GB. Redis 7.0 (128 MB RAM) provee cache LRU y message queue para desacoplamiento temporal. Eclipse Mosquitto 2.0 (64 MB RAM) broker MQTT puertos 1883/8883 con autenticación username/password para suscriptores cloud. Grafana 10.2 (256 MB RAM) renderiza 3 dashboards preconfigured consumiendo InfluxDB datasource, puerto 3000 local. Nginx 1.25 (64 MB RAM) reverse proxy TLS 1.3 con Let's Encrypt mapea puerto 80→8000 (gateway API) y 443→3000 (Grafana UI). Red Docker backend (172.20.0.0/24) aísla servicios internos (InfluxDB, Redis, Mosquitto, gateway\_service), red frontend expone Nginx y Grafana al host. Volúmenes persistentes totalizan 7 GB: influxdb\_data 5 GB, app\_logs 1 GB, redis\_data 500 MB, grafana\_dashboards 200 MB, mosquitto\_config 100 MB, nginx\_certs 50 MB. Stack consume 1.28 GB RAM total (32\% de 4 GB RPi4), 2.6 CPU cores pico, uptime 99.1\% durante piloto. Restart policy unless-stopped con health checks 30s interval garantizan auto-recuperación fallas. Entrada CoAP UDP 5683 desde Thread Border Router (30 nodos IoT), entrada DLMS/COSEM RS-485 /dev/ttyUSB0 @ 9600 bps, salida HTTPS/MQTT HaLow mesh hacia cloud. Logging json-file limitado 100 MB por contenedor evita saturación disco SD. Arquitectura microservicios permite escalado horizontal independiente de componentes y rollback granular en actualizaciones.}
+% === RED DOCKER (fondo interior) ===
+\draw[draw=blue!60, fill=blue!5, rounded corners=6pt, dashed, line width=0.7pt] (-10, -2) rectangle (10, 7);
+\node[font=\tiny\itshape, blue!60] at (-7.5, 6.7) {Docker Compose: \texttt{tb-edge-stack} (172.20.0.0/24)};
+
+% === CONTENEDOR 1: ThingsBoard Edge (principal, grande) ===
+\node[container-teal, minimum width=10cm, minimum height=5.5cm] (tbe) at (0, 2.5) {};
+\node[containerlabel=teal, anchor=north] at (tbe.north) {ThingsBoard Edge 3.6.2 (\texttt{tb-edge})};
+
+% Componentes internos de TB Edge
+\node[tbcomp] (transport) at (-3.2, 4.8) {Capa de Transporte};
+\node[font=\tiny, below=0.05cm of transport] {LwM2M | CoAP | MQTT | HTTP};
+
+\node[tbcomp] (core) at (0, 4.8) {Servicios Centrales};
+\node[font=\tiny, below=0.05cm of core] {Sistema de actores | API REST};
+
+\node[tbcomp] (rules) at (3.2, 4.8) {Motor de Reglas};
+\node[font=\tiny, below=0.05cm of rules] {JavaScript (RC1--RC4)};
+
+\node[tbcomp] (cloud) at (-1.6, 2.8) {Gestor de Nube};
+\node[font=\tiny, below=0.05cm of cloud] {gRPC bidireccional};
+
+\node[tbcomp] (webui) at (1.6, 2.8) {Interfaz Web};
+\node[font=\tiny, below=0.05cm of webui] {Express.js :8080};
+
+% Puertos
+\node[font=\tiny, teal!70!black, anchor=south west] at ([xshift=-4.8cm, yshift=0.1cm]tbe.south) {
+  Puertos: 8080 (REST+UI) | 5683 (CoAP) | 5685 (LwM2M) | 1883 (MQTT)
+};
+
+% Flechas internas
+\draw[depflow] (transport.east) -- (core.west);
+\draw[depflow] (core.east) -- (rules.west);
+\draw[depflow] (core.south) -- ++(0,-0.3) -| (cloud.north);
+\draw[depflow] (core.south) -- ++(0,-0.3) -| (webui.north);
+
+% RAM
+\node[font=\tiny\bfseries, teal!60!black, anchor=south east] at ([xshift=4.8cm, yshift=0.1cm]tbe.south) {
+  CPU: $\sim$2,0 | RAM: 1\,024\,MB
+};
+
+% === CONTENEDOR 2: PostgreSQL 15 ===
+\node[container-purple, minimum width=4cm, minimum height=1.8cm] (pg) at (-3, -0.8) {};
+\node[containerlabel=purple, anchor=north] at (pg.north) {PostgreSQL 15};
+\node[font=\tiny, text width=3.5cm, align=left, anchor=north] at ([yshift=-0.4cm]pg.north) {
+  Almacenamiento relacional\\
+  Puerto: 5432 | RAM: 512\,MB
+};
+
+% === CONTENEDOR 3: Redis 7.0 ===
+\node[container-red, minimum width=4cm, minimum height=1.8cm] (redis) at (3, -0.8) {};
+\node[containerlabel=red!60!black, anchor=north] at (redis.north) {Redis 7.0};
+\node[font=\tiny, text width=3.5cm, align=left, anchor=north] at ([yshift=-0.4cm]redis.north) {
+  Cach\'{e} de sesiones\\
+  Puerto: 6379 | RAM: 256\,MB
+};
+
+% === FLUJOS INTERNOS ===
+% TB Edge -> PostgreSQL
+\draw[dataflow=purple!60] ([xshift=-1.5cm]tbe.south) -- (pg.north)
+  node[midway, left, font=\tiny] {SQL (telemetr\'{i}a, config)};
+% TB Edge -> Redis
+\draw[dataflow=red!60] ([xshift=1.5cm]tbe.south) -- (redis.north)
+  node[midway, right, font=\tiny] {Cach\'{e} (sesiones, attrs)};
+
+% === ENTRADA: OTBR -> TB Edge (LwM2M) ===
+\draw[dataflow=cyan!60!black, line width=1.5pt] (-7.25, 7.5) -- (-7.25, 6.5) -- (-3.2, 6.5) -- (-3.2, 5.5)
+  node[pos=0.5, right, font=\tiny\bfseries] {CoAP/LwM2M (IPv6 local, UDP:5685)};
+
+% === ENTRADA: Thread mesh -> OTBR ===
+\node[extnode=cyan!60!black] at (-7.25, 10.5) {Red Thread\\Mesh 802.15.4\\Nodos IoT};
+\draw[dataflow=cyan!60!black, line width=1.5pt] (-7.25, 10) -- (-7.25, 9);
+
+% === SALIDA: TB Edge -> Servidor on-premise (gRPC) ===
+\draw[biflow=teal, line width=1.5pt] (cloud.south) -- ++(0, -2.2) -- (10.5, 0.6)
+  node[pos=0.6, below, font=\tiny\bfseries] {gRPC bidireccional};
+\node[extnode=teal] at (12.5, 0.6) {Servidor TB\\\emph{on-premise}\\(gRPC :7070)};
+
+% === SALIDA: HaLow link ===
+\draw[draw=orange!70!black, line width=1pt, dashed, -{Latex[length=2mm]}] (10.5, 0.6) -- (11.3, 0.6);
+\node[font=\tiny, orange!70!black, above] at (10.9, 0.6) {HaLow};
+
+% === SALIDA: Dashboard local ===
+\node[extnode=orange!60!black] at (8.5, 8.5) {Panel local\\Navegador\\HTTP :8080};
+\draw[dataflow=orange!60, line width=1pt] (webui.north) -- ++(0, 1.5) -- (8.5, 5.8) -- (8.5, 8)
+node[pos=0.3, above, font=\tiny] {API REST + interfaz web};
+
+% === RECURSOS TOTALES ===
+\node[infobox, text width=6cm] at (0, -2.3) {
+  \textbf{Recursos totales \emph{stack}:} CPU $\sim$2,5 n\'{u}cleos | RAM $\sim$1\,800\,MB (45\% de 4\,GB RPi4)\\
+  SO: OpenWRT 23.05 ARM64 (Morse Micro) | Docker Compose 2.21 | OTBR nativo (fuera de Docker)
+};
+
+\end{tikzpicture}%
+}% end resizebox
+\caption{Arquitectura Docker Compose de ThingsBoard Edge en la pasarela RPi4 (OpenWRT 23.05).  El \emph{stack} comprende 3~contenedores: (1)~ThingsBoard Edge 3.6.2 (monolito JVM con transporte LwM2M integrado, motor de reglas, gestor de nube y panel web), (2)~PostgreSQL~15 (almacenamiento relacional y de series temporales) y (3)~Redis~7.0 (cach\'{e}).  OTBR se ejecuta como servicio nativo de OpenWRT (fuera de Docker).  El flujo de datos: nodos Thread $\rightarrow$ OTBR (IPv6) $\rightarrow$ TB Edge (LwM2M :5685) $\rightarrow$ procesamiento local (reglas RC1--RC4) $\rightarrow$ sincronizaci\'{o}n gRPC con servidor \emph{on-premise}.  Recursos totales: $\sim$2,5 CPU, $\sim$1\,800\,MB RAM.}
 \label{fig:docker-stack}
 \end{figure}

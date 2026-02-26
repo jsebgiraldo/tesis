@@ -1,104 +1,140 @@
-% Diagrama de topología Thread mostrando roles de dispositivos
+% Diagrama TikZ de topología Thread mostrando roles de dispositivos
 % Leader, Router, REED, MED, SED con sus relaciones jerárquicas
+% Mejoras: enlaces mesh al fondo con transparencia, mejor aspecto
 
-\begin{figure}[H]
+\begin{figure}[ht]
 \centering
+\resizebox{0.92\textwidth}{!}{%
+\begin{tikzpicture}[
+  % Estilos de nodos
+  leader/.style={regular polygon, regular polygon sides=6, minimum size=2cm,
+    fill=yellow!60!orange, draw=yellow!80!black, line width=1.4pt,
+    font=\scriptsize\bfseries, text width=1.5cm, align=center,
+    drop shadow={shadow xshift=0.5mm, shadow yshift=-0.5mm, opacity=0.25}},
+  router/.style={regular polygon, regular polygon sides=6, minimum size=1.7cm,
+    fill=blue!65, draw=blue!85!black, line width=1pt, font=\scriptsize\bfseries,
+    text width=1.3cm, align=center, text=white,
+    drop shadow={shadow xshift=0.5mm, shadow yshift=-0.5mm, opacity=0.2}},
+  reed/.style={regular polygon, regular polygon sides=6, minimum size=1.5cm,
+    fill=blue!12, draw=blue!50, line width=0.8pt, dashed, font=\scriptsize,
+    text width=1.1cm, align=center},
+  med/.style={circle, minimum size=1.2cm, fill=green!25, draw=green!55!black,
+    line width=0.8pt, font=\tiny\bfseries, text width=1cm, align=center},
+  sed/.style={circle, minimum size=1.2cm, fill=orange!30, draw=orange!65!black,
+    line width=0.8pt, font=\tiny\bfseries, text width=1cm, align=center},
+  % Estilos de conexiones
+  meshlink/.style={-, line width=2pt, green!45!black, opacity=0.35},
+  passivelink/.style={-, line width=0.8pt, blue!50, dashed, opacity=0.6},
+  parentchild/.style={-, line width=0.5pt, gray!55},
+  % Anotaciones
+  infobox/.style={draw=gray!40, fill=gray!3, rounded corners=3pt,
+    font=\tiny, text width=3cm, inner sep=4pt},
+]
 
-% ============================================================================
-% PLACEHOLDER: Insertar imagen de topología Thread aquí
-% ============================================================================
-% PROMPT PARA GENERAR LA IMAGEN:
-%
-% Crear un diagrama de red mesh Thread mostrando la jerarquía de dispositivos
-% y sus relaciones de comunicación:
-%
-% NODOS Y ROLES:
-%
-% 1. LEADER (1 nodo, centro superior):
-%    - Forma: Hexágono grande (3cm diámetro)
-%    - Color: Dorado (#FFD700) con borde grueso negro
-%    - Icono: Corona ♛ o estrella ★
-%    - Label: "Leader\nRouter ID: 1\nPartition Master"
-%    - Funciones anotadas: "Asigna Router IDs", "Propaga Network Data", "Sincronización temporal"
-%
-% 2. ROUTERS (3 nodos, distribuidos alrededor del Leader):
-%    - Forma: Hexágono mediano (2.5cm diámetro)
-%    - Color: Azul oscuro (#1565C0) con borde blanco
-%    - Label: "Router\nRID: 2/3/4\nFTD"
-%    - Funciones: "Forwarding", "Routing table", "MLE Advertisements"
-%
-% 3. REED (2 nodos, entre Routers):
-%    - Forma: Hexágono pequeño (2cm diámetro)
-%    - Color: Azul claro (#64B5F6) con borde punteado
-%    - Label: "REED\nRouter-Eligible\nStandby"
-%    - Funciones: "Routing table pasiva", "Promoción rápida"
-%
-% 4. MED - Minimal End Device (4 nodos, conectados a Routers):
-%    - Forma: Círculo (1.5cm diámetro)
-%    - Color: Verde (#4CAF50)
-%    - Label: "MED\nRX Always-On\n<50ms latency"
-%    - Ícono: Sensor activo
-%
-% 5. SED - Sleepy End Device (6 nodos, conectados a Routers):
-%    - Forma: Círculo (1.5cm diámetro)
-%    - Color: Naranja (#FF9800)
-%    - Label: "SED\nPolling 5s\n<1mA avg"
-%    - Ícono: Batería/Zzzz (sleepy)
-%
-% CONEXIONES:
-%   - Leader ↔ Routers: Líneas gruesas bidireccionales (verde) "Peer links"
-%   - Router ↔ Router: Líneas medianas bidireccionales (verde) "Mesh routing"
-%   - Router ↔ REED: Líneas punteadas (azul) "Passive routing"
-%   - Router ↔ MED/SED: Líneas finas unidireccionales (naranja) "Parent-Child"
-%   - Flechas indicando "Data Poll" de SED hacia Router parent
-%   - Flechas indicando "MLE Advertisement" de Router hacia neighbors
-%
-% ANOTACIONES:
-%   - Cuadro superior derecho: "Thread Partition"
-%     * Partition ID: 0x12345678
-%     * Channel: 25 (2.475 GHz)
-%     * PAN ID: 0xABCD
-%   - Cuadro inferior izquierdo: "Límites Thread 1.4 (OpenThread main)"
-%     * Max Routers: 16 por partición
-%     * Max Children per Router: 511
-%     * Max total devices: ~250 típico
-%   - Etiqueta "Network Data" con flecha desde Leader hacia Routers
-%   - Etiqueta "Keep-alive 32s" en MLE Advertisements
-%
-% ESCENARIOS VISUALIZADOS (opcional con color overlay):
-%   - Zona sombreada mostrando "Promoción REED → Router" (flecha azul punteada a sólida)
-%   - Zona sombreada mostrando "Re-parent" de SED (cambio de Router parent tras fallo)
-%
-% LEYENDA:
-%   - Hexágonos: Full Thread Devices (FTD) con capacidad routing
-%   - Círculos: End Devices (ED) sin routing, solo endpoints
-%   - Verde: Activo/Always-on
-%   - Naranja: Sleepy/Battery-powered
-%   - Azul: Standby/Elegible para promoción
-%
-% ESTILO VISUAL:
-%   - Tipografía: Sans-serif, tamaño 10pt para labels, 8pt para anotaciones
-%   - Fondo: Blanco con grid sutil opcional
-%   - Sombras suaves en nodos para profundidad
-%   - Iconos minimalistas (Material Design o similar)
-%
-% FORMATO DE SALIDA:
-%   - PNG o PDF vectorial
-%   - Dimensiones: 16cm ancho × 20cm alto (vertical)
-%   - Resolución: 300 DPI si PNG
-%
-% HERRAMIENTAS SUGERIDAS:
-%   - draw.io con biblioteca "Network Topology"
-%   - yEd Graph Editor con layout "Organic" o "Hierarchical"
-%   - Graphviz dot con custom shapes
-%   - Python networkx + matplotlib
-%   - LaTeX TikZ con shapes.geometric
-%
-% ============================================================================
+% === PASO 1: ENLACES MESH AL FONDO (dibujados primero) ===
+% Coordenadas de nodos para los enlaces
+\coordinate (Lpos) at (0, 4.2);
+\coordinate (R1pos) at (-4, 2);
+\coordinate (R2pos) at (0, 0.8);
+\coordinate (R3pos) at (4, 2);
+\coordinate (RE1pos) at (-2, 3.2);
+\coordinate (RE2pos) at (2, 3.2);
 
-% Figura temporalmente omitida - imagen placeholder corrupta
-% TODO: Regenerar diagrama según especificación de comentarios arriba
+% Mesh links (FTD <-> FTD) — dibujados ANTES de los nodos
+\draw[meshlink] (Lpos) -- (R1pos);
+\draw[meshlink] (Lpos) -- (R2pos);
+\draw[meshlink] (Lpos) -- (R3pos);
+\draw[meshlink] (R1pos) -- (R2pos);
+\draw[meshlink] (R2pos) -- (R3pos);
+\draw[meshlink] (R1pos) -- (R3pos);
 
-\caption{[FIGURA PENDIENTE] Topología Thread mesh con roles jerárquicos de dispositivos. La red Thread implementa arquitectura auto-organizativa con 5 roles: (1) \textbf{Leader} único por partición, responsable de asignación de Router IDs y propagación de Network Data vía RANN periódico, (2) \textbf{Routers} (FTD) con capacidad forwarding, mantienen routing table activa y envían MLE Advertisements cada 32s para detección de fallos, (3) \textbf{REED} (Router-Eligible End Device) con routing table pasiva, permiten promoción rápida sin re-discovery cuando topología lo requiere, (4) \textbf{MED} (Minimal End Device) con RX always-on, latencia <50ms para aplicaciones tiempo real, consumo 19mA @ 3.3V, (5) \textbf{SED} (Sleepy End Device) con polling periódico 3-30s, latencia 100-3000ms, consumo <1mA promedio para aplicaciones battery-powered. Flechas verdes indican peer links mesh bidireccionales entre routers; flechas naranjas indican relaciones parent-child unidireccionales con End Devices. OpenThread main (Thread 1.4) limita 16 routers máximo por partición, cada router soporta hasta 511 children, topología típica escala 200-250 dispositivos por partición, TCP habilitado para transferencias >100 KB.}
+% Passive links (REED)
+\draw[passivelink] (R1pos) -- (RE1pos);
+\draw[passivelink] (Lpos) -- (RE1pos);
+\draw[passivelink] (R3pos) -- (RE2pos);
+\draw[passivelink] (Lpos) -- (RE2pos);
+
+% Parent-child links
+\draw[parentchild] (R1pos) -- (-5.5, 0.2);
+\draw[parentchild] (R1pos) -- (-2.8, -0.2);
+\draw[parentchild] (R3pos) -- (2.8, -0.2);
+\draw[parentchild] (R3pos) -- (5.5, 0.2);
+\draw[parentchild] (R1pos) -- (-6, -1.5);
+\draw[parentchild] (R1pos) -- (-3.8, -1.5);
+\draw[parentchild] (R2pos) -- (-1.2, -0.8);
+\draw[parentchild] (R2pos) -- (1.2, -0.8);
+\draw[parentchild] (R3pos) -- (3.8, -1.5);
+\draw[parentchild] (R3pos) -- (6, -1.5);
+
+% === PASO 2: NODOS ENCIMA DE LOS ENLACES ===
+
+% LEADER
+\node[leader] (L) at (Lpos) {Líder\\RID: 1\\Partición};
+
+% ROUTERS
+\node[router] (R1) at (R1pos)  {Enrutador\\RID: 2\\FTD};
+\node[router] (R2) at (R2pos) {Enrutador\\RID: 3\\FTD};
+\node[router] (R3) at (R3pos)   {Enrutador\\RID: 4\\FTD};
+
+% REED
+\node[reed] (RE1) at (RE1pos) {REED\\En espera};
+\node[reed] (RE2) at (RE2pos)  {REED\\En espera};
+
+% MED
+\node[med] (M1) at (-5.5, 0.2) {MED\\19.3\,mA};
+\node[med] (M2) at (-2.8, -0.2){MED\\19.3\,mA};
+\node[med] (M3) at (2.8, -0.2) {MED\\19.3\,mA};
+\node[med] (M4) at (5.5, 0.2)  {MED\\19.3\,mA};
+
+% SED
+\node[sed] (S1) at (-6, -1.5)  {SED\\$<$1\,mA};
+\node[sed] (S2) at (-3.8, -1.5){SED\\$<$1\,mA};
+\node[sed] (S3) at (-1.2, -0.8){SED\\$<$1\,mA};
+\node[sed] (S4) at (1.2, -0.8) {SED\\$<$1\,mA};
+\node[sed] (S5) at (3.8, -1.5) {SED\\$<$1\,mA};
+\node[sed] (S6) at (6, -1.5)   {SED\\$<$1\,mA};
+
+% === CUADRO: Thread Partition ===
+\node[infobox] at (7, 4.2) {
+  \textbf{Partición Thread}\\[1pt]
+  Canal: 25 (2,475\,GHz)\\
+  PAN ID: 0xABCD\\
+  MLE Adv: 32\,s\\
+  Latencia mesh: 15$\pm$3\,ms
+};
+
+% === CUADRO: Límites ===
+\node[infobox] at (7, 2) {
+  \textbf{L\'imites Thread 1.4}\\[1pt]
+  M\'ax.\ Enrutadores: 16/part.\\
+  M\'ax.\ Hijos: 511/enrutador\\
+  Dispositivos: $\sim$250\\
+  Saltos m\'ax.: 32
+};
+
+% === LEYENDA ===
+\draw[fill=gray!5, draw=gray!40, rounded corners=2pt] (-6.5,-3.2) rectangle (6.5,-2.3);
+\node[font=\tiny\bfseries] at (-5.3,-2.5) {Leyenda:};
+\fill[yellow!60!orange, draw=black, line width=0.4pt] (-4.3,-2.55) -- (-4.1,-2.45) -- (-4.1,-2.35) -- (-4.3,-2.25) -- (-4.5,-2.35) -- (-4.5,-2.45) -- cycle;
+\node[font=\tiny] at (-3.5,-2.4) {L\'{i}der};
+\fill[blue!70, draw=blue!90!black, line width=0.4pt] (-2.5,-2.55) -- (-2.3,-2.45) -- (-2.3,-2.35) -- (-2.5,-2.25) -- (-2.7,-2.35) -- (-2.7,-2.45) -- cycle;
+\node[font=\tiny, text=black] at (-1.7,-2.4) {Enrutador};
+\fill[blue!20, draw=blue!60, dashed, line width=0.4pt] (-0.7,-2.55) -- (-0.5,-2.45) -- (-0.5,-2.35) -- (-0.7,-2.25) -- (-0.9,-2.35) -- (-0.9,-2.45) -- cycle;
+\node[font=\tiny] at (0.1,-2.4) {REED};
+\fill[green!30, draw=green!60!black, line width=0.4pt] (0.9,-2.4) circle (0.15);
+\node[font=\tiny] at (1.6,-2.4) {MED};
+\fill[orange!35, draw=orange!70!black, line width=0.4pt] (2.3,-2.4) circle (0.15);
+\node[font=\tiny] at (2.9,-2.4) {SED};
+% links legend
+\draw[green!50!black, line width=1.2pt] (-5,-2.9) -- (-4,-2.9);
+\node[font=\tiny] at (-2.9,-2.9) {Enlace malla (FTD$\leftrightarrow$FTD)};
+\draw[gray!70, line width=0.5pt] (0,-2.9) -- (1,-2.9);
+\node[font=\tiny] at (2.2,-2.9) {Padre--hijo (FTD$\rightarrow$ED)};
+\draw[blue!50, line width=0.7pt, dashed] (3.8,-2.9) -- (4.8,-2.9);
+\node[font=\tiny] at (5.7,-2.9) {Pasivo (REED)};
+
+\end{tikzpicture}%
+}% end resizebox
+\caption{Topología Thread en malla con roles jerárquicos de dispositivos. La red implementa arquitectura auto-organizativa con 5~roles: \textbf{Líder} (dorado), único por partición, responsable de asignación de identificadores de enrutador (Router~ID) y propagación de datos de red; \textbf{Enrutador} (azul, FTD) con capacidad de reenvío y tabla de enrutamiento activa, envía MLE Advertisements cada 32\,s; \textbf{REED} (azul claro, punteado) con tabla pasiva y promoción a enrutador; \textbf{MED} (verde) con RX siempre activo, 19,3\,mA (sistema completo 27\,mA); \textbf{SED} (naranja) con sondeo cada 5\,s, $<$1\,mA promedio. Líneas verdes gruesas indican enlaces de malla bidireccionales entre FTDs; líneas grises indican relaciones padre--hijo con dispositivos finales.}
 \label{fig:thread-topology-roles}
 \end{figure}

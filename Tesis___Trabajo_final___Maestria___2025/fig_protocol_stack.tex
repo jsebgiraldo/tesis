@@ -1,84 +1,135 @@
-% Diagrama de pila de protocolos completa para nodos Thread
-% IEEE 802.15.4 → Thread → 6LoWPAN → CoAP → LwM2M
+% Diagrama TikZ: Pila completa de protocolos Thread/LwM2M para nodos IoT
+% IEEE 802.15.4 PHY → MAC → 6LoWPAN → IPv6/Thread → UDP → CoAP → LwM2M
 
 \begin{figure}[H]
 \centering
+\resizebox{0.97\textwidth}{!}{%
+\begin{tikzpicture}[
+  % --- Estilos de capa ---
+  layerbase/.style={
+    rounded corners=4pt, minimum width=12.5cm, minimum height=1.6cm,
+    inner sep=4pt, line width=0.7pt, font=\small,
+    drop shadow={shadow xshift=0.5mm, shadow yshift=-0.5mm, opacity=0.15},
+    align=center},
+  layer-darkgreen/.style={layerbase, draw=green!50!black, fill=green!15!white},
+  layer-green/.style={layerbase, draw=green!60!black, fill=green!10!white},
+  layer-blue/.style={layerbase, draw=blue!70!black, fill=blue!10!white},
+  layer-lightblue/.style={layerbase, draw=blue!50, fill=blue!5!white},
+  layer-violet/.style={layerbase, draw=violet!70!black, fill=violet!10!white},
+  layer-orange/.style={layerbase, draw=orange!70!black, fill=orange!10!white},
+  layer-red/.style={layerbase, draw=red!60!black, fill=red!10!white},
+  % --- Estilos auxiliares ---
+  ltitle/.style={font=\small\bfseries, #1},
+  ldetail/.style={font=\scriptsize, gray!70!black},
+  overhead/.style={font=\scriptsize, anchor=west, red!60!black},
+  refstd/.style={font=\scriptsize, anchor=east, blue!50!black},
+  grplabel/.style={font=\scriptsize\bfseries, rotate=90, anchor=south, #1},
+  arrconn/.style={-{Latex[length=1.5mm]}, line width=0.5pt, gray!60},
+]
 
-% ============================================================================
-% PLACEHOLDER: Insertar imagen de pila de protocolos aquí
-% ============================================================================
-% PROMPT PARA GENERAR LA IMAGEN:
-%
-% Crear un diagrama de arquitectura de capas (stack diagram) vertical mostrando
-% la pila completa de protocolos de comunicación para nodos IoT Thread:
-%
-% ESTRUCTURA (de abajo hacia arriba):
-%
-% CAPA 1 - FÍSICA (PHY):
-%   - Título: "IEEE 802.15.4 PHY"
-%   - Detalles: "2.4 GHz | 250 kbps | O-QPSK | Canales 11-26"
-%   - Color: Verde oscuro (#2E7D32)
-%
-% CAPA 2 - ENLACE (MAC):
-%   - Título: "IEEE 802.15.4 MAC"
-%   - Detalles: "CSMA/CA | ACK | MTU 127 bytes"
-%   - Color: Verde medio (#43A047)
-%
-% CAPA 3 - RED (Network):
-%   - Título: "OpenThread main Network Layer (IPv6 + TCP)"
-%   - Detalles: "IPv6 Mesh | HWMP Routing | MLE"
-%   - Color: Azul oscuro (#1565C0)
-%
-% CAPA 3.5 - ADAPTACIÓN:
-%   - Título: "6LoWPAN (RFC 6282)"
-%   - Detalles: "Header Compression | Fragmentation | Reassembly"
-%   - Color: Azul medio (#1976D2)
-%
-% CAPA 4 - TRANSPORTE:
-%   - Título: "UDP (User Datagram Protocol)"
-%   - Detalles: "Connectionless | Port-based multiplexing"
-%   - Color: Morado (#6A1B9A)
-%
-% CAPA 5 - APLICACIÓN (Protocol):
-%   - Título: "CoAP (RFC 7252)"
-%   - Detalles: "RESTful | Observe | Block Transfer | DTLS"
-%   - Color: Naranja (#E65100)
-%
-% CAPA 6 - APLICACIÓN (Management):
-%   - Título: "LwM2M 1.1 (OMA)"
-%   - Detalles: "Device Management | Objects & Resources | TLV/JSON"
-%   - Color: Rojo (#C62828)
-%
-% ESTILO VISUAL:
-%   - Cada capa como rectángulo de 12cm ancho × 1.8cm alto
-%   - Bordes redondeados (radius 3pt)
-%   - Sombra sutil (drop shadow)
-%   - Flechas verticales bidireccionales entre capas (↕)
-%   - Tipografía: Sans-serif, títulos en negrita
-%   - Anotaciones laterales indicando RFC/estándar correspondiente
-%
-% ELEMENTOS ADICIONALES:
-%   - Leyenda lateral derecha mostrando: "PHY/MAC", "Network", "Transport", "Application"
-%   - Medidas de overhead aproximado por capa (bytes): PHY=11, MAC=17, IPv6=40, UDP=8, CoAP=4, LwM2M variable
-%   - Flecha lateral indicando "Payload útil disponible: 102 bytes (de 127 MTU)"
-%
-% FORMATO DE SALIDA:
-%   - PNG o PDF vectorial
-%   - Resolución mínima: 300 DPI si PNG, vectorial preferido
-%   - Dimensiones: 12cm ancho × 20cm alto
-%   - Fondo blanco o transparente
-%
-% HERRAMIENTAS SUGERIDAS:
-%   - draw.io (diagrams.net) con plantilla "Network Stack"
-%   - Microsoft Visio con SmartArt "Stacked List"
-%   - Adobe Illustrator o Inkscape
-%   - Python matplotlib con patches.Rectangle
-%   - LaTeX TikZ (si prefieres código)
-%
-% ============================================================================
+% === Separaci\'{o}n vertical entre capas ===
+\def\layersep{1.95}
 
-\includegraphics[width=0.7\textwidth]{figures/protocol_stack.png}
+% === CAPA 7 (arriba): LwM2M ===
+\pgfmathsetmacro{\yLwm}{6*\layersep}
+\node[layer-red] (lwm2m) at (0, \yLwm) {};
+\node[ltitle=red!70!black] at (0, \yLwm+0.32) {LwM2M 1.1 (OMA)};
+\node[ldetail] at (0, \yLwm-0.25) {Gestión de dispositivos \textbar{} Objetos IPSO \textbar{} Actualización OTA \textbar{} Aprovisionamiento (Bootstrap)};
 
-\caption{Pila completa de protocolos de comunicación para nodos IoT Thread/LwM2M. La arquitectura implementa 7 capas desde IEEE 802.15.4 PHY (capa física 2.4 GHz, 250 kbps) hasta LwM2M 1.1 (gestión de dispositivos). OpenThread main proporciona red IPv6 mesh auto-configurable sobre IEEE 802.15.4 con soporte TCP nativo (RFC 9293), con 6LoWPAN comprimiendo headers IPv6/UDP/TCP (60 bytes → 6-12 bytes típico) para maximizar payload útil. CoAP (Constrained Application Protocol) implementa RESTful sobre UDP con extensiones Observe (RFC 7641) para notificaciones asíncronas. LwM2M aprovecha CoAP para operaciones CRUD sobre objetos estandarizados (IPSO Smart Objects), habilitando gestión remota, firmware OTA y bootstrap automático. MTU efectivo: 127 bytes MAC - 25 bytes overhead = 102 bytes payload disponible para datos de aplicación.}
+% === CAPA 6: CoAP ===
+\pgfmathsetmacro{\yCoap}{5*\layersep}
+\node[layer-orange] (coap) at (0, \yCoap) {};
+\node[ltitle=orange!70!black] at (0, \yCoap+0.32) {CoAP (RFC 7252)};
+\node[ldetail] at (0, \yCoap-0.25) {RESTful GET/PUT/POST \textbar{} Observación (Observe, RFC 7641) \textbar{} Transferencia por bloques \textbar{} DTLS 1.2};
+
+% === CAPA 5: UDP ===
+\pgfmathsetmacro{\yUdp}{4*\layersep}
+\node[layer-violet] (udp) at (0, \yUdp) {};
+\node[ltitle=violet!70!black] at (0, \yUdp+0.32) {UDP (RFC 768)};
+\node[ldetail] at (0, \yUdp-0.25) {Sin conexión (Connectionless) \textbar{} Multiplexación de puertos \textbar{} Sobrecarga: 8 bytes};
+
+% === CAPA 4: IPv6 / Thread Network ===
+\pgfmathsetmacro{\yIpv}{3*\layersep}
+\node[layer-blue] (ipv6) at (0, \yIpv) {};
+\node[ltitle=blue!70!black] at (0, \yIpv+0.32) {Capa de red OpenThread (IPv6 + MLE)};
+\node[ldetail] at (0, \yIpv-0.25) {Enrutamiento malla IPv6 \textbar{} Descubrimiento MLE \textbar{} TCP nativo (RFC 9293) \textbar{} Thread 1.4};
+
+% === CAPA 3: 6LoWPAN ===
+\pgfmathsetmacro{\ySix}{2*\layersep}
+\node[layer-lightblue] (sixlo) at (0, \ySix) {};
+\node[ltitle=blue!50!black] at (0, \ySix+0.32) {6LoWPAN (RFC 6282)};
+\node[ldetail] at (0, \ySix-0.25) {Compresión de cabeceras HC1/IPHC (40 B $\rightarrow$ 2--6 B) \textbar{} Fragmentación \textbar{} Reensamblaje};
+
+% === CAPA 2: MAC ===
+\pgfmathsetmacro{\yMac}{1*\layersep}
+\node[layer-green] (mac) at (0, \yMac) {};
+\node[ltitle=green!50!black] at (0, \yMac+0.32) {IEEE 802.15.4 MAC};
+\node[ldetail] at (0, \yMac-0.25) {CSMA/CA \textbar{} ACK automático \textbar{} Filtrado de tramas \textbar{} MTU 127 bytes};
+
+% === CAPA 1 (abajo): PHY ===
+\node[layer-darkgreen] (phy) at (0, 0) {};
+\node[ltitle=green!40!black] at (0, 0.32) {IEEE 802.15.4 PHY};
+\node[ldetail] at (0, -0.25) {2.4 GHz ISM \textbar{} O-QPSK DSSS \textbar{} 250 kbps \textbar{} Canales 11--26 \textbar{} --100 dBm};
+
+% === Flechas bidireccionales entre capas ===
+\foreach \src/\dst in {phy/mac, mac/sixlo, sixlo/ipv6, ipv6/udp, udp/coap, coap/lwm2m} {
+  \draw[arrconn] (\src.north) -- (\dst.south);
+  \draw[arrconn] (\dst.south) -- (\src.north);
+}
+
+% === Anotaciones de overhead (lado derecho) ===
+\node[overhead] at (6.6, 0)        {11 B};
+\node[overhead] at (6.6, \yMac)    {17 B};
+\node[overhead] at (6.6, \ySix)    {2--6 B\textsuperscript{*}};
+\node[overhead] at (6.6, \yIpv)    {40 B $\rightarrow$ compr.};
+\node[overhead] at (6.6, \yUdp)    {8 B};
+\node[overhead] at (6.6, \yCoap)   {4 B};
+\node[overhead] at (6.6, \yLwm)    {var.};
+
+% Título de columna sobrecarga
+\node[font=\scriptsize\bfseries, red!60!black, anchor=west] at (6.6, \yLwm+0.7) {Sobrecarga};
+
+% === Anotaciones de est\'{a}ndar/RFC (lado izquierdo) ===
+\node[refstd] at (-6.6, 0)        {IEEE 802.15.4-2020};
+\node[refstd] at (-6.6, \yMac)    {IEEE 802.15.4-2020};
+\node[refstd] at (-6.6, \ySix)    {RFC 6282};
+\node[refstd] at (-6.6, \yIpv)    {Thread 1.4.0 / RFC 9293};
+\node[refstd] at (-6.6, \yUdp)    {RFC 768};
+\node[refstd] at (-6.6, \yCoap)   {RFC 7252 / RFC 7641};
+\node[refstd] at (-6.6, \yLwm)    {OMA-TS-LightweightM2M};
+
+% Título de columna estándar
+\node[font=\scriptsize\bfseries, blue!50!black, anchor=east] at (-6.6, \yLwm+0.7) {Estándar};
+
+% === Etiquetas de grupo OSI (extremo derecho) ===
+\pgfmathsetmacro{\ymidphy}{0.5*\yMac}
+\pgfmathsetmacro{\ymidnet}{(\ySix+\yIpv)*0.5}
+\pgfmathsetmacro{\ymidapp}{(\yCoap+\yLwm)*0.5}
+
+\draw[decorate, decoration={brace, amplitude=4pt, mirror}, line width=0.5pt, gray!50]
+  (8.0, -0.78) -- (8.0, \yMac+0.78);
+\node[grplabel=green!40!black] at (8.5, \ymidphy) {PHY / MAC};
+
+\draw[decorate, decoration={brace, amplitude=4pt, mirror}, line width=0.5pt, gray!50]
+  (8.0, \ySix-0.78) -- (8.0, \yIpv+0.78);
+\node[grplabel=blue!60!black] at (8.5, \ymidnet) {Red / Adaptaci\'{o}n};
+
+\draw[decorate, decoration={brace, amplitude=4pt, mirror}, line width=0.5pt, gray!50]
+  (8.0, \yUdp-0.78) -- (8.0, \yUdp+0.78);
+\node[grplabel=violet!60!black] at (8.5, \yUdp) {Transporte};
+
+\draw[decorate, decoration={brace, amplitude=4pt, mirror}, line width=0.5pt, gray!50]
+  (8.0, \yCoap-0.78) -- (8.0, \yLwm+0.78);
+\node[grplabel=red!60!black] at (8.5, \ymidapp) {Aplicaci\'{o}n};
+
+% === Flecha lateral: Payload \'{u}til (desplazada para no superponer columna Est\'{a}ndar) ===
+\draw[{Latex[length=2mm]}-{Latex[length=2mm]}, line width=1pt, blue!40!black]
+  (-10.5, -0.78) -- (-10.5, \yLwm+0.78);
+\node[font=\scriptsize\bfseries, blue!40!black, rotate=90, anchor=south] at (-11.0, \ymidnet)
+  {MTU 127 B $-$ 25 B sobrecarga = 102 B carga \'{u}til};
+
+\end{tikzpicture}%
+}% end resizebox
+\caption{Pila completa de protocolos de comunicación para nodos IoT Thread/LwM2M. La arquitectura implementa 7~capas desde IEEE~802.15.4 PHY (capa física 2,4\,GHz, 250\,kbps) hasta LwM2M~1.1 (gestión de dispositivos). OpenThread proporciona red IPv6 en malla auto-configurable sobre IEEE~802.15.4 con soporte TCP nativo (RFC~9293), con 6LoWPAN comprimiendo cabeceras IPv6/UDP/TCP (60~bytes $\rightarrow$ 6--12~bytes típico) para maximizar la carga útil. CoAP implementa RESTful sobre UDP con extensiones de observación (Observe, RFC~7641) para notificaciones asíncronas. LwM2M aprovecha CoAP para operaciones CRUD sobre objetos estandarizados (IPSO Smart Objects), habilitando gestión remota, actualización OTA y aprovisionamiento automático. MTU efectivo: 127~bytes MAC $-$ 25~bytes de sobrecarga = 102~bytes de carga útil disponible para datos de aplicación.}
 \label{fig:protocol-stack}
 \end{figure}

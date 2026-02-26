@@ -1,0 +1,5 @@
+# AMI LwM2M Node — Kconfig
+
+mainmenu "AMI LwM2M Node"
+
+source "Kconfig.zephyr"

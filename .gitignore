@@ -263,3 +263,25 @@ rev/*.pdf
 
 # Patches temporales
 *.patch
+
+# --- Archivos temporales de sesión ---
+# Scripts de recuperación/extracción de sesión (prefijo _)
+_*.py
+
+# Backups de edición
+*.bak
+*.bak[0-9]*
+
+# Archivos basura (Windows NUL, terminal typescript)
+nul
+typescript
+
+# Paquetes de entrega temporales
+thesis_package_*/
+thesis_symmetric_package/
+
+# Documentos de extracción obsoletos
+EXTRACCION_TECNICA_COMPLETA_OLD.md
+
+# Capítulos archivados (ya no compilan)
+04Implementacion_NEW_ARCHIVED.tex

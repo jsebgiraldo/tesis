@@ -1,0 +1,113 @@
+% Diagrama de flujo: Proceso de registro y observación LwM2M del nodo IoT
+% v2 — Hispanizado: etiquetas principales en español, términos de protocolo entre paréntesis
+
+\begin{figure}[ht]
+\centering
+\resizebox{0.92\textwidth}{!}{%
+\begin{tikzpicture}[
+  node distance=0.6cm,
+  entity/.style={font=\small\bfseries, minimum width=2.2cm, align=center},
+  lifeline/.style={gray!40, line width=0.5pt, dashed},
+  msg/.style={-{Latex[length=2mm]}, line width=0.7pt, #1},
+  msgback/.style={{Latex[length=2mm]}-, line width=0.7pt, #1},
+  msglabel/.style={font=\tiny\sffamily, fill=white, inner sep=1.5pt, align=center},
+  phase/.style={draw=#1!60!black, fill=#1!8, rounded corners=3pt,
+    font=\tiny\bfseries\sffamily, inner sep=4pt, minimum width=2cm, align=center},
+  note/.style={draw=gray!50, fill=yellow!8, rounded corners=2pt,
+    font=\tiny\sffamily, inner sep=3pt, text width=3.5cm, align=left},
+]
+
+% === Cabeceras de columna (entidades) ===
+\node[entity] (nodo) at (0, 0) {Nodo IoT\\[-1pt]\tiny(Zephyr + OT)};
+\node[entity] (otbr) at (5, 0) {OTBR\\[-1pt]\tiny(Enrutador frontera)};
+\node[entity] (tbe)  at (10, 0) {TB Edge\\[-1pt]\tiny(Servidor LwM2M)};
+\node[entity] (tbs)  at (15, 0) {TB Servidor\\[-1pt]\tiny(Local)};
+
+% Líneas de vida
+\draw[lifeline] (0, -0.5) -- (0, -18.5);
+\draw[lifeline] (5, -0.5) -- (5, -18.5);
+\draw[lifeline] (10, -0.5) -- (10, -18.5);
+\draw[lifeline] (15, -0.5) -- (15, -18.5);
+
+% === FASE 1: Ingreso a Thread (Thread Join) ===
+\node[phase=blue] at (-3.5, -1.2) {Fase 1\\Ingreso a Thread};
+
+\draw[msg=blue!70!black] (0, -1.8) -- (5, -1.8)
+  node[msglabel, midway, above] {Solicitud de padre (MLE Parent Request, multidifusión)};
+\draw[msgback=blue!70!black] (0, -2.4) -- (5, -2.4)
+  node[msglabel, midway, above] {Respuesta de padre (MLE Parent Response)};
+\draw[msg=blue!70!black] (0, -3.0) -- (5, -3.0)
+  node[msglabel, midway, above] {Solicitud de ID hijo (MLE Child ID Req. + PSKd + Dataset)};
+\draw[msgback=blue!70!black] (0, -3.6) -- (5, -3.6)
+  node[msglabel, midway, above] {Respuesta ID hijo $\rightarrow$ Router ID asignado};
+
+\node[note] at (-3.5, -3.0) {Clave de red Thread\\derivada de PSKd\\vía DTLS (JPAKE)};
+
+% === FASE 2: Registro LwM2M ===
+\node[phase=green!60!black] at (-3.5, -4.8) {Fase 2\\Registro LwM2M};
+
+\draw[msg=green!60!black] (0, -5.4) -- (10, -5.4)
+  node[msglabel, midway, above] {CoAP POST /rd?ep=\{endpoint\}\&lt=86400 (Registro)};
+\draw[msgback=green!60!black] (0, -6.0) -- (10, -6.0)
+  node[msglabel, midway, above] {2.01 Creado (Location: /rd/\{id\})};
+
+\draw[msg=green!60!black] (10, -6.6) -- (0, -6.6)
+  node[msglabel, midway, above] {CoAP GET /3/0 (Descubrir info.\ dispositivo)};
+\draw[msg=green!60!black] (0, -7.2) -- (10, -7.2)
+  node[msglabel, midway, above] {2.05 Contenido: Fabricante, modelo, versión FW};
+
+\node[note] at (-3.5, -6.0) {Punto final = EUI-64\\Tiempo de vida = 86\,400\,s\\CoAP sobre UDP/6LoWPAN};
+
+% === FASE 3: Observación (Telemetría) ===
+\node[phase=orange] at (-3.5, -8.4) {Fase 3\\Observación (Observe)};
+
+\draw[msg=orange!70!black] (10, -9.0) -- (0, -9.0)
+  node[msglabel, midway, above] {CoAP GET /10242/0 + Observe:0 (Suscripción objeto personalizado)};
+\draw[msg=orange!70!black] (0, -9.6) -- (10, -9.6)
+  node[msglabel, midway, above] {2.05 Contenido (TLV, 27 recursos, Observe:1)};
+
+\node[note] at (-3.5, -9.0) {\texttt{pmin}=60\,s, \texttt{pmax}=900\,s\\Alarmas: CON con ACK\\Telemetría: NON};
+
+% Notificaciones periódicas
+\draw[msg=orange!70!black, densely dashed] (0, -10.4) -- (10, -10.4)
+  node[msglabel, midway, above] {Notif.\ NON (TLV, Observe:N) --- cada 15\,min};
+\draw[msg=orange!70!black] (0, -11.0) -- (10, -11.0)
+  node[msglabel, midway, above] {Notif.\ CON: Alarma hundimiento de tensión ($<$0,9\,V\textsubscript{n})};
+\draw[msgback=orange!70!black] (0, -11.5) -- (10, -11.5)
+  node[msglabel, midway, above] {Acuse de recibo (ACK)};
+
+% === FASE 4: Procesamiento en borde + Sincronización ===
+\node[phase=purple] at (12.5, -12.5) {Fase 4\\Borde $\rightarrow$ Nube};
+
+\draw[msg=purple!70!black] (10, -13.2) -- (15, -13.2)
+  node[msglabel, midway, above] {gRPC: telemetría + atributos (lote)};
+\draw[msgback=purple!70!black] (10, -13.8) -- (15, -13.8)
+  node[msglabel, midway, above] {gRPC ACK + comandos RPC (si los hay)};
+
+\node[note] at (17.5, -13.5) {Sincronización\\bidireccional gRPC\\Resiliente a cortes WAN};
+
+% === FASE 5: Ciclo de vida ===
+\node[phase=teal] at (-3.5, -15.0) {Fase 5\\Ciclo de vida};
+
+\draw[msg=teal!70!black] (0, -15.6) -- (10, -15.6)
+  node[msglabel, midway, above] {CoAP POST /rd/\{id\} (Actualización de registro, cada 12\,h)};
+\draw[msgback=teal!70!black] (0, -16.1) -- (10, -16.1)
+  node[msglabel, midway, above] {2.04 Modificado (Changed)};
+
+% OTA
+\draw[msg=teal!70!black] (10, -16.8) -- (0, -16.8)
+  node[msglabel, midway, above] {CoAP PUT /5/0/1 (URI del firmware --- paquete OTA)};
+\draw[msg=teal!70!black] (0, -17.4) -- (10, -17.4)
+  node[msglabel, midway, above] {CoAP POST /5/0/2 (Actualización ejecutada, reinicio + re-registro)};
+
+\node[note] at (17.5, -16.8) {Actualización OTA\\vía LwM2M Obj.\,/5\\(Firmware, SUIT/Zephyr)};
+
+% Eje temporal
+\draw[-{Latex[length=2.5mm]}, gray!60, line width=0.8pt] (-5, -0.5) -- (-5, -18.5)
+  node[midway, rotate=90, above, font=\small\bfseries, gray!60] {Tiempo};
+
+\end{tikzpicture}%
+}% end resizebox
+\caption{Flujo completo del ciclo de vida LwM2M del nodo IoT: (1)~ingreso a Thread (\emph{Thread Join}) mediante intercambio MLE con OTBR y derivación de clave vía DTLS/JPAKE; (2)~registro CoAP (\emph{Registration}) hacia TB~Edge como servidor LwM2M con punto final EUI-64 y tiempo de vida 86\,400\,s; (3)~observación (\emph{Observe}) del objeto personalizado /10242/0 con 27~recursos, notificaciones NON periódicas cada 15\,min y CON para alarmas críticas; (4)~sincronización bidireccional TB~Edge$\leftrightarrow$TB~Servidor vía gRPC; (5)~ciclo de vida (\emph{Lifecycle}) con actualización de registro cada 12\,h y actualización OTA vía objeto /5.}
+\label{fig:lwm2m-registration-flow}
+\end{figure}

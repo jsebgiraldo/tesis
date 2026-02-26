@@ -1,0 +1,65 @@
+% Diagrama de flujo: Ciclo Principal del Firmware (Nodo IoT Thread + LwM2M)
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+    node distance=0.6cm,
+    start/.style={ellipse, draw=black!70, fill=green!10, thick, minimum width=2.8cm, font=\footnotesize, align=center},
+    process/.style={rectangle, draw=black!70, fill=blue!6, thick, rounded corners=2pt, minimum width=4.5cm, minimum height=0.7cm, font=\footnotesize, align=center},
+    decision/.style={diamond, draw=black!70, fill=yellow!10, thick, minimum width=2cm, aspect=2.2, font=\footnotesize, align=center},
+    io/.style={trapezium, draw=black!70, fill=orange!8, thick, trapezium left angle=75, trapezium right angle=105, minimum width=3.5cm, font=\footnotesize, align=center},
+    wait/.style={rectangle, draw=red!60, fill=red!6, thick, rounded corners=2pt, minimum width=4.5cm, minimum height=0.7cm, font=\footnotesize, align=center},
+    arr/.style={->, thick, >=stealth, draw=black!60},
+]
+
+% Inicio
+\node[start] (init) {Inicio\\(\texttt{main()})};
+
+% Registro callback L4
+\node[process, below=of init] (cb) {Registrar callback L4\\(\texttt{net\_mgmt\_add\_event\_callback})};
+\draw[arr] (init) -- (cb);
+
+% Espera semáforo
+\node[wait, below=of cb] (sem) {Esperar conectividad IPv6 Thread\\(\texttt{k\_sem\_take(\&network\_connected\_sem, K\_FOREVER)})};
+\draw[arr] (cb) -- (sem);
+
+% Evento conectado (lateral)
+\node[decision, right=1.6cm of sem] (evt) {\texttt{L4\_CONNECTED}?};
+\draw[arr, dashed] (evt) -- node[above, font=\tiny]{Sí} (sem);
+\node[font=\tiny, text=gray, below=0.15cm of evt] {ISR da semáforo};
+
+% Configurar servidor LwM2M
+\node[process, below=of sem] (cfg) {Configurar URI servidor LwM2M\\(\texttt{coap://[fd00::1]:5683})};
+\draw[arr] (sem) -- (cfg);
+
+% Registrar cliente
+\node[process, below=of cfg] (reg) {Registrar cliente RD LwM2M\\(\texttt{lwm2m\_rd\_client\_start})\\endpoint: \texttt{ami-node-001}};
+\draw[arr] (cfg) -- (reg);
+
+% Loop header
+\node[decision, below=0.8cm of reg] (loop) {\texttt{while(1)}};
+\draw[arr] (reg) -- (loop);
+
+% Leer Modbus
+\node[io, below=of loop] (read) {Leer 17 registros OBIS\\vía Modbus RTU @ 9600};
+\draw[arr] (loop) -- node[right, font=\tiny]{Ciclo 30\,s} (read);
+
+% Actualizar recursos
+\node[process, below=of read] (upd) {Actualizar 27 recursos\\Objeto LwM2M /10242/0/*\\(\texttt{lwm2m\_set\_f64})};
+\draw[arr] (read) -- (upd);
+
+% Notify/Observe
+\node[process, below=of upd] (obs) {Motor LwM2M envía\\Notify (Observe activo)\\vía CoAP/DTLS → Leshan};
+\draw[arr] (upd) -- (obs);
+
+% Sleep
+\node[wait, below=of obs] (sleep) {\texttt{k\_sleep(K\_SECONDS(30))}};
+\draw[arr] (obs) -- (sleep);
+
+% Loop back
+\draw[arr] (sleep.west) -- ++(-2.2,0) |- (loop.west);
+
+\end{tikzpicture}
+\caption{Diagrama de flujo del ciclo principal del firmware. El hilo \texttt{main} espera conectividad IPv6 Thread mediante semáforo, registra el cliente LwM2M ante Leshan, y entra en un bucle de 30\,s: lectura Modbus RTU del medidor Emsitech P2000-T, actualización de 27 recursos del Objeto~10242, y notificación CoAP/DTLS al servidor.}
+\label{fig:firmware-main-loop}
+\end{figure}

@@ -1,142 +1,140 @@
-% Diagrama de hardware ESP32-C6 con bloques funcionales y conexiones
+% Diagrama de bloques TikZ del ESP32-C6 / XIAO ESP32C6 — Nodo IoT Thread
+% v3 — Hispanizado, rutas limpias sin cruces, bloques más espaciados
 
-\begin{figure}[H]
+\begin{figure}[ht]
 \centering
+\resizebox{0.95\textwidth}{!}{%
+\begin{tikzpicture}[
+  % Estilos base
+  blockbase/.style={rounded corners=3pt, minimum height=1.0cm, font=\scriptsize\sffamily,
+    inner sep=5pt, line width=0.6pt, align=center},
+  block-blue/.style={blockbase, draw=blue!65!black, fill=blue!12,
+    drop shadow={shadow xshift=0.4mm, shadow yshift=-0.4mm, opacity=0.15}},
+  block-purple/.style={blockbase, draw=purple!65!black, fill=purple!12,
+    drop shadow={shadow xshift=0.4mm, shadow yshift=-0.4mm, opacity=0.15}},
+  block-green/.style={blockbase, draw=green!50!black, fill=green!10,
+    drop shadow={shadow xshift=0.4mm, shadow yshift=-0.4mm, opacity=0.15}},
+  block-teal/.style={blockbase, draw=teal!65!black, fill=teal!12,
+    drop shadow={shadow xshift=0.4mm, shadow yshift=-0.4mm, opacity=0.15}},
+  block-orange/.style={blockbase, draw=orange!65!black, fill=orange!12,
+    drop shadow={shadow xshift=0.4mm, shadow yshift=-0.4mm, opacity=0.15}},
+  block-red/.style={blockbase, draw=red!60!black, fill=red!10,
+    drop shadow={shadow xshift=0.4mm, shadow yshift=-0.4mm, opacity=0.15}},
+  soc/.style={draw=blue!70!black, fill=blue!4, rounded corners=5pt,
+    line width=1.4pt, inner sep=8pt},
+  extblockbase/.style={rounded corners=3pt, minimum height=1.1cm, font=\scriptsize\sffamily,
+    inner sep=5pt, line width=0.7pt, align=center,
+    drop shadow={shadow xshift=0.3mm, shadow yshift=-0.3mm, opacity=0.12}},
+  extblock-green/.style={extblockbase, draw=green!40!black, fill=green!5},
+  extblock-purple/.style={extblockbase, draw=purple!55, fill=purple!6},
+  extblock-orange/.style={extblockbase, draw=orange!55, fill=orange!6},
+  extblock-brown/.style={extblockbase, draw=brown!55, fill=brown!6},
+  extblock-red/.style={extblockbase, draw=red!45, fill=red!5},
+  extblock-darkred/.style={extblockbase, draw=red!50, fill=red!5},
+  extblock-gray/.style={extblockbase, draw=gray!55, fill=gray!6},
+  conn/.style={-{Latex[length=2mm]}, line width=0.7pt, #1},
+  bidi/.style={{Latex[length=2mm]}-{Latex[length=2mm]}, line width=0.7pt, #1},
+]
 
-% ============================================================================
-% PLACEHOLDER: Insertar diagrama de bloques ESP32-C6 aquí
-% ============================================================================
-% PROMPT PARA GENERAR LA IMAGEN:
-%
-% Crear un diagrama de bloques de hardware del ESP32-C6 mostrando arquitectura
-% interna y conexiones con periféricos externos:
-%
-% NÚCLEO PRINCIPAL (Centro del diagrama):
-%
-% CPU RISC-V:
-%   - Rectángulo grande central: "RISC-V RV32IMAC"
-%   - Detalles: "Single-core 160 MHz\n400 DMIPS\n32-bit RISC-V"
-%   - Color: Azul oscuro (#0D47A1)
-%   - Sub-bloques internos:
-%     * "FPU (Float Point Unit)"
-%     * "32 KB Instruction Cache"
-%     * "32 KB Data Cache"
-%
-% MEMORIA (Lado izquierdo):
-%   - "ROM: 384 KB" (bloque gris)
-%   - "SRAM: 512 KB" (bloque verde claro)
-%   - "Flash externo: 4-16 MB" (bloque amarillo, conexión SPI)
-%   - Flechas bidireccionales al CPU: "Memory Bus 32-bit"
-%
-% RADIO IEEE 802.15.4 (Parte superior):
-%   - Rectángulo destacado: "IEEE 802.15.4 Radio"
-%   - Detalles internos:
-%     * "2.4 GHz Transceiver"
-%     * "TX: +21 dBm max"
-%     * "RX: -105 dBm sensitivity"
-%     * "Thread 1.3 / Zigbee compatible"
-%   - Color: Verde (#2E7D32)
-%   - Conexión a antena externa (símbolo zig-zag)
-%   - Flecha al CPU: "MAC/PHY Interface"
-%
-% CONECTIVIDAD PERIFÉRICA (Lados derecho e inferior):
-%
-% UART (2 canales):
-%   - Pin GPIO20/21: "UART0 (console)"
-%   - Pin GPIO4/5: "UART1 (RS-485 Medidor)"
-%   - Baudrate: 115200 / 9600 bps
-%
-% SPI (2 canales):
-%   - "SPI2: Flash externo"
-%   - "SPI3: Expansión (disponible)"
-%
-% I2C:
-%   - Pin GPIO6/7: "I2C0 (sensores opcionales)"
-%   - Velocidad: 100 kHz / 400 kHz
-%
-% GPIO:
-%   - 22 pines GPIO disponibles
-%   - Anotación: "3.3V logic level, 40mA max per pin"
-%
-% ADC:
-%   - 7 canales ADC 12-bit
-%   - Rango: 0-3.3V
-%   - "Lectura opcional voltaje batería"
-%
-% PWM:
-%   - 6 canales PWM
-%   - "LED control / Motor control"
-%
-% ALIMENTACIÓN (Esquina inferior izquierda):
-%   - Rectángulo: "Power Management"
-%   - Entradas:
-%     * "USB-C: 5V (dev/debug)"
-%     * "Medidor AUX: 5V @ 100mA (producción)"
-%     * "Batería: 3.7V Li-ion (backup opcional)"
-%   - Salida: "3.3V LDO → Core + Peripherals"
-%   - Consumo anotado:
-%     * "Active TX: 190 mA @ 3.3V"
-%     * "Active RX: 90 mA @ 3.3V"
-%     * "Idle: 7 mA"
-%     * "Deep Sleep: 7 μA"
-%
-% SEGURIDAD (Esquina superior derecha):
-%   - Bloque: "Security Features"
-%   - Detalles:
-%     * "Secure Boot"
-%     * "Flash Encryption"
-%     * "AES-128/256 Hardware"
-%     * "SHA-256 Hardware"
-%     * "RSA/ECC accelerator"
-%     * "RNG (Random Number Generator)"
-%
-% CONEXIONES EXTERNAS DESTACADAS:
-%
-% 1. Medidor Inteligente (flecha desde UART1):
-%    - Cable: "RS-485 Half-Duplex"
-%    - Protocolo: "DLMS/COSEM over HDLC"
-%    - Icono: Medidor trifásico con display
-%
-% 2. Antena IEEE 802.15.4 (desde Radio):
-%    - Antena PCB integrada o conector U.FL
-%    - "Thread mesh → DCU Border Router"
-%
-% 3. LED Status (desde GPIO):
-%    - RGB LED indicando estados
-%
-% 4. Botón Reset/Flash (GPIO9):
-%    - Pulsador físico
-%
-% ANOTACIONES TÉCNICAS:
-%   - Package: QFN 5×5 mm, 32 pins
-%   - Temperatura: -40°C a +85°C
-%   - Certificaciones: FCC, CE, IC para radio
-%   - SDK: ESP-IDF 5.1+, Arduino compatible
-%
-% ESTILO VISUAL:
-%   - Diagrama de bloques tipo datasheet
-%   - Rectángulos con bordes redondeados
-%   - Colores diferenciando categorías (CPU, memoria, radio, periféricos)
-%   - Flechas con grosor indicando bus width (grueso=32-bit, medio=8-bit, fino=señal)
-%   - Tipografía: Sans-serif, 9pt para labels, 7pt para especificaciones
-%   - Fondo blanco, grid sutil opcional
-%
-% FORMATO DE SALIDA:
-%   - PNG o PDF vectorial
-%   - Dimensiones: 18cm ancho × 14cm alto (horizontal)
-%   - Resolución: 300 DPI si PNG
-%
-% HERRAMIENTAS SUGERIDAS:
-%   - draw.io con plantilla "Block Diagram"
-%   - Microsoft Visio con SmartArt "Block Diagram"
-%   - Inkscape o Adobe Illustrator
-%   - Fritzing (para aspecto más físico)
-%   - LaTeX TikZ con tikz-shapes library
-%
-% ============================================================================
+% === Límite del SoC ===
+\draw[soc] (-6.5, -2.8) rectangle (6.5, 4.8);
+\node[font=\footnotesize\bfseries\sffamily, blue!70!black] at (0, 4.4) {ESP32-C6 SoC (QFN 5$\times$5\,mm)};
 
-\includegraphics[width=\textwidth]{figures/esp32c6_block_diagram.png}
+% === CPU ===
+\node[block-blue, minimum width=4.0cm, minimum height=1.3cm] (cpu) at (0, 3.2) {};
+\node[font=\scriptsize\bfseries\sffamily] at (0, 3.5) {RISC-V RV32IMAC};
+\node[font=\scriptsize\sffamily] at (0, 2.95) {Núcleo único @ 160\,MHz (400\,DMIPS)};
 
-\caption{Diagrama de bloques de hardware ESP32-C6 con arquitectura interna y conexiones periféricas. El SoC integra CPU RISC-V RV32IMAC single-core @ 160 MHz (400 DMIPS) con 512 KB SRAM on-chip y 4 MB flash externo SPI. Radio IEEE 802.15.4 de 2.4 GHz con soporte Thread 1.3/Zigbee 3.0, sensibilidad RX -105 dBm, potencia TX configurable hasta +21 dBm, habilita comunicación mesh low-power con alcance 30-50m indoor típico. Conectividad periférica: 2× UART (console + RS-485 medidor @ 9600 bps), 2× SPI (flash + expansión), 1× I2C (sensores), 22× GPIO, 7× ADC 12-bit, 6× PWM. Alimentación: 5V desde puerto auxiliar medidor (100 mA límite) regulado a 3.3V LDO, consumo activo TX 190 mA pico, idle 7 mA. En esta arquitectura, el nodo opera como MED (RX always-on) alimentado continuamente desde el medidor. Seguridad hardware: Secure Boot, Flash Encryption, AES-128/256 accelerator, SHA-256 engine, RSA/ECC crypto, RNG. Package QFN 5×5mm 32-pin, rango temperatura -40°C a +85°C, certificaciones FCC/CE/IC. SDK oficial ESP-IDF 5.1+ con soporte OpenThread stack nativo.}}
+% === Memorias ===
+\node[block-purple, minimum width=1.8cm] (sram) at (-3.8, 3.2) {SRAM\\512\,KB};
+\node[block-purple, minimum width=1.8cm] (rom) at (3.8, 3.2) {ROM\\320\,KB};
+
+% === Radio 802.15.4 ===
+\node[block-green, minimum width=3.2cm, minimum height=1.3cm] (radio154) at (-3.0, 1) {};
+\node[font=\scriptsize\bfseries\sffamily] at (-3.0, 1.35) {Radio IEEE 802.15.4};
+\node[font=\scriptsize\sffamily] at (-3.0, 0.85) {2,4\,GHz | TX: +21\,dBm};
+\node[font=\scriptsize\sffamily] at (-3.0, 0.5) {RX: $-$105\,dBm};
+
+% === Radio Wi-Fi ===
+\node[block-teal, minimum width=2.8cm, minimum height=1.1cm] (radiowifi) at (3.0, 1) {};
+\node[font=\scriptsize\bfseries\sffamily] at (3.0, 1.25) {Radio Wi-Fi 6};
+\node[font=\scriptsize\sffamily] at (3.0, 0.85) {802.11ax 2,4\,GHz};
+
+% === Periféricos internos — una sola fila espaciada ===
+\node[block-orange, minimum width=1.6cm] (uart) at (-4.5, -0.9) {UART $\times$2};
+\node[block-orange, minimum width=1.4cm] (spi)  at (-2.2, -0.9) {SPI $\times$2};
+\node[block-orange, minimum width=1.2cm] (i2c)  at (0.0, -0.9) {I2C};
+\node[block-orange, minimum width=1.6cm] (adc)  at (2.5, -0.9) {ADC 12 bits\\$\times$7};
+\node[block-orange, minimum width=1.4cm] (gpio) at (4.8, -0.9) {GPIO\\$\times$22};
+
+% === Seguridad ===
+\node[block-red, minimum width=11.5cm, minimum height=0.8cm] (crypto) at (0, -2.0) {};
+\node[font=\scriptsize\bfseries\sffamily] at (0, -1.85) {Seguridad HW: AES-256 | SHA-256 | RSA/ECC | Arranque seguro};
+
+% === Bus interno ===
+\draw[blue!25!gray, line width=2.5pt, opacity=0.4] (-5.8, 2.1) -- (5.8, 2.1);
+\draw[blue!40!gray, line width=0.6pt] (-5.8, 2.1) -- (5.8, 2.1);
+\node[font=\scriptsize\bfseries\sffamily, blue!40!gray, fill=blue!4, inner sep=2pt, rounded corners=1pt] at (0, 2.28) {Bus AHB/APB};
+\draw[gray!35, line width=0.4pt] (cpu.south) -- (0, 2.1);
+\draw[gray!35, line width=0.4pt] (sram.south) -- (-3.8, 2.1);
+\draw[gray!35, line width=0.4pt] (rom.south) -- (3.8, 2.1);
+\draw[gray!35, line width=0.4pt] (radio154.north) -- (-3.0, 2.1);
+\draw[gray!35, line width=0.4pt] (radiowifi.north) -- (3.0, 2.1);
+
+% === COMPONENTES EXTERNOS ===
+
+% Antena 802.15.4 — horizontal directa
+\node[extblock-green, minimum width=1.8cm] (ant154) at (-8.8, 1) {Antena PCB\\2,4\,GHz};
+\draw[bidi=green!55!black] (radio154.west) -- (ant154.east);
+
+% Memoria Flash externa — horizontal directa desde SPI
+\node[extblock-purple, minimum width=1.8cm] (flash) at (-8.8, -0.9) {Flash SPI\\4\,MB};
+\draw[bidi=purple!55] (spi.west) -- (flash.east);
+
+% Transceptor RS-485 — sale por abajo de UART (ruta limpia)
+\node[extblock-orange, minimum width=2cm] (rs485) at (-8.8, -2.8) {MAX485\\RS-485};
+\draw[bidi=orange!55] (uart.south) -- (-4.5, -2.8) -- (rs485.east);
+
+% Medidor
+\node[extblock-brown, minimum width=2.2cm, minimum height=1.2cm] (meter) at (-12.2, -2.8) {Medidor\\Emsitech\\P2000-T\\DLMS/COSEM};
+\draw[bidi=brown!55, line width=0.8pt] (rs485.west) -- (meter.east)
+  node[midway, above, font=\tiny\sffamily] {9600\,bps};
+
+% Regulador LDO — horizontal desde borde derecho
+\node[extblock-red, minimum width=1.8cm] (ldo) at (8.8, -2.0) {LDO 3,3\,V\\AMS1117};
+\draw[conn=red!55] (ldo.west) -- (6.7, -2.0);
+\node[font=\scriptsize\sffamily, red!55!black] at (8.8, -2.85) {3,3\,V @ 800\,mA};
+
+% Alimentación desde medidor
+\node[extblock-darkred, minimum width=2cm] (pwr) at (12.2, -2.0) {Puerto aux.\\medidor\\5\,V / 100\,mA};
+\draw[conn=red!65, line width=0.8pt] (pwr.west) -- (ldo.east)
+  node[midway, above, font=\tiny\sffamily] {5\,V};
+
+% Conector USB (depuración) — horizontal al GPIO
+\node[extblock-gray, minimum width=1.8cm] (usb) at (8.8, -0.5) {USB-C\\(depuración)};
+\draw[bidi=gray!55] (6.7, -0.5) -- (usb.west);
+
+% === CONSUMO ===
+\node[draw=red!40, fill=red!3, rounded corners=3pt, font=\scriptsize\sffamily,
+  text width=3.5cm, inner sep=4pt] at (9.5, 1.5) {
+  \textbf{Consumo (5\,V):}\\
+  TX pico: 190\,mA\\
+  RX activo: 19,3\,mA (SoC)\\
+  Sistema completo: 27\,mA\\
+  Reposo (\emph{idle}): 7\,mA
+};
+
+% === ETIQUETA MÓDULO XIAO ===
+\node[draw=blue!35, fill=blue!3, rounded corners=3pt, font=\scriptsize\sffamily,
+  text width=3cm, inner sep=4pt] at (9.5, 3.5) {
+  \textbf{Módulo:} XIAO ESP32C6\\
+  \textbf{Fabricante:} Seeed Studio\\
+  \textbf{Dimensiones:} 21$\times$17,5\,mm\\
+  \textbf{Temp.:} $-$40$^\circ$C a +85$^\circ$C
+};
+
+\end{tikzpicture}%
+}% end resizebox
+\caption{Diagrama de bloques del nodo IoT basado en ESP32-C6 (módulo XIAO ESP32C6, Seeed Studio). El SoC integra CPU RISC-V RV32IMAC @ 160\,MHz, radio IEEE~802.15.4 (TX +21\,dBm, RX $-$105\,dBm) para red Thread, 512\,KB SRAM y acelerador criptográfico AES-256/SHA-256/RSA. Periféricos: UART$\times$2 (consola + RS-485 vía MAX485 hacia medidor Emsitech P2000-T @ 9600\,bps), SPI (flash 4\,MB), I2C, ADC 12 bits. Alimentación: 5\,V desde puerto auxiliar del medidor, regulado a 3,3\,V con LDO. Consumo: 19,3\,mA SoC activo, 27\,mA sistema completo (incluyendo RS-485 + LDO).}
 \label{fig:esp32c6-block-diagram}
 \end{figure}

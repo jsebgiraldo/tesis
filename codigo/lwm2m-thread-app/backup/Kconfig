@@ -1,0 +1,25 @@
+# Private Kconfig for AMI LwM2M Client
+
+mainmenu "AMI LwM2M Client"
+
+config NET_SAMPLE_LWM2M_ID
+	string "LwM2M Client identity"
+	default ""
+	help
+	  Client endpoint name for LwM2M registration.
+	  Leave empty to use CONFIG_BOARD.
+
+config NET_SAMPLE_LWM2M_SERVER
+	string "LwM2M server address"
+	default "coap://[fdde:ad00:beef::2]:5683"
+	help
+	  LwM2M server address. Full URI including port.
+	  IPv6 addresses must be in square brackets.
+
+config AMI_FW_VERSION
+	string "AMI Firmware version"
+	default "0.3.0"
+	help
+	  Firmware version reported via LwM2M Device Object.
+
+source "Kconfig.zephyr"

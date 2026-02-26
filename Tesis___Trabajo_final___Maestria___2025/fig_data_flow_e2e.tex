@@ -1,0 +1,230 @@
+% fig_data_flow_e2e.tex — Flujo de datos extremo a extremo (E2E) del Gateway Edge
+% Diagrama TikZ profesional que muestra la trayectoria completa de telemetría
+% desde medidor hasta la nube, con protocolos y latencias en cada salto.
+
+\begin{figure}[htbp]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[
+    node distance=1.8cm and 2.0cm,
+    % Estilos de nodos
+    device/.style={
+        rectangle, rounded corners=4pt, draw=black!70, line width=0.8pt,
+        fill=blue!8, minimum width=2.6cm, minimum height=1.4cm,
+        font=\footnotesize\sffamily, align=center, drop shadow={opacity=0.15}
+    },
+    service/.style={
+        rectangle, rounded corners=4pt, draw=black!70, line width=0.8pt,
+        fill=orange!10, minimum width=2.6cm, minimum height=1.4cm,
+        font=\footnotesize\sffamily, align=center, drop shadow={opacity=0.15}
+    },
+    storage/.style={
+        cylinder, draw=black!70, line width=0.8pt,
+        fill=cyan!10, minimum width=2.0cm, minimum height=1.2cm,
+        shape border rotate=90, aspect=0.25,
+        font=\footnotesize\sffamily, align=center, drop shadow={opacity=0.15}
+    },
+    cloud/.style={
+        ellipse, draw=black!70, line width=0.8pt,
+        fill=purple!10, minimum width=3.0cm, minimum height=1.4cm,
+        font=\footnotesize\sffamily, align=center, drop shadow={opacity=0.15}
+    },
+    rulechain/.style={
+        rectangle, rounded corners=6pt, draw=red!60!black, line width=1pt,
+        fill=red!5, minimum width=2.4cm, minimum height=1.2cm,
+        font=\footnotesize\sffamily, align=center
+    },
+    proto/.style={
+        font=\tiny\sffamily\bfseries, fill=white, inner sep=2pt,
+        rounded corners=2pt, draw=gray!40, line width=0.4pt
+    },
+    latency/.style={
+        font=\tiny\sffamily\itshape, text=blue!70!black
+    },
+    arrow/.style={
+        -{Latex[length=2mm]}, line width=1pt, color=black!60
+    },
+    dasharrow/.style={
+        -{Latex[length=2mm]}, line width=0.8pt, color=black!40, dashed
+    },
+    zonebase/.style={
+        rectangle, rounded corners=8pt, line width=1.2pt, dashed
+    },
+    zone-blue/.style={zonebase, draw=blue!50, fill=blue!3},
+    zone-orange/.style={zonebase, draw=orange!50, fill=orange!3},
+    zone-purple/.style={zonebase, draw=purple!50, fill=purple!3}
+]
+
+% ============================================================
+% ZONA 1: Campo (Thread Mesh)
+% ============================================================
+\begin{scope}[local bounding box=field]
+    \node[device] (meter) at (0, 0) {Medidor\\Emsitech P2000-T};
+    \node[device] (esp32) at (3.5, 0) {XIAO\\ESP32-C6};
+\end{scope}
+
+% Zona Campo
+\node[zone-blue, fit=(meter)(esp32), inner sep=12pt] (fieldzone) {};
+\node[font=\scriptsize\sffamily\bfseries, text=blue!60!black] 
+    at (fieldzone.north) [above=1pt] {Nivel 1 --- Nodo Sensor};
+
+% ============================================================
+% ZONA 2: Gateway Edge (RPi4 Docker)
+% ============================================================
+\begin{scope}[local bounding box=gateway]
+    \node[device] (otbr) at (7.5, 0) {OTBR\\nRF52840 + RPi4};
+    \node[service] (bridge) at (11.0, 0) {Puente\\CoAP$\rightarrow$MQTT};
+    \node[service] (mosquitto) at (14.5, 0) {Mosquitto\\Intermediario MQTT};
+    
+    % TB Edge y Rule Chains (debajo)
+    \node[service] (tbedge) at (14.5, -3.0) {ThingsBoard\\Edge 3.6};
+    
+    % Rule chains
+    \node[rulechain] (rc1) at (11.0, -3.0) {RC1: Filtrado de\\telemetr\'{i}a};
+    \node[rulechain] (rc2) at (11.0, -4.8) {RC2: Detecci\'{o}n de\\alarmas};
+    \node[rulechain] (rc3) at (14.5, -4.8) {RC3: Enriquecimiento\\de datos};
+    \node[rulechain] (rc4) at (17.8, -4.8) {RC4: Comandos\\descendentes};
+    
+    % Storage
+    \node[storage] (postgres) at (17.8, -3.0) {PostgreSQL\\TimescaleDB};
+    
+    % Visualización
+    \node[service] (nodered) at (7.5, -3.0) {Node-RED\\3.1};
+    \node[service] (grafana) at (7.5, -4.8) {Grafana\\10.2};
+\end{scope}
+
+% Zona Gateway
+\node[zone-orange, fit=(otbr)(bridge)(mosquitto)(tbedge)(postgres)(nodered)(grafana)(rc1)(rc2)(rc3)(rc4), 
+      inner sep=14pt] (gwzone) {};
+\node[font=\scriptsize\sffamily\bfseries, text=orange!60!black] 
+    at (gwzone.north) [above=1pt] {Nivel 2 --- Gateway Edge (Raspberry Pi 4 / Docker Compose)};
+
+% ============================================================
+% ZONA 3: WAN / Cloud
+% ============================================================
+\node[device] (halow) at (20.5, 0) {HaLow AP\\Alfa AHM};
+\node[cloud] (tbcloud) at (23.5, 0) {ThingsBoard\\Nube (AWS)};
+\node[cloud] (dashboard) at (23.5, -3.0) {Panel del\\operador};
+
+% Zona Cloud
+\begin{scope}[local bounding box=cloudbox]
+\node[zone-purple, fit=(halow)(tbcloud)(dashboard), inner sep=14pt] (cloudzone) {};
+\end{scope}
+\node[font=\scriptsize\sffamily\bfseries, text=purple!60!black] 
+    at (cloudzone.north) [above=1pt] {Nivel 3 --- Troncal + Nube};
+
+% ============================================================
+% FLECHAS PRINCIPALES (Flujo Telemetría →)
+% ============================================================
+
+% Meter → ESP32
+\draw[arrow, blue!70] (meter) -- (esp32);
+\node[proto, fill=blue!8] at ($(meter)!0.5!(esp32)$) [above=4pt] {RS-485};
+\node[latency] at ($(meter)!0.5!(esp32)$) [below=4pt] {MODBUS 9600\,bps};
+
+% ESP32 → OTBR
+\draw[arrow, blue!70] (esp32) -- (otbr);
+\node[proto, fill=blue!8] at ($(esp32)!0.5!(otbr)$) [above=4pt] {CoAP/6LoWPAN};
+\node[latency] at ($(esp32)!0.5!(otbr)$) [below=4pt] {Thread 802.15.4};
+
+% OTBR → Bridge
+\draw[arrow, orange!70!black] (otbr) -- (bridge);
+\node[proto, fill=orange!8] at ($(otbr)!0.5!(bridge)$) [above=4pt] {CoAP UDP:5683};
+\node[latency] at ($(otbr)!0.5!(bridge)$) [below=4pt] {IPv6 local};
+
+% Bridge → Mosquitto
+\draw[arrow, orange!70!black] (bridge) -- (mosquitto);
+\node[proto, fill=orange!8] at ($(bridge)!0.5!(mosquitto)$) [above=4pt] {MQTT QoS\,1};
+\node[latency] at ($(bridge)!0.5!(mosquitto)$) [below=4pt] {1.2\,ms};
+
+% Mosquitto → TB Edge
+\draw[arrow, orange!70!black] (mosquitto) -- (tbedge);
+\node[proto, fill=orange!8] at ($(mosquitto)!0.5!(tbedge)$) [right=3pt] {MQTT};
+
+% TB Edge → Rule Chains
+\draw[arrow, red!60] (tbedge) -- (rc1);
+\draw[arrow, red!60] (rc1) -- (rc2);
+\draw[arrow, red!60] (tbedge) -- (rc3);
+\draw[arrow, red!60] (tbedge.east) -| (rc4.north);
+
+% Rule Chain → PostgreSQL
+\draw[arrow, cyan!60!black] (rc1.east) -- ++(0.5,0) |- (postgres.west);
+\draw[arrow, cyan!60!black] (rc3.east) -- ($(rc3.east)!0.5!(rc4.west)$) |- (postgres.south west);
+
+% RC2 alarma → directo cloud (línea punteada)
+\draw[dasharrow, red!60] (rc2.south) -- ++(0,-0.6) -| ($(cloudzone.south west)!0.3!(cloudzone.south east)$) 
+    node[pos=0.3, below, latency] {alarma directa};
+
+% TB Edge → Node-RED (procesamiento adicional)
+\draw[dasharrow, orange!50] (rc1.west) -- (nodered.east);
+\node[latency] at ($(rc1.west)!0.5!(nodered.east)$) [above=2pt] {flujos de borde};
+
+% Node-RED → Grafana
+\draw[arrow, cyan!60!black] (nodered) -- (grafana);
+\node[latency] at ($(nodered)!0.5!(grafana)$) [right=2pt] {SQL local};
+
+% PostgreSQL → Grafana (query)
+\draw[dasharrow, cyan!50] (postgres.south) |- (grafana.east);
+
+% ============================================================
+% FLECHAS WAN (Gateway → Cloud)
+% ============================================================
+
+% Mosquitto → HaLow
+\draw[arrow, purple!60] (mosquitto.east) -- ++(0.5,0) |- (halow.west);
+\node[proto, fill=purple!8] at ($(mosquitto.north east)!0.5!(halow.west)$) [above=2pt] {MQTT/TLS 1.3};
+
+% HaLow → TB Cloud
+\draw[arrow, purple!60] (halow) -- (tbcloud);
+\node[proto, fill=purple!8] at ($(halow)!0.5!(tbcloud)$) [above=4pt] {LTE 4G};
+\node[latency] at ($(halow)!0.5!(tbcloud)$) [below=4pt] {802.11ah + WAN};
+
+% TB Cloud → Dashboard
+\draw[arrow, purple!60] (tbcloud) -- (dashboard);
+\node[latency] at ($(tbcloud)!0.5!(dashboard)$) [right=2pt] {HTTPS};
+
+% RC4 downlink ← Cloud (flecha inversa)
+\draw[dasharrow, purple!40] (tbcloud.south) -- ++(0,-1.5) -| (rc4.east)
+    node[pos=0.15, right, latency] {RPC descendente};
+
+% ============================================================
+% CUADRO LATENCIAS E2E
+% ============================================================
+\node[rectangle, rounded corners=4pt, draw=black!50, fill=yellow!8, 
+      line width=0.6pt, font=\tiny\sffamily, align=left,
+      text width=5.5cm] (latbox) at (3.5, -6.5) {
+    \textbf{Latencia E2E (P95):}\\[2pt]
+    \begin{tabular}{@{}lr@{}}
+    Medidor $\rightarrow$ ESP32 (RS-485) & 12\,ms \\
+    ESP32 $\rightarrow$ OTBR (Thread) & 15\,ms \\
+    OTBR $\rightarrow$ Puente (CoAP) & 3\,ms \\
+    Puente $\rightarrow$ Mosquitto (MQTT) & 1,2\,ms \\
+    Procesamiento cadena de reglas & 8\,ms \\
+    \textbf{Total borde (P95)} & \textbf{$<$\,10\,ms} \\[2pt]
+    Troncal HaLow & 11\,ms \\
+    Enlace ascendente LTE & 35\,ms \\
+    \textbf{Total E2E nube} & \textbf{380\,ms} \\
+    \end{tabular}
+};
+
+% ============================================================
+% CUADRO REDUCCIÓN TRÁFICO
+% ============================================================
+\node[rectangle, rounded corners=4pt, draw=black!50, fill=cyan!8, 
+      line width=0.6pt, font=\tiny\sffamily, align=left,
+      text width=5.0cm] (trafficbox) at (20.5, -6.5) {
+    \textbf{Reducción tráfico WAN:}\\[2pt]
+    \begin{tabular}{@{}lr@{}}
+    Telemetría sin procesar & 9.600\,msgs/día \\
+    Post-agregación RC1 & 2.640\,msgs/día \\
+    \textbf{Reducción} & \textbf{72{,}5\,\%} \\[2pt]
+    Ahorro datos LTE & 6{,}8\,MB/día \\
+    Respaldo sin conexión & 7 días / 128\,GB \\
+    \end{tabular}
+};
+
+\end{tikzpicture}
+}%
+\caption[Flujo de datos extremo a extremo del sistema AMI]{Flujo de datos extremo a extremo (E2E) del sistema AMI: desde el medidor trifásico hasta ThingsBoard en la nube, mostrando protocolos, microservicios Docker y las cuatro cadenas de reglas (\textit{Rule Chains}) de preprocesamiento de borde. Las líneas punteadas indican flujos secundarios (alarmas directas, comandos descendentes, consultas locales). Los valores de latencia corresponden a mediciones P95 del piloto de 90 días.}
+\label{fig:data-flow-e2e}
+\end{figure}

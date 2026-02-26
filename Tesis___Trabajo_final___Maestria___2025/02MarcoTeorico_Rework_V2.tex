@@ -2,366 +2,146 @@
 \label{chap:marco-teorico}
 
 % ============================================================================
-% PROPÓSITO: Establecer contexto Smart Energy, estado del arte y análisis
-% crítico que fundamentan la arquitectura IoT propuesta para AMI.
 % Estructura: Contexto → Estado del Arte → Análisis Crítico → Conclusiones
 % ============================================================================
 
 \section{Introducción}
 \label{sec:marco-intro}
 
-Este capítulo establece las bases teóricas que sustentan la arquitectura IoT propuesta para infraestructuras de medición avanzada (\textit{Advanced Metering Infrastructure}, AMI) en redes eléctricas inteligentes. La revisión se organiza en tres ejes temáticos progresivos.
+Diseñar una arquitectura IoT para medición avanzada de energía exige articular tres dimensiones: un marco normativo que defina qué debe hacer el sistema, un conjunto de tecnologías que determinen cómo implementarlo, y un análisis crítico que revele dónde persisten vacíos de investigación. Este capítulo recorre esas tres dimensiones de manera progresiva.
 
-El primer eje, \textbf{Contexto} (Sección~\ref{sec:marco-smart-energy}), presenta el marco normativo y de estandarización que rige el diseño de infraestructuras AMI interoperables: el modelo de referencia NIST para redes inteligentes (\textit{Smart Grids}), el protocolo de intercambio de datos de medición DLMS/COSEM (IEC~62056), y el marco de interoperabilidad IoT ISO/IEC~30141:2024. Estos estándares internacionales definen requisitos de arquitectura, formatos de datos y mecanismos de seguridad que toda implementación AMI debe satisfacer para garantizar interoperabilidad multi-fabricante y trazabilidad regulatoria.
-
-El segundo eje, \textbf{Estado del Arte} (Sección~\ref{sec:marco-estado-arte}), revisa tecnologías y arquitecturas IoT en seis dominios complementarios: tecnologías LPWAN para conectividad de largo alcance con bajo consumo energético, arquitecturas mesh para redes de campo auto-organizadas, protocolos de gestión de dispositivos IoT (LwM2M y CoAP), paradigmas de computación distribuida (borde vs nube), plataformas de borde para AMI, y seguridad en sistemas IoT para infraestructuras críticas. Esta revisión identifica compromisos (\textit{trade-offs}) técnicos y limitaciones documentadas que fundamentan las decisiones arquitectónicas de esta tesis.
-
-El tercer eje, \textbf{Análisis Crítico} (Sección~\ref{sec:marco-analisis-critico}), evalúa soluciones comerciales de borde (Cisco IR829, Dell Edge Gateway, AWS IoT Greengrass) mediante análisis de costo total de propiedad (TCO) a 5 años, e identifica brechas de investigación que motivan directamente las decisiones de diseño del Capítulo~3. La Sección~\ref{sec:marco-conclusiones} sintetiza hallazgos clave y establece la transición conceptual hacia la arquitectura propuesta.
+La Sección~\ref{sec:marco-smart-energy} introduce el contexto regulatorio ---modelo NIST para redes inteligentes, protocolo DLMS/COSEM para intercambio de datos de medición, y marco ISO/IEC~30141 para interoperabilidad IoT--- que establece los requisitos funcionales obligatorios. La Sección~\ref{sec:marco-estado-arte} revisa el estado del arte en cinco ejes tecnológicos, desde la conectividad física (LPWAN, mallas) hasta las plataformas de borde y la seguridad, evaluando sus prestaciones frente a dichos requisitos. Finalmente, la Sección~\ref{sec:marco-analisis-critico} contrasta las soluciones comerciales existentes con la arquitectura propuesta e identifica las cuatro brechas de investigación que motivan los capítulos siguientes.
 
 % ============================================================================
-% SECCIÓN 2.2: CONTEXTO — REDES ELÉCTRICAS INTELIGENTES E INFRAESTRUCTURA AMI
+% SECCIÓN 2.2: CONTEXTO
 % ============================================================================
 
-\section{Contexto: Redes Eléctricas Inteligentes e Infraestructura de Medición Avanzada}
+\section{Contexto: Redes Inteligentes e Infraestructura AMI}
 \label{sec:marco-smart-energy}
 
-Esta sección presenta el marco de estándares internacionales que guían el diseño de infraestructuras AMI interoperables: el modelo de referencia NIST para redes inteligentes, el protocolo de intercambio de datos de medición DLMS/COSEM (IEC~62056) y el marco de arquitectura IoT ISO/IEC~30141.
+Antes de evaluar tecnologías concretas, conviene delimitar el entorno normativo que rige los sistemas de medición avanzada. Tres estándares definen, respectivamente, la estructura general de la red inteligente, el protocolo de datos del medidor, y la arquitectura de referencia IoT a la que debe adherirse cualquier solución interoperable.
 
-\subsection{Arquitectura de Referencia NIST para Redes Inteligentes}
+\subsection{Marco de Referencia NIST para Redes Inteligentes}
 \label{sec:marco-nist-framework}
 
-Las redes eléctricas inteligentes (\textit{Smart Grids}) integran tecnologías de información y comunicación (TIC) para monitoreo, control y optimización en tiempo real del flujo eléctrico desde generación hasta consumo final~\cite{SmartHomeEnergy2024,velasquezSmartGridsEmpowered2024,gungorSmartGridTechnologies2011}. Este enfoque permite: integración masiva de energías renovables distribuidas (DER), gestión activa de la demanda (DSM), detección y auto-recuperación de fallas (\textit{self-healing}), y participación activa de prosumidores.
+El modelo NIST (Release 4.0) organiza las redes inteligentes en tres capas: (1)~infraestructura física (generación, transmisión, distribución), (2)~comunicaciones (WAN, NAN, HAN), y (3)~gestión y aplicaciones. La infraestructura AMI integra medidores inteligentes, redes de comunicación, sistemas de gestión de datos de medición (MDMS) y concentradores de datos (DCU). El marco define siete dominios prioritarios con actores e interfaces estandarizadas que esta tesis mapea a componentes específicos de la arquitectura propuesta~\cite{NISTFramework2022}.
 
-El modelo de referencia NIST para Smart Grid (NIST Framework Release 4.0~\cite{NISTFramework2022}) define tres capas principales~\cite{alsuwaidiSecuringSmartGrid2024}:
+Dentro de ese modelo de comunicaciones, el eslabón entre el medidor físico y la infraestructura de datos es el protocolo de intercambio de información de medición, cuyo estándar predominante se describe a continuación.
 
-\begin{enumerate}
-\item \textbf{Power and Energy Layer}: Infraestructura física de generación, transmisión, distribución y almacenamiento.
-\item \textbf{Communication Layer}: Redes de datos multi-protocolo (HAN, NAN, WAN) que transportan información de telemetría y comandos de control.
-\item \textbf{Application Layer}: Sistemas de gestión de energía (EMS), gestión de distribución (DMS), gestión de demanda (DERMS), y analytics.
-\end{enumerate}
-
-La arquitectura AMI se compone típicamente de: medidores inteligentes instalados en puntos de consumo, concentradores/gateways que agregan datos de decenas o cientos de medidores, y sistemas centrales (\textit{head-end systems}) en centros de control que procesan típicamente 1-10 millones de registros diarios en redes de 100K-1M medidores~\cite{alsafranChallengesImplementingIoT2025}.
-
-\subsection{DLMS/COSEM (IEC 62056): Protocolo de Intercambio de Datos de Medición}
+\subsection{DLMS/COSEM (IEC 62056)}
 \label{sec:marco-dlms-cosem}
 
-DLMS/COSEM (\textit{Device Language Message Specification / Companion Specification for Energy Metering}) es el estándar internacional predominante para intercambio de datos de medición de energía, definido por la serie de normas IEC~62056~\cite{IEC62056-2021}. Este estándar multipartes especifica: (1) el modelo de datos orientado a objetos COSEM (\textit{COmpanion Specification for Energy Metering}), (2) los perfiles de comunicación para diferentes capas de transporte, y (3) los mecanismos de seguridad para proteger integridad y confidencialidad de datos de medición.
+DLMS/COSEM es el estándar internacional predominante para intercambio de datos de medición inteligente, adoptado por más de 130 países~\cite{dlmsCOSEMArchitecture2023}. Define un modelo de datos orientado a objetos (COSEM) con clases de interfaz estandarizadas (registros, perfiles de carga, eventos de calidad de energía), identificados mediante códigos OBIS de 6 octetos. El transporte utiliza HDLC o capas envolventes (\emph{wrapper}) TCP/UDP con seguridad integrada (Authentication y Encryption AES-128-GCM, HLS/GMAC). La interoperabilidad DLMS/COSEM con la plataforma LwM2M propuesta se describe en la Sección~\ref{sec:marco-lwm2m-coap}.
 
-\subsubsection{Modelo de Datos COSEM y Códigos OBIS}
-
-El modelo COSEM define clases de interfaz (\textit{Interface Classes}, IC) que representan objetos del medidor: registros de energía (IC~3), perfiles de carga (\textit{load profiles}, IC~7), registros de facturación (\textit{billing registers}, IC~8), y eventos de calidad de energía (IC~1). Cada objeto se identifica mediante un código OBIS (\textit{Object Identification System}) de 6 bytes que codifica grupo, canal, abstracción y clasificación del dato, garantizando identificación universal independiente del fabricante~\cite{DLMSBluebookOBIS2023}. Por ejemplo, el código OBIS \texttt{1.0.1.8.0.255} identifica energía activa importada total ($+A$), registrada por cualquier medidor DLMS/COSEM certificado globalmente.
-
-\subsubsection{Capas de Transporte y Seguridad}
-
-DLMS/COSEM soporta múltiples capas de transporte según el medio físico: HDLC (\textit{High-level Data Link Control}) para enlaces seriales punto a punto (RS-485, PLC), y wrapper TCP/UDP para comunicación sobre redes IP~\cite{IEC62056-2021}. La \textit{Security Suite~1} (obligatoria desde IEC~62056-5-3:2017) implementa cifrado autenticado AES-128-GCM (\textit{Galois/Counter Mode}), proporcionando confidencialidad, integridad y autenticación de origen en una sola operación criptográfica con sobrecarga mínima (<5\% en microcontroladores modernos).
-
-\subsubsection{Adopción Global y Relevancia para esta Tesis}
-
-DLMS/COSEM es el protocolo de medición inteligente más desplegado globalmente: la Unión Europea lo adopta como estándar de referencia mediante la iniciativa IDIS (\textit{Interoperable Device Interface Specifications}), India lo implementa en su programa nacional de contadores inteligentes (\textit{smart meters}), y China lo integra en su ecosistema de 600 millones de medidores~\cite{IEC62056-2021}. En América Latina, Brasil, Colombia y Chile han adoptado DLMS/COSEM para programas AMI nacionales. Para esta tesis, la relevancia de DLMS/COSEM radica en la necesidad de traducir datos de medidores DLMS/COSEM al protocolo LwM2M utilizado por la plataforma ThingsBoard Edge, implementando un adaptador DLMS-a-LwM2M en la pasarela de borde que mapea clases de interfaz COSEM a objetos IPSO Smart Objects~\cite{DLMSBluebookOBIS2023}.
+Si DLMS/COSEM normaliza la conversación entre medidor y concentrador, hace falta un marco más amplio que organice todas las entidades del sistema IoT ---sensores, redes, servicios, gestión--- de forma coherente. Ese rol lo cumple ISO/IEC~30141.
 
 \subsection{ISO/IEC 30141:2024 --- Marco de Interoperabilidad IoT}
 \label{sec:marco-iso-iec-30141}
 
-ISO/IEC 30141, publicado originalmente en 2018 y actualizado en 2024~\cite{ISOIEC30141v2024}, define un framework estandarizado para sistemas IoT mediante cuatro vistas complementarias (funcional, información, despliegue, operacional). Especifica componentes, interfaces y flujos de información, complementando ISO/IEC 29100 (Privacy Framework) e ISO/IEC 27001 (Security Management)~\cite{ISOIEC30141v2024,tangResearchInteroperabilityIoT}.
+ISO/IEC 30141:2024 define una arquitectura de referencia IoT mediante siete entidades funcionales (FE): \textit{Physical Entity}, \textit{Sensing/Actuating}, \textit{Device}, \textit{Network \& Communication}, \textit{Service \& Application}, \textit{User}, y \textit{Management}. La arquitectura propuesta mapea explícitamente sus componentes a estas FE: el nodo IoT Zephyr cubre Sensing + Device, la red Thread implementa Network \& Communication, ThingsBoard Edge provee Service \& Application y paneles de control para User, y el transporte LwM2M integrado en ThingsBoard Edge implementa Management~\cite{ISOIEC30141v2024}.
 
-\subsubsection{Modelo de Capas Funcionales}
-
-ISO/IEC 30141 define cuatro vistas complementarias, siendo la Vista Funcional la más relevante para esta tesis. Descompone el sistema IoT en 7 entidades funcionales (FE)~\cite{tangResearchInteroperabilityIoT}: Sensing/Actuation (adquisición de datos y control), Processing (transformación y agregación), Storage (persistencia de datos), Communication (transporte entre FEs), Security (autenticación y cifrado), Management (configuración y actualizaciones OTA), Application Support (APIs y workflows).
-
-\subsubsection{Mapeo de Arquitectura Propuesta a ISO/IEC 30141}
-
-La arquitectura propuesta implementa las 7 entidades funcionales requeridas por ISO/IEC 30141:2024, garantizando conformidad con el estándar: (1) Sensing FE mediante medidores DLMS/COSEM y nodos Thread ESP32-C6, (2) Communication FE con gateway multi-radio Thread/HaLow, (3) Processing FE edge en Raspberry Pi 4 con ThingsBoard Edge Rule Engine, (4) Processing FE cloud con microservicios distribuidos y Kafka streams, (5) Storage FE local con TimescaleDB 7 días retention, (6) Storage FE cloud con ThingsBoard PostgreSQL 5 años, (7) Security FE con Thread AES-128-CCM-8, WPA3-SAE y mTLS 1.3, (8) Management FE con OTA firmware updates, (9) Application Support FE con REST API y adaptador DLMS/COSEM a LwM2M.
+Con los requisitos normativos establecidos ---modelo NIST, protocolo DLMS/COSEM e interoperabilidad ISO/IEC~30141---, la siguiente sección examina las tecnologías candidatas para satisfacerlos.
 
 % ============================================================================
-% SECCIÓN 2.3: ESTADO DEL ARTE — TECNOLOGÍAS Y ARQUITECTURAS IoT PARA AMI
+% SECCIÓN 2.3: ESTADO DEL ARTE
 % ============================================================================
 
-\section{Estado del Arte: Tecnologías y Arquitecturas IoT para AMI}
+\section{Estado del Arte}
 \label{sec:marco-estado-arte}
 
-Esta sección examina el estado del arte en tecnologías específicas para implementar arquitecturas IoT AMI. Se analizan seis dominios tecnológicos complementarios: tecnologías de comunicación LPWAN que habilitan conectividad de largo alcance con bajo consumo energético (§\ref{sec:lpwan-technologies}), arquitecturas mesh para redes de campo auto-organizadas (§\ref{sec:marco-estado-mesh}), protocolos de gestión de dispositivos IoT ligeros (§\ref{sec:marco-lwm2m-coap}), paradigmas de procesamiento distribuido que determinan la ubicación óptima de capacidad computacional (§\ref{sec:edge-vs-cloud}), plataformas de borde para infraestructura de medición avanzada (§\ref{sec:marco-estado-edge}), y seguridad en sistemas IoT para infraestructuras críticas (§\ref{sec:marco-seguridad}). Esta revisión sistemática culmina en la identificación de brechas en la literatura que motivan directamente las decisiones arquitectónicas documentadas en el Capítulo~\ref{chap:nodo-iot}.
+Esta sección revisa las tecnologías y arquitecturas relevantes para el diseño de la plataforma propuesta. El recorrido sigue la trayectoria de los datos: primero, cómo llegan del medidor al concentrador (tecnologías LPWAN y redes en malla); después, cómo se gestionan los dispositivos de forma estandarizada (LwM2M/CoAP); luego, dónde se procesan los datos (computación en el borde frente a la nube y plataformas de borde); y, por último, cómo se protegen (seguridad en infraestructuras críticas).
 
-% ----------------------------------------------------------------------------
-% §2.3.1: TECNOLOGÍAS LPWAN PARA SMART METERING
-% ----------------------------------------------------------------------------
-
-\subsection{Tecnologías LPWAN para Medición Inteligente}
+\subsection{Tecnologías LPWAN para Conectividad de Largo Alcance}
 \label{sec:lpwan-technologies}
 
-Las tecnologías de red de área amplia de bajo consumo energético (LPWAN - Low-Power Wide-Area Network) representan una familia de protocolos inalámbricos diseñados para conectar dispositivos IoT que requieren largo alcance (1-15 km), bajo consumo energético (operación con batería >5 años), y caudal (throughput) moderado (0.3-250 kbps)~\cite{chaudhariLPWANTechnologiesEmerging2020,ugwuanyiSurveyIoTDeveloping2021,razaLowPowerWideArea2017}. A diferencia de tecnologías de corto alcance como Thread o Zigbee (alcance <500 m), las LPWAN permiten despliegues a escala utility con menor densidad de infraestructura, reduciendo CAPEX de gateways y concentradores~\cite{zhengPerformancePowerConsumption2018}.
+Las tecnologías LPWAN constituyen alternativas para conectividad de medición inteligente, cada una con compromisos distintos entre alcance, caudal, latencia y costo~\cite{chaudhariLPWANTechnologiesEmerging2020,ugwuanyiSurveyIoTDeveloping2021}.
 
-Esta subsección analiza tres tecnologías LPWAN representativas con diferentes compromisos (trade-offs) de diseño: \textbf{(1) LoRaWAN} (red propietaria, sub-1 GHz, máximo alcance pero bajo caudal (throughput)), \textbf{(2) NB-IoT} (red celular licenciada, infraestructura existente pero OPEX recurrente), y \textbf{(3) Wi-Fi HaLow (IEEE 802.11ah)} (sub-1 GHz unlicensed, caudal (throughput) 20-40$\times$ superior a LoRa/NB-IoT). El análisis comparativo fundamenta la decisión arquitectónica de esta tesis de utilizar Wi-Fi HaLow como tecnología de backhaul para transmisión de waveforms de calidad de energía, dado que LoRaWAN/NB-IoT presentan caudal (throughput) insuficiente (<250 kbps) para soportar muestreo continuo de forma de onda a 10 kHz (requisito mínimo ~200 kbps)~\cite{chaudhariLPWANTechnologiesEmerging2020}.
+\textbf{LoRaWAN} (Sub-1~GHz ISM) ofrece alcance de 15~km y consumo ultrabajo, pero su caudal (50~kbps) y latencia (1--5~s) lo restringen a telemetría simple. Para AMI avanzada, el caudal es 8$\times$ insuficiente para formas de onda de calidad de energía~\cite{chaudhariLPWANTechnologiesEmerging2020}.
 
-\subsubsection{LoRaWAN: Tecnología de Largo Alcance con Caudal Limitado}
+\textbf{NB-IoT} (3GPP Rel.~13, banda licenciada) proporciona cobertura en interiores (\emph{indoor}) superior (MCL 164~dB) y 250~kbps, pero introduce OPEX recurrente (\$12--36/año) y latencia de 837~ms, con consumo energético +3,7~mAh por transacción respecto a LoRaWAN~\cite{ugwuanyiSurveyIoTDeveloping2021,zhengPerformancePowerConsumption2018}.
 
-LoRaWAN (Long Range Wide Area Network) es un protocolo MAC construido sobre la modulación propietaria LoRa (Chirp Spread Spectrum) de Semtech, operando en bandas ISM sub-1 GHz (868 MHz Europa, 915 MHz Américas, 433 MHz Asia). La arquitectura típica incluye end-nodes (sensores), gateways LoRaWAN (concentradores multi-canal), y network server (gestión de red y aplicaciones)~\cite{chaudhariLPWANTechnologiesEmerging2020}.
+\textbf{Wi-Fi HaLow} (IEEE 802.11ah, Sub-1~GHz) combina alcance de 1~km con 4~Mbps (MCS7, 2~MHz), latencia 10--50~ms y QoS EDCA~\cite{zhengPerformancePowerConsumption2018}. El análisis de caudal para formas de onda (\emph{waveforms}) de calidad de energía (10~kHz $\times$ 16~bits $\times$ 2,5~canales $\approx$ 400~kbps): LoRaWAN 8$\times$ insuficiente, NB-IoT 1,6$\times$ insuficiente, HaLow 10$\times$ margen --- viable con capacidad para 10 medidores simultáneos.
 
-\textbf{Características Técnicas Clave:}
-
-\begin{itemize}
-\item \textbf{Alcance:} 2-5 km entorno urbano, hasta 15 km rural con línea de vista (\textit{line-of-sight})~\cite{ugwuanyiSurveyIoTDeveloping2021}. El mayor alcance entre LPWAN se logra mediante spreading factors (SF7-SF12) que sacrifican data rate por robustez.
-
-\item \textbf{Throughput:} Máximo teórico 50 kbps con SF7 @ 125 kHz ancho de banda, reduciendo a 0.3 kbps con SF12 @ 125 kHz~\cite{chaudhariLPWANTechnologiesEmerging2020}. El duty cycle regulatorio del 1\% (restricción FCC/ETSI para bandas ISM) limita tiempo de transmisión acumulado a 36 segundos/hora, resultando en caudal (throughput) efectivo promedio ~5-10 kbps para aplicaciones con alta frecuencia de reportes.
-
-\item \textbf{Payload:} Limitado a 51 bytes por mensaje según especificación LoRaWAN 1.0.x~\cite{ugwuanyiSurveyIoTDeveloping2021}, requiriendo fragmentación de payloads mayores con impacto en latencia y confiabilidad.
-
-\item \textbf{Consumo Energético:} Establece línea base de eficiencia energética en comparación con NB-IoT. Estudios experimentales de Ugwuanyi et al.~\cite{ugwuanyiSurveyIoTDeveloping2021} demuestran que LoRaWAN consume significativamente menos energía en operaciones de network join y transmisión de mensajes uplink, validando su idoneidad para aplicaciones alimentadas por batería (\textit{battery-powered}) con reportes esporádicos (<1 mensaje/hora).
-
-\item \textbf{Latencia:} Típicamente 1-5 segundos debido a arquitectura ALOHA pura sin coordinación de canal. LoRaWAN Class A (usado por >95\% dispositivos) solo recibe downlinks en ventanas RX1/RX2 después de uplink, introduciendo latencia adicional para comandos bidireccionales.
-\end{itemize}
-
-\textbf{Análisis para Smart Metering:} LoRaWAN es adecuado para telemetría simple de medidores inteligentes (\textit{smart meters}) con lecturas horarias/diarias (payload <50 bytes, frecuencia <1 msg/hora) donde caudal (throughput) limitado no representa restricción operacional. Sin embargo, presenta tres limitaciones críticas para arquitecturas AMI avanzadas con integración de Distributed Energy Resources (DER):
-
-\begin{enumerate}
-\item \textbf{Throughput insuficiente para waveforms:} La transmisión de forma de onda de voltage/corriente a 10 kHz requiere caudal (throughput) mínimo de $10\text{ kHz} \times 2\text{ bytes/sample} \times 8 = 160$ kbps sin considerar overhead de protocolo~\cite{chaudhariLPWANTechnologiesEmerging2020}. LoRaWAN (50 kbps máximo teórico, 5-10 kbps efectivo con duty cycle 1\%) es \textbf{insuficiente por factor 16-32$\times$}.
-
-\item \textbf{Latencia incompatible con control DER:} Los estándares de control para redes inteligentes (<100~ms) especifican latencia máxima para comandos de actuación (disconnect switches, load shedding)~\cite{IEEERecommendedPractice}. LoRaWAN Class A con latencia típica 1-10 s no satisface este requisito.
-
-\item \textbf{Payload limitado:} 51 bytes son insuficientes para reportes complejos de power quality que incluyen voltage sag/swell events, harmonic distortion measurements (THD), y phase imbalance metrics, requiriendo múltiples transmisiones fragmentadas con incremento de latencia end-to-end.
-\end{enumerate}
-
-\subsubsection{NB-IoT: LPWAN Celular con Infraestructura Licenciada}
-
-NB-IoT (Narrowband IoT) es un estándar 3GPP Release 13 (2016) optimizado para comunicaciones machine-type (MTC) sobre infraestructura LTE existente, operando en bandas licenciadas 700-900 MHz. Utiliza tecnología narrowband (180 kHz ancho de banda) para maximizar cobertura y penetración en interiores (\textit{indoor}), con tres modos de despliegue: standalone (reemplaza GSM), guardband (bandas de guarda LTE), o in-band (dentro de carrier LTE)~\cite{ugwuanyiSurveyIoTDeveloping2021}.
-
-\textbf{Características Técnicas Clave:}
-
-\begin{itemize}
-\item \textbf{Alcance:} 10-15 km aprovechando torres celulares existentes, con Maximum Coupling Loss (MCL) de 164 dB (superior a LoRaWAN ~157 dB)~\cite{ugwuanyiSurveyIoTDeveloping2021}. La penetración indoor profunda permite cobertura de medidores en sótanos y estructuras metálicas donde LoRaWAN falla.
-
-\item \textbf{Throughput:} Máximo 250 kbps downlink (single-tone, 15 kHz subcarrier spacing) y 250 kbps uplink con multi-tone~\cite{chaudhariLPWANTechnologiesEmerging2020}. Mediciones experimentales de Ugwuanyi et al.~\cite{ugwuanyiSurveyIoTDeveloping2021} reportan caudal (throughput) efectivo de 264 bps con latencia de 837 ms en testbed real, destacando el gap entre capacidad teórica y desempeño práctico en condiciones de cobertura marginal.
-
-\item \textbf{Consumo Energético Comparativo:} Análisis experimental riguroso de Ugwuanyi et al.~\cite{ugwuanyiSurveyIoTDeveloping2021} con mismo hardware UE (User Equipment) para LoRaWAN y NB-IoT demuestra que NB-IoT consume significativamente más energía:
-\begin{itemize}
-    \item \textbf{Network Join:} NB-IoT consume +2.0 mAh adicionales vs LoRaWAN
-    \item \textbf{Uplink Message (44 bytes):} NB-IoT consume +1.7 mAh adicionales por mensaje
-    \item \textbf{Consumo Total Extra:} +3.7 mAh por operación típica (join + uplink)
-\end{itemize}
-
-Este overhead energético se debe a: (1) mayor complejidad de sincronización con red LTE (cell search, random access preamble, RRC connection setup), (2) potencia de transmisión más alta requerida para alcanzar MCL 164 dB, y (3) overhead de protocolo LTE (subheaders PDCP/RLC/MAC). Para aplicaciones battery-powered con transmisiones frecuentes (>10 mensajes/día), el consumo adicional acumulado de NB-IoT reduce significativamente la vida útil de batería vs LoRaWAN, aunque esta penalización se compensa parcialmente por Power Save Mode (PSM) y extended Discontinuous Reception (eDRX) que permiten duty cycles <0.01\%.
-
-\item \textbf{Latencia:} 837 ms medido por Ugwuanyi et al.~\cite{ugwuanyiSurveyIoTDeveloping2021}, reducible a <100 ms con optimizaciones de red (early data transmission, control plane optimization). Latencia inferior a LoRaWAN pero superior a Wi-Fi HaLow.
-
-\item \textbf{OPEX Recurrente:} A diferencia de LoRaWAN (banda ISM libre), NB-IoT requiere suscripción a operador celular con costo típico \$1-3 USD/dispositivo/mes en contratos enterprise~\cite{chaudhariLPWANTechnologiesEmerging2020}. Para despliegues de 10,000 medidores, el OPEX anual es \$120K-360K USD, representando 30-40\% del TCO a 10 años.
-\end{itemize}
-
-\textbf{Ventajas para Smart Metering:} NB-IoT presenta tres ventajas estratégicas sobre LoRaWAN: (1) \textbf{Cobertura garantizada} aprovechando infraestructura celular existente de operadores, eliminando CAPEX de despliegue de gateways propietarios, (2) \textbf{Penetración indoor superior} con MCL 164 dB permite alcanzar medidores en ubicaciones desafiantes (sótanos, parking subterráneos, estructuras metálicas) donde LoRaWAN requeriría repetidores adicionales, (3) \textbf{Payload variable sin fragmentación} permite transmisión de mensajes >51 bytes en single uplink, reduciendo latencia end-to-end y simplificando lógica de reensamblado en application layer.
-
-\textbf{Limitaciones para AMI Avanzado:} Similar a LoRaWAN, NB-IoT presenta caudal (throughput) insuficiente (250 kbps teórico, 264 bps efectivo en cobertura marginal) para transmisión continua de waveforms de power quality a 10 kHz. La ecuación de Shannon-Hartley $C = B \log_2(1 + \text{SNR})$ aplicada a narrowband 180 kHz con SNR típico -6 dB (Extended Coverage Level 2) resulta en capacidad teórica máxima de ~50-100 kbps, insuficiente para 160 kbps requeridos por waveforms con overhead mínimo de protocolo~\cite{chaudhariLPWANTechnologiesEmerging2020}. Adicionalmente, el OPEX recurrente de \$1-3/mes/dispositivo impacta significativamente el TCO a 10 años vs tecnologías ISM unlicensed.
-
-\subsubsection{Wi-Fi HaLow (IEEE 802.11ah): LPWAN de Alto Caudal para Redes Inteligentes}
-
-Wi-Fi HaLow es la denominación comercial del estándar IEEE 802.11ah (ratificado 2016), diseñado específicamente para IoT con operación en bandas sub-1 GHz (902-928 MHz US, 863-868 MHz EU) combinando las ventajas de propagación sub-GHz con caudal (throughput) superior a tecnologías LPWAN tradicionales~\cite{zhengPerformancePowerConsumption2018,IEEE802.11ah-2016,austIEEE80211ahSubOnegigahertz2012}. A diferencia de LoRaWAN/NB-IoT optimizados para narrow-band low-rate, 802.11ah adopta OFDM con ancho de banda configurable (1/2/4/8/16 MHz) permitiendo compromiso (trade-off) dinámico alcance-caudal (throughput).
-
-\textbf{Especificaciones Técnicas IEEE 802.11ah:}
-
-\begin{itemize}
-\item \textbf{Frecuencia:} Bandas ISM sub-1 GHz unlicensed. US 902-928 MHz (26 MHz disponible), Europa 863-868 MHz (5 MHz disponible). Propagación superior a Wi-Fi 2.4/5 GHz por free-space path loss $\sim$15-20 dB menor y atenuación de paredes de concreto 8-12 dB menor según mediciones empíricas~\cite{zhengPerformancePowerConsumption2018}.
-
-\item \textbf{Alcance:} Zheng et al.~\cite{zhengPerformancePowerConsumption2018} reportan ~1 km en exteriores (\textit{outdoor}) en entornos smart grid urbanos típicos. Sin embargo, productos comerciales outdoor como Alfa Networks AHPI7292S (antena direccional 8 dBi, Tx +27 dBm) alcanzan 3-5 km en línea de vista (LoS) rural. Análisis de presupuesto de enlace (\textit{link budget}) con potencia Tx +20 dBm (módulos estándar), sensibilidad Rx -101 dBm (MCS0 @ 1 MHz), y pérdida de propagación (\textit{path loss}) urbana COST231-Hata a 900 MHz resulta en alcance ~1 km urbano NLoS. Con equipos outdoor (+27 dBm Tx, -104 dBm Rx), alcance extendido 3-5 km LoS validado por fabricantes. Suficiente para cobertura neighborhood-scale urbana (1 km) y rural extendida (3-5 km) con menor densidad de gateways vs Wi-Fi convencional.
-
-\item \textbf{Throughput:} Rango 150 kbps (MCS0, 1 MHz, más robusto) hasta 86.7 Mbps (MCS10, 16 MHz, 4 spatial streams)~\cite{IEEE802.11ah-2016}. Para aplicaciones smart metering, configuración típica MCS7 @ 2 MHz entrega caudal (throughput) efectivo ~4 Mbps con margen robusto para interferencia. \textbf{Análisis crítico para tesis:} 4 Mbps representa caudal (throughput) 20-40$\times$ superior a LoRaWAN (50 kbps) y NB-IoT (250 kbps), permitiendo transmisión simultánea de waveforms de múltiples medidores: $\frac{4000\text{ kbps}}{200\text{ kbps/waveform}} = 20$ medidores simultáneamente con overhead de protocolo.
-
-\item \textbf{Latencia:} CSMA/CA con Enhanced Distributed Channel Access (EDCA) para QoS diferenciado. Latencia típica 10-50 ms según prioridad (Voice/Video <20 ms, Best-Effort <50 ms), cumpliendo requisitos de control en redes inteligentes de <100 ms para comandos críticos de actuación~\cite{IEEERecommendedPractice}.
-
-\item \textbf{Eficiencia Energética:} Target Wake Time (TWT) permite scheduling determinístico de transmisiones con duty cycles <0.1\%, reduciendo consumo promedio a ~5-10 µA idle (similar LoRaWAN). Hierarchical Association Identifier (AID) soporta hasta 8,191 STAs (stations) por AP (Access Point), con grouping para beacon multicasting eficiente~\cite{IEEE802.11ah-2016}.
-
-\item \textbf{Seguridad:} WPA3-SAE (Simultaneous Authentication of Equals) con Perfect Forward Secrecy, resistencia a offline dictionary attacks, y protección contra downgrade attacks. Superior a seguridad LoRaWAN (AES-128 vulnerable a replay attacks sin proper frame counters) y comparable a NB-IoT LTE security~\cite{IEEE802.11ah-2016}.
-\end{itemize}
-
-\textbf{Validación Industrial Smart Grid:} Zheng et al.~\cite{zhengPerformancePowerConsumption2018} analizan desempeño y consumo energético de IEEE 802.11ah para smart grid, destacando que China desplegó aproximadamente 600 millones de smart meters para 2018, muchos de ellos candidatos para conectividad HaLow debido a balance favorable entre caudal (throughput) y alcance. El estándar 802.11ah fue publicado en 2017, posicionándose como tecnología emergente para Advanced Metering Infrastructure con capacidades superiores a ZigBee (limitado a 250 kbps @ 2.4 GHz) y LoRaWAN (limitado a 50 kbps).
-
-\textbf{Caso de Uso Tesis - Transmisión de Waveforms:} La aplicación crítica que diferencia Wi-Fi HaLow de LoRaWAN/NB-IoT es la transmisión continua de formas de onda de calidad de energía para análisis avanzado de power quality. Consideremos un escenario de monitoreo de voltage/corriente con tasa de muestreo (\textit{sampling rate}) de 10 kHz (suficiente para análisis hasta 5 kHz de ancho de banda según criterio Nyquist):
-
-\begin{equation}
-\text{Throughput mínimo} = 10\text{ kHz} \times 2\text{ bytes/sample} \times 2\text{ canales (V+I)} \times 8\text{ bits/byte} = 320\text{ kbps}
-\end{equation}
-
-Con overhead de protocolo (headers UDP/IPv6, timestamps, device ID) estimado en 25\%, el caudal (throughput) requerido es:
-
-\begin{equation}
-\text{Throughput con overhead} = 320\text{ kbps} \times 1.25 = 400\text{ kbps}
-\end{equation}
-
-\textbf{Comparación capacidades tecnologías LPWAN:}
-\begin{itemize}
-\item \textbf{LoRaWAN (50 kbps):} 400/50 = \textbf{8$\times$ insuficiente} → No viable para waveforms
-\item \textbf{NB-IoT (250 kbps):} 400/250 = \textbf{1.6$\times$ insuficiente} → Marginal sin overhead, insuficiente con overhead real
-\item \textbf{Wi-Fi HaLow (4 Mbps @ MCS7):} 4000/400 = \textbf{10$\times$ margen} → Viable con capacidad para 10 medidores simultáneos
-\end{itemize}
-
-Este análisis cuantitativo fundamenta la decisión arquitectónica de esta tesis de seleccionar Wi-Fi HaLow como tecnología de backhaul para el gateway smart meter. LoRaWAN y NB-IoT permanecen adecuados para telemetría simple (lecturas horarias/diarias sin waveforms), pero presentan limitaciones fundamentales de caudal (throughput) para aplicaciones AMI avanzadas con integración DER que requieren visibilidad de power quality en tiempo real~\cite{chaudhariLPWANTechnologiesEmerging2020,zhengPerformancePowerConsumption2018}.
-
-\subsubsection{Análisis Comparativo Multi-Criterio de Tecnologías LPWAN}
-
-La Tabla~\ref{tab:lpwan-comparative-analysis} consolida las métricas cuantitativas extraídas de la literatura revisada, proporcionando framework de decisión multi-criterio para selección de tecnología LPWAN según requisitos específicos de aplicación Smart Energy.
+La Tabla~\ref{tab:lpwan-comparative-analysis} consolida la comparación cuantitativa multi-criterio.
 
 \begin{table}[H]
 \centering
-\caption{Comparación Cuantitativa de Tecnologías LPWAN para Smart Metering}
+\caption{Comparación Cuantitativa de Tecnologías LPWAN para Medición Inteligente (\emph{Smart Metering})}
 \label{tab:lpwan-comparative-analysis}
 \footnotesize
 \resizebox{\textwidth}{!}{%
-\begin{tabular}{|l|l|l|l|l|}
+\begin{tabular}{|l|l|l|l|l|l|}
 \hline
 \rowcolor{blue!20}
-\textbf{Criterio} & \textbf{LoRaWAN} & \textbf{NB-IoT} & \textbf{Wi-Fi HaLow} & \textbf{Referencia} \\
+\textbf{Criterio} & \textbf{LoRaWAN} & \textbf{NB-IoT} & \textbf{Wi-SUN FAN} & \textbf{Wi-Fi HaLow} & \textbf{Referencia} \\
 \hline
-\textbf{Alcance (km)} & \textcolor{green}{\textbf{15 km}} & 10-15 km & 1 km & \cite{ugwuanyiSurveyIoTDeveloping2021} \\
+\textbf{Alcance (km)} & \textcolor{green}{\textbf{15 km}} & 10--15 km & 2--5 km & 1 km & \cite{ugwuanyiSurveyIoTDeveloping2021,haradaIEEE802154g2017} \\
 \hline
-\textbf{Throughput} & 50 kbps & 250 kbps & \textcolor{green}{\textbf{10 Mbps}} & \cite{chaudhariLPWANTechnologiesEmerging2020} \\
+\textbf{Caudal} & 50 kbps & 250 kbps & 300 kbps & \textcolor{green}{\textbf{4 Mbps (MCS7)}} & \cite{chaudhariLPWANTechnologiesEmerging2020} \\
 \hline
-\textbf{Latencia} & 1-5 s & 837 ms & \textcolor{green}{\textbf{10-50 ms}} & \cite{ugwuanyiSurveyIoTDeveloping2021} \\
+\textbf{Latencia} & 1--5 s & 837 ms & 500 ms--2 s & \textcolor{green}{\textbf{10--50 ms}} & \cite{ugwuanyiSurveyIoTDeveloping2021} \\
 \hline
-\textbf{Payload típico} & 51 bytes & Variable & Variable & \cite{ugwuanyiSurveyIoTDeveloping2021} \\
+\textbf{Consumo energético} & \textcolor{green}{\textbf{Baseline}} & +3.7 mAh & $\sim$10 µA \emph{idle} & $\sim$5 µA \emph{idle} & \cite{ugwuanyiSurveyIoTDeveloping2021} \\
 \hline
-\textbf{Consumo energético} & \textcolor{green}{\textbf{Baseline}} & +3.7 mAh & ~5 µA idle & \cite{ugwuanyiSurveyIoTDeveloping2021} \\
+\textbf{OPEX (USD/año)} & \textcolor{green}{\textbf{\$0}} & \$12--36 & \$0 & \$0 & Análisis mercado \\
 \hline
-\textbf{Infraestructura} & Gateway propietario & \textcolor{green}{\textbf{Red celular}} & Access Point & - \\
+\textbf{Formas de onda ($>$1 Mbps)} & \textcolor{red}{\xmark} & \textcolor{red}{\xmark} & \textcolor{red}{\xmark} & \textcolor{green}{\checkmark} & \cite{zhengPerformancePowerConsumption2018} \\
 \hline
-\textbf{OPEX (USD/año)} & \textcolor{green}{\textbf{\$0}} & \$12-36 & \$0 & Análisis mercado \\
+\textbf{Control DER ($<$100 ms)} & \textcolor{red}{\xmark} & \textcolor{orange}{$\triangle$} & \textcolor{orange}{$\triangle$} & \textcolor{green}{\checkmark} & \cite{IEEERecommendedPractice} \\
 \hline
-\textbf{Waveforms (>1 Mbps)} & \textcolor{red}{\xmark} & \textcolor{red}{\xmark} & \textcolor{green}{\checkmark} & \cite{zhengPerformancePowerConsumption2018} \\
-\hline
-\textbf{Control DER (<100 ms)} & \textcolor{red}{\xmark} & \textcolor{orange}{$\triangle$} & \textcolor{green}{\checkmark} & \cite{IEEERecommendedPractice} \\
-\hline
-\textbf{Despliegue documentado} & Millones (utilities EU/US) & Millones (telecom carriers) & \textcolor{blue}{\textbf{600M meters China}} & \cite{zhengPerformancePowerConsumption2018} \\
+\textbf{Despliegue documentado} & Millones (EU/US) & Millones (telecom) & \textcolor{green}{\textbf{$>$100M (Itron/L+G)}} & Emergente (600M pot.) & \cite{zhengPerformancePowerConsumption2018,haradaIEEE802154g2017} \\
 \hline
 \end{tabular}%
 }
 \end{table}
 
-\textbf{Leyenda símbolos:} \textcolor{green}{\checkmark} Cumple requisito, \textcolor{red}{\xmark} No cumple, \textcolor{orange}{$\triangle$} Cumple marginalmente, \textcolor{green}{\textbf{Bold}} Mejor valor de criterio.
+\textbf{Leyenda:} \textcolor{green}{\checkmark} Cumple, \textcolor{red}{\xmark} No cumple, \textcolor{orange}{$\triangle$} Cumple marginalmente, \textcolor{green}{\textbf{Bold}} Mejor valor.
 
-\subsubsection{Recomendaciones de Selección Según Caso de Uso}
+\input{fig_lpwan_comparison}
 
-El análisis cuantitativo comparativo permite establecer tres perfiles de aplicación de medición inteligente (\textit{smart metering}) con tecnología LPWAN óptima:
+Los datos de la tabla evidencian que Wi-Fi HaLow domina en caudal y latencia, pero carece de topología en malla. El competidor más maduro en despliegues AMI es Wi-SUN FAN, cuya comparación directa con la combinación Thread~+~HaLow resulta determinante para la selección tecnológica.
 
-\textbf{Perfil 1 - Telemetría Simple (lecturas horarias/diarias):}
-\begin{itemize}
-\item \textbf{Requisitos:} Payload <50 bytes, frecuencia <1 msg/hora, latencia <10 s aceptable
-\item \textbf{Tecnología óptima:} \textbf{LoRaWAN} (alcance máximo 15 km, costo OPEX \$0, eficiencia energética superior)
-\item \textbf{Trade-off aceptado:} Throughput/latencia limitados no impactan aplicación simple
-\end{itemize}
+\subsubsection{Wi-SUN FAN vs Thread + HaLow}
+\label{sec:marco-wisun}
 
-\textbf{Perfil 2 - AMI Estándar con cobertura indoor profunda:}
-\begin{itemize}
-\item \textbf{Requisitos:} Cobertura sótanos/estructuras metálicas, payload variable, latencia <1 s
-\item \textbf{Tecnología óptima:} \textbf{NB-IoT} (MCL 164 dB, infraestructura celular existente, caudal (throughput) 250 kbps)
-\item \textbf{Trade-off aceptado:} OPEX recurrente \$12-36/año justificado por cobertura garantizada
-\end{itemize}
+Wi-SUN FAN (IEEE 802.15.4g) cuenta con más de 100~millones de nodos desplegados~\cite{haradaIEEE802154g2017} y constituye el principal competidor de la arquitectura propuesta. La selección de Thread~+~HaLow se fundamenta en cuatro factores: (1)~\textbf{separación espectral} --- Wi-SUN (915~MHz) y HaLow (902--928~MHz) generan interferencia mutua; Thread (2,4~GHz) + HaLow (900~MHz) provee separación clara; (2)~\textbf{caudal de agregación (\emph{throughput})} --- pico DCU con 100 medidores requiere 800~kbps en ráfaga (\emph{burst}); Wi-SUN (300~kbps) es 2,7$\times$ insuficiente vs HaLow (4~Mbps) con 5$\times$ margen~\cite{zhengPerformancePowerConsumption2018}; (3)~\textbf{integración} --- OTBR opera como servicio nativo de OpenWRT vs SDK propietario Wi-SUN con NRE $\sim$\$3\,600~\cite{openthreadOpenThreadBorderRouter2024}; (4)~\textbf{convergencia Matter} --- Thread es transporte obligatorio de Matter (CSA 2022), habilitando interoperabilidad DER futura. El compromiso es que el chipset Wi-SUN (TI CC1312R, \$2,70) es 32\% más económico que Thread (nRF52840, \$4,00), pero la necesidad de 2--4$\times$ más concentradores y el NRE de integración propietaria anulan este ahorro.  Cabe mencionar que Silicon Labs ha anunciado el SoC EFR25 con soporte Wi-SUN~1.1 FAN, que mejora el caudal hasta 2,4~Mbps; sin embargo, a la fecha de escritura de este trabajo no existen módulos comerciales disponibles ni despliegues documentados.
 
-\textbf{Perfil 3 - AMI Avanzado con DER y Power Quality (Tesis):}
-\begin{itemize}
-\item \textbf{Requisitos:} Waveforms >1 Mbps, comandos DER <100 ms, payload variable >100 bytes
-\item \textbf{Tecnología óptima:} \textbf{Wi-Fi HaLow} (caudal (throughput) 4-10 Mbps, latencia 10-50 ms, QoS EDCA)
-\item \textbf{Trade-off aceptado:} Alcance reducido 1 km compensado por mayor densidad de APs en despliegue urban/suburban
-\end{itemize}
-
-\textbf{Justificación arquitectónica de esta tesis:} La selección de Wi-Fi HaLow como tecnología de backhaul se fundamenta en el \textbf{requisito crítico no negociable} de transmisión de waveforms de calidad de energía con sampling rate 10 kHz (equivalente a 400 kbps con overhead). LoRaWAN (50 kbps) y NB-IoT (250 kbps) son \textbf{técnicamente insuficientes} por factor 8$\times$ y 1.6$\times$ respectivamente. Esta limitación física de caudal (throughput) no puede mitigarse mediante optimizaciones de protocolo o compresión de datos, dado que las formas de onda deben preservar fidelidad espectral hasta 5 kHz (criterio Nyquist) para detectar eventos de power quality como voltage sags/swells, harmonic distortion (THD), y transient overvoltages~\cite{chaudhariLPWANTechnologiesEmerging2020,zhengPerformancePowerConsumption2018}.
-
-El despliegue documentado de 600 millones de smart meters en China considerando tecnología 802.11ah valida la madurez industrial de HaLow y reduce riesgo tecnológico de adopción. La arquitectura propuesta no excluye LoRaWAN/NB-IoT para telemetría simple de nodos sin capacidad de waveforms, permitiendo modelo híbrido multi-tecnología según perfil de medidor (básico vs avanzado)~\cite{ugwuanyiSurveyIoTDeveloping2021}.
-
-% ----------------------------------------------------------------------------
-% §2.3.2: ARQUITECTURAS MESH PARA REDES DE CAMPO
-% ----------------------------------------------------------------------------
+Las tecnologías LPWAN resuelven la última milla entre el concentrador y la nube, pero dentro del armario o la subestación los medidores necesitan una red de campo de corto alcance con topología en malla para sortear obstáculos y garantizar redundancia. A continuación se evalúan las principales alternativas.
 
 \subsection{Arquitecturas Mesh para Redes de Campo}
 \label{sec:marco-estado-mesh}
 
-Las topologías mesh permiten que cada nodo actúe simultáneamente como endpoint y router, formando redes auto-organizadas con múltiples rutas redundantes hacia el destino. Esta arquitectura es crítica para infraestructuras AMI distribuidas donde la pérdida de un único nodo no debe comprometer conectividad de vecinos~\cite{choudharyInternetThingsComprehensive2024}.
+\textbf{ZigBee Pro} (IEEE 802.15.4, 2.4~GHz) soporta hasta 65\,000 nodos con routing AODV, pero la ausencia de IPv6 nativo requiere pasarelas ALG que introducen 50--150~ms de latencia adicional y dificultan interoperabilidad multi-vendor~\cite{zigbeealliance2018,abdulsalamOverviewRecentWireless2024}.
 
-\subsubsection{ZigBee Pro: Malla Clásica para Energía Inteligente}
-
-ZigBee Pro (IEEE 802.15.4 @ 2.4 GHz) ha sido ampliamente desplegado en AMI desde 2010, soportando hasta 65,000 nodos teóricos y 30 saltos máximos mediante protocolo de routing AODV (Ad-hoc On-Demand Distance Vector)~\cite{zigbeealliance2018}. ZigBee Coordinator inicia la red, Routers mantienen tabla de enrutamiento, y End Devices duermen 99\% del tiempo comunicándose solo con su parent router.
-
-\textbf{Limitaciones arquitectónicas:} Ausencia de IPv6 nativo requiere pasarelas de capa de aplicación (\textit{application-layer gateways}, ALG) que traducen ZigBee Cluster Library (ZCL) a protocolos IP, introduciendo latencia adicional (50-150 ms) y punto único de falla. Stack propietario dificulta interoperabilidad entre múltiples proveedores (\textit{multi-vendor}) sin certificación ZigBee Alliance~\cite{abdulsalamOverviewRecentWireless2024}.
-
-\subsubsection{Thread: IPv6 Mesh Emergente}
-
-Thread (Thread Group Specification 1.3) implementa IPv6 end-to-end sobre IEEE 802.15.4 mediante 6LoWPAN, eliminando necesidad de gateways ALG~\cite{threadMatterConvergence2024}. Thread Border Router (OTBR) actúa como router IP estándar, permitiendo que dispositivos Thread sean alcanzables directamente desde cualquier red IP sin proxies intermedios.
-
-\textbf{Routing mesh adaptativo:} Thread utiliza MLE (Mesh Link Establishment) para formar red automáticamente, eligiendo Thread Leader mediante ID más bajo. Routers intercambian Link Quality Indicator (LQI) cada 32 segundos, recalculando path cost según ecuación:
+\textbf{Thread 1.4} implementa IPv6 end-to-end mediante 6LoWPAN, eliminando pasarelas ALG~\cite{threadMatterConvergence2024}. El routing adaptativo MLE recalcula path cost según:
 
 \begin{equation}
 \text{Path Cost} = \sum_{i=1}^{n} \frac{255 - \text{LQI}_i}{255} \times 10
 \end{equation}
 
-Convergencia típica <5 segundos tras falla de router, vs 30-60 segundos en ZigBee AODV~\cite{openthread2024}.
+con convergencia $<$5~s tras falla (vs 30--60~s en ZigBee). Limitación práctica: 250 nodos por partición, escalable mediante múltiples Border Routers~\cite{openthread2024,abdulsalamOverviewRecentWireless2024}.
 
-\textbf{Escalabilidad limitada:} Thread Specification 1.3 documenta límite práctico de 250 nodos por partición, aunque topologías multi-partición con múltiples Border Routers pueden escalar a miles de dispositivos. Para AMI con >500 medidores por gateway, requiere desplegar múltiples redes Thread independientes o emplear HaLow como enlace troncal (\textit{backhaul}) agregador~\cite{abdulsalamOverviewRecentWireless2024}.
+\textbf{Bluetooth Mesh} (BT SIG, 2019) emplea inundación gestionada con tráfico $O(n^2)$, inviable para AMI con $>$100 dispositivos~\cite{bluetoothsig2019,choudharyInternetThingsComprehensive2024}.
 
-\subsubsection{Bluetooth Mesh: Inundación vs Enrutamiento}
+Una vez que los datos de medición alcanzan la pasarela a través de la red en malla, surge la necesidad de gestionar los dispositivos de forma estandarizada: aprovisionamiento, actualización de \emph{firmware}, lectura de recursos y configuración remota. El protocolo LwM2M, operando sobre CoAP, ofrece una solución ligera diseñada específicamente para redes con restricciones de ancho de banda.
 
-Bluetooth Mesh Profile 1.0 (Bluetooth SIG, 2019) implementa topología mesh mediante inundación (\textit{managed flooding}): cada mensaje se retransmite por todos los nodos hasta alcanzar TTL=0~\cite{bluetoothsig2019}. Ventajas incluyen simplicidad (sin tablas de enrutamiento) y resiliencia (múltiples rutas simultáneas).
-
-\textbf{Ineficiencia en redes densas:} La inundación (\textit{flooding}) genera tráfico $O(n^2)$ en redes con $n$ nodos, saturando canal 2.4 GHz en despliegues >100 dispositivos. Para AMI con transmisiones periódicas cada 15 minutos, genera colisiones excesivas. El enrutamiento Thread es preferible para aplicaciones de energía inteligente~\cite{choudharyInternetThingsComprehensive2024}.
-
-% ----------------------------------------------------------------------------
-% §2.3.3: GESTIÓN DE DISPOSITIVOS IoT: LwM2M Y CoAP
-% ----------------------------------------------------------------------------
-
-\subsection{Gestión de Dispositivos IoT: LwM2M y CoAP}
+\subsection{Gestión de Dispositivos: LwM2M y CoAP}
 \label{sec:marco-lwm2m-coap}
 
-La gestión estandarizada de dispositivos IoT en redes de campo requiere protocolos ligeros capaces de operar sobre enlaces con restricciones de ancho de banda y energía. Esta subsección revisa los dos protocolos centrales de la pila propuesta: el Protocolo de Aplicación Restringida (\textit{Constrained Application Protocol}, CoAP) como capa de transporte, y el protocolo Ligero M2M (\textit{Lightweight Machine-to-Machine}, LwM2M) como marco de gestión de dispositivos.
+CoAP (RFC~7252)~\cite{RFC7252} opera sobre UDP con sobrecarga mínima (4~bytes fijos vs 16--60~bytes TCP). Las extensiones Observe (RFC~7641) y Block-wise transfer (RFC~7959) reducen tráfico mesh hasta 60\% y habilitan transferencia de payloads mayores que el MTU de 127~bytes IEEE~802.15.4~\cite{amezcuavaldovinosDesignImplementationEvaluation2024}.
 
-\subsubsection{CoAP: Protocolo de Aplicación para Dispositivos Restringidos}
+LwM2M (OMA SpecWorks)~\cite{OMA_LwM2M2020} define un modelo de datos Objeto/Instancia/Recurso con interfaces estandarizadas (Bootstrap, Registro, Gestión, Reporte). Objetos clave incluyen: Seguridad (Obj~0), Servidor (Obj~1), Dispositivo (Obj~3), Conectividad (Obj~4), \emph{Firmware} (Obj~5), y Medidor Trifásico (Obj~10242, 51 recursos: tensión, corriente, potencia por fase, THD, frecuencia)~\cite{karaagacLightweightM2MSurvey2018,OMA_LwM2M_Registry_10242}. LwM2M reduce tráfico de gestión en más del 75\% vs HTTP/REST propietario mediante codificación TLV compacta y operaciones Observe~\cite{karaagacLightweightM2MSurvey2018}. La interoperabilidad DLMS/COSEM se logra mediante mapeo de clases IC~3 a Obj~10242 y perfiles IC~7 a operaciones Observe, implementado mediante el transporte LwM2M integrado en ThingsBoard Edge~\cite{dlmsLwM2MIntegration2024}.
 
-CoAP (RFC~7252)~\cite{RFC7252} es un protocolo de transferencia web diseñado específicamente para dispositivos y redes con restricciones (\textit{constrained}). Opera sobre UDP con sobrecarga mínima de encabezado (4~bytes fijos vs 16-60~bytes TCP) y define cuatro tipos de mensaje: CON (\textit{Confirmable}, con retransmisión automática), NON (\textit{Non-Confirmable}, sin garantía de entrega), ACK (\textit{Acknowledgement}) y RST (\textit{Reset})~\cite{shelby6LoWPANWirelessEmbedded2009}.
+Hasta aquí se ha trazado el camino de los datos desde el medidor hasta la pasarela: conectividad LPWAN, red en malla Thread y gestión LwM2M/CoAP. La pregunta que surge naturalmente es \textit{dónde} procesar esos datos ---en la nube o localmente--- y qué implicaciones tiene cada enfoque para la latencia, el ancho de banda y la disponibilidad.
 
-\textbf{Extensiones relevantes para AMI:} (1)~\textit{Observe} (RFC~7641) permite suscripción a recursos con notificaciones asíncronas, eliminando la necesidad de sondeo periódico (\textit{polling}) y reduciendo tráfico en redes mesh hasta un 60\% para telemetría de medidores; (2)~\textit{Block-wise transfer} (RFC~7959) habilita transferencia de payloads mayores que el MTU (típicamente 127~bytes en IEEE~802.15.4) mediante fragmentación a nivel de aplicación; (3)~DTLS~1.2 proporciona seguridad de extremo a extremo con sobrecarga mínima de 13~bytes por registro.
-
-\textbf{Ventajas sobre HTTP/MQTT para AMI:} Amezcua-Valdovinos et al.~\cite{amezcuavaldovinosDesignImplementationEvaluation2024} implementan un proxy CoAP embebido para 6LoWPAN, demostrando reducción de tiempo de respuesta del 37\% en topologías mesh de 3 saltos y reducción de paquetes intercambiados del 167\%. CoAP sobre UDP resulta particularmente eficiente para dispositivos Thread con objetivos de latencia menores que 30~ms por transacción solicitud/respuesta, como se valida en el Capítulo~\ref{chap:nodo-iot}.
-
-\subsubsection{LwM2M: Marco de Gestión para Redes IoT a Escala}
-
-\textit{Lightweight Machine-to-Machine} (LwM2M), especificado por OMA SpecWorks~\cite{OMA_LwM2M2020}, es un protocolo de gestión de dispositivos IoT construido sobre CoAP que define: (1)~un modelo de datos orientado a objetos con recursos estandarizados, (2)~cuatro interfaces de gestión (\textit{Bootstrap}, Registro, Gestión de Dispositivos, Reporte de Información), y (3)~mecanismos de observación eficientes para telemetría periódica.
-
-\textbf{Modelo de objetos:} LwM2M estructura datos mediante una jerarquía Objeto/Instancia/Recurso. Los objetos estándar incluyen: Seguridad (Obj~0), Servidor (Obj~1), Dispositivo (Obj~3, con fabricante, modelo, versión firmware, estado de batería), Monitoreo de Conectividad (Obj~4, con RSSI, tipo de enlace, operador), y Actualización de Firmware (Obj~5, con URI de paquete, estado, checksum SHA-256)~\cite{karaagacLightweightM2MSurvey2018}. Para medición de energía, el registro OMA define objetos IPSO específicos: Potencia (Obj~3305), Factor de Potencia (Obj~3312), y Medidor Trifásico (Obj~10242, con 51 recursos que cubren tensión, corriente, potencia activa/reactiva/aparente por fase, THD, y frecuencia)~\cite{OMA_LwM2M_Registry_10242}.
-
-\textbf{Superioridad frente a alternativas propietarias:} Karaagac et al.~\cite{karaagacLightweightM2MSurvey2018} demuestran que LwM2M reduce tráfico de gestión en más del 75\% frente a soluciones HTTP/REST propietarias mediante: (1)~codificación TLV (\textit{Type-Length-Value}) compacta vs JSON/XML, (2)~operaciones Observe que eliminan sondeo periódico, y (3)~actualizaciones de registro con delta mínimo (solo atributos modificados). Para despliegues AMI con >500 medidores por pasarela, esta reducción de tráfico es crítica para evitar saturación de la red mesh Thread (ancho de banda efectivo ~100 kbps compartido).
-
-\textbf{Integración DLMS/COSEM a LwM2M:} La interoperabilidad entre medidores DLMS/COSEM existentes y la plataforma LwM2M requiere un adaptador que traduzca clases de interfaz COSEM a objetos LwM2M equivalentes. OMA SpecWorks y la DLMS User Association han publicado lineamientos técnicos para este mapeo~\cite{dlmsLwM2MIntegration2024}: registros COSEM IC~3 (Register) se mapean a recursos LwM2M Obj~10242, perfiles de carga IC~7 se traducen a operaciones Observe con periodicidad configurable, y eventos de calidad de energía se modelan como notificaciones asíncronas LwM2M. Eclipse Leshan, la implementación Java de referencia del servidor LwM2M~\cite{OMA_LwM2M2020}, es el componente adoptado en la pasarela de borde descrita en el Capítulo~\ref{chap:gateway-halow}.
-
-% ----------------------------------------------------------------------------
-% §2.3.4: PROCESAMIENTO DISTRIBUIDO — COMPUTACIÓN EN EL BORDE VS EN LA NUBE
-% ----------------------------------------------------------------------------
-
-\subsection{Procesamiento Distribuido: Computación en el Borde vs en la Nube}
+\subsection{Computación en el Borde vs en la Nube}
 \label{sec:edge-vs-cloud}
 
-El despliegue masivo de dispositivos IoT plantea una decisión arquitectónica fundamental: centralizar el procesamiento en centros de datos en la nube (\textit{cloud}), o distribuirlo en pasarelas de borde (\textit{edge gateways}) cercanas a los dispositivos. La literatura reciente~\cite{andriuloEdgeComputingCloud2024,minhEdgeComputingIoTEnabled2022} coincide en que esta dicotomía no es binaria, sino un espectro de arquitecturas híbridas que equilibran latencia, ancho de banda, escalabilidad y costo según los requisitos de cada aplicación.
+La computación centralizada en la nube presenta latencias de 50--200~ms, incompatibles con control DER ($<$100~ms) y monitoreo de calidad de energía ($<$10~ms)~\cite{andriuloEdgeComputingCloud2024,IEEERecommendedPractice}. Sus limitaciones adicionales para AMI incluyen consumo excesivo de ancho de banda, dependencia total de conectividad WAN, y costos OPEX lineales con el volumen de datos.
 
-\subsubsection{Computación en la Nube (\textit{Cloud Computing})}
+La computación en el borde reduce latencia a 1--10~ms y ancho de banda WAN en 70--90\% mediante filtrado y agregación local~\cite{andriuloEdgeComputingCloud2024,minhEdgeComputingIoTEnabled2022}, habilitando operación autónoma durante desconexiones WAN. Sus limitaciones incluyen recursos computacionales restringidos y complejidad de escalamiento horizontal.
 
-El paradigma de computación en la nube concentra capacidad de cómputo y almacenamiento en centros de datos remotos (AWS, Azure, GCP) con arquitectura virtualizada multiusuario~\cite{andriuloEdgeComputingCloud2024}. Sus principales ventajas incluyen escalabilidad horizontal prácticamente ilimitada, servicios gestionados que reducen la carga operacional, acceso a capacidades avanzadas de aprendizaje automático (\textit{machine learning}), y alta disponibilidad con replicación geo-distribuida (SLA 99,95-99,99\%).
-
-Sin embargo, para aplicaciones de energía inteligente (\textit{Smart Energy}), presenta limitaciones críticas:
-
-\begin{itemize}
-\item \textbf{Latencia inaceptable}: Andriulo et al.~\cite{andriuloEdgeComputingCloud2024} reportan latencias típicas de 50-200~ms en arquitecturas centradas en la nube, incompatibles con los requisitos de control en redes inteligentes (<100~ms) y monitoreo de calidad de energía (<10~ms)~\cite{IEEERecommendedPractice}.
-\item \textbf{Consumo excesivo de ancho de banda}: La transmisión continua de formas de onda sin filtrado local puede saturar enlaces WAN en despliegues de mediana escala.
-\item \textbf{Dependencia de conectividad WAN}: Durante interrupciones, los sistemas solo-nube (\textit{cloud-only}) quedan completamente inoperativos.
-\item \textbf{Costos OPEX lineales}: El modelo de pago por uso escala linealmente con el volumen de datos, resultando en costos elevados para telemetría de alta frecuencia.
-\end{itemize}
-
-\subsubsection{Computación en el Borde (\textit{Edge Computing})}
-
-La computación en el borde distribuye el procesamiento hacia pasarelas locales, procesando datos cerca de su origen antes de transmitir hacia la nube solo agregados, alarmas o eventos relevantes~\cite{andriuloEdgeComputingCloud2024,minhEdgeComputingIoTEnabled2022}. Sus ventajas principales son:
-
-\begin{itemize}
-\item \textbf{Latencia ultra-baja}: Típicamente 1-10~ms para procesamiento local sin ida y vuelta WAN~\cite{andriuloEdgeComputingCloud2024}, habilitando control en tiempo real (detección de huecos de tensión, respuesta a la demanda).
-\item \textbf{Reducción de ancho de banda 70-90\%}: Mediante filtrado, agregación temporal y compresión local antes del envío selectivo a la nube~\cite{andriuloEdgeComputingCloud2024}.
-\item \textbf{Operación autónoma}: Funcionalidad ininterrumpida durante desconexiones WAN con almacenamiento local y motor de reglas.
-\item \textbf{Privacidad por diseño}: Procesamiento local de datos granulares de consumo sin transmisión a la nube pública.
-\end{itemize}
-
-Sus limitaciones incluyen recursos computacionales restringidos (impracticable para modelos pesados de aprendizaje profundo), complejidad de escalamiento horizontal (requiere instalación física) y riesgo de punto único de fallo local.
-
-\subsubsection{Arquitectura Híbrida: Solución Adoptada}
-
-La literatura~\cite{andriuloEdgeComputingCloud2024,bonomiFogComputingItsRole2012} establece que las arquitecturas híbridas que combinan computación en el borde y en la nube son la solución óptima para IoT industrial. El principio rector consiste en ejecutar cada tarea en el nivel más bajo (cercano a los datos) que satisfaga sus requisitos, escalando hacia la nube solo cuando sea necesario. La Tabla~\ref{tab:edge-cloud-workload-distribution} presenta la distribución de tareas adoptada en esta tesis.
+A la luz de estos compromisos, esta tesis adopta una arquitectura híbrida con prioridad en el borde (\textit{edge-first})~\cite{bonomiFogComputingItsRole2012}: procesamiento primario en pasarelas Raspberry~Pi~4 con ThingsBoard Edge para tareas de tiempo real ($<$10~ms), y sincronización selectiva con la nube para analítica avanzada y almacenamiento a largo plazo. La Tabla~\ref{tab:edge-cloud-workload-distribution} presenta la distribución resultante de tareas.
 
 \begin{table}[H]
 \centering
@@ -393,267 +173,75 @@ Almacenamiento largo plazo & N/A & Nube & Políticas de ciclo de vida costo-efec
 \end{tabular}}
 \end{table}
 
-La Tabla~\ref{tab:edge-cloud-latency-comparison} consolida las métricas cuantitativas de latencia que fundamentan esta distribución.
+Definida la estrategia de distribución borde/nube, la siguiente pregunta es qué \emph{software} concreto la materializa. Se requiere una plataforma capaz de ejecutar motor de reglas, paneles de visualización y almacenamiento intermedio en \emph{hardware} limitado, con sincronización transparente hacia la nube.
 
-\begin{table}[H]
-\centering
-\caption{Comparación cuantitativa de latencia: computación en el borde vs en la nube}
-\label{tab:edge-cloud-latency-comparison}
-\small
-\resizebox{\textwidth}{!}{%
-\begin{tabular}{|l|l|l|l|}
-\hline
-\rowcolor{gray!20}
-\textbf{Componente} & \textbf{Borde} & \textbf{Nube} & \textbf{Referencia} \\
-\hline
-Enlace ascendente dispositivo $\rightarrow$ procesador & 1-5~ms (Thread/HaLow local) & 20-80~ms (LTE WAN) & \cite{andriuloEdgeComputingCloud2024} \\
-\hline
-Tiempo de procesamiento & 2-5~ms (pasarela local) & 10-30~ms (ingesta en nube) & \cite{andriuloEdgeComputingCloud2024} \\
-\hline
-Enrutamiento WAN & 0~ms & 10-50~ms (Internet) & \cite{andriuloEdgeComputingCloud2024} \\
-\hline
-Enlace descendente de respuesta & 0~ms (local) & 20-80~ms (LTE WAN) & \cite{andriuloEdgeComputingCloud2024} \\
-\hline
-\textbf{Latencia TOTAL} & \textcolor{green}{\textbf{1-10~ms}} & \textcolor{red}{\textbf{50-200~ms}} & \cite{andriuloEdgeComputingCloud2024} \\
-\hline
-Requisito control DER & \textcolor{green}{\checkmark{} Cumple <100~ms} & \textcolor{red}{\xmark{} Excede >100~ms} & \cite{IEEERecommendedPractice} \\
-\hline
-Calidad de energía (<10~ms) & \textcolor{green}{\checkmark{} Viable} & \textcolor{red}{\xmark{} No viable} & \cite{minhEdgeComputingIoTEnabled2022} \\
-\hline
-\end{tabular}}
-\end{table}
-
-En síntesis, la computación en el borde reduce la latencia de extremo a extremo por un factor de 5-20$\times$ y el ancho de banda WAN en 70-90\%. Estas mejoras no son incrementales sino \textbf{cualitativas}, habilitando categorías completas de aplicaciones de control en tiempo real imposibles con arquitecturas solo-nube. La arquitectura presentada en los Capítulos~3 y~4 implementa este modelo híbrido: procesamiento local en pasarelas Raspberry Pi con ThingsBoard Edge, TimescaleDB y Kafka~\cite{krepsKafkaDistributedMessaging2011} para tareas de tiempo real (<10~ms), y sincronización selectiva con la nube para analítica avanzada y almacenamiento a largo plazo.
-
-% ----------------------------------------------------------------------------
-% §2.3.4: PLATAFORMAS DE BORDE PARA INFRAESTRUCTURA DE MEDICIÓN AVANZADA
-% ----------------------------------------------------------------------------
-
-\subsection{Plataformas de Borde para Infraestructura de Medición Avanzada}
+\subsection{Plataformas de Borde para AMI}
 \label{sec:marco-estado-edge}
 
-La computación en el borde (\textit{edge computing}) traslada capacidades de procesamiento, almacenamiento y análisis desde centros de datos centralizados hacia gateways en el borde de la red, minimizando latencia y reduciendo tráfico WAN~\cite{liangReviewEdgeComputing2024,satyanarayananEmergenceEdgeComputing2017}. Para Smart Grids, edge permite implementar funciones críticas como detección de anomalías en tiempo real, Volt-VAR optimization (VVO) local, y auto-recuperación de fallas sin dependencia de conectividad en la nube (\textit{cloud}).
+ThingsBoard Edge replica funcionalidad IoT completa en pasarelas locales, sincronizando bidireccionalmente con el servidor mediante gRPC comprimido~\cite{thingsboardEdgeArchitecture2024}. Capacidades clave: paneles de control locales sin internet, almacenamiento intermedio sin conexión automático ($>$100K mensajes, 7 días configurables), y motor de reglas CEP con latencia $<$10~ms. La validación experimental (Capítulo~\ref{chap:resultados}) demuestra: 40~MB de sobrecarga para 9\,600~msgs/día, cero pérdida en 3 eventos de desconexión (261~min acumulados), y sincronización post-reconexión a 53~msgs/s. Alternativas comerciales --- AWS IoT Greengrass (\$2,20/dispositivo/mes, máximo 7~días sin conexión) y Azure IoT Edge (950~MB RAM típico, \$1,50/dispositivo/mes) --- presentan limitaciones de costo y operación autónoma analizadas en la Sección~\ref{sec:marco-analisis-critico}.
 
-\subsubsection{Modelos de Despliegue: Borde, Niebla y Nube}
-
-La literatura distingue tres paradigmas de computación distribuida con características diferenciadas~\cite{liangReviewEdgeComputing2024}:
-
-\textbf{Edge Computing:} Procesamiento en gateways inmediatamente adyacentes a dispositivos IoT (1-2 saltos). Latencia típica 1-10 ms, capacidad limitada (4-16 GB RAM, 4-8 cores ARM/x86), implementa reglas CEP (Complex Event Processing) simples y buffering local.
-
-\textbf{Fog Computing:} Capa intermedia distribuida en estaciones base, subestaciones eléctricas o PoPs regionales. Latencia 10-50 ms, recursos moderados (32-128 GB RAM, GPU opcional), ejecuta analytics avanzados (ML inference, data fusion multi-sensor).
-
-\textbf{Cloud Computing:} Centros de datos centralizados con recursos virtualmente ilimitados. Latencia 50-200 ms (100-400 ms para Latinoamérica), ejecuta entrenamiento de modelos ML, business intelligence, almacenamiento histórico multi-año.
-
-\textbf{Arquitectura híbrida propuesta:} Esta tesis implementa modelo de prioridad en el borde (\textit{edge-first}) con respaldo en la nube (\textit{cloud backup}): procesamiento primario en Raspberry Pi 4 gateways (Nivel 3), sincronización diferida con instancia cloud ThingsBoard para BI y auditoría. Datos críticos permanecen 7 días en edge (TimescaleDB local), luego se comprimen y transfieren a cloud para retención 5 años según regulación~\cite{alsafranChallengesImplementingIoT2025}.
-
-\subsubsection{Plataformas de Borde para AMI}
-
-Despliegues documentados de edge computing en Smart Grids típicamente emplean hardware industrial costoso (Cisco IR829 \$2,500-4,000, Dell Edge Gateway 3000 \$1,200-2,000) con software propietario. Alternativas open-source emergen como viables:
-
-\textbf{ThingsBoard Edge:} Replica funcionalidad completa de plataforma IoT en gateways locales, sincronizando entidades (devices, dashboards, rule chains) bidireccionalmente con instancia cloud mediante gRPC comprimido~\cite{gartnerMagicQuadrantIoT2024,thingsboardEdgeArchitecture2024}. Ventajas incluyen tableros de control (\textit{dashboards}) locales sin internet, almacenamiento temporal sin conexión (\textit{offline buffering}) automático (>100K mensajes con PostgreSQL FIFO queue, 7 días configurable vía \texttt{EDGE\_BUFFER\_DAYS}), y rule engine CEP completo (filtros, transformaciones, alarmas locales <10 ms). Implementación detallada en Sección~\ref{sec:gateway-tb-edge-features} (Capítulo~\ref{chap:gateway-halow}) con validación experimental: sobrecarga de 40 MB para 9,600 msgs/día, 0 pérdida datos en 3 eventos desconexión WAN (87 min acumulados), sincronización post-reconexión 53 msgs/s caudal (\textit{throughput}) gRPC.
-
-\textbf{AWS IoT Greengrass:} Framework de AWS para ejecutar funciones Lambda en edge devices, con sincronización automática hacia AWS IoT Core. Requiere Amazon Linux 2 y conectividad periódica (cada 7 días) para renovación certificados y despliegue (\textit{deployment}) de funciones. Limitaciones críticas: (1) OPEX \$2.20/device/mes~\cite{awsGreengrassPricing2024} escala linealmente (vs ThingsBoard Edge \$0), (2) Buffer sin conexión (\textit{offline}) limitado 2 días SQLite (vs 7+ días PostgreSQL TB Edge), (3) Sin tableros de control (\textit{dashboards}) locales (requiere AWS Console cloud). Comparación exhaustiva vs ThingsBoard Edge en Tabla~\ref{tab:edge-features-comparison} (Sección~\ref{sec:gateway-tb-edge-features}, Capítulo~\ref{chap:gateway-halow}) muestra ventajas arquitectura open-source propuesta.
-
-\textbf{Azure IoT Edge:} Containers Docker~\cite{merkelDockerLightweightLinux2014} orquestados con módulos de runtime Azure, permitiendo ejecutar Azure Stream Analytics y ML models (ONNX) localmente. Requiere mínimo 512 MB RAM (950 MB típico en producción), OPEX \$1.50/device/mes~\cite{azureIoTEdgePricing2024}, sincronización bidireccional AMQP con IoT Hub. Validación en Raspberry Pi 4 2GB (Sección~\ref{sec:gateway-tb-edge-validacion}) demuestra ThingsBoard Edge consume 1.2 GB RAM (piloto 192 devices), comparable a Azure IoT Edge pero con ventajas: (1) Zero OPEX (Apache 2.0 license vs Microsoft propietaria), (2) Buffer offline 7 días vs 3 días Azure, (3) Tableros de control (\textit{Dashboards}) locales web UI vs Azure Monitor solo en la nube (\textit{cloud-only}).
-
-\subsubsection{Brechas en la Literatura sobre Borde para AMI}
-
-La revisión de las plataformas de borde presentadas en esta sección evidencia limitaciones recurrentes en tres ejes: (1)~dependencia de enlaces troncales (\textit{backhaul}) celulares con OPEX mensual significativo, (2)~ausencia de validación experimental bajo carga realista, y (3)~falta de análisis de costo total de propiedad (TCO) para contextos con presupuesto limitado. La Sección~\ref{sec:marco-estado-brecha} consolida estas observaciones junto con las brechas identificadas en las demás áreas temáticas, formulando las cuatro brechas fundamentales que motivan las decisiones de diseño de esta tesis.
-
-% ----------------------------------------------------------------------------
-% §2.3.5: SEGURIDAD EN SISTEMAS IoT PARA INFRAESTRUCTURAS CRÍTICAS
-% ----------------------------------------------------------------------------
+La conectividad inalámbrica, la distribución geográfica de dispositivos y los ciclos de vida prolongados de la infraestructura AMI plantean riesgos de seguridad específicos que deben abordarse transversalmente en toda la arquitectura.
 
 \subsection{Seguridad en Sistemas IoT para Infraestructuras Críticas}
 \label{sec:marco-seguridad}
 
-Los sistemas IoT para infraestructuras críticas como Smart Grids presentan superficie de ataque significativamente ampliada respecto a sistemas tradicionales debido a: (1) millones de dispositivos distribuidos geográficamente con acceso físico limitado, (2) redes inalámbricas susceptibles a escucha no autorizada (\textit{eavesdropping}), (3) dispositivos con recursos limitados (\textit{resource-constrained}) que limitan implementación de criptografía robusta, y (4) ciclos de vida operacional prolongados (10-15 años) que exceden vigencia de algoritmos criptográficos~\cite{BlockchainBasedSecureAuthentication2025,nandalSECURITYRISKSIoT2025}. Esta subsección revisa amenazas específicas de ecosistemas IoT AMI, el marco NIST Cybersecurity Framework aplicado a Smart Energy, y mecanismos criptográficos que balancean seguridad con restricciones computacionales.
+Los sistemas IoT para redes eléctricas inteligentes (\emph{Smart Grids}) presentan superficie de ataque ampliada por dispositivos distribuidos geográficamente, redes inalámbricas susceptibles a escucha, recursos computacionales limitados, y ciclos de vida de 10--15 años que exceden vigencia de algoritmos criptográficos~\cite{BlockchainBasedSecureAuthentication2025,nandalSECURITYRISKSIoT2025}. El NIST Cybersecurity Framework (CSF 2.0) estructura la gestión de seguridad en cinco funciones concurrentes (Identificar, Proteger, Detectar, Responder, Recuperar) aplicables a infraestructuras críticas~\cite{alsuwaidiSecuringSmartGrid2024}.
 
-\subsubsection{Amenazas y Vectores de Ataque en Ecosistemas IoT}
-\label{sec:marco-seguridad-amenazas}
+La arquitectura propuesta implementa defensa en profundidad en cuatro capas: (1)~\textit{física} --- arranque seguro del SoC con eFuse y verificación de firma; (2)~\textit{red} --- Thread AES-128-CCM-8 en capa de malla, WPA3-SAE, cortafuegos nftables; (3)~\textit{aplicación} --- autenticación mutual TLS~1.3 con ECDSA~P-256 (acelerador hardware ECC del nodo, firma en $<$10~ms), RBAC en ThingsBoard; (4)~\textit{datos} --- cifrado en reposo LUKS (AES-256-XTS, $<$5\% sobrecarga en ARM Cortex-A72), respaldo GPG~\cite{alsuwaidiSecuringSmartGrid2024}. La gestión de certificados X.509v3 cubre aprovisionamiento inicial con CSR, renovación automática pre-expiración, y revocación mediante CRL distribuidas vía LwM2M.
 
-La taxonomía de amenazas IoT abarca múltiples capas arquitectónicas, desde ataques físicos a dispositivos de campo hasta exfiltración de datos en servidores cloud. El modelo STRIDE (Spoofing, Tampering, Repudiation, Information Disclosure, Denial of Service, Elevation of Privilege) aplicado a AMI identifica vectores de ataque críticos~\cite{alsuwaidiSecuringSmartGrid2024}:
-
-\textbf{Ataques a Dispositivos de Campo (Nivel 1):} Los medidores inteligentes y sensores IoT son vulnerables a: (a) Manipulación física (\textit{physical tampering}) - extracción de claves criptográficas mediante ataques de canal lateral (\textit{side-channel attacks}) (análisis de consumo energético) o lectura directa de memoria flash, (b) Compromiso de firmware (\textit{firmware compromise}) - inyección de código malicioso mediante vulnerabilidades en bootloaders inseguros o actualizaciones OTA sin verificación criptográfica de firma digital, (c) Captura de nodo (\textit{node capture}) - captura física de dispositivos para análisis forense inverso que expone credenciales hardcodeadas o algoritmos propietarios. El caso Mirai botnet (2016) demostró capacidad de comprometer 600,000+ dispositivos IoT mediante credenciales por defecto, generando ataques DDoS de 1 Tbps~\cite{nandalSECURITYRISKSIoT2025}.
-
-\textbf{Ataques a Redes de Comunicación (Nivel 2):} Las redes inalámbricas mesh (Thread, Zigbee, Wi-Fi) presentan vulnerabilidades específicas: (a) Escucha pasiva no autorizada (\textit{eavesdropping}) - captura de tráfico sin cifrado o con cifrado débil (WEP, WPA-TKIP deprecados), (b) intermediario (\textit{Man-in-the-Middle}, MITM) - interposición entre nodo y gateway mediante puntos de acceso fraudulentos (\textit{rogue access points}) que explotan ausencia de autenticación mutua (\textit{mutual authentication}), (c) Ataques de repetición (\textit{replay attacks}) - retransmisión de comandos capturados (ej. comando de desconexión DER) que explotan falta de nonces o timestamps en protocolos sin protección anti-replay, (d) Interferencia/denegación de servicio (\textit{jamming/DoS}) - saturación deliberada del canal RF para denegar servicio. El ataque Industroyer (2016) comprometió subestaciones eléctricas mediante MITM en protocolos IEC 60870-5-104, causando apagón masivo en Ucrania~\cite{alsuwaidiSecuringSmartGrid2024}.
-
-\textbf{Ataques a Infraestructura Backend (Niveles 3-4):} Servidores edge y cloud son objetivos de: (a) inyección SQL (\textit{SQL injection}) - explotación de queries mal sanitizadas para exfiltrar base de datos de mediciones (violación GDPR), (b) Relleno de credenciales (\textit{credential stuffing}) - ataques de fuerza bruta contra interfaces web de administración con credenciales filtradas de otros servicios, (c) Abuso de API (\textit{API abuse}) - explotación de limitación de tasa (\textit{rate limiting}) inexistente o autenticación débil en APIs REST/MQTT para inundación (\textit{flooding}), (d) Escape de contenedor (\textit{container escape}) - escape de sandboxing Docker para acceso a host subyacente. Stuxnet (2010) demostró capacidad de malware para propagarse desde IT systems hacia Operational Technology (OT) mediante explotación de vulnerabilidades zero-day en SCADA, destruyendo 1,000+ centrifugadoras nucleares~\cite{nandalSECURITYRISKSIoT2025}.
-
-\subsubsection{Marco de Seguridad NIST Cybersecurity Framework}
-\label{sec:marco-seguridad-nist}
-
-El NIST Cybersecurity Framework (CSF) versión 2.0 define enfoque estructurado basado en 5 funciones concurrentes (Identificar, Proteger, Detectar, Responder, Recuperar; \textit{Identify, Protect, Detect, Respond, Recover}) aplicables a infraestructuras críticas incluyendo Smart Grids~\cite{alsuwaidiSecuringSmartGrid2024}. A diferencia de estándares prescriptivos, NIST CSF es framework de gestión de riesgo que permite adaptación según contexto operacional y apetito de riesgo organizacional.
-
-\textbf{Función 1 - Identify (Identificar):} Establece comprensión de contexto de negocio, recursos a proteger, y riesgos asociados. Para AMI incluye: (a) Inventario de activos (\textit{asset inventory}) - catálogo completo de medidores, gateways, servidores con metadatos (firmware version, última actualización, criticidad), (b) Evaluación de riesgos (\textit{risk assessment}) - análisis cuantitativo de probabilidad $\times$ impacto para cada amenaza identificada (ej. compromise de gateway edge: probabilidad media, impacto alto = riesgo alto), (c) Contexto de negocio (\textit{business context}) - identificación de procesos críticos (billing, demand response) que dependen de integridad y disponibilidad de telemetría. La arquitectura propuesta (Capítulo 3) implementa inventario automatizado mediante LwM2M Object 3 (Device) que reporta metadata de dispositivos~\cite{karaagacLightweightM2MSurvey2018}.
-
-\textbf{Función 2 - Protect (Proteger):} Implementa salvaguardas para asegurar entrega de servicios críticos. Mecanismos específicos AMI: (a) Control de acceso (\textit{access control}) - autenticación mutual TLS 1.3 con certificados X.509 entre dispositivos y gateway, RBAC (Role-Based Access Control) en ThingsBoard con permisos granulares por tenant/device group, (b) Seguridad de datos (\textit{data security}) - cifrado end-to-end con Thread AES-128-CCM-8 en capa mesh, cifrado at-rest con LUKS para bases de datos TimescaleDB, (c) Arranque seguro (\textit{secure boot}) - verificación criptográfica de integridad de firmware en ESP32-C6 mediante eFuse y signature checking, (d) Segmentación de red (\textit{network segmentation}) - VLANs segregadas (Thread mesh aislada, WAN/LTE en DMZ, servidor cloud en zona privada). La estrategia de defensa en profundidad (\textit{Defence in Depth}) implementa seguridad en 4 capas concéntricas: física (secure boot, TPM), red (firewall nftables, WPA3-SAE), aplicación (RBAC, rate limiting), datos (cifrado LUKS, backup GPG)~\cite{alsuwaidiSecuringSmartGrid2024}.
-
-\textbf{Función 3 - Detect (Detectar):} Identifica ocurrencia de eventos de seguridad mediante monitoreo continuo. Capacidades AMI: (a) Detección de anomalías (\textit{anomaly detection}) - Complex Event Processing (CEP) en ThingsBoard Edge Rule Engine que detecta patrones anómalos (ej. consumo energético 10$\times$ promedio histórico sugiere compromise o fraude), (b) Detección de intrusiones (\textit{intrusion detection}) - análisis de tráfico de red mediante Suricata/Snort que identifica signatures de ataques conocidos (port scanning, SQL injection attempts), (c) Monitoreo continuo (\textit{continuous monitoring}) - logs centralizados en ELK stack (Elasticsearch, Logstash, Kibana) con alertas proactivas. El procesamiento local en edge permite detección con latencia <100 ms vs >1 segundo en arquitecturas solo en la nube (\textit{cloud-only}).
-
-\textbf{Función 4 - Respond (Responder):} Define acciones ante incidentes detectados. Plan de respuesta AMI: (a) Respuesta a incidentes (\textit{incident response}) - playbooks automatizados que activan cuarentena de dispositivo comprometido (bloqueo de comunicación en firewall, revocación de certificado X.509), (b) \textit{Communication} - notificación automática a NOC (Network Operations Center) y stakeholders regulatorios según severidad, (c) \textit{Forensics} - preservación de evidencia mediante snapshots de bases de datos y logs para análisis post-mortem. La arquitectura híbrida edge-cloud permite respuesta local durante desconexiones WAN, sincronizando eventos al restaurar conectividad.
-
-\textbf{Función 5 - Recover (Recuperar):} Restaura capacidades degradadas tras incidente. Mecanismos AMI: (a) Planificación de recuperación (\textit{recovery planning}) - RTO (Recovery Time Objective) <1 hora para servicios críticos mediante conmutación por fallo (\textit{failover}) automático LTE, (b) \textit{Backup estrategia} - backups incrementales diarios en edge (7 días retention), backups completos semanales en cloud (5 años retention) con cifrado GPG, (c) Recuperación ante desastres (\textit{disaster recovery}) - procedimientos de reimaging de gateways comprometidos mediante PXE boot desde servidor central. La validación de resiliencia (Capítulo 6) demuestra recuperación completa en <15 minutos post-compromise de gateway.
-
-\subsubsection{Mecanismos Criptográficos y Compromisos (\textit{Trade-offs}) Computacionales}
-\label{sec:marco-seguridad-cripto}
-
-La selección de algoritmos criptográficos en sistemas IoT con restricciones energéticas (\textit{energy-constrained}) requiere balance entre robustez criptográfica y sobrecarga (\textit{overhead}) computacional/energética. Esta subsección analiza primitivas criptográficas implementadas en la arquitectura propuesta.
-
-\textbf{Cifrado Simétrico:} Thread implementa AES-128-CCM-8 (Counter with CBC-MAC, 8-byte MIC) para cifrado de capa MAC 802.15.4, proporcionando confidencialidad e integridad con sobrecarga de 13 bytes por frame (5 bytes counter + 8 bytes MIC). AES-128 ofrece seguridad de $2^{128}$ operaciones para brute-force, suficiente para horizonte 2040+ según recomendaciones NIST. Almacenamiento local en edge utiliza AES-256-XTS (implementado por LUKS) para cifrado at-rest de bases de datos, con sobrecarga de rendimiento <5\% en SSD modernos gracias a instrucciones AES-NI de CPUs ARM Cortex-A72.
-
-\textbf{Cifrado Asimétrico:} La autenticación mutual TLS 1.3 entre gateway y servidor cloud emplea curvas elípticas ECDSA P-256 (equivalente a RSA-3072 pero con claves de 256 bits), reduciendo tamaño de certificados X.509 de $\sim$2 KB (RSA-2048) a $\sim$1 KB y acelerando handshake TLS en 3-5$\times$ respecto a RSA. ESP32-C6 incluye acelerador hardware ECC que ejecuta firma ECDSA en <10 ms vs >100 ms en software puro, habilitando verificación criptográfica de actualizaciones OTA sin degradación perceptible de rendimiento (\textit{performance}).
-
-\textbf{Funciones Hash:} SHA-256 provee integridad de mensajes y firmado de firmware con resistencia a colisiones de $2^{128}$ operaciones (cumple requisito NIST de 112 bits post-quantum). LwM2M Object 5 (Firmware Update) incluye campo SHA-256 checksum que el dispositivo verifica antes de aplicar actualización, previniendo inyección de firmware modificado. La sobrecarga de computación SHA-256 para paquete CoAP típico (100 bytes) es <1 ms en ESP32-C6 @ 160 MHz.
-
-\textbf{Infraestructura de Clave Pública (PKI):} Certificados X.509v3 establecen identidad de dispositivos y gateways mediante cadena de confianza desde Root CA (Certificate Authority) organizacional. El protocolo Thread utiliza certificados X.509 para autenticación mutual de dispositivos en la red mesh. La gestión de ciclo de vida incluye: (a) provisioning inicial con Certificate Signing Request (CSR) generado en dispositivo, (b) renovación automática 30 días antes de expiración, (c) revocación mediante Certificate Revocation Lists (CRL) distribuidas vía LwM2M. La sobrecarga de almacenamiento es $\sim$3 KB por certificado (aceptable en dispositivos con >4 MB flash).
+La revisión precedente ha cubierto el marco normativo y las cinco dimensiones tecnológicas relevantes. El paso siguiente es contrastar este conocimiento con las soluciones comerciales existentes para determinar si alguna satisface, simultáneamente, todos los requisitos de una infraestructura AMI de borde.
 
 % ============================================================================
-% SECCIÓN 2.4: ANÁLISIS CRÍTICO Y BRECHAS DE INVESTIGACIÓN
+% SECCIÓN 2.4: ANÁLISIS CRÍTICO Y BRECHAS
 % ============================================================================
 
 \section{Análisis Crítico y Brechas de Investigación}
 \label{sec:marco-analisis-critico}
 
-% ----------------------------------------------------------------------------
-% §2.4.1: EVALUACIÓN DE SOLUCIONES COMERCIALES DE BORDE PARA AMI
-% ----------------------------------------------------------------------------
+Esta sección traduce la revisión tecnológica en una evaluación práctica: primero se comparan tres soluciones comerciales representativas con la arquitectura propuesta, y después se sintetizan las cuatro brechas de investigación que justifican las decisiones de diseño de los capítulos siguientes.
 
 \subsection{Evaluación de Soluciones Comerciales de Borde para AMI}
 \label{sec:marco-soluciones-comerciales}
 
-Complementando la revisión del estado del arte académico (\S\ref{sec:marco-estado-arte}), esta subsección examina críticamente soluciones comerciales de gateway edge para infraestructuras AMI disponibles en el mercado actual (2023-2025). El análisis evalúa tres plataformas representativas: Cisco Industrial Router 829 (IR829), Dell Edge Gateway 3000, y AWS IoT Greengrass, considerando cinco dimensiones críticas para adopción en utilities Latinoamericanas: costo total de propiedad (TCO), capacidades de edge computing, cumplimiento de estándares de medición inteligente, dependencia del proveedor (\textit{vendor lock-in}), y requisitos operacionales. Este análisis justifica la decisión arquitectónica de esta tesis de emplear solución open-source con hardware commodity (Raspberry Pi 4 + ThingsBoard Edge) en lugar de alternativas comerciales.
-
-\subsubsection{Cisco Industrial Router 829 (IR829)}
-\label{sec:marco-cisco-ir829}
-
-\textbf{Descripción técnica:} El Cisco IR829 es un router industrial multiservicio diseñado para ambientes extremos (temperatura $-40^\circ$C a $+70^\circ$C, IP30), integra módems celulares duales (4G LTE Advanced Cat 6, hasta 300 Mbps), 4 puertos Gigabit Ethernet, y procesador Freescale P1020 dual-core @ 800 MHz con 2 GB RAM. Ejecuta Cisco IOS Software con capacidades avanzadas de routing (OSPF, BGP, MPLS), firewall con inspección stateful, e IPSec VPN. La plataforma IOx (Fog Computing) permite desplegar aplicaciones Docker en contenedor aislado con 512 MB RAM dedicada~\cite{ciscoCiscoIndustrialRouters2024}.
-
-\textbf{Capacidades edge computing:} IOx Framework proporciona entorno de ejecución para aplicaciones edge, con PaaS (Platform-as-a-Service) que incluye: (1) integración con Cisco Kinetic para analytics, (2) soporte para protocolos industriales (Modbus, DNP3, IEC 61850), (3) edge analytics básico mediante Cisco Kinetic Edge \& Fog Module. Sin embargo, \textit{no incluye nativamente} plataformas IoT completas como ThingsBoard o Node-RED; requiere desarrollar aplicaciones personalizadas (\textit{custom}) o integrar servicios Cisco propietarios~\cite{ciscoCiscoIoTFieldNetwork2023}.
-
-\textbf{Cumplimiento estándares de medición inteligente:} El IR829 carece de implementación nativa de DLMS/COSEM (IEC 62056) o protocolos LwM2M para gestión de dispositivos IoT. La conectividad con medidores inteligentes requiere gateways intermedios o desarrollo de aplicaciones IOx custom, incrementando complejidad y CAPEX~\cite{ciscoCiscoIndustrialRouters2024}.
-
-\textbf{Dependencia del proveedor (\textit{vendor lock-in}) y ecosistema:} La arquitectura IR829 presenta dependencias significativas del ecosistema Cisco: (1) requiere licencias Cisco Smart Licensing para software IOS y IOx Runtime (\$500-1,500/año por dispositivo dependiendo de feature set), (2) integración nativa exclusivamente con Cisco Kinetic (\$15,000-50,000 licencia perpetua para 1,000 endpoints), (3) gestión de red mediante Cisco DNA Center (\$25,000-100,000 según escala), (4) soporte técnico Cisco SmartNet obligatorio para actualizaciones de seguridad (15\% CAPEX anual). Esta dependencia dificulta migración futura a otras plataformas y genera OPEX recurrente elevado~\cite{ciscoCiscoDNACenter2024}.
-
-\textbf{Costo total de propiedad (TCO 5 años):} El análisis de costo para deployment de 100 gateways edge revela:
-
-\begin{itemize}
-\item \textbf{CAPEX hardware:} \$2,500-4,000 USD por unidad $\times$ 100 = \$250,000-400,000 USD (según configuración LTE single/dual radio)
-\item \textbf{CAPEX software:} Licencias IOx Advanced \$1,200/dispositivo $\times$ 100 = \$120,000 USD
-\item \textbf{OPEX conectividad:} Plan LTE M2M \$25/mes $\times$ 100 $\times$ 60 meses = \$150,000 USD
-\item \textbf{OPEX licencias:} SmartNet soporte 15\% CAPEX anual $\times$ 5 años = \$278,000 USD (15\% $\times$ \$370K promedio)
-\item \textbf{TCO 5 años:} \$798,000 USD → \textbf{\$7,980/gateway} promedio
-\end{itemize}
-
-\textbf{Análisis crítico - Razones de descarte:} Aunque el IR829 proporciona robustez industrial probada y capacidades de routing empresarial, tres limitaciones fundamentales justifican su exclusión para esta tesis: (1) \textit{Costo prohibitivo para economías emergentes:} TCO 5 años de \$7,980/gateway excede en 40-60$\times$ el presupuesto típico de utilities Latinoamericanas (\$100-200/gateway objetivo), (2) \textit{Ausencia de soporte nativo DLMS/COSEM y LwM2M:} La integración con protocolos de medición inteligente mandatorios requiere desarrollo personalizado (\textit{custom}), contradiciendo la premisa de solución llave-en-mano, (3) \textit{Dependencia severa del proveedor (\textit{vendor lock-in}):} Dependencia de ecosistema propietario Cisco (Kinetic, DNA Center, Smart Licensing) impide portabilidad y genera OPEX perpetuo no-cancelable. La arquitectura propuesta con Raspberry Pi 4 + ThingsBoard Edge + OpenThread Border Router implementa capacidades equivalentes (análisis en el borde (\textit{edge analytics}), almacenamiento sin conexión (\textit{offline buffering}), conmutación por fallo LTE) con TCO 5 años de \$124/gateway (\textbf{98.4\% reducción de costo}), eliminando licencias propietarias y habilitando migración sin fricción a plataformas alternativas.
-
-\subsubsection{Dell Edge Gateway 3000}
-\label{sec:marco-dell-eg3000}
-
-\textbf{Descripción técnica:} Dell Edge Gateway 3000 Series (modelos 3001/3002/3003) es plataforma edge computing compacta fanless (10$\times$15 cm) con procesador Intel Atom E3815 single-core @ 1.46 GHz (Silvermont microarchitecture), 2 GB RAM DDR3L, 32 GB eMMC storage, y rango térmico extendido $-20^\circ$C a $+60^\circ$C (opcional $-40^\circ$C a $+70^\circ$C). Conectividad incluye 2$\times$ Gigabit Ethernet, 2$\times$ USB 2.0, módulos opcionales LTE Cat 1 (10 Mbps), Wi-Fi 802.11ac, y Bluetooth 4.1. Opera sobre Windows 10 IoT Enterprise o Ubuntu Snappy Core~\cite{dellDellEdgeGateway2024}.
-
-\textbf{Capacidades edge computing:} La plataforma ejecuta Dell Edge Gateway Manager, framework basado en OSGi que proporciona: (1) gestión remota OTA de aplicaciones vía Dell IoT Gateway Management Console, (2) protocolos industriales pre-integrados (Modbus TCP/RTU, BACnet, SNMP), (3) SDK Java para desarrollo de aplicaciones edge. Sin embargo, presenta tres limitaciones críticas: (a) \textit{Windows IoT Enterprise no-determinístico:} El sistema operativo Windows introduce latencias variables (10-100 ms) y consumo de memoria base elevado (1.2-1.5 GB), dejando solo 500 MB disponibles para aplicaciones edge complejas como ThingsBoard, (b) \textit{Procesador sub-dimensional:} Intel Atom E3815 single-core @ 1.46 GHz proporciona ~1,500 PassMark CPU Score, insuficiente para edge analytics con >200 dispositivos concurrentes o ML inference (requiere >3,000 score), (c) \textit{Sin soporte DLMS/COSEM nativo:} Dell Gateway Manager no incluye adaptadores de medición inteligente; requiere licencias third-party como Leviton Load Control Module (\$800-1,200/gateway)~\cite{dellDellIoTGateway2023}.
-
-\textbf{Costo total de propiedad (TCO 5 años):} Análisis para 100 gateways:
-
-\begin{itemize}
-\item \textbf{CAPEX hardware:} \$1,200-2,000 USD/unidad $\times$ 100 = \$120,000-200,000 USD
-\item \textbf{CAPEX software:} Windows 10 IoT Enterprise licencias \$100/dispositivo $\times$ 100 = \$10,000 USD (alternativa Ubuntu Snappy sin costo)
-\item \textbf{OPEX conectividad:} LTE M2M \$20/mes $\times$ 100 $\times$ 60 meses = \$120,000 USD
-\item \textbf{OPEX gestión:} Dell IoT Gateway Management Console \$5/device/mes $\times$ 100 $\times$ 60 = \$30,000 USD
-\item \textbf{TCO 5 años (Windows):} \$480,000 USD → \textbf{\$4,800/gateway}
-\item \textbf{TCO 5 años (Ubuntu):} \$470,000 USD → \textbf{\$4,700/gateway}
-\end{itemize}
-
-\textbf{Análisis crítico - Razones de descarte:} El Dell EG 3000 representa punto medio entre Cisco IR829 (ultra-robusto, ultra-costoso) y soluciones commodity, pero tres deficiencias fundamentales lo descalifican: (1) \textit{Performance insuficiente para edge analytics:} Single-core Atom @ 1.46 GHz limita capacidades de procesamiento CEP (Complex Event Processing) con >100 dispositivos; benchmarks muestran 40-60\% menor caudal (\textit{throughput}) que Raspberry Pi 4 quad-core @ 1.8 GHz en operaciones multi-thread típicas de edge computing, (2) \textit{Windows IoT non-determinism:} La sobrecarga de Windows IoT Enterprise (servicios en segundo plano (\textit{background}), actualizaciones automáticas no-diferibles, telemetría Microsoft) introduce latencias impredecibles incompatibles con aplicaciones real-time de Smart Grid; alternativa Ubuntu Snappy Core mitiga esto pero requiere desarrollo personalizado (\textit{custom}) de stack completo sin soporte Dell, (3) \textit{TCO 38$\times$ superior a arquitectura propuesta:} \$4,700-4,800/gateway vs \$124 Raspberry Pi 4 (sin ventajas proporcionales en robustez para despliegue en interiores/exteriores (\textit{indoor/outdoor}) protegido). La arquitectura de esta tesis con Raspberry Pi 4 Compute Module 4 en enclosure IP67 industrial (\$120 módulo + \$80 enclosure = \$200 total) iguala robustez térmica ($-40^\circ$C a $+85^\circ$C) con \textbf{96\% reducción de costo}.
-
-\subsubsection{AWS IoT Greengrass}
-\label{sec:marco-aws-greengrass}
-
-\textbf{Descripción técnica:} AWS IoT Greengrass es software edge runtime que extiende capacidades de AWS Cloud a dispositivos edge, permitiendo ejecutar funciones AWS Lambda localmente, sincronizar datos con AWS IoT Core, y desplegar modelos de Machine Learning (SageMaker) en gateways. Requiere hardware x86 o ARM con Linux (Ubuntu, Amazon Linux 2, Yocto), mínimo 1 GB RAM + 128 MB storage para runtime core~\cite{awsAWSIoTGreengrass2024}.
-
-\textbf{Capacidades edge computing:} Greengrass Core proporciona: (1) \textit{Lambda@Edge:} Ejecuta funciones Lambda Python/Node.js/Java localmente con event-driven triggers (MQTT messages, local shadows updates), (2) \textit{Local shadows:} Replica AWS IoT Device Shadows en edge para operación offline, sincronizando bidireccionalmente al restaurar conectividad, (3) \textit{ML inference:} Despliega modelos SageMaker Neo optimizados para CPU/GPU local, (4) \textit{Stream Manager:} Buffer local configurable (hasta 10 GB) con políticas de exportación batch hacia AWS IoT Analytics. Ventajas incluyen integración nativa con ecosistema AWS (S3, DynamoDB, CloudWatch) y actualizaciones OTA centralizadas mediante AWS IoT Device Management~\cite{awsAWSIoTGreengrass2023}.
-
-\textbf{Limitaciones arquitectónicas:} Tres restricciones críticas limitan adopción en AMI: (1) \textit{Dependencia AWS perpetua:} Greengrass Core requiere conectividad periódica (cada 7 días) con AWS Cloud para renovar certificados y recibir deployments; desconexiones >7 días causan pérdida de funcionalidad hasta reconexión, incompatible con sitios remotos sin conectividad garantizada, (2) \textit{Dependencia perpetua de AWS (\textit{lock-in}):} Arquitectura estrechamente acoplada (\textit{tightly-coupled}) con servicios AWS propietarios (IoT Core, Lambda, SageMaker) impide portabilidad a otras clouds (Azure, GCP) o soluciones on-premise sin reescritura completa de lógica de aplicación, (3) \textit{Ausencia de interfaz local:} Greengrass carece de tablero de control (\textit{dashboard}) local tipo ThingsBoard Edge; toda visualización/configuración requiere acceso a AWS Console via internet, imposibilitando operación en modo aislado (\textit{air-gapped})~\cite{awsAWSIoTGreengrass2024}.
-
-\textbf{Cumplimiento estándares de medición inteligente:} AWS IoT Greengrass no implementa nativamente DLMS/COSEM ni LwM2M. La integración con medidores inteligentes requiere funciones Lambda personalizadas (\textit{custom}) que traduzcan entre DLMS/COSEM y MQTT/IoT Core, incrementando complejidad y superficie de ataque~\cite{awsAWSIoTSmartEnergy2023}.
-
-\textbf{Costo total de propiedad (TCO 5 años):} Análisis para 100 gateways (asumiendo Raspberry Pi 4 como hardware host):
-
-\begin{itemize}
-\item \textbf{CAPEX hardware:} Raspberry Pi 4 8GB \$75 $\times$ 100 = \$7,500 USD
-\item \textbf{OPEX Greengrass Core:} \$2.20/device/mes $\times$ 100 $\times$ 60 = \$13,200 USD (primeros 3 dispositivos gratis)
-\item \textbf{OPEX AWS IoT Core:} \$1.00/million messages $\times$ 100 devices $\times$ 96 msgs/día $\times$ 30 días $\times$ 60 meses = \$17,280 USD
-\item \textbf{OPEX data transfer:} \$0.09/GB $\times$ 100 devices $\times$ 5 MB/día $\times$ 30 días $\times$ 60 meses = \$8,100 USD (estimando 5 MB/device/día)
-\item \textbf{OPEX conectividad LTE:} \$15/mes $\times$ 100 $\times$ 60 = \$90,000 USD (LTE M2M básico)
-\item \textbf{TCO 5 años:} \$136,080 USD → \textbf{\$1,361/gateway}
-\end{itemize}
-
-\textbf{Análisis crítico - Razones de descarte:} AWS IoT Greengrass presenta OPEX recurrente más bajo que Cisco IR829 o Dell EG 3000 (por ausencia de licencias software perpetuas), pero cuatro limitaciones estratégicas justifican su exclusión: (1) \textit{OPEX escala linealmente con número de dispositivos:} \$2.20/device/mes $\times$ 1,000 devices = \$2,200/mes (\$132,000 en 5 años) genera costo prohibitivo para despliegues (\textit{deployments}) a escala de servicio público (\textit{utility-scale}) con 10K-100K medidores; arquitectura open-source con ThingsBoard elimina este OPEX completamente, (2) \textit{Dependencia del proveedor de AWS (\textit{vendor lock-in}) severo:} La migración futura a Azure IoT Hub o Google Cloud IoT Core requiere reescribir 100\% de Lambda functions y adaptar arquitectura pub/sub, generando costo hundido significativo, (3) \textit{Conectividad mandatoria cada 7 días:} Requisito de renovación de certificados impide despliegue en sitios aislados (\textit{air-gapped}) o con conectividad intermitente (ej. subestaciones rurales con LTE esporádico), vs ThingsBoard Edge que opera indefinidamente offline, (4) \textit{Ausencia de tablero de control (\textit{dashboard}) local:} Imposibilita resolución de problemas (\textit{troubleshooting}) en campo sin internet; técnicos requieren acceso AWS Console cloud para diagnosticar problemas, vs ThingsBoard Edge con UI local completa vía http://localhost:8080. La arquitectura propuesta con ThingsBoard Edge open-source elimina OPEX recurrente AWS (\$13,200 Greengrass + \$17,280 IoT Core = \$30,480 en 5 años), logra operación offline indefinida, y preserva portabilidad multi-cloud mediante MQTT/REST APIs estándar. TCO 5 años: \$124/gateway propuesto vs \$1,361 Greengrass (\textbf{91\% reducción}).
-
-\subsubsection{Síntesis Comparativa y Justificación de Arquitectura de Código Abierto}
-\label{sec:marco-sintesis-comercial}
-
-La Tabla~\ref{tab:marco-comparativa-comercial} sintetiza el análisis crítico de las tres soluciones comerciales evaluadas versus la arquitectura propuesta en esta tesis, considerando siete dimensiones técnico-económicas relevantes para adopción en utilities Latinoamericanas.
+Se evaluaron tres plataformas comerciales representativas --- Cisco IR829, Dell Edge Gateway 3000 y AWS IoT Greengrass --- en cinco dimensiones: TCO a 5 años, capacidades edge, conformidad DLMS/COSEM + LwM2M, dependencia del proveedor (\textit{vendor lock-in}), y operación sin conexión. La Tabla~\ref{tab:marco-comparativa-comercial} sintetiza la comparación.
 
 \begin{table}[H]
 \centering
-\caption{Comparación Multidimensional: Soluciones Comerciales Edge vs Arquitectura Propuesta Open-Source}
+\caption{Comparación: Soluciones Comerciales Edge vs Arquitectura Propuesta}
 \label{tab:marco-comparativa-comercial}
-\footnotesize
+\resizebox{\textwidth}{!}{%
 \begin{tabular}{lllll}
 \toprule
-\textbf{Dimensión} & \textbf{Cisco IR829} & \textbf{Dell EG 3000} & \textbf{AWS Greengrass} & \textbf{Arquitectura Propuesta} \\ 
+\textbf{Dimensión} & \textbf{Cisco IR829} & \textbf{Dell EG 3000} & \textbf{AWS Greengrass} & \textbf{Arq. Propuesta} \\
 \midrule
-\textbf{TCO 5 años} & \$798,000 & \$480,000 & \$136,080 & \textbf{\$12,400} \\
-\textbf{(100 gateways)} & (\$7,980/gw) & (\$4,800/gw) & (\$1,361/gw) & \textbf{(\$124/gw)} \\[0.1cm]
-\textbf{CAPEX hardware} & \$2,500-4,000 & \$1,200-2,000 & \$75 (RPi 4) & \textbf{\$55-75 (RPi 4)} \\[0.1cm]
-\textbf{OPEX anual} & \$55,600 & \$30,000 & \$6,096/año & \textbf{\$0/año} \\
-& (lic. + LTE) & (LTE + gestión) & (AWS + LTE) & \textbf{(sin licencias)} \\[0.1cm]
-\textbf{DLMS/COSEM} & No (dev custom) & No (plugin \$800) & No (Lambda) & \textbf{Sí (adaptador)} \\[0.1cm]
-\textbf{LwM2M} & No & No & No & \textbf{Sí (Leshan)} \\[0.1cm]
-\textbf{Dashboard local} & Sí (IOS CLI) & Limitado (UI) & No (AWS) & \textbf{Sí (ThingsBoard)} \\[0.1cm]
-\textbf{Offline indefinido} & Sí & Sí & No (max 7d) & \textbf{Sí (sync)} \\[0.1cm]
-\textbf{Vendor lock-in} & Alto (Cisco) & Medio (Win IoT) & Alto (AWS) & \textbf{Nulo (OSS)} \\[0.1cm]
-\textbf{Multi-cloud} & Baja & Media & Baja & \textbf{Alta (REST)} \\[0.1cm]
-\textbf{Performance} & Alta (P1020) & Baja (Atom) & Depende host & \textbf{Media-Alta (RPi4)} \\[0.1cm]
-\textbf{Térmica} & $-40$ a $+70^\circ$C & $-40$ a $+70^\circ$C & Depende host & $-40$ a $+85^\circ$C \\[0.1cm]
-\textbf{OTA} & Sí (Smart Lic.) & Sí (Dell Mgr) & Sí (AWS) & \textbf{Sí (Ansible)} \\[0.1cm]
-\textbf{Soporte} & \$55K/año (24×7) & \$15K/año & \$15K/año min & \textbf{Comunidad} \\
+\textbf{TCO 5 años (100 gw)} & \$798\,000 (\$7\,980/gw) & \$480\,000 (\$4\,800/gw) & \$136\,080 (\$1\,361/gw) & \textbf{\$12\,400 (\$124/gw)} \\
+\textbf{CAPEX \emph{hardware}} & \$2\,500--4\,000 & \$1\,200--2\,000 & \$75 (RPi 4) & \textbf{\$55--75 (RPi 4)} \\
+\textbf{OPEX anual (lic.+LTE)} & \$55\,600 & \$30\,000 & \$6\,096 & \textbf{\$0 (sin licencias)} \\
+\textbf{DLMS/COSEM nativo} & No (dev custom) & No (plugin \$800) & No (Lambda) & \textbf{Sí (adaptador)} \\
+\textbf{LwM2M nativo} & No & No & No & \textbf{Sí (TB Edge)} \\
+\textbf{Panel local} & Sí (IOS CLI) & Limitado & No (AWS Console) & \textbf{Sí (ThingsBoard)} \\
+\textbf{Sin conexión indefinido} & Sí & Sí & No (max 7d) & \textbf{Sí (sync)} \\
+\textbf{Dependencia del proveedor} & Alto (Cisco) & Medio (Win IoT) & Alto (AWS) & \textbf{Nulo (OSS)} \\
 \bottomrule
-\end{tabular}
+\end{tabular}}%
 \end{table}
 
-\textbf{Hallazgos clave del análisis comparativo:}
+\textbf{Hallazgos clave:} (1)~Las soluciones comerciales presentan TCO 11--64$\times$ superior a la arquitectura propuesta (\$124/pasarela), sin ventajas técnicas proporcionales --- el Raspberry~Pi~4 quad-core supera en rendimiento multi-hilo al Dell Atom single-core~\cite{ciscoCiscoIndustrialRouters2024,dellDellEdgeGateway2024}. (2)~Ninguna implementa nativamente DLMS/COSEM ni LwM2M, requiriendo desarrollo a medida o licencias de terceros. (3)~El OPEX recurrente escala linealmente con dispositivos (Cisco: \$55\,600/año, Dell: \$30\,000/año, AWS: \$6\,096/año para 100~pasarelas), desincentivando expansión de red. (4)~AWS Greengrass requiere conectividad cada 7~días para renovación de certificados, incompatible con sitios remotos con LTE intermitente~\cite{awsAWSIoTGreengrass2024}. (5)~La arquitectura de código abierto con Raspberry~Pi~4 + ThingsBoard Edge elimina OPEX de licencias, logra operación sin conexión indefinida, y preserva portabilidad multi-nube mediante APIs estándar (MQTT, REST, CoAP), alcanzando \textbf{91--98\% de reducción de TCO}.
 
-\textbf{1. Brecha económica insostenible:} Las soluciones comerciales presentan TCO 5 años que exceden en 11-64$\times$ la arquitectura propuesta (\$124/gateway): Cisco IR829 (\$7,980, 64$\times$), Dell EG 3000 (\$4,800, 39$\times$), AWS Greengrass (\$1,361, 11$\times$). Esta diferencia de costo no se justifica por ventajas técnicas proporcionales; el Raspberry Pi 4 quad-core @ 1.8 GHz supera en rendimiento (\textit{performance}) multi-hilo (\textit{multi-thread}) al Dell Atom single-core, y el módulo Compute Module 4 industrial alcanza robustez térmica equivalente a gateways comerciales. Para utilities Latinoamericanas con presupuestos típicos de \$50-150 USD/medidor (incluyendo hardware + instalación), soluciones comerciales consumen 40-80\% del presupuesto total solo en gateway, vs 10-15\% con arquitectura propuesta, liberando recursos para desplegar más medidores.
-
-\textbf{2. OPEX recurrente como barrera de entrada:} Cisco, Dell y AWS introducen OPEX anual perpetuo no-cancelable: Cisco SmartNet \$55,600/año (100 gw), Dell Management Console \$6,000/año, AWS Greengrass+IoT Core \$6,096/año. Este OPEX escala linealmente con número de dispositivos, generando costo hundido creciente que desincentiva expansión de red. En contraste, la arquitectura open-source con ThingsBoard Edge + Wi-Fi HaLow elimina completamente OPEX de licencias y conectividad, escalando a 1,000 o 10,000 medidores sin incremento marginal de costo recurrente. El ahorro OPEX 5 años para 100 gateways es: \$278,000 (Cisco), \$150,000 (Dell), \$30,480 (AWS), permitiendo amortizar inversión CAPEX inicial en <18 meses.
-
-\textbf{3. Dependencia del proveedor (\textit{vendor lock-in}) como riesgo estratégico:} Las tres soluciones comerciales generan dependencia de ecosistemas propietarios que dificultan migración futura: Cisco requiere Kinetic + DNA Center, Dell requiere Windows IoT Enterprise o stack custom sobre Ubuntu, AWS requiere Lambda + IoT Core con arquitectura serverless no-portable. La arquitectura propuesta emplea exclusivamente protocolos abiertos (MQTT 5.0, CoAP, HTTP/REST, DLMS/COSEM) y software open-source (ThingsBoard, Eclipse Leshan, OpenThread), garantizando portabilidad total entre clouds (AWS→Azure→GCP→on-premise) sin reescritura de código. Esta independencia tecnológica preserva flexibilidad estratégica de la empresa de servicios públicos (\textit{utility}) para negociar términos con proveedores o internalizar operación completamente.
-
-\textbf{4. Ausencia de soporte nativo DLMS/COSEM + LwM2M:} Ninguna solución comercial implementa nativamente los protocolos mandatorios para medición inteligente (DLMS/COSEM) y gestión IoT estandarizada (LwM2M IPSO Objects). Cisco y Dell requieren desarrollo custom o licencias third-party (\$800-1,500/gateway), AWS requiere Lambda functions ad-hoc. Esta ausencia contradice la premisa de solución comercial "llave-en-mano" y genera costo de integración oculto. La arquitectura propuesta implementa adaptador DLMS/COSEM a LwM2M y Leshan LwM2M server (Java), ambos open-source y documentados extensivamente, con costo de integración marginal.
-
-\textbf{5. Limitaciones operacionales críticas:} AWS Greengrass requiere conectividad cada 7 días para renovación de certificados, imposibilitando despliegue (\textit{deployment}) en sitios aislados (\textit{air-gapped}) o con LTE intermitente. Dell EG 3000 con Windows IoT Enterprise introduce latencias no-determinísticas (10-100 ms) incompatibles con aplicaciones real-time de Smart Grid. Cisco IR829, aunque robusto, no justifica CAPEX 33-53$\times$ superior para despliegue en interiores/exteriores (\textit{indoor/outdoor}) protegido donde extremos térmicos $<-20^\circ$C o $>+50^\circ$C no ocurren. La arquitectura propuesta con ThingsBoard Edge opera indefinidamente offline (validado 90 días piloto sin sincronización cloud), ejecuta sobre Linux determinístico (Ubuntu Server 22.04 LTS), y con enclosure IP67 alcanza robustez suficiente para $>95\%$ de escenarios AMI reales.
-
-\textbf{Conclusión - Justificación arquitectura open-source:} El análisis crítico de soluciones comerciales revela que ninguna satisface simultáneamente los cinco requisitos fundamentales para adopción en utilities Latinoamericanas: (1) TCO <\$200/gateway, (2) OPEX recurrente cero, (3) soporte nativo DLMS/COSEM + LwM2M, (4) ausencia de dependencia del proveedor (\textit{vendor lock-in}), (5) operación sin conexión (\textit{offline}) indefinida. La arquitectura propuesta con Raspberry Pi 4 + ThingsBoard Edge + OpenThread Border Router + Wi-Fi HaLow cumple los cinco requisitos simultáneamente, logrando \textbf{91-98\% reducción de TCO} respecto a alternativas comerciales sin sacrificar capacidades técnicas esenciales. Los Capítulos~3-6 de esta tesis documentan diseño, implementación y validación experimental exhaustiva de esta arquitectura, demostrando viabilidad técnica y económica para despliegue (\textit{deployment}) a escala de servicio público (\textit{utility-scale}) en contexto Latinoamericano.
-
-% ----------------------------------------------------------------------------
-% §2.4.2: BRECHAS IDENTIFICADAS Y JUSTIFICACIÓN DE LA CONTRIBUCIÓN
-% ----------------------------------------------------------------------------
+Estas carencias no son casuales: reflejan vacíos sistemáticos en la literatura que ninguna solución existente cubre de forma integral. A continuación se formalizan como brechas de investigación.
 
 \subsection{Brechas Identificadas y Justificación de la Contribución}
 \label{sec:marco-estado-brecha}
 
-El análisis crítico del estado del arte en arquitecturas IoT para AMI revela cuatro brechas fundamentales que motivan directamente las decisiones de diseño de esta tesis:
+El análisis del estado del arte revela cuatro brechas que motivan las decisiones de diseño:
 
-\textbf{Brecha 1: Ausencia de HaLow en gateways edge.} Ningún trabajo de los revisados integra Wi-Fi HaLow (IEEE 802.11ah) como enlace troncal (\textit{backhaul}) primario para Smart Energy con conmutación por fallo (\textit{failover}) multi-WAN, a pesar de su ventaja comprobada de alcance (1-3 km) y caudal (\textit{throughput}) (40 Mbps) sobre alternativas LPWAN como LoRaWAN (latencia típica >1s, caudal <50 kbps). Esta ausencia limita capacidades de transmisión de waveforms de calidad de energía que requieren caudal mínimo de 160-200 kbps para muestreo continuo a 10 kHz~\cite{chaudhariLPWANTechnologiesEmerging2020}. La arquitectura propuesta en el Capítulo~3 implementa gateway multi-radio con HaLow como tecnología principal y LTE como respaldo, habilitando monitoreo avanzado de power quality con latencia <15 ms.
+\textbf{Brecha 1 --- Ausencia de HaLow en pasarelas de borde:} Ningún trabajo integra Wi-Fi HaLow como enlace troncal primario en malla 802.11s para AMI, a pesar de su ventaja de caudal (4~Mbps vs $<$300~kbps LPWAN) requerida para formas de onda de calidad de energía ($>$400~kbps)~\cite{chaudhariLPWANTechnologiesEmerging2020}. El Capítulo~\ref{chap:gateway-halow} implementa pasarela con red HaLow en malla con latencia $<$15~ms.
 
-\textbf{Brecha 2: Conformidad limitada DLMS/COSEM + ISO/IEC 30141.} Soluciones comerciales (Cisco IR829, Dell Edge Gateway) implementan protocolos propietarios sin conformidad completa con interfaces COSEM mandatorias (perfiles de carga, registros de facturación, eventos de calidad de energía). Prototipos académicos cumplen parcialmente estándares pero no documentan las cuatro vistas de ISO/IEC 30141 (funcional, información, despliegue, operacional), dificultando replicabilidad y certificación. Esta tesis provee mapeo explícito de arquitectura propuesta a las 7 entidades funcionales de ISO/IEC 30141 y documenta traducción DLMS/COSEM a LwM2M mediante adaptador dedicado en la pasarela de borde.
+\textbf{Brecha 2 --- Conformidad limitada DLMS/COSEM + ISO/IEC 30141:} Soluciones comerciales emplean protocolos propietarios sin conformidad completa con interfaces COSEM mandatorias. Prototipos académicos no documentan mapeo a las cuatro vistas de ISO/IEC~30141. Esta tesis provee mapeo explícito a las 7 FE y documenta traducción DLMS/COSEM a LwM2M.
 
-\textbf{Brecha 3: Validación experimental insuficiente.} La mayoría de trabajos revisados presentan diseño conceptual o simulaciones sin mediciones empíricas de latencia end-to-end bajo carga, Packet Delivery Ratio (PDR) en condiciones reales con interferencia, o caracterización cuantitativa de resiliencia durante desconexiones WAN prolongadas (>24 horas). Solo 3 de los 20 papers analizados reportan despliegue (\textit{deployment}) en campo con datos operacionales. El Capítulo~6 de esta tesis presenta validación experimental exhaustiva con: latencia percentil 95 medida en 10,000 transacciones, PDR con 500 dispositivos concurrentes, y pruebas de conmutación por fallo (\textit{failover}) WAN→LTE con sincronización edge-cloud post-reconexión.
+\textbf{Brecha 3 --- Validación experimental insuficiente:} Solo 3 de 20 papers revisados reportan despliegue en campo con datos operacionales. El Capítulo~\ref{chap:resultados} presenta validación en laboratorio controlado con 1~medidor físico y nodos simulados: latencia P95 extremo a extremo, PDR del enlace Thread$\leftrightarrow$HaLow, y pruebas de sincronización edge-cloud entre TB~Edge y servidor ThingsBoard.
 
-\textbf{Brecha 4: Costo-efectividad en contexto Latinoamericano.} Soluciones comerciales presentan barreras CAPEX significativas (Cisco IR829: \$2,500-4,000 USD, Dell EG: \$1,200-2,000 USD) para economías emergentes, sin análisis comparativo de alternativas open-source con hardware commodity. Esta tesis implementa gateway edge sobre Raspberry Pi 4 (\$55-75 USD) + módulo HaLow MM6108 (\$40-60 USD proyectado volumen), logrando CAPEX <\$200 vs >\$1,200 soluciones comerciales, con análisis de TCO a 5 años que considera OPEX de conectividad, mantenimiento y consumo energético.
+\textbf{Brecha 4 --- Costo-efectividad en contexto Latinoamericano:} Soluciones comerciales (\$1\,200--4\,000/pasarela) presentan barreras CAPEX para economías emergentes. Esta tesis logra CAPEX $<$\$200 con análisis TCO a 5 años que considera OPEX de conectividad, mantenimiento y consumo energético.
 
 % ============================================================================
 % SECCIÓN 2.5: CONCLUSIONES DEL CAPÍTULO
@@ -662,16 +250,4 @@ El análisis crítico del estado del arte en arquitecturas IoT para AMI revela c
 \section{Conclusiones del Capítulo}
 \label{sec:marco-conclusiones}
 
-Este capítulo presentó los fundamentos teóricos que sustentan la arquitectura propuesta, abarcando contexto normativo de redes inteligentes, estado del arte en tecnologías IoT para AMI, y análisis crítico de soluciones comerciales de borde.
-
-\textbf{Contexto normativo Smart Energy:} El marco de referencia NIST para redes inteligentes (Release 4.0) y el estándar DLMS/COSEM (IEC~62056) proporcionan la base normativa para diseño de infraestructuras AMI interoperables. El mapeo explícito de la arquitectura propuesta a las 7 entidades funcionales de ISO/IEC~30141:2024 garantiza conformidad con el marco internacional de interoperabilidad IoT, aspecto no documentado en trabajos previos revisados.
-
-\textbf{Computación en el borde:} El análisis comparativo demuestra que una arquitectura con prioridad en el borde (\textit{edge-first}) reduce la latencia de extremo a extremo por un factor de 5-20$\times$ (1-10~ms vs 50-200~ms en arquitecturas solo-nube) y el consumo de ancho de banda WAN en 70-90\% mediante filtrado, agregación temporal y compresión local. Estas mejoras son cualitativas, habilitando categorías completas de aplicaciones de control en tiempo real (detección de huecos de tensión <10~ms, respuesta a la demanda <100~ms) imposibles con procesamiento centralizado.
-
-\textbf{Seguridad:} La aplicación del NIST Cybersecurity Framework (CSF 2.0) a infraestructuras AMI requiere implementación de defensa en profundidad en cuatro capas concéntricas: física (arranque seguro, TPM), red (firewall nftables, WPA3-SAE), aplicación (RBAC, limitación de tasa), y datos (cifrado LUKS, backup GPG). Los mecanismos criptográficos seleccionados (AES-128-CCM-8 para Thread, ECDSA P-256 para TLS~1.3, SHA-256 para integridad) equilibran robustez con restricciones computacionales de dispositivos IoT.
-
-\textbf{Estado del arte:} La revisión de literatura (2018-2025) no identificó implementaciones que integren simultáneamente: Thread~1.3 mesh para redes de campo, Wi-Fi HaLow (IEEE~802.11ah) como enlace troncal de largo alcance, ThingsBoard Edge para procesamiento local con operación autónoma, y LwM2M para gestión estandarizada de dispositivos. Trabajos previos documentan subconjuntos parciales~\cite{shahryarSolutionSmartHome2020,sunHaLowBasedWirelessCommunication2019}, pero ninguno valida una arquitectura integrada completa con métricas de producción.
-
-\textbf{Análisis de soluciones comerciales:} La evaluación de Cisco IR829, Dell Edge Gateway 3000 y AWS IoT Greengrass revela que ninguna satisface simultáneamente los cinco requisitos para adopción en utilities Latinoamericanas: TCO~<\$200/gateway, OPEX recurrente cero, soporte nativo DLMS/COSEM + LwM2M, ausencia de dependencia del proveedor, y operación offline indefinida. La arquitectura propuesta logra \textbf{91-98\% de reducción de TCO} a 5 años (\$124/gateway vs \$1,361-7,980 en alternativas comerciales), eliminando licencias propietarias y habilitando portabilidad multi-cloud.
-
-\textbf{Transición al Capítulo~3:} Con el marco teórico y las brechas de investigación establecidos, el Capítulo~3 documenta la implementación del Nivel~1 de la arquitectura: nodos IoT con stack Thread~1.3 + LwM2M ejecutando en microcontrolador ESP32-C6, validando consumo energético, latencia mesh, y gestión remota mediante servidor LwM2M Leshan. Las decisiones de diseño del Capítulo~3 responden directamente a las cuatro brechas identificadas en este capítulo, particularmente la integración de Thread mesh con pasarela HaLow (Brecha~1) y la conformidad DLMS/COSEM + ISO/IEC~30141 (Brecha~2).
+La revisión de literatura (2018--2026) no identificó implementaciones que integren simultáneamente Thread~1.4 en malla, Wi-Fi HaLow como enlace troncal, ThingsBoard Edge para procesamiento local autónomo, y LwM2M para gestión estandarizada de dispositivos. La evaluación de soluciones comerciales demuestra que ninguna satisface los cinco requisitos para empresas de servicios públicos Latinoamericanas: TCO~$<$\$200/pasarela, OPEX cero, soporte nativo DLMS/COSEM + LwM2M, ausencia de dependencia de proveedor, y operación sin conexión indefinida. La arquitectura de código abierto propuesta logra 91--98\% de reducción de TCO. Las cuatro brechas identificadas motivan directamente las decisiones de diseño documentadas en los Capítulos~\ref{chap:nodo-iot} a~\ref{chap:resultados}.

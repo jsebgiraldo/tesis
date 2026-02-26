@@ -1,10 +1,13 @@
-﻿\chapter{Plataforma Cloud de Gestión AMI: Arquitectura Escalable con ThingsBoard y Kafka}
+﻿\chapter{Arquitectura Servidor ThingsBoard On-Premise (Trabajo Futuro)}
 \label{chap:server-thingsboard}
 
 % ============================================================================
-% PROPÓSITO ÚNICO: Detallar infraestructura de ingesta masiva y lógica de
-% negocio en servidor central. Se agota el tema ThingsBoard Server aquí.
+% ANEXO: Diseño de referencia para despliegue a escala del servidor central.
+% En el piloto de validación se utilizó ThingsBoard on-premise local.
+% La implementación con Kafka para escalamiento queda como trabajo futuro.
 % ============================================================================
+
+\textbf{Nota:} Este anexo documenta el diseño de referencia para un despliegue a escala de la plataforma ThingsBoard con Apache Kafka en infraestructura propia (\textit{on-premise}). En el piloto de validación de esta tesis (Capítulo~\ref{chap:resultados}), se utilizó un servidor ThingsBoard on-premise local con sincronización gRPC bidireccional hacia las instancias ThingsBoard Edge de las pasarelas. La implementación con Kafka para escalamiento masivo descrita aquí constituye una línea de trabajo futuro orientada a despliegues con miles de dispositivos.
 
 \section{Introducción}
 \label{sec:server-intro}
@@ -33,7 +36,7 @@ Kafka maneja ingest concurrente desde múltiples Gateways Edge (QoS 1 MQTT)~\cit
 
 \begin{itemize}
     \item \S\ref{sec:server-infraestructura}: Infraestructura hardware AWS (EC2, RDS, MSK), arquitectura Kafka (topics, partitions, consumer groups), balanceo carga HAProxy
-    \item \S\ref{sec:server-tb-server}: Despliegue ThingsBoard microservicios (Docker Compose 12 containers, Figura~\ref{fig:thingsboard-msa-architecture}), PostgreSQL+TimescaleDB schema, backup/recovery. Comparación con arquitectura Edge (Capítulo~\ref{chap:gateway-halow}, Tabla~\ref{tab:edge-vs-cloud-architecture})
+    \item \S\ref{sec:server-tb-server}: Despliegue ThingsBoard microservicios (Docker Compose 12 containers, Figura~\ref{fig:thingsboard-msa-architecture}), PostgreSQL+TimescaleDB schema, backup/recovery. Comparación con arquitectura Edge (Capítulo~\ref{chap:gateway-halow})
     \item \S\ref{sec:server-logica}: Lógica negocio (Asset Model, Rule Chains billing/alarmas/analytics), dashboards multi-tenant
     \item \S\ref{sec:server-conclusiones}: Síntesis contribuciones capítulo, transición Cap 6 Resultados
 \end{itemize}
@@ -400,14 +403,13 @@ Prueba carga simulando 500 devices @ 1 msg/s (500 msgs/s total):
 \subsection{Arquitectura de Microservicios}
 \label{sec:server-tb-arquitectura}
 
-ThingsBoard 3.6.2 Community Edition implementa una arquitectura de microservicios distribuida basada en containers Docker~\cite{thingsboardCloudArchitecture2024,perezImplicationSoftwareContainerization2024,elakhdarExploringPotentialMicroservices2024}, diseñada para escalabilidad horizontal, alta disponibilidad y procesamiento de eventos masivo. La Figura~\ref{fig:thingsboard-architecture} ilustra los 12 componentes principales desplegados en AWS EC2.
+ThingsBoard 3.6.2 Community Edition implementa una arquitectura de microservicios distribuida basada en containers Docker~\cite{thingsboardCloudArchitecture2024,perezImplicationSoftwareContainerization2024,elakhdarExploringPotentialMicroservices2024}, diseñada para escalabilidad horizontal, alta disponibilidad y procesamiento de eventos masivo. La Figura~\ref{fig:thingsboard-msa-architecture} ilustra los 12 componentes principales desplegados en AWS EC2.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.85\textwidth]{figures/thingsboard-architecture.png}
 \caption{Arquitectura oficial de microservicios ThingsBoard 3.6.2 desplegada en AWS (fuente: \url{thingsboard.io}). La plataforma integra 4 capas: (1) \textbf{Transport Layer} para ingesta multi-protocolo (MQTT/HTTP/CoAP), (2) \textbf{Core Services} con Actor System para procesamiento concurrente y Rule Engine para lógica de negocio, (3) \textbf{Data Layer} con PostgreSQL+TimescaleDB para persistencia time-series, Redis para cache, y Kafka como message broker distribuido con Zookeeper quorum, (4) \textbf{API Layer} con REST/WebSocket para dashboards y integraciones externas. Arquitectura permite escalado horizontal de cada capa independientemente según carga (transport layer 2 instancias, core services 8 instancias piloto, expansión a 32+ instancias producción). Contrasta con arquitectura Edge monolítica (Capítulo~\ref{chap:gateway-halow}, Figura~\ref{fig:edge-architecture-official}) optimizada para recursos limitados 256-512 MB RAM.}
 \label{fig:thingsboard-msa-architecture}
-\label{fig:thingsboard-architecture}
 \end{figure}
 
 \subsubsection{Capa de Transporte (Transport Layer)}

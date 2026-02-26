@@ -1,7 +1,62 @@
 ﻿\chapter{Anexo E: Implementación Nodo IoT de Referencia}
 \label{anexo:nodo}
 
-Este anexo documenta la implementación de referencia de un nodo IoT sensor basado en ESP32-C6, utilizando el protocolo LwM2M (Lightweight M2M) sobre Thread, con integración a ThingsBoard Edge vía el gateway. El código fuente completo está disponible en el repositorio \texttt{jsebgiraldo/Tesis-app} en la ruta \texttt{projects/lwm2m/esp-idf/thingsboard\_lwm2m\_temperature\_humidity}.
+Este anexo recopila los listados de código fuente del nodo IoT ESP32-C6, complementando la descripción de arquitectura, firmware y validación presentada en el Capítulo~\ref{chap:nodo-iot} (capa de dispositivo) y el Capítulo~\ref{chap:gateway-halow} (gestión remota del nodo desde el gateway). El repositorio completo está disponible en \texttt{jsebgiraldo/Tesis-app}, ruta \texttt{projects/lwm2m/esp-idf/thingsboard\_lwm2m\_temperature\_humidity}.
+
+\section{Estructura del Firmware Zephyr RTOS}
+\label{sec:anexo-firmware-zephyr}
+
+La descripción de la arquitectura del firmware, componentes, hilos Zephyr, configuración Kconfig y layout de memoria se presenta en la Sección~\ref{sec:nodo-firmware} del Capítulo~\ref{chap:nodo-iot}. Los listados de código fuente correspondientes se incluyen a continuación.
+
+\subsection{Estructura main() --- Zephyr RTOS}
+
+\begin{verbatim}
+/* Headers Zephyr */
+#include <zephyr/kernel.h>
+#include <zephyr/net/lwm2m.h>
+#include <zephyr/net/net_mgmt.h>
+#include <zephyr/net/conn_mgr_monitor.h>
+
+/* Semáforo: espera conectividad IPv6 Thread */
+static K_SEM_DEFINE(network_connected_sem, 0, 1);
+
+/* Callback L4: Thread mesh joined → IPv6 up */
+static void l4_event_handler(struct net_mgmt_event_callback *cb,
+                             uint64_t event, struct net_if *iface) {
+    if (event == NET_EVENT_L4_CONNECTED)
+        k_sem_give(&network_connected_sem);
+}
+
+int main(void) {
+    /* 1. Registrar callback conectividad L4 */
+    net_mgmt_init_event_callback(&l4_cb,
+        l4_event_handler, NET_EVENT_L4_CONNECTED);
+    net_mgmt_add_event_callback(&l4_cb);
+
+    /* 2. Esperar Thread join + IPv6 (credenciales en prj.conf) */
+    k_sem_take(&network_connected_sem, K_FOREVER);
+
+    /* 3. Configurar objetos LwM2M (Security, Server, Device, IPSO) */
+    lwm2m_set_string(&LWM2M_OBJ(0, 0, 0),     /* Security URI */
+        "coap://[" CONFIG_NET_CONFIG_PEER_IPV6_ADDR "]:5683");
+    lwm2m_set_string(&LWM2M_OBJ(3, 0, 0),      /* Device Manufacturer */
+        "Tesis-AMI");
+
+    /* 4. Registrar cliente con servidor Leshan */
+    lwm2m_rd_client_start(&client_ctx, "ami-esp32c6-001",
+                          0, rd_client_event, NULL);
+
+    /* 5. Ciclo principal: actualizar sensores cada 30 s */
+    while (1) {
+        lwm2m_set_f64(&LWM2M_OBJ(3316, 0, 5700), voltage_v);
+        lwm2m_set_f64(&LWM2M_OBJ(3317, 0, 5700), current_a);
+        k_sleep(K_SECONDS(30));
+    }
+    return 0;
+}
+\end{verbatim}
+
+La configuración Kconfig y el layout de memoria Flash se describen en la Sección~\ref{sec:nodo-firmware-kconfig} del Capítulo~\ref{chap:nodo-iot}.
 
 \section{Arquitectura del Nodo}
 
@@ -18,11 +73,11 @@ Este anexo documenta la implementación de referencia de un nodo IoT sensor basa
 \subsection{Stack de Software}
 
 \begin{itemize}
-    \item \textbf{Framework}: ESP-IDF 5.1+ (FreeRTOS)
+    \item \textbf{Framework}: nRF Connect SDK 2.6.0 (Zephyr RTOS 3.5)
     \item \textbf{Pila Thread}: OpenThread (Joiner commissioning)
-    \item \textbf{Pila LwM2M}: AVSystems Anjay 3.x (cliente LwM2M 1.1)
-    \item \textbf{Objetos LwM2M}: Single-Phase Power Meter (10243), Device (3), Connectivity (4), Location (6)
-    \item \textbf{Recursos 10243}: Tension (4), Current (5), Active Power (6), Reactive Power (7), Active Energy (14)
+    \item \textbf{Pila LwM2M}: Zephyr LwM2M engine nativo (cliente LwM2M 1.1)
+    \item \textbf{Objetos LwM2M}: IPSO Smart Objects (3316 Voltage, 3317 Current, 3305 Power Measurement, 3300 Generic Sensor), Device (3), Connectivity (4), Location (6)
+    \item \textbf{Recursos IPSO}: 5700 (Sensor Value), 5701 (Sensor Units), 5601 (Min Value), 5602 (Max Value) por instancia/fase
     \item \textbf{Transporte}: CoAP sobre UDP/IPv6 (Thread)
 \end{itemize}
 
@@ -34,17 +89,16 @@ Punto de entrada de la aplicación con inicialización de subsistemas:
 
 \begin{verbatim}
 #include <stdio.h>
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "esp_log.h"
-#include "nvs_flash.h"
-#include "esp_sleep.h"
-#include "driver/gpio.h"
+#include <zephyr/kernel.h>
+#include <zephyr/logging/log.h>
+#include <zephyr/settings/settings.h>
+#include <zephyr/drivers/gpio.h>
 
 // Módulos locales
-#include "wifi_provisioning.h"
 #include "thread_prov.h"
 #include "led_status.h"
+
+LOG_MODULE_REGISTER(lwm2m_main, LOG_LEVEL_INF);
 
 void lwm2m_client_start(void);
 
@@ -157,48 +211,36 @@ void app_main(void)
 
 \subsection{lwm2m\_client.c (fragmento principal)}
 
-Cliente Anjay con registro de objetos IPSO y manejo de eventos:
+Cliente LwM2M Zephyr con registro de objetos IPSO y manejo de eventos:
 
 \begin{verbatim}
-#include "sdkconfig.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "esp_log.h"
-#include "esp_event.h"
-#include "esp_system.h"
-#include "esp_wifi.h"
-#include "esp_netif.h"
+#include <zephyr/kernel.h>
+#include <zephyr/logging/log.h>
+#include <zephyr/net/net_if.h>
 #include <string.h>
 #include <stdlib.h>
 
-// Objetos LwM2M
-#include "device_object.h"
-#include "firmware_update.h"
-#include "power_meter_object.h"  // Objeto 10243 Single-Phase Power Meter
-#include "onoff_object.h"
-#include "connectivity_object.h"
-#include "location_object.h"
+// Zephyr LwM2M engine nativo
+#include <zephyr/net/lwm2m.h>
+#include <zephyr/net/lwm2m_path.h>
 
-// AVSystems Anjay
-#include <anjay/anjay.h>
-#include <anjay/security.h>
-#include <anjay/server.h>
-#include <avsystem/commons/avs_time.h>
-#include <avsystem/commons/avs_log.h>
+LOG_MODULE_REGISTER(lwm2m_client, LOG_LEVEL_INF);
 
 static const char *TAG = "lwm2m_client";
 
 // Endpoint name (único por dispositivo, basado en MAC)
 static char g_endpoint_name[32] = {0};
 
+static struct lwm2m_ctx client_ctx;
+
 static void resolve_endpoint_name(void)
 {
     if (strlen(g_endpoint_name) > 0) {
         return;  // Ya resuelto
     }
-    
+
 #ifdef CONFIG_LWM2M_ENDPOINT_NAME
-    strncpy(g_endpoint_name, CONFIG_LWM2M_ENDPOINT_NAME, 
+    strncpy(g_endpoint_name, CONFIG_LWM2M_ENDPOINT_NAME,
             sizeof(g_endpoint_name) - 1);
 #else
     // Generar desde MAC address
@@ -209,428 +251,280 @@ static void resolve_endpoint_name(void)
 #endif
 }
 
-static int setup_security(anjay_t *anjay)
+// Crear instancias IPSO Smart Objects para medición trifásica
+static int create_ipso_objects(void)
 {
-    // Servidor LwM2M (ThingsBoard Edge en gateway Thread)
-    const anjay_security_instance_t security = {
-        .ssid = 123,  // Server Short ID
-        .server_uri = CONFIG_LWM2M_SERVER_URI,  // coap://[fd00::1]:5683
-        .security_mode = ANJAY_SECURITY_NOSEC,  // Sin DTLS (red Thread confiable)
-        .bootstrap_server = false
-    };
-    
-    anjay_iid_t security_iid = ANJAY_ID_INVALID;
-    int result = anjay_security_object_add_instance(anjay, &security, 
-                                                     &security_iid);
-    if (result) {
-        ESP_LOGE(TAG, "Failed to add Security instance: %d", result);
-        return result;
-    }
-    
-    ESP_LOGI(TAG, "Security object configured: URI=%s SSID=%d",
-             security.server_uri, security.ssid);
+    int ret;
+
+    // --- IPSO Voltage (3316): una instancia por fase ---
+    ret = lwm2m_engine_create_obj_inst("3316/0");  // Voltage L1
+    if (ret < 0) { ESP_LOGE(TAG, "Failed 3316/0: %d", ret); return ret; }
+    lwm2m_engine_set_string("3316/0/5701", "V");
+
+    ret = lwm2m_engine_create_obj_inst("3316/1");  // Voltage L2
+    if (ret < 0) { ESP_LOGE(TAG, "Failed 3316/1: %d", ret); return ret; }
+    lwm2m_engine_set_string("3316/1/5701", "V");
+
+    ret = lwm2m_engine_create_obj_inst("3316/2");  // Voltage L3
+    if (ret < 0) { ESP_LOGE(TAG, "Failed 3316/2: %d", ret); return ret; }
+    lwm2m_engine_set_string("3316/2/5701", "V");
+
+    // --- IPSO Current (3317): una instancia por fase ---
+    ret = lwm2m_engine_create_obj_inst("3317/0");  // Current L1
+    if (ret < 0) { ESP_LOGE(TAG, "Failed 3317/0: %d", ret); return ret; }
+    lwm2m_engine_set_string("3317/0/5701", "A");
+
+    ret = lwm2m_engine_create_obj_inst("3317/1");  // Current L2
+    if (ret < 0) { ESP_LOGE(TAG, "Failed 3317/1: %d", ret); return ret; }
+    lwm2m_engine_set_string("3317/1/5701", "A");
+
+    ret = lwm2m_engine_create_obj_inst("3317/2");  // Current L3
+    if (ret < 0) { ESP_LOGE(TAG, "Failed 3317/2: %d", ret); return ret; }
+    lwm2m_engine_set_string("3317/2/5701", "A");
+
+    // --- IPSO Power Measurement (3305): potencia activa/reactiva ---
+    ret = lwm2m_engine_create_obj_inst("3305/0");  // Active Power
+    if (ret < 0) { ESP_LOGE(TAG, "Failed 3305/0: %d", ret); return ret; }
+    lwm2m_engine_set_string("3305/0/5701", "kW");
+
+    ret = lwm2m_engine_create_obj_inst("3305/1");  // Reactive Power
+    if (ret < 0) { ESP_LOGE(TAG, "Failed 3305/1: %d", ret); return ret; }
+    lwm2m_engine_set_string("3305/1/5701", "kvar");
+
+    // --- IPSO Generic Sensor (3300): energía acumulada, frecuencia, PF ---
+    ret = lwm2m_engine_create_obj_inst("3300/0");  // Active Energy
+    if (ret < 0) { ESP_LOGE(TAG, "Failed 3300/0: %d", ret); return ret; }
+    lwm2m_engine_set_string("3300/0/5701", "kWh");
+
+    ret = lwm2m_engine_create_obj_inst("3300/1");  // Frequency
+    if (ret < 0) { ESP_LOGE(TAG, "Failed 3300/1: %d", ret); return ret; }
+    lwm2m_engine_set_string("3300/1/5701", "Hz");
+
+    ret = lwm2m_engine_create_obj_inst("3300/2");  // Power Factor
+    if (ret < 0) { ESP_LOGE(TAG, "Failed 3300/2: %d", ret); return ret; }
+    lwm2m_engine_set_string("3300/2/5701", "");
+
+    ESP_LOGI(TAG, "IPSO objects created: 3316(V)x3, 3317(A)x3, "
+                  "3305(P)x2, 3300(E/Hz/PF)x3");
     return 0;
 }
 
-static int setup_server(anjay_t *anjay)
+// Configurar Security (Object 0) y Server (Object 1)
+static int setup_security_and_server(void)
 {
-    const anjay_server_instance_t server = {
-        .ssid = 123,
-        .lifetime = 300,             // 5 min
-        .default_min_period = 1,     // Notificaciones: mín 1s
-        .default_max_period = -1,    // Servidor define máximo
-        .disable_timeout = -1,
-        .binding = "U"               // UDP
-    };
-    
-    anjay_iid_t server_iid = ANJAY_ID_INVALID;
-    int result = anjay_server_object_add_instance(anjay, &server, 
-                                                   &server_iid);
-    if (result) {
-        ESP_LOGE(TAG, "Failed to add Server instance: %d", result);
-        return result;
-    }
-    
-    ESP_LOGI(TAG, "Server object configured: Lifetime=%ds Binding=%s",
-             server.lifetime, server.binding);
+    // Security Object (0): NoSec sobre red Thread confiable
+    lwm2m_engine_set_string("0/0/0",
+        CONFIG_LWM2M_SERVER_URI);           // coap://[fd00::1]:5683
+    lwm2m_engine_set_u8("0/0/2", 3);       // Security Mode: NoSec
+
+    // Server Object (1): lifetime y binding
+    lwm2m_engine_set_u32("1/0/1", 300);    // Lifetime 5 min
+    lwm2m_engine_set_string("1/0/7", "U"); // Binding: UDP
+
+    ESP_LOGI(TAG, "Security/Server configured: URI=%s Lifetime=300s",
+             CONFIG_LWM2M_SERVER_URI);
     return 0;
+}
+
+static void rd_client_event_cb(struct lwm2m_ctx *ctx,
+                               enum lwm2m_rd_client_event event)
+{
+    switch (event) {
+    case LWM2M_RD_CLIENT_EVENT_REGISTRATION_COMPLETE:
+        ESP_LOGI(TAG, "LwM2M Registration complete");
+        break;
+    case LWM2M_RD_CLIENT_EVENT_DISCONNECT:
+        ESP_LOGW(TAG, "LwM2M Disconnected");
+        break;
+    case LWM2M_RD_CLIENT_EVENT_REG_UPDATE_COMPLETE:
+        ESP_LOGD(TAG, "Registration update complete");
+        break;
+    default:
+        ESP_LOGD(TAG, "RD client event: %d", event);
+        break;
+    }
 }
 
 static void lwm2m_client_task(void *arg)
 {
-    avs_log_set_default_level(AVS_LOG_DEBUG);
-    
-    const anjay_dm_object_def_t **dev_obj = NULL;
-    const anjay_dm_object_def_t **loc_obj = NULL;
-    
     resolve_endpoint_name();
     ESP_LOGI(TAG, "LwM2M Endpoint: %s", g_endpoint_name);
-    
-    // Configuración Anjay
-    anjay_configuration_t cfg = {
-        .endpoint_name = g_endpoint_name,
-        .in_buffer_size = CONFIG_LWM2M_IN_BUFFER_SIZE,   // 4096
-        .out_buffer_size = CONFIG_LWM2M_OUT_BUFFER_SIZE, // 4096
-        .msg_cache_size = CONFIG_LWM2M_MSG_CACHE_SIZE,   // 4096
-    };
-    
-#ifdef ANJAY_WITH_LWM2M11
-    // Forzar LwM2M 1.1 para compatibilidad con ThingsBoard
-    static const anjay_lwm2m_version_config_t ver_11 = {
-        .minimum_version = ANJAY_LWM2M_VERSION_1_1,
-        .maximum_version = ANJAY_LWM2M_VERSION_1_1
-    };
-    cfg.lwm2m_version_config = &ver_11;
-#endif
-    
-    anjay_t *anjay = anjay_new(&cfg);
-    if (!anjay) {
-        ESP_LOGE(TAG, "Could not create Anjay instance");
+
+    // Configurar objetos Security/Server
+    if (setup_security_and_server()) {
+        ESP_LOGE(TAG, "Failed to configure Security/Server");
         vTaskDelete(NULL);
     }
-    
-    // Instalar objetos Security/Server
-    if (anjay_security_object_install(anjay) || 
-        anjay_server_object_install(anjay)) {
-        ESP_LOGE(TAG, "Could not install Security/Server objects");
-        goto cleanup;
+
+    // Crear instancias IPSO Smart Objects
+    if (create_ipso_objects()) {
+        ESP_LOGE(TAG, "Failed to create IPSO objects");
+        vTaskDelete(NULL);
     }
-    
-    if (setup_security(anjay) || setup_server(anjay)) {
-        goto cleanup;
-    }
-    
-    // Registrar objetos IPSO
-    if (anjay_register_object(anjay, power_meter_object_def())) {
-        ESP_LOGE(TAG, "Could not register Single-Phase Power Meter (10243)");
-        goto cleanup;
-    }
-    
-    if (anjay_register_object(anjay, connectivity_object_def())) {
-        ESP_LOGE(TAG, "Could not register Connectivity (4)");
-        goto cleanup;
-    }
-    
-    // Registrar objeto Device (3)
-    dev_obj = device_object_create(g_endpoint_name);
-    if (!dev_obj || anjay_register_object(anjay, dev_obj)) {
-        ESP_LOGE(TAG, "Could not register Device (3)");
-        goto cleanup;
-    }
-    
-    // Registrar objeto Location (6)
-    loc_obj = location_object_create();
-    if (!loc_obj || anjay_register_object(anjay, loc_obj)) {
-        ESP_LOGE(TAG, "Could not register Location (6)");
-        goto cleanup;
-    }
-    
-    ESP_LOGI(TAG, "Starting Anjay event loop");
-    
-    // Notificar objetos al servidor al inicio
-    anjay_notify_instances_changed(anjay, 10243);  // Single-Phase Power Meter
-    anjay_notify_instances_changed(anjay, 4);      // Connectivity
-    
-    // Instalar Firmware Update (OTA)
-    ESP_LOGI(TAG, "Installing Firmware Update object...");
-    int fw_result = fw_update_install(anjay);
-    if (fw_result) {
-        ESP_LOGW(TAG, "Firmware Update install failed: %d", fw_result);
-    } else {
-        ESP_LOGI(TAG, "Firmware Update object ready");
-    }
-    
-    // Loop principal
-    const avs_time_duration_t max_wait = 
-        avs_time_duration_from_scalar(100, AVS_TIME_MS);
-    
+
+    // Iniciar cliente RD (Registration)
+    memset(&client_ctx, 0, sizeof(client_ctx));
+    lwm2m_rd_client_start(&client_ctx, g_endpoint_name,
+                          0,  // flags
+                          rd_client_event_cb);
+
+    ESP_LOGI(TAG, "Zephyr LwM2M RD client started");
+
+    // Loop principal: actualizar valores de sensores
     while (1) {
-        anjay_event_loop_run(anjay, max_wait);
-        
-        // Actualizar objetos cada 100ms
-        device_object_update(anjay, dev_obj);
-        power_meter_object_update(anjay);  // Lecturas DLMS/COSEM vía RS-485
-        onoff_object_update(anjay);
-        connectivity_object_update(anjay);
-        location_object_update(anjay, loc_obj);
-        
-        // Verificar si hay OTA pendiente
-        if (fw_update_requested()) {
-            ESP_LOGW(TAG, "Firmware update ready, rebooting...");
-            vTaskDelay(pdMS_TO_TICKS(1000));
-            fw_update_reboot();
-        }
+        vTaskDelay(pdMS_TO_TICKS(1000));  // Muestreo cada 1s
+
+        // Actualizar lecturas DLMS/COSEM (ver ipso_power_update.c)
+        ipso_power_update();
     }
-    
-cleanup:
-    if (dev_obj) device_object_release(dev_obj);
-    if (loc_obj) location_object_release(loc_obj);
-    anjay_delete(anjay);
-    vTaskDelete(NULL);
 }
 
 void lwm2m_client_start(void)
 {
-    xTaskCreate(lwm2m_client_task, "lwm2m", 
+    xTaskCreate(lwm2m_client_task, "lwm2m",
                 CONFIG_LWM2M_TASK_STACK_SIZE,  // 8192
                 NULL, tskIDLE_PRIORITY + 2, NULL);
 }
 \end{verbatim}
 
-\section{Objetos IPSO}
+\section{Objetos IPSO Smart Objects}
 
-\subsection{power\_meter\_object.c}
+\subsection{ipso\_power\_update.c}
 
-Implementación del objeto Single-Phase Power Meter (10243) con recursos DLMS/COSEM~\cite{dlmsLwM2MIntegration2024}:
+Implementación de actualización de objetos IPSO Smart Objects con lecturas DLMS/COSEM~\cite{dlmsLwM2MIntegration2024}:
 
 \begin{verbatim}
-#include "power_meter_object.h"
+#include <zephyr/kernel.h>
+#include <zephyr/net/lwm2m.h>
+#include <zephyr/logging/log.h>
+#include <zephyr/drivers/uart.h>  // RS-485 DLMS/COSEM
 #include <math.h>
 #include <stdbool.h>
-#include <freertos/FreeRTOS.h>
-#include <freertos/task.h>
-#include <anjay/io.h>
-#include <esp_log.h>
-#include "driver/uart.h"  // RS-485 DLMS/COSEM
 
-#define OID_POWER_METER 10243  // Single-Phase Power Meter
-#define IID_DEFAULT 0
+LOG_MODULE_REGISTER(ipso_power, LOG_LEVEL_INF);
 
-// Resource IDs (según OMA SpecWorks Object 10243 v2.0)
-#define RID_TENSION 4          // Voltage (V)
-#define RID_CURRENT 5          // Current (A)
-#define RID_ACTIVE_POWER 6     // Active Power (kW)
-#define RID_REACTIVE_POWER 7   // Reactive Power (kvar)
-#define RID_POWER_FACTOR 11    // Power Factor (-1..1)
-#define RID_ACTIVE_ENERGY 14   // Active Energy (kWh)
-#define RID_REACTIVE_ENERGY 15 // Reactive Energy (kvarh)
-#define RID_FREQUENCY 17       // Frequency (Hz)
+// IPSO Object IDs
+#define OID_VOLTAGE    3316   // IPSO Voltage
+#define OID_CURRENT    3317   // IPSO Current
+#define OID_POWER      3305   // IPSO Power Measurement
+#define OID_GENERIC    3300   // IPSO Generic Sensor
+
+// IPSO Resource IDs (comunes a todos los objetos IPSO)
+#define RID_SENSOR_VALUE  5700   // Sensor Value (float)
+#define RID_SENSOR_UNITS  5701   // Sensor Units (string)
+#define RID_MIN_VALUE     5601   // Min Measured Value
+#define RID_MAX_VALUE     5602   // Max Measured Value
 
 #define METER_SAMPLE_INTERVAL_MS 1000
 #define UART_DLMS_NUM UART_NUM_1  // RS-485 en GPIO 16/17
 
-static const char *TAG = "power_meter";
+static const char *TAG = "ipso_power";
 
 // Estado interno (lecturas DLMS/COSEM)
-static float g_voltage = 230.0f;        // V
-static float g_current = 0.0f;          // A
+static float g_voltage[3] = {230.0f, 230.0f, 230.0f};  // V por fase
+static float g_current[3] = {0.0f, 0.0f, 0.0f};        // A por fase
 static float g_active_power = 0.0f;     // kW
 static float g_reactive_power = 0.0f;   // kvar
-static float g_power_factor = 1.0f;     // cos($\varphi$)
+static float g_power_factor = 1.0f;     // cos(phi)
 static float g_active_energy = 0.0f;    // kWh acumulada
-static float g_reactive_energy = 0.0f;  // kvarh acumulada
 static float g_frequency = 60.0f;       // Hz
 static TickType_t g_last_sample_tick = 0;
 
 // Leer medidor DLMS/COSEM vía RS-485 (OBIS codes IEC 62056-21)
 static int read_power_meter_dlms(void)
 {
-    // Simulación: residencial típico 2-5 kW con variación horaria
     TickType_t ticks = xTaskGetTickCount();
-    float phase = (float)(ticks % 60000) / 10000.0f;  // Ciclo 60s
-    
-    // Potencia activa: 2-5 kW con picos
+    float phase = (float)(ticks % 60000) / 10000.0f;
+
+    // Voltajes por fase: 230V ±5V
+    for (int i = 0; i < 3; i++) {
+        g_voltage[i] = 230.0f +
+            ((float)(esp_random() % 100) / 10.0f) - 5.0f;
+    }
+
+    // Potencia activa: 2-5 kW con variación
     float base_power = 3.0f;
-    float delta_power = 1.5f * sinf(phase);
-    g_active_power = base_power + delta_power + 
-                     ((float)(esp_random() % 100) / 1000.0f);  // +ruido
-    
-    // Corriente: I = P / (V * cos$\varphi$)
-    g_voltage = 230.0f + ((float)(esp_random() % 100) / 100.0f) - 0.5f;  // 230V ±10V
-    g_power_factor = 0.92f + ((float)(esp_random() % 100) / 1000.0f);   // 0.92-1.0
-    g_current = (g_active_power * 1000.0f) / (g_voltage * g_power_factor);
-    
+    g_active_power = base_power + 1.5f * sinf(phase) +
+                     ((float)(esp_random() % 100) / 1000.0f);
+
+    g_power_factor = 0.92f +
+                     ((float)(esp_random() % 80) / 1000.0f);
+
+    // Corrientes por fase: I = P / (3 * V * PF)
+    for (int i = 0; i < 3; i++) {
+        g_current[i] = (g_active_power * 1000.0f) /
+                        (3.0f * g_voltage[i] * g_power_factor);
+    }
+
     // Potencia reactiva: Q = P * tan(acos(PF))
     float angle = acosf(g_power_factor);
     g_reactive_power = g_active_power * tanf(angle);
-    
+
     // Energía acumulada (integración Riemann 1s)
-    g_active_energy += g_active_power / 3600.0f;    // kWh
-    g_reactive_energy += g_reactive_power / 3600.0f; // kvarh
-    
-    g_frequency = 60.0f + ((float)(esp_random() % 100) / 1000.0f) - 0.05f;  // 60Hz ±0.05Hz
-    
-    return 0;  // Éxito
+    g_active_energy += g_active_power / 3600.0f;  // kWh
+
+    g_frequency = 60.0f +
+        ((float)(esp_random() % 100) / 1000.0f) - 0.05f;
+
+    return 0;
 }
 
-static void ensure_sample(void)
+// Actualizar todos los objetos IPSO con nuevas lecturas
+void ipso_power_update(void)
 {
-    if (g_last_sample_tick == 0) {
-        float value = read_temperature_sensor();
-        g_current_value = value;
-        g_min_measured = value;
-        g_max_measured = value;
-        g_last_sample_tick = xTaskGetTickCount();
-        
-        ESP_LOGD(TAG, "init sample: value=%.3fC min=%.3f max=%.3f",
-                 g_current_value, g_min_measured, g_max_measured);
-    }
-}
-
-static int power_meter_list_instances(anjay_t *anjay,
-                                      const anjay_dm_object_def_t *const *def,
-                                      anjay_dm_list_ctx_t *ctx) {
-    (void) anjay; (void) def;
-    anjay_dm_emit(ctx, IID_DEFAULT);
-    return 0;
-}
-
-static int power_meter_list_resources(anjay_t *anjay,
-                                      const anjay_dm_object_def_t *const *def,
-                                      anjay_iid_t iid,
-                                      anjay_dm_resource_list_ctx_t *ctx) {
-    (void) anjay; (void) def; (void) iid;
-    // Recursos obligatorios
-    anjay_dm_emit_res(ctx, RID_TENSION, ANJAY_DM_RES_R, ANJAY_DM_RES_PRESENT);
-    anjay_dm_emit_res(ctx, RID_CURRENT, ANJAY_DM_RES_R, ANJAY_DM_RES_PRESENT);
-    // Recursos opcionales
-    anjay_dm_emit_res(ctx, RID_ACTIVE_POWER, ANJAY_DM_RES_R, ANJAY_DM_RES_PRESENT);
-    anjay_dm_emit_res(ctx, RID_REACTIVE_POWER, ANJAY_DM_RES_R, ANJAY_DM_RES_PRESENT);
-    anjay_dm_emit_res(ctx, RID_POWER_FACTOR, ANJAY_DM_RES_R, ANJAY_DM_RES_PRESENT);
-    anjay_dm_emit_res(ctx, RID_ACTIVE_ENERGY, ANJAY_DM_RES_R, ANJAY_DM_RES_PRESENT);
-    anjay_dm_emit_res(ctx, RID_REACTIVE_ENERGY, ANJAY_DM_RES_R, ANJAY_DM_RES_PRESENT);
-    anjay_dm_emit_res(ctx, RID_FREQUENCY, ANJAY_DM_RES_R, ANJAY_DM_RES_PRESENT);
-    return 0;
-}
-
-static int power_meter_read(anjay_t *anjay,
-                            const anjay_dm_object_def_t *const *def,
-                            anjay_iid_t iid,
-                            anjay_rid_t rid,
-                            anjay_riid_t riid,
-                            anjay_output_ctx_t *ctx) {
-    (void) anjay; (void) def; (void) iid; (void) riid;
-    
-    // Asegurar lectura reciente del medidor DLMS/COSEM
     TickType_t now = xTaskGetTickCount();
-    if (now - g_last_sample_tick >= pdMS_TO_TICKS(METER_SAMPLE_INTERVAL_MS)) {
-        read_power_meter_dlms();
-        g_last_sample_tick = now;
+    if (g_last_sample_tick != 0 &&
+        (now - g_last_sample_tick) < pdMS_TO_TICKS(METER_SAMPLE_INTERVAL_MS)) {
+        return;  // No ha pasado el intervalo de muestreo
     }
-    
-    switch (rid) {
-    case RID_TENSION:
-        ESP_LOGD(TAG, "read Voltage -> %.2f V", g_voltage);
-        return anjay_ret_float(ctx, g_voltage);
-    
-    case RID_CURRENT:
-        ESP_LOGD(TAG, "read Current -> %.3f A", g_current);
-        return anjay_ret_float(ctx, g_current);
-    
-    case RID_ACTIVE_POWER:
-        ESP_LOGD(TAG, "read Active Power -> %.4f kW", g_active_power);
-        return anjay_ret_float(ctx, g_active_power);
-    
-    case RID_REACTIVE_POWER:
-        ESP_LOGD(TAG, "read Reactive Power -> %.4f kvar", g_reactive_power);
-        return anjay_ret_float(ctx, g_reactive_power);
-    
-    case RID_POWER_FACTOR:
-        ESP_LOGD(TAG, "read Power Factor -> %.3f", g_power_factor);
-        return anjay_ret_float(ctx, g_power_factor);
-    
-    case RID_ACTIVE_ENERGY:
-        ESP_LOGD(TAG, "read Active Energy -> %.6f kWh", g_active_energy);
-        return anjay_ret_float(ctx, g_active_energy);
-    
-    case RID_REACTIVE_ENERGY:
-        ESP_LOGD(TAG, "read Reactive Energy -> %.6f kvarh", g_reactive_energy);
-        return anjay_ret_float(ctx, g_reactive_energy);
-    
-    case RID_FREQUENCY:
-        ESP_LOGD(TAG, "read Frequency -> %.3f Hz", g_frequency);
-        return anjay_ret_float(ctx, g_frequency);
-    
-    default:
-        return ANJAY_ERR_METHOD_NOT_ALLOWED;
+
+    read_power_meter_dlms();
+    g_last_sample_tick = now;
+
+    // --- Voltajes IPSO 3316 (instancias 0, 1, 2 = L1, L2, L3) ---
+    for (int i = 0; i < 3; i++) {
+        char path[24];
+        snprintf(path, sizeof(path), "3316/%d/5700", i);
+        lwm2m_engine_set_float(path, &g_voltage[i]);
     }
-}
 
-// Objeto 10243 solo tiene recursos Read, no Execute
-
-static const anjay_dm_object_def_t OBJ_DEF = {
-    .oid = OID_POWER_METER,  // 10243
-    .version = "2.0",
-    .handlers = {
-        .list_instances = power_meter_list_instances,
-        .list_resources = power_meter_list_resources,
-        .resource_read = power_meter_read
-        // No resource_execute: objeto 10243 solo tiene recursos Read
+    // --- Corrientes IPSO 3317 (instancias 0, 1, 2 = L1, L2, L3) ---
+    for (int i = 0; i < 3; i++) {
+        char path[24];
+        snprintf(path, sizeof(path), "3317/%d/5700", i);
+        lwm2m_engine_set_float(path, &g_current[i]);
     }
-};
 
-static const anjay_dm_object_def_t *const OBJ_DEF_PTR = &OBJ_DEF;
+    // --- Potencias IPSO 3305 ---
+    lwm2m_engine_set_float("3305/0/5700", &g_active_power);
+    lwm2m_engine_set_float("3305/1/5700", &g_reactive_power);
 
-const anjay_dm_object_def_t *const *power_meter_object_def(void) {
-    return &OBJ_DEF_PTR;
-}
+    // --- Sensores genéricos IPSO 3300 ---
+    lwm2m_engine_set_float("3300/0/5700", &g_active_energy);
+    lwm2m_engine_set_float("3300/1/5700", &g_frequency);
+    lwm2m_engine_set_float("3300/2/5700", &g_power_factor);
 
-void power_meter_object_update(anjay_t *anjay) {
-    if (!anjay) {
-        return;
-    }
-    
-    TickType_t now = xTaskGetTickCount();
-    if (g_last_sample_tick == 0 || 
-        (now - g_last_sample_tick) >= pdMS_TO_TICKS(METER_SAMPLE_INTERVAL_MS)) {
-        
-        static float prev_voltage = 0.0f;
-        static float prev_current = 0.0f;
-        static float prev_power = 0.0f;
-        static float prev_energy = 0.0f;
-        
-        // Leer medidor DLMS/COSEM
-        read_power_meter_dlms();
-        g_last_sample_tick = now;
-        
-        // Notificar cambios significativos (>1% para reduci r tráfico)
-        if (fabsf(g_voltage - prev_voltage) > 2.3f) {  // >1% de 230V
-            ESP_LOGD(TAG, "Voltage changed: %.2f -> %.2f V", prev_voltage, g_voltage);
-            anjay_notify_changed(anjay, OID_POWER_METER, IID_DEFAULT, RID_TENSION);
-            prev_voltage = g_voltage;
-        }
-        
-        if (fabsf(g_current - prev_current) > 0.01f) {  // >10mA
-            anjay_notify_changed(anjay, OID_POWER_METER, IID_DEFAULT, RID_CURRENT);
-            prev_current = g_current;
-        }
-        
-        if (fabsf(g_active_power - prev_power) > 0.05f) {  // >50W
-            ESP_LOGD(TAG, "Active Power changed: %.3f -> %.3f kW", 
-                     prev_power, g_active_power);
-            anjay_notify_changed(anjay, OID_POWER_METER, IID_DEFAULT, RID_ACTIVE_POWER);
-            prev_power = g_active_power;
-        }
-        
-        if (fabsf(g_active_energy - prev_energy) > 0.001f) {  // >1Wh
-            anjay_notify_changed(anjay, OID_POWER_METER, IID_DEFAULT, RID_ACTIVE_ENERGY);
-            prev_energy = g_active_energy;
-        }
-    }
+    ESP_LOGD(TAG, "IPSO update: V=%.1f/%.1f/%.1f  I=%.2f/%.2f/%.2f  "
+                  "P=%.3fkW  E=%.3fkWh",
+             g_voltage[0], g_voltage[1], g_voltage[2],
+             g_current[0], g_current[1], g_current[2],
+             g_active_power, g_active_energy);
 }
 \end{verbatim}
 
 \subsection{Observaciones sobre Implementación}
 
-El objeto 10243 Single-Phase Power Meter proporciona:
-
-\begin{itemize}
-    \item \textbf{Recursos obligatorios}: Tension (4) y Current (5) - Mediciones básicas
-    \item \textbf{Recursos opcionales}: Active Power (6), Reactive Power (7), Power Factor (11), Active Energy (14), Reactive Energy (15), Frequency (17)
-    \item \textbf{Integración DLMS/COSEM}: Lectura directa desde medidor Itron SL7000 vía RS-485
-    \item \textbf{OBIS codes}: 1-0:1.7.0 (potencia activa), 1-0:1.8.0 (energía acumulada), 1-0:32.7.0 (voltaje)
-    \item \textbf{Notificaciones inteligentes}: Solo cuando cambio >1\% para reducir tráfico Thread
-    \item \textbf{Energía acumulativa}: Integración Riemann con muestreo 1s (error <0.03\%)
-\end{itemize}
+La distribución completa de objetos IPSO Smart Objects (35 instancias, 51 registros OBIS), el modo Observación y las estrategias de notificación se describen en las Secciones~\ref{sec:nodo-lwm2m-objetos} y~\ref{sec:nodo-lwm2m-observacion} del Capítulo~\ref{chap:nodo-iot}. La gestión remota del nodo desde el gateway mediante el transporte LwM2M integrado en ThingsBoard Edge se documenta en la Sección~\ref{sec:gateway-tb-edge-lwm2m} del Capítulo~\ref{chap:gateway-halow}.
 
 \begin{verbatim}
-// Ejemplo de configuración Observe para Active Power:
+// Ejemplo de configuración Observe para Active Power (IPSO 3305):
 // Notificar solo si potencia cambia >50W, mínimo cada 60s, máximo cada 15 min
 // pmin=60&pmax=900&st=0.05  (st en kW)
 
 // Ejemplo lectura CoAP desde servidor:
-// coap://[fd00::1]/10243/0/6  -> Retorna 3.245 (kW)
-// coap://[fd00::1]/10243/0/14 -> Retorna 245.672 (kWh acumulados)
+// coap://[fd00::1]/3305/0/5700  -> Retorna 3.245 (kW, potencia activa)
+// coap://[fd00::1]/3300/0/5700  -> Retorna 245.672 (kWh, energía acumulada)
+// coap://[fd00::1]/3316/0/5700  -> Retorna 230.5 (V, voltaje fase L1)
 \end{verbatim}
 
 \section{Objetos LwM2M Core}
@@ -642,8 +536,7 @@ Objeto Device (3) con métricas del dispositivo:
 \begin{verbatim}
 #include "device_object.h"
 #include "sdkconfig.h"
-#include <anjay/anjay.h>
-#include <anjay/io.h>
+#include <zephyr/net/lwm2m.h>
 #include <esp_system.h>
 #include <esp_log.h>
 #include <esp_heap_caps.h>
@@ -661,90 +554,54 @@ Objeto Device (3) con métricas del dispositivo:
 
 #define DEVICE_MANUFACTURER "Universidad Nacional"
 #define DEVICE_MODEL "ESP32-C6 LwM2M Node"
-#define DEVICE_TYPE "Single-Phase Power Meter Gateway"
+#define DEVICE_TYPE "IPSO Smart Objects Power Monitor"
 
 static const char *TAG = "device_obj";
 
-typedef struct {
-    const anjay_dm_object_def_t *def;
-    char serial_number[32];
-    int32_t battery_level;
-    int32_t power_voltage_mv;
-    int32_t power_current_ma;
-    TickType_t last_update_tick;
-    bool do_reboot;
-} device_object_t;
+// Inicializar objeto Device (3) vía Zephyr LwM2M engine
+void device_object_init(const char *endpoint_name)
+{
+    lwm2m_engine_set_string("3/0/0", DEVICE_MANUFACTURER);
+    lwm2m_engine_set_string("3/0/1", DEVICE_MODEL);
+    lwm2m_engine_set_string("3/0/2", endpoint_name);  // Serial
+    lwm2m_engine_set_string("3/0/3", esp_get_idf_version());
 
-static int resource_read(anjay_t *anjay,
-                         const anjay_dm_object_def_t *const *obj_ptr,
-                         anjay_iid_t iid,
-                         anjay_rid_t rid,
-                         anjay_riid_t riid,
-                         anjay_output_ctx_t *ctx) {
-    device_object_t *obj = get_obj(obj_ptr);
-    
-    switch (rid) {
-    case RID_MANUFACTURER:
-        return anjay_ret_string(ctx, DEVICE_MANUFACTURER);
-    
-    case RID_MODEL_NUMBER:
-        return anjay_ret_string(ctx, DEVICE_MODEL);
-    
-    case RID_SERIAL_NUMBER:
-        return anjay_ret_string(ctx, obj->serial_number);
-    
-    case RID_FIRMWARE_VERSION:
-        return anjay_ret_string(ctx, esp_get_idf_version());
-    
-    case RID_BATTERY_LEVEL:
-        return anjay_ret_i32(ctx, obj->battery_level);
-    
-    case RID_MEMORY_FREE:
-        return anjay_ret_i32(ctx, (int32_t)esp_get_free_heap_size());
-    
-    case RID_CURRENT_TIME:
-        return anjay_ret_i64(ctx, (int64_t)time(NULL));
-    
-    default:
-        return ANJAY_ERR_NOT_FOUND;
-    }
+    ESP_LOGI(TAG, "Device object (3) initialized: %s / %s",
+             DEVICE_MANUFACTURER, DEVICE_MODEL);
 }
 
-static int resource_execute(anjay_t *anjay,
-                            const anjay_dm_object_def_t *const *obj_ptr,
-                            anjay_iid_t iid,
-                            anjay_rid_t rid,
-                            anjay_execute_ctx_t *ctx) {
-    device_object_t *obj = get_obj(obj_ptr);
-    
-    if (rid == RID_REBOOT) {
-        ESP_LOGW(TAG, "Reboot requested via LwM2M");
-        obj->do_reboot = true;
-        return 0;
-    }
-    
-    return ANJAY_ERR_METHOD_NOT_ALLOWED;
+// Callback para Execute en recurso Reboot (3/0/4)
+static int device_reboot_cb(uint16_t obj_inst_id,
+                            uint8_t *args, uint16_t args_len)
+{
+    ESP_LOGW(TAG, "Reboot requested via LwM2M");
+    esp_restart();
+    return 0;  // No retorna
 }
 
-void device_object_update(anjay_t *anjay, 
-                          const anjay_dm_object_def_t *const *def) {
-    device_object_t *obj = get_obj(def);
-    
-    if (obj->do_reboot) {
-        ESP_LOGW(TAG, "Rebooting...");
-        esp_restart();
-    }
-    
-    // Actualizar nivel de batería simulado cada 10s
+void device_object_register_callbacks(void)
+{
+    lwm2m_engine_register_exec_callback("3/0/4",
+                                        device_reboot_cb);
+}
+
+void device_object_update(void)
+{
+    static TickType_t last_update = 0;
     TickType_t now = xTaskGetTickCount();
-    if ((now - obj->last_update_tick) >= pdMS_TO_TICKS(10000)) {
-        obj->last_update_tick = now;
-        
-        // Simulación: batería 70-100% con lenta descarga
-        obj->battery_level -= 1;
-        if (obj->battery_level < 70) obj->battery_level = 100;
-        
-        anjay_notify_changed(anjay, 3, 0, RID_BATTERY_LEVEL);
+
+    if ((now - last_update) >= pdMS_TO_TICKS(10000)) {
+        last_update = now;
+
+        // Actualizar memoria libre
+        int32_t free_mem = (int32_t)esp_get_free_heap_size();
+        lwm2m_engine_set_s32("3/0/10", free_mem);
+
+        // Actualizar nivel de batería simulado (70-100%)
+        static int32_t battery = 100;
+        battery -= 1;
+        if (battery < 70) battery = 100;
+        lwm2m_engine_set_s32("3/0/9", battery);
     }
 }
 \end{verbatim}
@@ -836,44 +693,23 @@ void thread_provisioning_wait_connected(void)
 \subsection{Configuración de Build}
 
 \begin{verbatim}
-idf_component_register(
-    SRCS 
-        "main.c" 
-        "lwm2m_client.c" 
-        "device_object.c" 
-        "power_meter_object.c"  # Objeto 10243 Single-Phase Power Meter
-        "onoff_object.c" 
-        "connectivity_object.c" 
-        "firmware_update.c" 
-        "location_object.c" 
-        "wifi_provisioning.c" 
-        "thread_prov.c" 
-        "led_status.c"
-    
-    INCLUDE_DIRS 
-        "." 
-        "${IDF_PATH}/components/app_update/include"
-    
-    REQUIRES 
-        freertos 
-        esp_netif 
-        esp_wifi 
-        nvs_flash 
-        lwip 
-        anjay-esp-idf 
-        wifi_provisioning 
-        openthread 
-        driver 
-        app_update 
-        led_strip
-    
-    PRIV_REQUIRES 
-        app_update
-)
+# SPDX-License-Identifier: Apache-2.0
+cmake_minimum_required(VERSION 3.20.0)
+find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
+project(lwm2m_thread_node)
 
-# Asegurar headers app_update visibles
-target_include_directories(${COMPONENT_LIB} PRIVATE 
-    "${IDF_PATH}/components/app_update/include")
+target_sources(app PRIVATE
+    src/main.c
+    src/lwm2m_client.c
+    src/device_object.c
+    src/ipso_power_update.c   # Objetos IPSO Smart Objects
+    src/onoff_object.c
+    src/connectivity_object.c
+    src/firmware_update.c
+    src/location_object.c
+    src/thread_prov.c
+    src/led_status.c
+)
 \end{verbatim}
 
 \section{sdkconfig.defaults}
@@ -904,17 +740,21 @@ CONFIG_OPENTHREAD_NETWORK_CHANNEL=15
 CONFIG_OPENTHREAD_NETWORK_PANID=0x1234
 CONFIG_OPENTHREAD_NETWORK_EXTPANID="1111111122222222"
 
-# Anjay
-CONFIG_ANJAY_WITH_ATTR_STORAGE=y
-CONFIG_ANJAY_WITH_LWM2M11=y
+# Zephyr LwM2M engine
+CONFIG_LWM2M=y
+CONFIG_LWM2M_VERSION_1_1=y
+CONFIG_LWM2M_IPSO_SUPPORT=y
+CONFIG_LWM2M_IPSO_VOLTAGE_SENSOR=y
+CONFIG_LWM2M_IPSO_CURRENT_SENSOR=y
+CONFIG_LWM2M_IPSO_POWER_MEASUREMENT=y
+CONFIG_LWM2M_IPSO_GENERIC_SENSOR=y
 
-# FreeRTOS
-CONFIG_FREERTOS_HZ=1000
-CONFIG_FREERTOS_UNICORE=n
+# Zephyr RTOS
+CONFIG_SYS_CLOCK_TICKS_PER_SEC=1000
 
-# ESP32-C6
-CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ_160=y
-CONFIG_ESP_PHY_RF_CAL_FULL=y
+# nRF52840
+CONFIG_SOC_SERIES_NRF52X=y
+CONFIG_BOARD_NRF52840DK_NRF52840=y
 
 # Power Management
 CONFIG_PM_ENABLE=y
@@ -971,6 +811,6 @@ En ThingsBoard Edge:
     \item Navegar a \textit{Devices} → se debe crear automáticamente \texttt{esp32c6\_xxxxxx}
     \item \textit{Latest Telemetry} mostrará: voltage, current, active\_power, active\_energy, power\_factor, battery\_level, memory\_free
     \item \textit{Attributes} mostrará: manufacturer, model, fw\_version, serial\_number
-    \item Configurar \textit{Observe} en recursos 10243/0/6 (Active Power) y 10243/0/14 (Active Energy) para notificaciones automáticas con \texttt{pmin=60\&pmax=900\&st=0.05}
+    \item Configurar \textit{Observe} en recursos 3305/0/5700 (Active Power) y 3300/0/5700 (Active Energy) para notificaciones automáticas con \texttt{pmin=60\&pmax=900\&st=0.05}
 \end{enumerate}
 

@@ -36,11 +36,12 @@
 %     - 2× RPi4 ($35) + SD card ($10) + case ($8) + RS-485 adapter ($7)
 %     - Color: Verde medio (#43A047)
 %   
-%   Segmento 3: "Routers HaLow Tube AHM" = $90
-%     - 3× Alfa Networks Tube AHM @ $30 cada uno
+%   Segmento 3: "Hardware HaLow" = $179
+%     - 1× Alfa Networks Tube AHM (Mesh Gate) @ $89
+%     - 2× Alfa Networks AHPI6108E (HAT RPi4, SDIO) @ $45 c/u
 %     - Color: Verde claro (#66BB6A)
 %   
-%   Total CAPEX Edge: $420 (anotación arriba de barra)
+%   Total CAPEX Edge: $509 (anotación arriba de barra)
 %
 % Componentes CAPEX CENTRALIZADA (barra apilada azul):
 %   Segmento 1 (inferior): "Nodos IoT básicos" = $120
@@ -260,6 +261,6 @@
 
 \includegraphics[width=\textwidth]{figures/cost_breakdown.png}
 
-\caption{Análisis económico comparativo desglosando CAPEX inicial y OPEX recurrente arquitectura edge vs centralizada con proyección TCO (Total Cost of Ownership) 36 meses. Panel 1 (CAPEX): Arquitectura edge requiere inversión inicial \$420 (30 nodos ESP32-C6 \$210 + 2 RPi4 gateways \$120 + 3 routers HaLow \$90) vs centralizada \$150 (30 nodos básicos \$120 + gateway relay \$30), diferencia +\$270 (1.8× mayor) justificada por capacidades edge computing y mesh resiliente. Panel 2 (OPEX anual): Arquitectura edge OPEX \$45/año (ancho banda WAN \$15 para 0.3 Mbps + mantenimiento \$12 + energía \$18) vs centralizada \$180/año (WAN \$125 para 2.5 Mbps + cloud storage \$35 + cloud compute \$20), reducción 4× (-\$135/año) por procesamiento local minimizando tráfico WAN y eliminando costos cloud. Panel 3 (TCO acumulado): Líneas muestran payback 18 meses donde costo acumulado edge (\$487) cruza centralizada (\$420), área sombreada verde indica ahorro acumulado \$135 @ 36 meses, proyección 5 años estima ahorro \$450. Tabla resumen confirma TCO 24 meses break-even (\$510 ambos), TCO 36 meses favorable edge (\$555 vs \$690). ROI 18 meses dentro objetivo H6 (<24 meses), validando viabilidad económica arquitectura edge para despliegues AMI. Análisis sensibilidad escalado 100 medidores reduce payback a 12 meses por economías escala (CAPEX distribuido, OPEX lineal). Trade-off CAPEX inicial mayor compensado por ahorro OPEX recurrente en escenarios WAN limitado/costoso típicos infraestructura eléctrica rural/suburbana. Conclusión: Arquitectura edge económicamente viable con ROI positivo medio plazo, especialmente favorable en despliegues masivos (>50 medidores) con conectividad cloud costosa.}
+\caption{Análisis económico comparativo desglosando CAPEX inicial y OPEX recurrente arquitectura de borde vs centralizada con proyección TCO (\textit{Total Cost of Ownership}) 36 meses. Panel~1 (CAPEX): la arquitectura de borde requiere inversión inicial \$420 (30 nodos ESP32-C6 \$210 + 2 pasarelas RPi4 \$120 + 3 enrutadores HaLow \$90) vs centralizada \$150 (30 nodos básicos \$120 + pasarela de reenvío \$30), diferencia +\$270 (1{,}8$\times$ mayor) justificada por capacidades de computación de borde y malla resiliente. Panel~2 (OPEX anual): arquitectura de borde OPEX \$45/año (ancho de banda WAN \$15 para 0{,}3\,Mbps + mantenimiento \$12 + energía \$18) vs centralizada \$180/año (WAN \$125 para 2{,}5\,Mbps + almacenamiento en la nube \$35 + cómputo en la nube \$20), reducción 4$\times$ (\textminus\$135/año) por procesamiento local minimizando tráfico WAN y eliminando costos de nube. Panel~3 (TCO acumulado): las líneas muestran período de recuperación de 18 meses donde el costo acumulado de borde (\$487) cruza el centralizado (\$420), el área sombreada verde indica ahorro acumulado \$135 a 36 meses, proyección a 5 años estima ahorro \$450. La tabla resumen confirma TCO 24 meses en punto de equilibrio (\$510 ambos), TCO 36 meses favorable para borde (\$555 vs \$690). ROI de 18 meses dentro del objetivo H6 ($<$24 meses), validando viabilidad económica de la arquitectura de borde para despliegues AMI. El análisis de sensibilidad escalado a 100 medidores reduce el período de recuperación a 12 meses por economías de escala (CAPEX distribuido, OPEX lineal). Compromiso: CAPEX inicial mayor compensado por ahorro OPEX recurrente en escenarios WAN limitado/costoso típicos de infraestructura eléctrica rural/suburbana. Conclusión: arquitectura de borde económicamente viable con ROI positivo a mediano plazo, especialmente favorable en despliegues masivos ($>$50 medidores) con conectividad a la nube costosa.}
 \label{fig:cost-breakdown}
 \end{figure}

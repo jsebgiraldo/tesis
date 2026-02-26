@@ -1,0 +1,88 @@
+% fig_thingsboard_edge_architecture.tex — Arquitectura ThingsBoard Edge 3.6.2
+\begin{figure}[H]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[
+    >=Latex,
+    box/.style={draw, rounded corners=4pt, minimum height=1.25cm,
+                font=\small, align=center, inner sep=6pt},
+    transport/.style={box, fill=blue!12, minimum width=2.8cm},
+    core/.style={box, fill=green!12, minimum width=3.4cm},
+    storage/.style={box, fill=orange!12, minimum width=3.2cm},
+    cloud/.style={box, fill=purple!12, minimum width=3.6cm},
+    container/.style={draw, dashed, rounded corners=6pt, inner sep=14pt},
+    lbl/.style={font=\small\bfseries, anchor=north west},
+    ext/.style={font=\small, align=center},
+]
+
+% ── Capa de Transporte (y=8) ──
+\node[transport] (lwm2m) at (0, 8)   {LwM2M\\(5685/UDP)};
+\node[transport] (coap)  at (3.4, 8) {CoAP\\(5683/UDP)};
+\node[transport] (mqtt)  at (6.8, 8) {MQTT\\(1883/TCP)};
+\node[transport] (http)  at (10.2, 8) {HTTP\\(8080/TCP)};
+
+\node[container, fit=(lwm2m)(coap)(mqtt)(http),
+      label={[lbl]north west:Capa de Transporte}] (transport-box) {};
+
+% ── Servicios Centrales (y=5) ──
+\node[core] (actor) at (1.8, 5)  {Sistema de Actores\\(\en{Actor System})};
+\node[core] (rules) at (6.2, 5)  {Motor de Reglas\\(JavaScript)};
+\node[core] (api)   at (10.4, 5) {API REST\\(8080)};
+
+\node[container, fit=(actor)(rules)(api),
+      label={[lbl]north west:Servicios Centrales}] (core-box) {};
+
+% ── Almacenamiento (y=1.8) ──
+\node[storage] (pg)    at (2.0, 1.8) {PostgreSQL 15\\(5432)};
+\node[storage] (redis) at (6.2, 1.8) {Redis 7.0\\(6379)};
+
+\node[container, fit=(pg)(redis),
+      label={[lbl]north west:Almacenamiento}] (storage-box) {};
+
+% ── Gestor de Nube (y=1.8) ──
+\node[cloud] (cloudmgr) at (10.4, 1.8) {Gestor de Nube\\gRPC bidireccional};
+
+% ── Flechas transporte → servicios (distribuidas) ──
+\draw[->, thick, gray!55] (lwm2m.south) -- ++(0,-0.8) -| (actor.north);
+\draw[->, thick, gray!55] (coap.south)  -- ++(0,-0.6) -| (actor.north east);
+\draw[->, thick, gray!55] (mqtt.south)  -- ++(0,-0.6) -| (rules.north);
+\draw[->, thick, gray!55] (http.south)  -- ++(0,-0.8) -| (api.north);
+
+% ── Flechas servicios → almacenamiento ──
+\draw[->, thick, gray!55] (actor.south) -- (pg.north);
+\draw[->, thick, gray!55] (rules.south) -- (redis.north);
+\draw[->, thick, gray!55] (api.south) -- (cloudmgr.north);
+
+% ── Flechas entre servicios ──
+\draw[->, thick, gray!55] (actor.east) -- (rules.west);
+\draw[->, thick, gray!55] (rules.east) -- (api.west);
+
+% ── Enlace cloud manager ← actor (sincronización) ──
+\draw[<->, thick, purple!50] (actor.south) -- ++(0,-0.6) -| (cloudmgr.west);
+
+% ── Nodos externos (arriba izquierda) ──
+\node[ext, above=0.8cm of lwm2m] (nodes) {Nodos Thread\\(ESP32-C6)};
+\draw[->, thick] (nodes.south) -- (lwm2m.north);
+
+% ── Interfaz Web (arriba derecha) ──
+\node[ext, above=0.8cm of http] (web) {Interfaz Web\\(navegador)};
+\draw[->, thick] (web.south) -- (http.north);
+
+% ── Servidor externo (abajo derecha) ──
+\node[ext, below=0.8cm of cloudmgr] (cloud-ext) {ThingsBoard\\Servidor \en{on-premise}};
+\draw[<->, thick, purple!50] (cloudmgr.south) -- (cloud-ext.north);
+
+% ── Contenedor Docker global ──
+\node[draw, very thick, rounded corners=8pt, inner sep=14pt,
+      fit=(transport-box)(core-box)(storage-box)(cloudmgr),
+      label={[font=\normalsize\bfseries, anchor=south]south:{Contenedor Docker \texttt{tb-edge} --- RPi4 (ARM64, 1,8\,GB RAM)}}] {};
+
+\end{tikzpicture}%
+}% end resizebox
+\caption[Arquitectura ThingsBoard Edge 3.6.2]{Arquitectura interna de ThingsBoard Edge 3.6.2 desplegada en la pasarela de borde (RPi4).
+La plataforma monol\'{i}tica integra cuatro capas: (1)~transporte multiprotocolo (LwM2M, CoAP, MQTT, HTTP),
+(2)~servicios centrales con sistema de actores y motor de reglas JavaScript,
+(3)~almacenamiento (PostgreSQL~15 para persistencia, Redis~7.0 para cach\'{e}), y
+(4)~gestor de nube con sincronizaci\'{o}n gRPC bidireccional hacia el servidor \en{on-premise}.}
+\label{fig:edge-architecture-official}
+\end{figure}

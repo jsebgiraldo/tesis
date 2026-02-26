@@ -1,91 +1,98 @@
-% Diagrama detallado de conexion hardware Alfa Networks Tube AHM con Raspberry Pi 4
-% Muestra configuracion fisica: Tube AHM como AP HaLow, RPi4 como STA con modulo HaLow USB
+% Figura 4-3: Detalle hardware pasarela de borde RPi4 + módulo AHPI6108E HaLow
+% Versión refactorizada: RPi4 con HaLow nativo vía SDIO (no Ethernet a router externo)
 
 \begin{figure}[H]
 \centering
 \begin{tikzpicture}[
-    % Estilos
-    device/.style={rectangle, draw=black, thick, minimum width=4cm, minimum height=3cm, rounded corners},
-    module/.style={rectangle, draw=blue!60, fill=blue!10, thick, minimum width=2.5cm, minimum height=1cm, rounded corners, font=\small, align=center},
-    antenna/.style={isosceles triangle, draw=red!60, fill=red!20, thick, minimum width=0.5cm, minimum height=1cm, rotate=90},
-    connector/.style={rectangle, draw=black, fill=gray!30, thick, minimum width=1.5cm, minimum height=0.4cm, font=\tiny, align=center},
-    arrow/.style={->, thick, >=stealth}
+    box/.style={rectangle, draw=black!70, thick, rounded corners=3pt,
+                minimum width=4.2cm, minimum height=2.2cm, align=center},
+    chip/.style={rectangle, draw=#1!60, fill=#1!8, thick, rounded corners=2pt,
+                 minimum width=2.8cm, minimum height=0.7cm, font=\footnotesize, align=center},
+    chip/.default=blue,
+    port/.style={rectangle, draw=black!50, fill=gray!20, thick,
+                 minimum width=1.8cm, minimum height=0.35cm, font=\tiny, align=center},
+    lbl/.style={font=\scriptsize, align=center},
+    arr/.style={->, thick, >=stealth, draw=black!70},
+    darr/.style={<->, thick, >=stealth, draw=black!70},
 ]
 
-% ============ ALFA NETWORKS TUBE AHM (AP MESH) ============
+% ============ MÓDULO AHPI6108E (HAT) ============
+\node[box, fill=cyan!6, minimum height=3.2cm, minimum width=5.2cm] (hat) at (0,2.8) {};
+\node[above=2pt of hat.north, font=\small\bfseries, text=cyan!40!black] {Alfa Networks AHPI6108E (HAT)};
 
-\node[device, fill=green!5] (tube) at (0,4) {};
-\node[above=-0.1cm of tube.north, font=\bfseries] {Alfa Networks Tube AHM};
+% Chip MM6108 dentro del HAT
+\node[chip=cyan, minimum width=3.4cm] at (0,3.6) (mm) {\textbf{MM6108} \tiny --- 802.11ah HaLow};
 
-% Componentes internos Tube AHM
-\node[module, fill=yellow!20] at (0,5) (mt7628) {
-    \textbf{MT7628}\\
-    \tiny MIPS 580 MHz\\OpenWRT 23.05
-};
-\node[module, fill=cyan!20] at (0,3.8) (mm6108) {
-    \textbf{MM6108}\\
-    \tiny 802.11ah radio\\915 MHz @ 4 MHz
-};
-\node[antenna, fill=red!40] at (1.5,4.5) (ant_tube) {};
-\node[right=0.1cm of ant_tube, font=\tiny] {5 dBi omni};
+% Socket M.2 E-Key
+\node[lbl, font=\tiny, text=gray!60!black] at (0,2.8) {M.2/NGFF 2230 E-Key};
 
-% Puerto Ethernet Tube AHM
-\node[connector] at (0,2.5) (eth_tube) {ETH0\\PoE 24V};
+% Conector GPIO 40-pin (salida inferior del HAT)
+\node[port, minimum width=3.4cm, fill=yellow!15] at (0,1.85) (gpio_hat) {GPIO 40-pin $\rightarrow$ SDIO};
 
-% Etiqueta role
-\node[below=0.2cm of eth_tube, font=\footnotesize, text=green!50!black, align=center] {
-    \textbf{Role: Mesh Point}\\(modo mesh 802.11s HWMP)
-};
+% Antena
+\node[lbl, text=red!50!black] at (4.2,3.6) (ant) {Antena SMA\\915\,MHz\\IPEX4/MHF4};
+\draw[arr, red!50] (mm.east) -- ++(0.8,0) -- (ant.west);
 
-% ============ RASPBERRY PI 4 (GATEWAY EDGE INTEGRADO) ============
+% MikroBUS (futuro)
+\node[lbl, text=gray!50!black, font=\tiny] at (-4.0,3.4) {mikroBUS\\(SPI, I\textsuperscript{2}C, UART)};
+\draw[arr, gray!40, dashed] (mm.west) -- ++(-0.8,0);
 
-\node[device, fill=orange!5] (rpi) at (0,-2) {};
-\node[above=-0.1cm of rpi.north, font=\bfseries] {Raspberry Pi 4 (Gateway Edge)};
-
-% Componentes Raspberry Pi 4
-\node[module, fill=orange!20] at (-1,-1.2) (cpu) {
-    \textbf{BCM2711}\\
-    \tiny ARM A72 4-core\\1.5 GHz
-};
-\node[module, fill=blue!20, minimum width=1.8cm] at (1.2,-1.2) (nrf) {
-    \textbf{nRF52840}\\
-    \tiny USB Dongle\\Thread OTBR
+% Specs label (nota lateral para no solapar conexión SDIO)
+\node[draw=gray!30, fill=gray!4, rounded corners=2pt, font=\tiny,
+  text=gray!60!black, inner sep=4pt, text width=3.4cm, anchor=north west] at (3.6, 1.5) {
+    \textbf{Specs AHPI6108E:}\\
+    65$\times$56$\times$19\,mm\\
+    TX: +25\,dBm (MCS0)\\
+    RX: $-$100\,dBm\\
+    32,5\,Mbps PHY m\'ax.
 };
 
-% Puerto Ethernet RPi4 (conexion primaria a Tube AHM)
-\node[connector] at (0,-3.2) (eth_rpi) {ETH0\\GbE (primary)
-};
+% ============ RASPBERRY PI 4 ============
+\node[box, fill=orange!4, minimum height=5.0cm, minimum width=5.2cm] (rpi) at (0,-4.0) {};
+\node[above=2pt of rpi.north, font=\small\bfseries, text=orange!50!black] {Raspberry Pi 4 (Pasarela de borde)};
 
-% Etiqueta role
-\node[below=0.2cm of eth_rpi, font=\footnotesize, text=orange!70!black, align=center] {
-    \textbf{Role: Edge Gateway}\\ThingsBoard Edge + OTBR
-};
+% GPIO receptor
+\node[port, minimum width=3.4cm, fill=yellow!15] at (0,-1.9) (gpio_rpi) {GPIO 40-pin $\leftarrow$ SDIO};
 
-% ============ CONEXION ETHERNET LOCAL ============
+% Chips internos
+\node[chip=orange, minimum width=3.4cm] at (0,-2.9) (cpu) {\textbf{BCM2711} \tiny --- Cortex-A72 4$\times$1,5\,GHz};
+\node[chip=blue, minimum width=3.4cm] at (0,-3.9) (docker) {\textbf{Docker} \tiny --- TB Edge + PostgreSQL + Redis};
+\node[chip=teal, minimum width=2.2cm] at (0,-4.9) (nrf) {\textbf{nRF52840}};
+\node[lbl, text=teal!60!black, font=\tiny] at (0,-5.4) {USB Dongle --- Thread OTBR (RCP)};
 
-% Enlace Ethernet local entre RPi4 y Tube AHM
-\draw[arrow, black, thick] (eth_rpi) -- (eth_tube) 
-    node[midway, right, font=\small, text width=3cm, align=left] {
-        \textbf{Ethernet Local}\\
-        \tiny 1 Gbps full-duplex\\
-        Latency: <1 ms\\
-        RPi4 inyecta tráfico\\
-        agregado Thread al\\
-        backbone HaLow mesh
+% Puerto Ethernet
+\node[port, minimum width=2.6cm] at (0,-6.2) (eth_r) {ETH GbE (gestión)};
+
+% ============ CONEXIÓN SDIO (HAT → RPi4) — en fondo ============
+\begin{scope}[on background layer]
+\draw[darr, cyan!60, line width=2pt] (gpio_hat.south) -- (gpio_rpi.north)
+    node[midway, right=12pt, font=\footnotesize, text=cyan!50!black, align=left,
+         fill=white, inner sep=4pt, rounded corners=1pt] {
+        \textbf{Bus SDIO}\\[-1pt]
+        \tiny Nativo, sin\\[-1pt]
+        \tiny intermediarios
     };
+\end{scope}
 
-% ============ NOTAS ARQUITECTURA ============
+% ============ SEÑALES INALÁMBRICAS ============
+% Thread
+\node[font=\scriptsize, text=teal!60!black, align=center] at (4.6,-4.9) {Red Thread\\[-1pt]\tiny 802.15.4 @ 2,4\,GHz\\[-1pt]\tiny $\leq$15 nodos/pasarela};
+\draw[arr, teal!60, dashed] (nrf.east) -- ++(1.8,0);
 
-\node[below=0.5cm of rpi, font=\footnotesize, text width=12cm, align=left] {
-    $\bullet$ \textbf{Arquitectura Distributed Mesh Gateways (Peer-to-Peer):}\\[0.2cm]
-    $\bullet$ \textbf{Alfa Networks Tube AHM:} Router comercial standalone MT7628 + MM6108 radio HaLow 802.11ah. Opera en modo Mesh Point IEEE 802.11s peer con protocolo HWMP, sin jerarquía maestro-esclavo.\\[0.1cm]
-    $\bullet$ \textbf{Raspberry Pi 4:} Gateway edge con Docker stack (ThingsBoard Edge, OTBR, PostgreSQL). Integrado localmente por Ethernet GbE al puerto LAN del Tube AHM co-ubicado.\\[0.1cm]
-    $\bullet$ \textbf{Conexión Ethernet local:} RPi4 conectado directamente por Ethernet al Tube AHM. Tráfico Thread agregado inyectado al backbone HaLow mesh compartido vía routing HWMP cooperativo.\\[0.1cm]
-    $\bullet$ \textbf{Ventaja peer-to-peer:} Todos los Gateways Edge son Mesh Points peers equipolentes. Múltiples rutas redundantes entre gateways hacia Mesh Gate. Fallos de cualquier Mesh Point no interrumpen servicio de otros: HWMP re-enruta tráfico automáticamente por paths alternativos disponibles en topología full-mesh.\\[0.1cm]
-    $\bullet$ \textbf{Thread Border Router:} Cada RPi4 ejecuta OTBR mediante nRF52840 USB Dongle, creando red Thread local para 15 nodos IoT ESP32-C6.
+% HaLow mesh (desde la antena)
+\node[font=\scriptsize, text=cyan!50!black, align=center] at (4.6,2.8) {Malla HaLow\\[-1pt]\tiny 802.11s + HWMP\\[-1pt]\tiny 902--928\,MHz};
+\draw[arr, cyan!60, dashed] (ant.east) -- ++(0.6,0) -- ++(0,-0.7);
+
+% ============ NOTA TRABAJO FUTURO ============
+\node[rectangle, draw=gray!40, fill=gray!5, rounded corners=2pt, 
+      font=\tiny, text=gray!60!black, text width=3.0cm, align=center] 
+      at (-4.8,-4.5) {
+    \textbf{Trabajo futuro:}\\
+    Interfaz SPI alternativa\\
+    Chipset MM8108 (USB)
 };
 
 \end{tikzpicture}
-\caption{Detalle hardware de integración Gateway Edge en Mesh Point peer: Alfa Networks Tube AHM (Mesh Point) y Raspberry Pi 4 (Gateway Edge) co-ubicados. El Tube AHM integra procesador MT7628 con radio MM6108 actuando como Mesh Point peer activo IEEE 802.11s sin jerarquía maestro-esclavo. El RPi4 se conecta localmente por Ethernet GbE al puerto LAN del Tube AHM, inyectando tráfico Thread agregado al backbone HaLow mesh compartido. Arquitectura distributed mesh gateways peer-to-peer: todos los gateways edge son Mesh Points equipolentes que participan cooperativamente en routing HWMP, habilitando múltiples paths redundantes y re-enrutamiento automático ante fallos, mejorando disponibilidad vs arquitectura cliente STA tradicional.}
+\caption{Detalle de \textit{hardware} de la pasarela de borde con HaLow nativo.  El módulo Alfa Networks AHPI6108E (formato HAT, 65$\times$56\,mm) se acopla al conector GPIO de 40~pines de la Raspberry~Pi~4, conectando el chipset Morse Micro MM6108 mediante interfaz \textbf{SDIO} nativa al SoC BCM2711.  Esta integración elimina la necesidad de un enrutador HaLow externo: la pasarela participa directamente en la malla 802.11s como \emph{Mesh Point}.  El nRF52840 USB Dongle proporciona la radio IEEE~802.15.4 para Thread (OTBR).  El \emph{socket} mikroBUS ofrece interfaces SPI, I\textsuperscript{2}C y UART para futuras evaluaciones de buses alternativos y del chipset MM8108.}
 \label{fig:halow-hardware-detail}
 \end{figure}

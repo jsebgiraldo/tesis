@@ -1,0 +1,121 @@
+% fig_topologia_armario.tex — Topología de despliegue: armario concentrador
+\begin{figure}[H]
+\centering
+\resizebox{0.97\textwidth}{!}{%
+\begin{tikzpicture}[
+    >=latex,
+    node distance=1.4cm,
+    meter/.style={rectangle, draw=black!70, fill=yellow!15, minimum width=1.6cm,
+                  minimum height=1cm, font=\scriptsize, align=center, rounded corners=2pt},
+    espnode/.style={circle, draw=teal!80!black, fill=teal!15, minimum size=0.8cm,
+                    font=\tiny\bfseries, inner sep=1pt},
+    halow/.style={rectangle, draw=orange!70!black, fill=orange!15, minimum width=2.4cm,
+                  minimum height=1.1cm, font=\scriptsize\bfseries, align=center, rounded corners=3pt},
+    gateway/.style={rectangle, draw=red!60!black, fill=red!10, minimum width=3.6cm,
+                    minimum height=3cm, font=\scriptsize\bfseries, align=center, rounded corners=4pt,
+                    drop shadow={shadow xshift=0.5mm, shadow yshift=-0.5mm, opacity=0.3}},
+    otbrsub/.style={rectangle, draw=blue!70!black, fill=blue!15, minimum width=3cm,
+                    minimum height=0.75cm, font=\tiny\bfseries, align=center, rounded corners=2pt},
+    gwsub/.style={rectangle, draw=red!40!black, fill=red!5, minimum width=3cm,
+                  minimum height=0.75cm, font=\tiny, align=center, rounded corners=2pt},
+    cloud/.style={ellipse, draw=gray!60, fill=gray!10, minimum width=2.6cm,
+                  minimum height=1.2cm, font=\scriptsize\bfseries, align=center},
+    threadlink/.style={->, draw=teal!70!black, thick, dashed},
+    halowlink/.style={->, draw=orange!70!black, very thick, decorate,
+                      decoration={snake, amplitude=0.6mm, segment length=4mm, post length=2mm}},
+    wanlink/.style={->, draw=gray!60, thick},
+    cabinet/.style={rectangle, draw=black!80, fill=gray!5, thick, rounded corners=5pt},
+]
+
+% --- Cabinet outline ---
+\node[cabinet, minimum width=9cm, minimum height=8.5cm,
+      label={[font=\small\bfseries, anchor=south, yshift=2pt]above:Armario Concentrador (sótano / espacio confinado)}]
+      (cab) at (0,0) {};
+
+% --- Thread label (inside cabinet, top) ---
+\node[font=\tiny\bfseries, text=teal!70!black] at (0.6, 3.5) {Red en malla Thread 2,4\,GHz};
+\node[font=\tiny, text=teal!70!black] at (0.6, 3.15) {IEEE 802.15.4 / 6LoWPAN / CoAP / LwM2M};
+
+% --- Meters column (left inside cabinet) ---
+\node[meter] (m1) at (-2.8, 2.5) {Medidor\\[-1pt]$\#1$};
+\node[meter] (m2) at (-2.8, 1.0) {Medidor\\[-1pt]$\#2$};
+\node[meter] (m3) at (-2.8,-0.5) {Medidor\\[-1pt]$\#3$};
+\node[font=\Large, text=black!50] at (-2.8,-1.8) {$\vdots$};
+\node[meter] (mN) at (-2.8,-3.0) {Medidor\\[-1pt]$\#N$};
+
+% --- Nodos Zephyr (next to meters) ---
+\node[espnode] (e1) at (-0.7, 2.5) {N\textsubscript{1}};
+\node[espnode] (e2) at (-0.7, 1.0) {N\textsubscript{2}};
+\node[espnode] (e3) at (-0.7,-0.5) {N\textsubscript{3}};
+\node[espnode] (eN) at (-0.7,-3.0) {N\textsubscript{$n$}};
+
+% --- RS-485 links (meter → node) ---
+\foreach \m/\e in {m1/e1, m2/e2, m3/e3, mN/eN} {
+    \draw[->, draw=black!50, thick] (\m) -- (\e)
+        node[midway, above, font=\tiny, text=black!60] {RS-485};
+}
+
+% --- Gateway Edge (contains OTBR) inside cabinet ---
+\node[gateway] (gw) at (2.6, -0.4) {};
+\node[font=\scriptsize\bfseries, text=red!60!black] at (2.6, 0.95) {Pasarela de borde};
+% --- OTBR sub-block ---
+\node[otbrsub] (otbr) at (2.6, 0.3) {OTBR (nRF52840 RCP)};
+% --- Software sub-blocks ---
+\node[gwsub] (gwsw) at (2.6,-0.55) {RPi4 + Docker};
+\node[gwsub] (gwtb) at (2.6,-1.4) {TB Edge + TimescaleDB};
+
+% --- Thread mesh links (nodes → OTBR) ---
+\foreach \e in {e1, e2, e3, eN} {
+    \draw[threadlink] (\e) -- (otbr.west);
+}
+
+% --- Thread mesh inter-node links ---
+\draw[threadlink, <->] (e1) -- (e2);
+\draw[threadlink, <->] (e2) -- (e3);
+
+% === OUTSIDE CABINET ===
+
+% --- Wall / barrier (more visible) ---
+\draw[line width=4pt, gray!40] (5.2, -4.5) -- (5.2, 4.8);
+\node[font=\tiny, text=gray!50, rotate=90, fill=white, inner sep=2pt] at (5.2, 2.2) {Pared de concreto};
+
+% --- HaLow AP (outside building, with more room) ---
+\node[halow] (hap) at (8.2, 0) {AP HaLow\\[-1pt]{\tiny 902--928\,MHz}};
+
+% --- HaLow link (Gateway → AP, through wall) ---
+\draw[halowlink] ([yshift=0mm]gw.east) -- (hap.west);
+\node[font=\tiny\bfseries, text=orange!70!black, fill=white, inner sep=1.5pt]
+    at (6.5, 0.55) {IEEE 802.11ah sub-GHz};
+\node[font=\tiny, text=orange!60!black, fill=white, inner sep=1.5pt]
+    at (6.5,-0.55) {15--20\,dB mejor penetración};
+
+% --- Cloud ---
+\node[cloud] (cloud) at (12.2, 0) {ThingsBoard\\Cloud};
+
+% --- AP HaLow → Cloud (WAN) ---
+\draw[wanlink, very thick] (hap.east) -- (cloud.west)
+    node[midway, above=3pt, font=\tiny, text=gray!50] {WAN}
+    node[midway, below=3pt, font=\tiny, text=gray!50] {LTE / Fibra};
+
+% --- Distance annotations (below cabinet, well separated) ---
+\draw[<->, thin, gray!40] (-4.2, -4.2) -- (4.2, -4.2)
+    node[midway, below=2pt, font=\tiny, text=gray!50]
+    {$<$80\,m (distancia típica intra-armario)};
+\draw[<->, thin, gray!40] (5.6, -4.2) -- (10.2, -4.2)
+    node[midway, below=2pt, font=\tiny, text=gray!50]
+    {$<$1\,km (NLOS urbano)};
+
+% --- Legend (below figure, well spaced) ---
+\node[font=\tiny, anchor=north west] at (-4.5, -5.0) {%
+    \textcolor{teal!70!black}{\textbf{- - -}}\; Red en malla Thread \qquad
+    \textcolor{orange!70!black}{\raisebox{0.5pt}{\tikz\draw[orange!70!black, very thick, decorate,
+        decoration={snake, amplitude=0.4mm, segment length=3mm}] (0,0)--(0.6,0);}}\;
+    Enlace HaLow sub-GHz \qquad
+    \textcolor{gray!60}{\textbf{---}}\; Enlace troncal WAN
+};
+
+\end{tikzpicture}%
+}%
+\caption[Topología de despliegue en armarios concentradores]{Topología de despliegue objetivo: armario concentrador con $N$~medidores (10--60) conectados mediante nodos Zephyr con radio IEEE~802.15.4 en red Thread. La pasarela de borde (RPi4) integra el OTBR que agrega el tráfico 6LoWPAN y lo transmite al punto de acceso Wi-Fi HaLow sub-GHz, capaz de atravesar barreras constructivas de concreto. El AP HaLow provee el enlace troncal hacia ThingsBoard Cloud.}
+\label{fig:topologia-armario}
+\end{figure}

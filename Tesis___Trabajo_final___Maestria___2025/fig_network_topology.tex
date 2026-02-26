@@ -1,0 +1,95 @@
+% fig_network_topology.tex — Topología de red AMI (3 segmentos)
+\begin{figure}[H]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[
+    >=Latex,
+    device/.style={draw, rounded corners=4pt, minimum height=1.1cm, minimum width=2.2cm,
+                   align=center, font=\small, inner sep=5pt},
+    iot/.style={device, fill=teal!20},
+    gw/.style={device, fill=blue!15},
+    halow/.style={device, fill=orange!20},
+    srv/.style={device, fill=green!20},
+    seg/.style={draw, dashed, rounded corners=8pt, inner sep=16pt, fill opacity=0.4},
+    seglbl/.style={font=\small\bfseries, fill=white, inner sep=3pt},
+    link/.style={thick, gray!60, ->},
+    mesh/.style={thick, dashed, teal!50},
+    annot/.style={font=\scriptsize, text=gray!80},
+]
+
+% ═══════════════════════════════════════════════════════
+%  Segmento 1 — Nodos Thread (izquierda)
+% ═══════════════════════════════════════════════════════
+\node[iot] (n1) at (0, 5.5) {Nodo 1\\ESP32-C6};
+\node[iot] (n2) at (0, 3.3) {Nodo 2\\ESP32-C6};
+\node[iot] (n3) at (0, 1.0) {Nodo $n$\\ESP32-C6};
+
+% Malla Thread entre nodos
+\draw[mesh] (n1) -- (n2);
+\draw[mesh] (n2) -- (n3);
+\draw[mesh] (n1) to[bend right=35] (n3);
+
+% ═══════════════════════════════════════════════════════
+%  Pasarela de borde (centro)
+% ═══════════════════════════════════════════════════════
+\node[gw, minimum width=3.6cm, minimum height=4.6cm] (gw1) at (5.5, 3.3) {};
+% Contenido interno de la pasarela
+\node[font=\small\bfseries, anchor=north, yshift=-4pt] at (gw1.north)
+     {Pasarela de Borde};
+\node[draw, rounded corners=2pt, fill=blue!8, font=\scriptsize, align=center,
+      minimum width=2.9cm, minimum height=0.8cm] at (5.5, 3.8)
+     {RPi4 + nRF52840\\(OTBR / otbr-agent)};
+\node[draw, rounded corners=2pt, fill=orange!10, font=\scriptsize, align=center,
+      minimum width=2.9cm, minimum height=0.8cm] at (5.5, 2.7)
+     {AHPI6108E\\(HaLow SDIO)};
+\node[draw, rounded corners=2pt, fill=green!10, font=\scriptsize, align=center,
+      minimum width=2.9cm, minimum height=0.65cm] at (5.5, 1.7)
+     {TB Edge (Docker)};
+
+% Enlace Thread → Pasarela
+\draw[link, teal!70] (n1.east) -- (gw1.west |- n1.east)
+     node[midway, above, annot] {LwM2M/CoAP};
+\draw[link, teal!70] (n2.east) -- (gw1.west);
+\draw[link, teal!70] (n3.east) -- (gw1.west |- n3.east);
+
+% ═══════════════════════════════════════════════════════
+%  Segmento 2 — HaLow (centro-derecha)
+% ═══════════════════════════════════════════════════════
+\node[halow, minimum width=2.4cm] (tube) at (10.5, 3.3) {Tube AHM\\(\emph{Mesh Gate})};
+
+% Enlace HaLow bidireccional
+\draw[<->, thick, orange!60] (gw1.east) -- (tube.west)
+     node[midway, above, annot] {802.11ah / 802.11s}
+     node[midway, below, annot] {900\,MHz, HWMP};
+
+% ═══════════════════════════════════════════════════════
+%  Segmento 3 — Ethernet local (derecha)
+% ═══════════════════════════════════════════════════════
+\node[device, fill=gray!15] (sw) at (14.0, 3.3) {\emph{Switch}\\Ethernet};
+\node[srv, minimum width=2.8cm] (tb) at (17.2, 3.3) {ThingsBoard\\Servidor};
+
+\draw[link] (tube.east) -- (sw.west) node[midway, above, annot] {Ethernet};
+\draw[link] (sw.east)   -- (tb.west) node[midway, above, annot] {gRPC};
+
+% ═══════════════════════════════════════════════════════
+%  Recuadros de segmento (dibujados AL FONDO)
+% ═══════════════════════════════════════════════════════
+\begin{scope}[on background layer]
+    \node[seg, fill=teal!8, fit=(n1)(n2)(n3)(gw1)] (seg1box) {};
+    \node[seg, fill=orange!8, fit=(gw1)(tube)] (seg2box) {};
+    \node[seg, fill=green!8, fit=(tube)(sw)(tb)] (seg3box) {};
+\end{scope}
+
+% Etiquetas de segmento
+\node[seglbl, anchor=south] at (seg1box.north) {Segmento 1: Thread (IEEE 802.15.4, 2,4\,GHz)};
+\node[seglbl, anchor=south] at (seg2box.north) {Segmento 2: HaLow (IEEE 802.11ah, 900\,MHz)};
+\node[seglbl, anchor=south] at (seg3box.north) {Segmento 3: Ethernet local};
+
+\end{tikzpicture}%
+}% end resizebox
+\caption[Topología de red del sistema AMI]{Topología de red del sistema AMI desplegado.
+Tres segmentos: (1)~Red Thread en malla (IEEE~802.15.4, 2,4\,GHz) para comunicación nodo--OTBR;
+(2)~Red HaLow en malla (IEEE~802.11ah, 900\,MHz) para distribución pasarela--servidor;
+(3)~Red local Ethernet para el servidor ThingsBoard \emph{on-premise}.}
+\label{fig:network-topology}
+\end{figure}

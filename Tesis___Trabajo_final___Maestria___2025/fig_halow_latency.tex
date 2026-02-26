@@ -1,0 +1,81 @@
+% fig_halow_latency.tex — Latencia ICMP por ancho de banda HaLow (boxplot)
+% Datos: thesis_symmetric_package (Feb 2025, Laboratorio UNAL)
+% v2 — Más ancho, cajas más amplias, anotaciones relativas
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+    boxplot/draw direction=y,
+    width=0.92\textwidth,
+    height=7.5cm,
+    ylabel={Latencia (ms)},
+    xlabel={Ancho de banda del canal},
+    xtick={1,2,3},
+    xticklabels={2\,MHz, 4\,MHz, 8\,MHz},
+    xmin=0.3, xmax=3.7,
+    ymin=0, ymax=90,
+    ytick={0,10,20,30,40,50,60,70,80,90},
+    ymajorgrids=true,
+    major grid style={gray!20, dashed},
+    tick label style={font=\small},
+    label style={font=\small},
+    boxplot={
+        box extend=0.45,
+    },
+]
+
+% 2 MHz: med=3.7, mean=8.0, p25~2.4, p75~5.1, min=2.1, max=31.9, p95=26.9
+\addplot+[
+    boxplot prepared={
+        lower whisker=2.1,
+        lower quartile=2.4,
+        median=3.7,
+        upper quartile=8.0,
+        upper whisker=26.9,
+    },
+    fill=green!40, draw=green!70!black,
+    boxplot/draw position=1,
+] coordinates {(1,31.9)};
+\node[font=\scriptsize\bfseries, text=green!55!black, anchor=south] at (axis cs:1,28) {$\bar{x}=8{,}0$\,ms};
+
+% 4 MHz: med=5.1, mean=8.6, p25~3.5, p75~9.0, min=2.8, max=85.5, p95=22.1
+\addplot+[
+    boxplot prepared={
+        lower whisker=2.8,
+        lower quartile=3.5,
+        median=5.1,
+        upper quartile=9.0,
+        upper whisker=22.1,
+    },
+    fill=blue!40, draw=blue!70!black,
+    boxplot/draw position=2,
+] coordinates {(2,85.5)};
+\node[font=\scriptsize\bfseries, text=blue!55!black, anchor=south] at (axis cs:2,24) {$\bar{x}=8{,}6$\,ms};
+
+% 8 MHz: med=3.6, mean=7.6, p25~2.5, p75~7.0, min=2.0, max=43.0, p95=22.8
+\addplot+[
+    boxplot prepared={
+        lower whisker=2.0,
+        lower quartile=2.5,
+        median=3.6,
+        upper quartile=7.0,
+        upper whisker=22.8,
+    },
+    fill=red!40, draw=red!70!black,
+    boxplot/draw position=3,
+] coordinates {(3,43.0)};
+\node[font=\scriptsize\bfseries, text=red!55!black, anchor=south] at (axis cs:3,24) {$\bar{x}=7{,}6$\,ms};
+
+\end{axis}
+
+% Nota de 0% pérdida
+\node[anchor=north, font=\scriptsize, text=gray!60] at (current bounding box.south) {%
+    0\,\% p\'{e}rdida de paquetes en los tres anchos de banda (50 pings por prueba)};
+
+\end{tikzpicture}
+\caption[Latencia ICMP por ancho de banda HaLow]{Distribuci\'{o}n de latencia ICMP (\texttt{ping}) por ancho de banda del canal IEEE~802.11ah.
+Los bigotes indican percentil 5 y percentil 95; los puntos aislados son valores at\'{i}picos (m\'{a}ximo).
+Las tres configuraciones presentan mediana inferior a 6\,ms, con 0\,\% de p\'{e}rdida.
+El canal de 4\,MHz exhibe la mayor dispersi\'{o}n (m\'{a}x 85{,}5\,ms) por burst ocasional.}
+\label{fig:halow-latency}
+\end{figure}

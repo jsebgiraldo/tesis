@@ -1,552 +1,454 @@
-﻿\chapter{Introducción}
+\chapter{Introducción}
 \label{chap:introduccion}
 
-Este capítulo establece el contexto y la motivación de la investigación, presentando los desafíos actuales de las redes eléctricas inteligentes, o energía inteligente (\textit{Smart Energy}), en la era de la transición energética. Se analizan las limitaciones de las arquitecturas tradicionales basadas en la nube, se comparan las principales tecnologías de comunicación del Internet de las cosas (IoT, \textit{Internet of Things}) disponibles (\textit{Thread}, \textit{Wi-SUN}, \textit{Zigbee}, \textit{Bluetooth Mesh}, \textit{LoRaWAN}, \textit{Wi-Fi HaLow}), y se justifica la elección de la arquitectura de pasarelas de borde (\textit{edge gateways}) con conectividad Thread/HaLow propuesta en este trabajo. El capítulo plantea el problema de investigación, delimita el alcance del trabajo, formula las hipótesis a validar y establece los objetivos generales y específicos. Finalmente, se describe la estructura del documento y la metodología empleada para el desarrollo de la tesis.
+Este capítulo guía al lector desde el contexto general de las redes de energía inteligente hasta la formulación precisa del problema de investigación y la metodología para resolverlo. Se comienza analizando por qué las arquitecturas tradicionales centradas en la nube resultan insuficientes, se comparan las tecnologías de comunicación candidatas --- tanto para la red de campo como para el enlace troncal--- y se identifican las brechas que motivan la propuesta. A partir de ese análisis se define el escenario de despliegue objetivo, se formulan los objetivos e hipótesis cuantificables, y se describe la metodología de validación. El capítulo cierra con el alcance del trabajo, las contribuciones esperadas y la organización del resto del documento.
 
+
+%% ═══════════════════════════════════════════════════
 \section{Contexto y Motivación}
+%% ═══════════════════════════════════════════════════
 
-En esta sección se presenta el panorama actual de las redes de energía inteligente (\textit{Smart Energy}), las tecnologías de comunicación IoT disponibles para su implementación y las brechas identificadas en las arquitecturas existentes que motivan esta investigación.
+La propuesta de esta tesis surge de la confluencia de tres tendencias: el crecimiento exponencial de medidores inteligentes, la madurez de protocolos de malla IPv6 como Thread y la disponibilidad comercial de enlaces sub-GHz de alto rendimiento como Wi-Fi HaLow. En esta sección se examina primero el desafío que plantean las redes de energía inteligente a escala global, luego se comparan las tecnologías de comunicación candidatas para la red de campo y el enlace troncal, se identifican las brechas que persisten en las arquitecturas actuales y, finalmente, se describe el escenario de despliegue concreto que motiva la investigación.
 
-\subsection{El Desafío de las Redes de Energía Inteligente (\textit{Smart Energy Networks})}
+\subsection{El desafío de las redes de energía inteligente}
 
-La transición energética global hacia sistemas descentralizados, con alta penetración de energías renovables y gestión activa del consumo, exige infraestructuras de medición inteligente robustas y escalables~\cite{velasquezSmartGridsEmpowered2024,SmartHomeEnergy2024,gungorSmartGridTechnologies2011}. Estas infraestructuras, conocidas como Infraestructura Avanzada de Medición (AMI o \textit{Advanced Metering Infrastructure}), deben ser capaces de recolectar, transmitir y procesar datos de millones de puntos de consumo en tiempo prácticamente real, proporcionando la información necesaria para optimizar la operación de la red eléctrica~\cite{alsafranChallengesImplementingIoT2025}. Sin embargo, las redes eléctricas actuales enfrentan desafíos crecientes relacionados con el incremento de demanda, pérdidas en distribución y amenazas de ciberseguridad que las tecnologías IoT pueden mitigar efectivamente~\cite{abdulsalamOverviewRecentWireless2024,khanSecuringIoTEcosystem2024}.
+La transición energética global hacia sistemas descentralizados, con alta penetración de energías renovables y gestión activa del consumo, exige infraestructuras de medición inteligente (AMI) robustas y escalables~\cite{velasquezSmartGridsEmpowered2024,gungorSmartGridTechnologies2011}. Se anticipa la instalación de más de 1.300 millones de medidores inteligentes para 2030, generando aproximadamente 15~PB de datos de telemetría diarios~\cite{dianeSystematicComprehensiveReview2025}. Sin embargo, las arquitecturas tradicionales dispositivo--nube presentan tres limitaciones recurrentes:
 
-Según proyecciones de la Agencia Internacional de Energía (IEA, \textit{International Energy Agency}), se anticipa la instalación de más de 1.300 millones de medidores inteligentes a nivel global para el año 2030. Este despliegue masivo generará aproximadamente 15 petabytes (PB) de datos de telemetría diarios, planteando desafíos significativos en términos de comunicación, almacenamiento y procesamiento de información~\cite{dianeSystematicComprehensiveReview2025}.
+\begin{itemize}
+    \item \textbf{Latencias elevadas:} superiores a 200~ms, insuficientes para telemetría en tiempo real~\cite{laghariInternetThingsIoT2024}.
+    \item \textbf{Dependencia de conectividad WAN continua:} las redes celulares LTE alcanzan disponibilidades de apenas 94--96\%, equivalentes a 18--25~días de inactividad acumulada al año.
+    \item \textbf{Costos prohibitivos a escala:} las plataformas IoT en la nube cobran por volumen de mensajes, resultando en gastos operativos inviables cuando la densidad de medidores es alta~\cite{alsafranChallengesImplementingIoT2025,alsuwaidiSecuringSmartGrid2024}.
+\end{itemize}
 
-Sin embargo, las arquitecturas tradicionales basadas en comunicación directa dispositivo-nube enfrentan limitaciones críticas que comprometen su viabilidad técnica y económica~\cite{alsafranChallengesImplementingIoT2025,alsuwaidiSecuringSmartGrid2024}. En primer lugar, estas soluciones presentan latencias elevadas (superiores a 200 milisegundos)~\cite{laghariInternetThingsIoT2024}, lo que dificulta aplicaciones de telemetría en tiempo real. Además, exhiben una dependencia estricta de conectividad WAN (\textit{Wide Area Network}) continua, generando vulnerabilidad ante interrupciones del servicio de internet. Finalmente, los costos operacionales se vuelven prohibitivos en escenarios de alta densidad de dispositivos y estas arquitecturas presentan dificultades para garantizar los requisitos de tiempo real exigidos por aplicaciones críticas como la gestión de microrredes y el monitoreo de calidad de energía.
+Estas limitaciones motivan la búsqueda de arquitecturas alternativas que procesen datos localmente, empleen protocolos ligeros y utilicen tecnologías de enlace troncal sin costos recurrentes de conectividad. Para diseñar una arquitectura así, el primer paso es evaluar las tecnologías de comunicación disponibles.
 
-\subsection{Estado Actual de las Tecnologías de Comunicación IoT}
 
-Para abordar los desafíos planteados en la sección anterior, es fundamental comprender el panorama actual de las tecnologías de comunicación disponibles para aplicaciones de Internet de las Cosas (IoT o \textit{Internet of Things}) en el sector energético~\cite{abdulsalamOverviewRecentWireless2024,choudharyInternetThingsComprehensive2024}. El ecosistema IoT para aplicaciones industriales y de infraestructura crítica se caracteriza por una heterogeneidad de tecnologías de comunicación, cada una optimizada para rangos específicos de alcance, rendimiento (\textit{throughput} o capacidad de transmisión), latencia y consumo energético~\cite{ashfaqIoTSensorNetworks2024}. Las tecnologías LPWAN como LoRaWAN y NB-IoT dominan actualmente el mercado de AMI, aunque presentan limitaciones de rendimiento (\textit{throughput}) y alta latencia para ciertos casos de uso críticos en redes eléctricas inteligentes (\textit{Smart Grid})~\cite{abdulsalamOverviewRecentWireless2024,razaLowPowerWideArea2017,chaudhariLPWANTechnologiesEmerging2020}, lo que motiva explorar alternativas emergentes como IEEE 802.11ah (Wi-Fi HaLow), IEEE 802.15.4g (Wi-SUN) y Thread. Esta diversidad tecnológica permite seleccionar la combinación más adecuada según los requisitos específicos de cada aplicación y escenario de despliegue (\textit{deployment}), no solamente en el sector energético sino también en aplicaciones de ciudad inteligente como alumbrado público, gestión de residuos, monitoreo ambiental y aparcamiento inteligente.
+\subsection{Comparativa de tecnologías de comunicación IoT}
 
-A continuación, se presenta una comparativa técnica de las principales tecnologías disponibles para redes de medición inteligente, agrupadas en tres categorías: protocolos en malla de corto alcance (\textit{mesh protocols}, 2.4~GHz), plataformas de procesamiento en el borde (\textit{edge computing}), y tecnologías de conectividad de área amplia.
+La selección de tecnologías para una red de telemetría energética requiere evaluar dos segmentos diferenciados:
 
-\subsubsection{Comparativa Técnica de Protocolos Mesh 2.4 GHz}
+\begin{enumerate}
+    \item \textbf{Red de campo} (comunicación entre medidores y pasarela): distancias cortas, alta densidad, baja latencia.
+    \item \textbf{Enlace troncal} (comunicación entre pasarela e infraestructura central): alcance extendido, alto rendimiento, bajo costo operativo.
+\end{enumerate}
 
-Los protocolos en malla operando en la banda 2.4~GHz constituyen la base de la red de campo (\textit{field area network}) para la recopilación de datos de sensores y medidores. La Tabla~\ref{tab:mesh-comparison} presenta las características principales de Thread, Zigbee y Bluetooth Mesh, los tres protocolos dominantes en esta categoría.
+Cada segmento impone requisitos distintos; a continuación se comparan las opciones en cada caso.
+
+
+\subsubsection{Protocolos en malla para la red de campo}
+
+La Tabla~\ref{tab:mesh-comparison} compara las tres tecnologías dominantes en malla a 2,4~GHz para redes de campo.
 
 \begin{table}[H]
 \centering
-\caption{Comparación de protocolos en malla (\textit{mesh}) 2.4 GHz para IoT (Thread, Zigbee, Bluetooth Mesh)}
+\caption{Comparación de protocolos en malla 2,4~GHz para IoT}
 \label{tab:mesh-comparison}
 \footnotesize
-\begin{tabular}{|l|l|l|l|}
+\begin{tabularx}{\textwidth}{|l|X|X|X|}
 \hline
 \rowcolor{gray!20}
-\textbf{Característica} & \textbf{Thread 1.3}$^{*}$ & \textbf{Zigbee 3.0} & \textbf{Bluetooth Mesh} \\
+\textbf{Característica} & \textbf{Thread 1.4}$^{*}$ & \textbf{Zigbee 3.0} & \textbf{Bluetooth Mesh} \\
 \hline
 \textbf{Capa física} & IEEE 802.15.4 & IEEE 802.15.4 & Bluetooth 5.3 LE \\
 \hline
-\textbf{Frecuencia} & 2.4 GHz & 2.4/Sub-GHz & 2.4 GHz \\
+\textbf{Topología} & Malla (enrutamiento MLE) & Malla (AODV) & Inundación gestionada \\
 \hline
-\textbf{Topología} & Mesh (MLE routing) & Mesh (AODV) & Managed Flooding \\
+\textbf{IPv6 nativo} & \textcolor{blue}{Sí} (6LoWPAN) & \textcolor{red}{No} (propietario) & \textcolor{red}{No} (proxy GATT) \\
 \hline
-\textbf{IPv6 nativo} & \textcolor{blue}{Sí} (6LoWPAN) & \textcolor{red}{No} (propietario) & \textcolor{red}{No} (GATT proxy) \\
+\textbf{Nodos máx.} & hasta 250 & 65\,535 (teórico) & 32\,767 \\
 \hline
-\textbf{Nodos máx.} & hasta 250 & 65,535 (teórico) & 32,767 \\
+\textbf{Latencia (3~saltos)} & \textcolor{blue}{40--60~ms} & 80--120~ms & 100--200~ms \\
 \hline
-\textbf{Latencia (3 hops)} & \textcolor{blue}{40-60 ms} & 80-120 ms & 100-200 ms \\
+\textbf{Consumo RX/TX} & 19/22~mA & 24/31~mA & \textcolor{blue}{9,2/10,5~mA} \\
 \hline
-\textbf{Consumo RX/TX} & 19/22 mA & 24/31 mA & \textcolor{blue}{9.2/10.5 mA} \\
+\textbf{Interoperabilidad} & \textcolor{blue}{OTBR estándar} & Requiere coordinador & Requiere aprovisionador \\
 \hline
-\textbf{Corriente en reposo (\textit{idle})} & 5 µA (ESP32-C6)$^{\ddagger}$ & 10 µA típico & \textcolor{blue}{2 µA} (nRF52840) \\
+\textbf{Seguridad} & DTLS~1.2$^{\dagger}$ & AES-128 CCM & AES-CCM \\
 \hline
-\textbf{Interoperabilidad} & \textcolor{blue}{OTBR estándar} & Req. coordinador & Req. provisioner \\
+\multicolumn{4}{|p{\dimexpr\textwidth-2\tabcolsep\relax}|}{\footnotesize $^{*}$Valores según especificaciones Thread~1.4.0. Detalles de implementación en §\ref{sec:nodo-thread}. $^{\dagger}$DTLS~1.2 sobre UDP; TLS~1.2/1.3 durante comisionamiento.} \\
 \hline
-\textbf{Seguridad} & DTLS 1.2$^{\dagger}$ & AES-128 CCM & AES-CCM \\
-\hline
-\multicolumn{4}{l}{\footnotesize $^{*}$Valores de referencia según especificaciones Thread 1.3.0. Detalles de implementación en §\ref{sec:nodo-thread}.} \\
-\multicolumn{4}{l}{\footnotesize $^{\dagger}$Thread utiliza DTLS 1.2 sobre UDP para seguridad de capa de transporte; TLS 1.2/1.3 se emplea exclusivamente durante el proceso de comisionamiento (\textit{commissioning}).} \\
-\multicolumn{4}{l}{\footnotesize $^{\ddagger}$Valor de referencia del SoC; en esta tesis los nodos operan alimentados desde el medidor (MED, RX always-on) sin modos de reposo.} \\
-\end{tabular}
+\end{tabularx}
 \end{table}
 
-Como se observa en la Tabla \ref{tab:mesh-comparison}, Thread emerge como el protocolo preferencial para redes de campo en aplicaciones de Energía Inteligente (\textit{Smart Energy}) debido a tres ventajas fundamentales~\cite{shelby6LoWPANWirelessEmbedded2009,parkScalableThreadMesh2023}. En primer lugar, su enrutamiento IPv6 nativo (\textit{native IPv6 routing}) facilita la integración con infraestructuras IP existentes, eliminando la necesidad de pasarelas de traducción (\textit{gateways}) de protocolo propietarios. En segundo lugar, cuenta con una estandarización completa bajo Thread Group (miembro de la Connectivity Standards Alliance), lo que garantiza interoperabilidad entre fabricantes. Finalmente, ofrece soporte multi-proveedor certificado (\textit{multi-vendor}) mediante el programa de certificación Thread 1.3.1, reduciendo el riesgo de dependencia de proveedor (\textit{vendor lock-in}) en proyectos de largo plazo.
+Thread emerge como protocolo preferencial para la red de campo por tres razones:
 
-Además, Thread presenta latencias significativamente menores (40-60 ms en tres saltos) comparado con Zigbee (80-120 ms) y Bluetooth Mesh (100-200 ms), lo cual resulta crítico para aplicaciones que requieren respuesta en tiempo real, como la detección de anomalías en el consumo eléctrico o la coordinación de microrredes.
+\begin{enumerate}
+    \item \textbf{Enrutamiento IPv6 nativo:} elimina pasarelas de traducción propietarias y facilita la integración directa con infraestructuras IP existentes.
+    \item \textbf{Estandarización completa:} la certificación del Thread Group garantiza interoperabilidad entre fabricantes, reduciendo la dependencia de proveedor.
+    \item \textbf{Latencia significativamente menor:} 40--60~ms en tres saltos, frente a 80--120~ms de Zigbee y 100--200~ms de Bluetooth Mesh~\cite{shelby6LoWPANWirelessEmbedded2009,parkScalableThreadMesh2023}.
+\end{enumerate}
 
-\subsubsection{Plataformas de Computación en el Borde (\textit{Edge Computing Platforms}) - Análisis Comparativo}
+\paragraph{Descarte de alternativas en malla sub-GHz.}
+Existen también tecnologías de malla que operan en bandas inferiores a 1~GHz (Wi-SUN, LoRa Mesh, DigiMesh), ofreciendo mayor alcance (1--5~km por salto) a costa de menor rendimiento. Sin embargo, para el escenario objetivo de esta tesis ---armarios concentradores con distancias menores a 100~m--- estas alternativas no aportan ventaja:
 
-Para complementar los protocolos de comunicación de campo presentados anteriormente, resulta indispensable evaluar las plataformas de procesamiento que operan en el borde de la red. A continuación, se comparan cuatro alternativas representativas en términos de arquitectura, capacidades de procesamiento local y autonomía fuera de línea (\textit{offline}).
+\begin{itemize}
+    \item \textbf{Wi-SUN} (IEEE~802.15.4g): latencias de 200--500~ms en rutas de 5--10~saltos y pila de protocolos compleja (6TiSCH, RPL)~\cite{haradaIEEE802154g2017}.
+    \item \textbf{LoRa Mesh} (Meshtastic, Pycom): rendimiento extremadamente limitado (0,3--50~kbps) con ciclo útil regulado (1--10\%) que genera latencias impredecibles de segundos a minutos.
+    \item \textbf{DigiMesh y protocolos propietarios:} dependencia total de un único fabricante, incompatibilidad con pilas IPv6 estándar y costos de módulos 3--5 veces superiores.
+\end{itemize}
+
+En resumen, las tecnologías sub-GHz son preferibles cuando las distancias entre nodos superan los 500~m (medidores rurales dispersos), pero Thread resulta óptimo para armarios concentradores por su latencia determinista, IPv6 nativo y costo reducido por nodo.
+
+Una vez definida Thread como tecnología de campo, es necesario evaluar las opciones disponibles para el segundo segmento: el enlace troncal entre la pasarela y la infraestructura central.
+
+
+\subsubsection{Tecnologías de enlace troncal}
+
+La Tabla~\ref{tab:lastmile-comparison} compara las principales tecnologías de área amplia para el segmento pasarela--nube.
 
 \begin{table}[H]
 \centering
-\caption{Comparación de plataformas IoT en el borde (\textit{edge}) para procesamiento distribuido}
-\label{tab:edge-platforms}
-\footnotesize
-\begin{tabular}{|l|l|l|l|l|}
-\hline
-\rowcolor{gray!20}
-\textbf{Plataforma} & \textbf{ThingsBoard Edge} & \textbf{AWS Greengrass} & \textbf{Azure IoT Edge} & \textbf{Node-RED} \\
-\hline
-\textbf{Arquitectura} & Monolítica Java & Microservicios Python & En contenedores .NET & Basada en flujos JS \\
-\hline
-\textbf{Sincronización} & \textcolor{blue}{Bidireccional} & \textcolor{red}{Unidireccional} & \textcolor{blue}{Bidireccional} & Manual \\
-\hline
-\textbf{Motor de reglas local} & \textcolor{blue}{Sí} (full chain) & Lambda local & Módulos custom & Function nodes \\
-\hline
-\textbf{Almacenamiento} & PostgreSQL/Cassandra & DynamoDB local & SQLite/Custom & Context store \\
-\hline
-\textbf{Panel de control local (\textit{Dashboard})} & \textcolor{blue}{Sí} (completo) & \textcolor{red}{No} (CloudWatch) & \textcolor{red}{No} (portal nube) & \textcolor{blue}{UI integrado} \\
-\hline
-\textbf{Autonomía offline} & \textcolor{blue}{Ilimitada} & Limitada & Limitada & \textcolor{blue}{Ilimitada} \\
-\hline
-\textbf{Huella de RAM} & 1-4 GB & 512 MB-2 GB & 256 MB-1 GB & \textcolor{blue}{128-512 MB} \\
-\hline
-\textbf{Licenciamiento} & \textcolor{blue}{Apache 2.0} & \textcolor{red}{Propietario} & \textcolor{red}{Propietario} & \textcolor{blue}{Apache 2.0} \\
-\hline
-\textbf{Curva aprendizaje} & Media & Alta & Alta & \textcolor{blue}{Baja} \\
-\hline
-\end{tabular}
-\end{table}
-
-Del análisis comparativo presentado en la Tabla \ref{tab:edge-platforms}, ThingsBoard Edge se posiciona como la solución más robusta para aplicaciones industriales que requieren continuidad operacional durante particiones WAN prolongadas~\cite{satyanarayananEmergenceEdgeComputing2017}. A diferencia de las alternativas comerciales propietarias (AWS IoT Greengrass, Azure IoT Edge), ThingsBoard Edge proporciona capacidades completas de procesamiento de reglas (\textit{rule engine}), paneles de control interactivos (\textit{dashboards}) accesibles localmente y sincronización bidireccional de configuraciones y datos históricos. 
-
-Esta autonomía offline ilimitada resulta especialmente relevante en el contexto latinoamericano, donde las infraestructuras de telecomunicaciones pueden presentar interrupciones frecuentes, particularmente en zonas rurales y semi-urbanas. Adicionalmente, su licenciamiento Apache 2.0 elimina costos recurrentes de suscripción y permite personalización del código fuente según requisitos específicos del proyecto.
-
-\subsubsection{Posicionamiento de Tecnologías de Conectividad de Área Amplia}
-
-Para completar la evaluación del ecosistema de comunicaciones, es necesario comparar las tecnologías disponibles para el enlace troncal (\textit{backhaul}) entre las pasarelas de borde y la infraestructura de red. La Tabla~\ref{tab:lastmile-comparison} compara Wi-Fi HaLow (IEEE 802.11ah), LoRaWAN, LTE Cat-M1 y Wi-Fi~6 en términos de las características más relevantes para aplicaciones de energía inteligente.
-
-\begin{table}[H]
-\centering
-\caption{Comparación de tecnologías de enlace troncal (\textit{backhaul}) para Energía Inteligente (\textit{Smart Energy}) IoT: Wi-Fi HaLow (IEEE 802.11ah), LoRaWAN, NB-IoT (LTE Cat-NB1), LTE Cat-M1. Criterios: alcance típico (km), rendimiento (\textit{throughput}, kbps), latencia (ms), espectro (licenciado/no licenciado), costos OPEX (\textit{Operational Expenditure}) mensuales por dispositivo, y adecuación para actualizaciones de código remoto (\textit{firmware OTA}).}
+\caption{Comparación de tecnologías de enlace troncal para energía inteligente}
 \label{tab:lastmile-comparison}
-\footnotesize
+\resizebox{\textwidth}{!}{%
 \begin{tabular}{|l|l|l|l|l|}
 \hline
 \rowcolor{gray!20}
-\textbf{Característica} & \textbf{HaLow 802.11ah} & \textbf{LoRaWAN} & \textbf{LTE Cat-M1} & \textbf{Wi-Fi 6} \\
+\textbf{Característica} & \textbf{HaLow (802.11ah)} & \textbf{LoRaWAN} & \textbf{LTE Cat-M1} & \textbf{NB-IoT} \\
 \hline
-\textbf{Frecuencia} & 902-928 MHz (US) & 868/915 MHz & LTE Bands & 2.4/5 GHz \\
+\textbf{Alcance típico} & \textcolor{blue}{1~km} urbano / \textcolor{blue}{3--5~km} LoS & 5--15~km & 10--35~km & 10--35~km \\
 \hline
-\textbf{Alcance típico} & \textcolor{blue}{1 km} urbano, \textcolor{blue}{3-5 km} exteriores LoS & 5-15 km & 10-35 km & \textcolor{red}{50-100 m} \\
+\textbf{Rendimiento máx.} & \textcolor{blue}{43,3~Mbps} @ 8~MHz & \textcolor{red}{50~kbps} & 1~Mbps & \textcolor{red}{250~kbps} \\
 \hline
-\textbf{Rendimiento máx. (\textit{throughput})} & \textcolor{blue}{43,3 Mbps} @ 8 MHz & \textcolor{red}{50 kbps} & 1 Mbps & 9,6 Gbps \\
+\textbf{Latencia típica} & \textcolor{blue}{10--30~ms} & \textcolor{red}{1--5~s} & 50--100~ms & \textcolor{red}{1,5--10~s} \\
 \hline
-\textbf{Latencia típica} & \textcolor{blue}{10-30 ms} & \textcolor{red}{1-5 seg} & 50-100 ms & menor que 10 ms \\
+\textbf{Topología} & \textcolor{blue}{Estrella/Malla} & Estrella & Estrella (celular) & Estrella (celular) \\
 \hline
-\textbf{Topología} & \textcolor{blue}{Star/Mesh} & Star (sin mesh) & Star (celular) & Star \\
+\textbf{Cobertura interiores} & \textcolor{blue}{Excelente} (sub-GHz) & Media & Buena & \textcolor{blue}{Excelente} \\
 \hline
-\textbf{Consumo TX (avg)} & 180 mA @ 1 MHz & \textcolor{blue}{120 mA} & 220 mA & 350 mA \\
+\textbf{Espectro} & \textcolor{blue}{No licenciado} ISM & \textcolor{blue}{No licenciado} & \textcolor{red}{Licenciado} & \textcolor{red}{Licenciado} \\
 \hline
-\textbf{Cobertura indoor} & \textcolor{blue}{Excelente} (penetración) & Media & Buena & Limitada \\
+\textbf{Costo por nodo} & \$25--40 módulo & \textcolor{blue}{\$8--15} & \$12--25 & \textcolor{blue}{\$5--15} \\
 \hline
-\textbf{Espectro} & \textcolor{blue}{No licenciado} ISM & \textcolor{blue}{No licenciado} ISM & \textcolor{red}{Licenciado} (operador) & \textcolor{blue}{No licenciado} ISM \\
+\textbf{Gasto operativo} & \textcolor{blue}{\$0} (privado) & \textcolor{blue}{\$0} (privado) & \textcolor{red}{\$10--15/nodo/año} & \textcolor{red}{\$5--10/nodo/año} \\
 \hline
-\textbf{Despliegue} & Privado, CAPEX (\textit{Capital Expenditure}) & Pasarela privada & \textcolor{red}{Suscripción} MVNO & Privado (CAPEX) \\
-\hline
-\textbf{Costo por nodo} & \$25-40 módulo & \textcolor{blue}{\$8-15} módulo & \$12-25 módulo & \textcolor{blue}{\$5-10} módulo \\
-\hline
-\end{tabular}
+\end{tabular}}%
 \end{table}
 
-Como se evidencia en la Tabla \ref{tab:lastmile-comparison}, Wi-Fi HaLow (IEEE 802.11ah) combina las ventajas de diferentes tecnologías de última milla en un único estándar~\cite{qiaoSurveyWiFiHaLow2018,austIEEE80211ahSubOnegigahertz2012}. Frente a LoRaWAN, ofrece un rendimiento (\textit{throughput}) superior (43,3~Mbps @ 8~MHz frente a 50~kbps), lo que permite la transmisión de datos agregados de múltiples medidores sin congestión. Comparado con LTE Cat-M1, proporciona latencia determinística menor (10-30~ms frente a 50-100~ms) y elimina los costos recurrentes de suscripción a operadores móviles virtuales (MVNO, \textit{Mobile Virtual Network Operator}). Por otra parte, supera significativamente al Wi-Fi 6 convencional en alcance (1~km urbano NLOS (\textit{Non-Line-of-Sight}), hasta 3-5~km en exteriores con línea de vista, con equipos comerciales como Alfa Networks AHPI7292S, frente a 50-100~m del Wi-Fi 6) gracias a su operación en banda ISM 902-928~MHz (EE.\,UU.) con mayor capacidad de penetración en edificaciones (aproximadamente 15-20~dB menor pérdida de propagación frente a 2,4~GHz).
-
-Adicionalmente, HaLow opera en espectro no licenciado ISM (\textit{Industrial, Scientific and Medical}), permitiendo despliegues privados controlados por el operador de la red eléctrica sin dependencia de infraestructura de terceros. Esta característica posiciona a Wi-Fi HaLow como la tecnología óptima para el enlace troncal (\textit{backhaul}) de pasarelas de energía inteligente (\textit{Smart Energy gateways}) en zonas urbanas y suburbanas de densidad media-alta, donde se requiere un balance entre alcance, capacidad y autonomía operativa.
-
-\subsection{Brechas en Arquitecturas IoT Existentes}
-
-A pesar de los avances tecnológicos descritos en las secciones anteriores, el análisis crítico del estado del arte revela limitaciones estructurales en las arquitecturas IoT contemporáneas que impiden su adopción masiva en aplicaciones de infraestructura crítica como las redes eléctricas inteligentes~\cite{laghariInternetThingsIoT2024}. Estas brechas se manifiestan en tres dimensiones principales: dependencia excesiva de conectividad en la nube (\textit{cloud}), ineficiencias en la utilización del ancho de banda y ausencia de capacidades de procesamiento inteligente distribuido.
+Wi-Fi HaLow (IEEE~802.11ah) combina rendimiento superior (43,3~Mbps), latencia determinista (10--30~ms) y operación en espectro no licenciado sin costos recurrentes~\cite{qiaoSurveyWiFiHaLow2018,austIEEE80211ahSubOnegigahertz2012}. Las demás alternativas presentan limitaciones claras:
 
 \begin{itemize}
-\item \textbf{Dependencia centrada en la nube (\textit{cloud-centric})}: Las arquitecturas tradicionales dispositivo \textrightarrow{} nube presentan puntos únicos de fallo (SPOF, \textit{Single Points of Failure}) en enlaces WAN. Estudios empíricos en despliegues urbanos reportan disponibilidades de 94-96\% en conectividad celular LTE (períodos de inactividad acumulados de 18-25 días/año)\footnote{Disponibilidad típica reportada en informes de calidad de servicio para redes LTE en zonas urbanas. Los valores de 94--96\% reflejan interrupciones por mantenimiento programado, congestión de red y fallos de infraestructura, según reportes públicos de calidad de servicio de organismos reguladores de telecomunicaciones.}, insuficientes para aplicaciones críticas.
-
-\item \textbf{Sobrecarga (\textit{overhead}) de traducción multi-protocolo}: Las pasarelas convencionales (\textit{gateways}) implementan traductores de capa de aplicación (\textit{application-layer}), por ejemplo Thread \textrightarrow{} MQTT \textrightarrow{} HTTP \textrightarrow{} nube, introduciendo latencias acumuladas de 150-300~ms y complejidad en el mantenimiento de mapeos de datos.
-
-\item \textbf{Escalabilidad limitada de la ingesta en la nube (\textit{cloud ingestion})}: Las plataformas IoT en la nube típicamente cobran por mensaje ingestado (\$5-10 USD por millón de mensajes)\footnote{Costo total estimado de ingesta en la nube incluyendo tarifa por mensaje, procesamiento (\textit{serverless}), almacenamiento y transferencia de datos. Las tarifas base de AWS IoT Core (\$0,08/millón) y Azure IoT Hub (\$0,50/millón) se incrementan al considerar la cadena completa de procesamiento~\cite{awsAWSIoTGreengrass2023,azureIoTEdgePricing2024}.}, resultando en costos prohibitivos para aplicaciones de telemetría de alta frecuencia (ej. 10\,000 medidores reportando cada 5 minutos generan \$2\,880/mes solo en ingesta).
-
-\item \textbf{Ausencia de estándares de interoperabilidad}: La mayoría de soluciones comerciales implementan APIs propietarias, dificultando la migración entre vendors y bloqueando clientes en ecosistemas cerrados~\cite{tangResearchInteroperabilityIoT,ISOIEC30141v2024}.
+    \item \textbf{LoRaWAN:} rendimiento insuficiente (50~kbps) para agregar datos de múltiples medidores.
+    \item \textbf{LTE Cat-M1 y NB-IoT:} operan en espectro licenciado con costos recurrentes que, en despliegues de más de 1\,000 medidores, totalizan \$150\,000 en 5~años solo en conectividad.
+    \item \textbf{LTE privado (CBRS):} inversión de capital superior a \$50\,000 por celda, con regulación no disponible en Latinoamérica.
+    \item \textbf{Redes no terrestres (LEO-IoT):} nula cobertura en interiores, latencia variable (20--600~ms) y costo por terminal \$1--5/mes.
 \end{itemize}
 
+HaLow opera en banda 902--928~MHz con penetración en edificaciones 15--20~dB superior a 2,4~GHz, posicionándose como tecnología óptima para el enlace troncal en entornos urbanos y suburbanos.
+
+Habiendo justificado la selección de Thread para la red de campo y HaLow para el enlace troncal, a continuación se identifican las brechas concretas en las arquitecturas existentes que motivan la propuesta.
+
+
+\subsection{Brechas en las arquitecturas IoT existentes}
+
+El análisis del estado del arte revela limitaciones estructurales que no se resuelven adoptando solamente Thread y HaLow~\cite{laghariInternetThingsIoT2024}:
+
+\begin{itemize}
+    \item \textbf{Dependencia de la nube:} puntos únicos de fallo en enlaces WAN con disponibilidades de 94--96\% en LTE (18--25~días de inactividad al año), insuficientes para infraestructura crítica.
+    \item \textbf{Sobrecarga de traducción:} cadenas de protocolos Thread--MQTT--HTTP--nube introducen 150--300~ms de latencia acumulada y complejidad en los mapeos de datos.
+    \item \textbf{Escalabilidad costosa:} plataformas IoT en la nube cobran \$5--10 por millón de mensajes; con 10\,000 medidores reportando cada 5~min, el costo mensual solo en ingesta alcanza \$2\,880.
+    \item \textbf{Ausencia de interoperabilidad:} interfaces propietarias dificultan la migración entre proveedores y bloquean a los operadores en ecosistemas cerrados~\cite{tangResearchInteroperabilityIoT,ISOIEC30141v2024}.
+\end{itemize}
+
+Es necesario, por tanto, una arquitectura que procese datos en el borde, emplee protocolos ligeros de extremo a extremo (CoAP/LwM2M en lugar de MQTT/HTTP), y combine Thread con HaLow en un diseño que no dependa de la nube para operar. Estas brechas se manifiestan con especial intensidad en un escenario de despliegue recurrente en Latinoamérica: los armarios concentradores de medidores.
+
+
+\subsection{Escenario de despliegue: armarios concentradores}
+\label{sec:escenario-armarios}
+
+Los \textbf{armarios concentradores} agrupan entre 10 y 60 medidores inteligentes en espacios confinados: sótanos de edificios residenciales, cuartos técnicos o recintos subterráneos de difícil acceso. Este escenario impone restricciones que determinan directamente la selección de tecnologías:
+
+\begin{itemize}
+    \item \textbf{Distancias cortas ($<$80~m):} Thread (IEEE~802.15.4, 2,4~GHz) cubre el armario con 1--2 saltos sin necesidad de alcance kilométrico.
+    \item \textbf{Entorno de radiofrecuencia hostil:} concreto armado e interferencia eléctrica; la robustez de la malla Thread (retransmisión automática, enrutamiento MLE, potencia TX de hasta +20~dBm) compensa la banda 2,4~GHz.
+    \item \textbf{Alta densidad (10--60 nodos):} Thread emplea CSMA/CA con retroceso exponencial, soportando hasta 250 nodos con latencias inferiores a 60~ms.
+    \item \textbf{Salida hacia la WAN:} HaLow sub-GHz ofrece 15--20~dB de ganancia en penetración respecto a 2,4~GHz, permitiendo alcanzar puntos de acceso exteriores a 1~km sin línea de vista.
+    \item \textbf{Alimentación desde el medidor:} los nodos se alimentan del puerto auxiliar 5\,V del medidor (200~mA disponibles), eliminando baterías y justificando la operación como dispositivo final en modo siempre activo (MED, 19~mA).
+\end{itemize}
+
+La Figura~\ref{fig:topologia-armario} ilustra esta topología: los nodos Thread dentro del armario forman una red en malla que converge en un enrutador de frontera (OTBR), el cual se conecta a la pasarela de borde mediante enlace HaLow sub-GHz capaz de atravesar las barreras constructivas del edificio.
+
+\input{fig_topologia_armario}
+
+La combinación de estas restricciones ---alta densidad, entorno hostil, alimentación limitada, necesidad de enlace troncal con penetración en edificaciones--- configura el problema que se formaliza a continuación.
+
+
+%% ═══════════════════════════════════════════════════
 \section{Planteamiento del Problema}
+%% ═══════════════════════════════════════════════════
 
-El problema de investigación abordado en esta tesis surge de la identificación de limitaciones estructurales en las arquitecturas IoT actuales aplicadas al sector energético. A continuación se define formalmente el problema, se delimita su alcance y se formula la pregunta de investigación.
+Las brechas descritas en la sección anterior ---dependencia de la nube, sobrecarga de protocolos, costos crecientes y falta de interoperabilidad--- no se resuelven incorporando una sola tecnología nueva, sino rediseñando la arquitectura completa de comunicación. Esta sección formaliza los tres problemas centrales, delimita el alcance de la investigación y formula la pregunta que guía el resto del trabajo. Como punto de partida, la Figura~\ref{fig:arquitectura-tres-niveles} presenta la visión general de la arquitectura jerárquica de tres niveles propuesta como respuesta a dichas brechas.
 
-\subsection{Definición del Problema de Investigación}
+\input{fig_arquitectura_tres_niveles}
 
-Las redes de telemetría para energía inteligente (\textit{Smart Energy}) enfrentan limitaciones críticas en sus arquitecturas de comunicación que comprometen la eficiencia operacional y escalabilidad de los sistemas de gestión energética inteligente. Estas limitaciones se manifiestan en tres dimensiones interrelacionadas:
+\subsection{Definición del problema}
 
-\textbf{Problema 1 - Sobrecarga excesiva en protocolos de comunicación (\textit{overhead})}: Las arquitecturas tradicionales de telemetría energética utilizan protocolos no optimizados para dispositivos con restricciones de recursos (MQTT/JSON sobre TCP/IP), generando sobrecarga de paquetes que alcanza 60-80\% de la trama total en redes de sensores IEEE 802.15.4 con MTU de 127 bytes. Un paquete típico MQTT/JSON con lectura de consumo energético (carga útil de 15-20 bytes) transporta 48 bytes de encabezados IPv6+UDP+TCP+MQTT, resultando en eficiencia de transmisión menor que 30\%. Esta sobrecarga se amplifica en topologías en malla (\textit{mesh}) multi-salto, donde cada retransmisión replica encabezados completos, generando latencias acumuladas de 150-300~ms en rutas de 3-5 saltos y consumo energético excesivo en el canal de radio.
+Las redes de telemetría para energía inteligente enfrentan tres limitaciones interrelacionadas:
 
-La ausencia de mecanismos estandarizados de compresión de encabezados IPv6 y optimización de protocolos de aplicación para redes restringidas (\textit{constrained}) impide alcanzar los requisitos de eficiencia espectral y latencia determinística exigidos por aplicaciones críticas de telemetría energética y monitoreo de calidad de potencia, donde ventanas de respuesta inferiores a 100~ms son necesarias según estándares internacionales de medición energética (IEC 61000-4-30, DLMS/COSEM).
+\textbf{Problema~1 --- Sobrecarga de protocolos.} Las arquitecturas tradicionales (MQTT/JSON sobre TCP/IP) generan sobrecarga del 60--80\% en tramas IEEE~802.15.4 (MTU de 127~bytes). Un paquete MQTT/JSON típico (15--20~bytes útiles) transporta 48~bytes de encabezados, resultando en eficiencia menor al 30\%. Esta sobrecarga se amplifica en topologías en malla con múltiples saltos, acumulando latencias de 150--300~ms en 3--5 saltos y consumo energético excesivo en el canal de radio.
 
-\textbf{Problema 2 - Dependencia crítica de conectividad WAN continua}: Las arquitecturas tradicionales centradas en la nube (\textit{cloud-centric}): dispositivo \textrightarrow{} pasarela \textrightarrow{} WAN \textrightarrow{} nube, presentan puntos únicos de fallo (\textit{Single Points of Failure}) en enlaces de área amplia, con disponibilidades reportadas de 94-96\% en conectividad celular LTE en despliegues urbanos (equivalente a 15-22 días de inactividad anual). Durante particiones WAN, los sistemas pierden capacidades críticas: visualización de telemetría en tiempo real para operadores, ejecución de reglas de negocio (alarmas, eventos), persistencia de datos históricos, y gestión remota de dispositivos. Esta dependencia genera riesgos operacionales en infraestructuras críticas donde la continuidad de servicio es mandatoria.
-
-La arquitectura centralizada introduce además latencias estructurales inherentes que, acumuladas a lo largo de la cadena de comunicación (dispositivo, pasarela, enlace WAN, nube y base de datos), superan los 200~ms en el percentil P50 y los 450~ms en P99. Estos valores exceden los requisitos de aplicaciones de telemetría en tiempo real (menor que 100~ms) y coordinación de microrredes (menor que 50~ms). La imposibilidad de procesamiento local durante desconexiones WAN impide implementar estrategias de gestión autónoma de energía en escenarios de operación aislada (\textit{islanding}) de microrredes.
-
-\textbf{Problema 3 - Limitaciones de alcance y rendimiento (\textit{throughput}) en tecnologías de última milla}: Las tecnologías de comunicación predominantes para enlace troncal (\textit{backhaul}) de pasarelas de energía inteligente (\textit{Smart Energy}) presentan compromisos desfavorables. LoRaWAN ofrece alcance extendido (5-15~km) pero rendimiento extremadamente limitado (50~kbps máximo, 0.3-50~kbps típico) y latencias impredecibles (1-5 segundos), inadecuadas para aplicaciones de telemetría de alta frecuencia (lecturas cada 5-15 minutos) y comandos de control en tiempo real. LTE Cat-M1 proporciona rendimiento superior (1~Mbps) y latencia aceptable (50-100~ms) pero genera costos operacionales recurrentes significativos (\$10-15~USD por nodo por año) que en despliegues de 1\,000+ medidores resultan en OPEX prohibitivos (\$150\,000 en 5 años solo en conectividad), además de requerir cobertura celular que puede ser intermitente en zonas suburbanas y rurales.
-
-Wi-Fi tradicional 2.4/5~GHz ofrece alto rendimiento pero alcance limitado (50-100~m) y pobre penetración en entornos sin línea de vista (NLOS), requiriendo despliegue denso de puntos de acceso con CAPEX elevado. La ausencia de tecnologías que combinen alcance extendido (mayor que 1~km), rendimiento suficiente para agregación de datos (mayor que 40~Mbps), latencia determinística (menor que 50~ms), y operación en espectro no licenciado sin costos recurrentes, limita la viabilidad económica de redes de telemetría de gran escala.
-
-\textbf{Impacto del problema}: Estas limitaciones resultan en sistemas de telemetría de energía inteligente con eficiencia operacional subóptima, costos de propiedad (TCO) elevados, escalabilidad restringida, y dependencia de conectividad externa que compromete resiliencia ante fallos. La ausencia de estándares abiertos de interoperabilidad agrava el problema, generando dependencia tecnológica del proveedor (\textit{vendor lock-in}) y dificultando la integración multi-proveedor (\textit{multi-vendor})~\cite{kandahNavigatingIoTSecurity2025}.
-
-\subsection{Delimitación del Problema}
-
-El problema de investigación se delimita específicamente al contexto de \textbf{redes de telemetría de energía inteligente (\textit{Smart Energy}) basadas en 6LoWPAN} para monitoreo y gestión de consumo energético en infraestructuras de distribución eléctrica residencial y comercial. La delimitación se estructura en tres dimensiones:
-
-\textbf{Dimensión 1 - Dominio de Aplicación: Smart Energy}
-
-El problema se circunscribe exclusivamente a aplicaciones de \textbf{gestión inteligente de energía eléctrica} según estándares DLMS/COSEM (IEC 62056) e IEC 61850, enfocándose en:
-
+\textbf{Problema~2 --- Dependencia de conectividad WAN.} Las arquitecturas centradas en la nube presentan disponibilidades de 94--96\% en LTE (15--22~días de inactividad al año). Durante las particiones WAN se pierden simultáneamente:
 \begin{itemize}
-\item \textbf{Telemetría de consumo}: Recolección de datos de medidores inteligentes (\textit{smart meters}) con frecuencias de muestreo de 5-60 minutos, incluyendo mediciones de potencia activa/reactiva (kW/kVAr), voltaje (V), corriente (A), factor de potencia, y energía acumulada (kWh).
-\item \textbf{Monitoreo de calidad de energía}: Detección de huecos e hinchazones de voltaje (\textit{sags/swells}), interrupciones, armónicos, y eventos de calidad de potencia según IEC 61000-4-30~\cite{ISOIEC30141v2024}.
+    \item Visualización de telemetría en tiempo real.
+    \item Ejecución de reglas de negocio (alarmas, eventos).
+    \item Persistencia de datos históricos.
+    \item Gestión remota de dispositivos.
+\end{itemize}
+Las latencias estructurales superan 200~ms en P50 y 450~ms en P99, excediendo los requisitos de telemetría en tiempo real ($<$100~ms) y coordinación de microrredes ($<$50~ms).
+
+\textbf{Problema~3 --- Limitaciones del enlace troncal.} Las tecnologías de área amplia existentes no satisfacen simultáneamente los requisitos de rendimiento, latencia, alcance y costo:
+\begin{itemize}
+    \item LoRaWAN alcanza 50~kbps máximo con latencias de 1--5~s.
+    \item LTE Cat-M1 genera costos operativos de \$150\,000 en 5~años para 1\,000 medidores.
+    \item Wi-Fi tradicional tiene alcance limitado a 50--100~m.
+\end{itemize}
+La ausencia de una tecnología que combine alcance superior a 1~km, rendimiento mayor a 4~Mbps, latencia menor a 50~ms y espectro no licenciado limita la viabilidad económica de redes de telemetría a gran escala~\cite{kandahNavigatingIoTSecurity2025}.
+
+Estos tres problemas están interrelacionados: la sobrecarga de protocolos agrava la dependencia WAN (al requerir mayor ancho de banda), mientras que la falta de un enlace troncal adecuado impide migrar el procesamiento al borde. Para abordarlos de manera conjunta es necesario primero delimitar el alcance de la investigación.
+
+\subsection{Delimitación}
+
+La investigación se circunscribe a \textbf{redes de telemetría para energía inteligente basadas en 6LoWPAN}, orientadas al monitoreo de consumo eléctrico residencial y comercial. La delimitación se estructura en tres dimensiones:
+
+\textbf{Dominio de aplicación:}
+\begin{itemize}
+    \item Telemetría de consumo: potencia activa y reactiva (kW, kvar), voltaje (V), corriente (A), energía acumulada (kWh).
+    \item Monitoreo de calidad de energía según IEC~61000-4-30.
+    \item Exclusiones: telemetría de agua y gas, redes SCADA de alta tensión (IEC~61850-3), automatización de edificios.
 \end{itemize}
 
-Se excluyen del alcance: telemetría de agua/gas, monitoreo industrial (no energético), automatización de edificios (HVAC, iluminación no vinculada a gestión energética), sistemas SCADA de alta tensión en subestaciones (dominio de IEC 61850-3), gestión de respuesta a la demanda (\textit{Demand Response}) e integración de recursos energéticos distribuidos (DER), los cuales se presentan como contexto en el estado del arte pero quedan fuera del alcance de implementación y validación de esta tesis.
-
-\textbf{Dimensión 2 - Pila de Protocolos: 6LoWPAN como Capa de Adaptación}
-
-El problema se enfoca en la \textbf{optimización de comunicaciones mediante 6LoWPAN} (RFC 6282, RFC 4944) como capa de adaptación IPv6 para redes de sensores con restricciones de recursos~\cite{alharbi6LoWPANBasedAMI2021,abood6LoWPANTechnicalFeatures2024}, delimitando:
-
+\textbf{Pila de protocolos:}
 \begin{itemize}
-\item \textbf{Capa física/MAC}: IEEE 802.15.4-2020 banda 2.4 GHz, modulación OQPSK, 250 kbps, MTU 127 bytes, CSMA/CA con retroceso exponencial.
-\item \textbf{Capa de adaptación (6LoWPAN)}: Compresión IPHC (\textit{IPv6 Header Compression}) reduciendo encabezados de 40 bytes a 2-7 bytes, compresión NHC (\textit{Next Header Compression}) para UDP/TCP, fragmentación y reensamblado para paquetes mayores que 127 bytes, enrutamiento bajo malla (\textit{mesh-under routing}) con encabezados de encapsulación.
-\item \textbf{Capa de transporte}: UDP predominante (sobrecarga de 8 bytes comprimible a 4 bytes con NHC), TCP limitado para aplicaciones que requieren confiabilidad garantizada (ej.\ actualizaciones de \textit{firmware}).
-\item \textbf{Capa de aplicación}: CoAP (Constrained Application Protocol, RFC 7252) como protocolo RESTful ligero con sobrecarga de 4-10 bytes, modos CON/NON, Observe (RFC 7641) para suscripciones, transferencia por bloques (\textit{block-wise transfer}, RFC 7959) para transferencias grandes, y DTLS 1.2 para seguridad.
-\item \textbf{Gestión de dispositivos}: LwM2M 1.2 (Lightweight M2M, OMA SpecWorks) sobre CoAP, con objetos estándar para telemetría energética, \textit{firmware} OTA, y monitoreo de conectividad~\cite{karaagacLightweightM2MSurvey2018,OMA_LwM2M2020}.
+    \item \textbf{Capa física y MAC:} IEEE~802.15.4-2020, banda 2,4~GHz, modulación O-QPSK, 250~kbps, MTU 127~bytes.
+    \item \textbf{Capa de adaptación:} 6LoWPAN con compresión IPHC/NHC (RFC~6282).
+    \item \textbf{Capa de transporte:} UDP sobre CoAP (RFC~7252) con Observe (RFC~7641) y transferencia por bloques (RFC~7959).
+    \item \textbf{Gestión de dispositivos:} LwM2M~1.2 (OMA SpecWorks) con DTLS~1.2 para seguridad.
 \end{itemize}
 
-El problema se delimita a la evaluación cuantitativa de: (a) reducción de sobrecarga de paquetes mediante compresión 6LoWPAN frente a pilas tradicionales MQTT/TCP, (b) latencia por salto en topologías en malla Thread de 3-5 saltos, (c) eficiencia espectral y consumo por bit transmitido en nodos alimentados desde el medidor, y (d) tasa de entrega de paquetes (PDR, \textit{Packet Delivery Ratio}) en condiciones de interferencia 2.4~GHz.
-
-\textbf{Dimensión 3 - Alcance Geográfico y Escala}
-
+\textbf{Escala y requisitos:}
 \begin{itemize}
-\item \textbf{Entorno de despliegue}: Zonas urbanas y suburbanas residenciales/comerciales con densidades de 100-500 medidores por km², excluyendo zonas rurales remotas (baja densidad, menos de 20 medidores/km²) y zonas industriales de alta potencia (mayor que 1~MW por punto de medición).
-\item \textbf{Escala de red}: Topologías de 10-100 nodos IoT por pasarela de borde, con validación experimental en prototipo de 10 nodos y extrapolación analítica a 100 nodos. Se excluye la validación empírica de redes de más de 1.000 nodos.
-\item \textbf{Alcance de comunicación}: Redes Thread mesh con alcance efectivo 200-500 m (3-5 hops @ 80 m por hop en entorno urbano con obstrucciones), y backhaul HaLow con alcance 1-2 km en configuración 2 MHz bandwidth.
-\item \textbf{Requisitos temporales}: Latencia de extremo a extremo objetivo menor que 100~ms P95 para telemetría, menor que 50~ms para comandos de control, y disponibilidad mayor que 99\% anual (tiempo de inactividad menor que 87 horas/año).
+    \item Topologías de 60--100 nodos por pasarela; validación experimental con 60 nodos.
+    \item Enlace troncal HaLow de 1--2~km, latencia objetivo menor a 100~ms en P95.
 \end{itemize}
 
-\textbf{Estándares implementados}:
-\begin{itemize}
-\item \textbf{Energía Inteligente (\textit{Smart Energy})}: DLMS/COSEM (IEC 62056), ISO/IEC 30141:2024 (Arquitectura de Referencia IoT).
-\item \textbf{Comunicación 6LoWPAN}: RFC 6282 (IPHC), RFC 4944 (6LoWPAN), RFC 7252 (CoAP), RFC 7641 (Observe), RFC 7959 (Block-wise), OMA LwM2M 1.2.
-\item \textbf{Conectividad}: IEEE 802.15.4-2020 (Thread 1.3.1), IEEE 802.11ah-2016 (HaLow).
-\end{itemize}
+Con el problema acotado a una pila de protocolos específica, un dominio de aplicación concreto y una escala de validación definida, es posible formular la pregunta de investigación que articula el trabajo.
 
-\textbf{Exclusiones explícitas}: PLC (Power Line Communication G3-PLC/PRIME), protocolos propietarios (Zigbee Smart Energy 1.x), redes celulares 5G/NR-Light, redes de alta tensión con IEC 61850-3 (fuera del dominio Smart Energy residencial/comercial), y blockchain para auditoría de transacciones energéticas (trabajo futuro).
+\subsection{Pregunta de investigación}
 
-Esta delimitación asegura que el problema de investigación se mantenga enfocado en la intersección específica de \textbf{6LoWPAN como solución de comunicación eficiente} y \textbf{energía inteligente (\textit{Smart Energy}) como dominio de aplicación crítico}, evitando dispersión en dominios adyacentes que diluirían la contribución técnica.
+A partir del problema definido y su delimitación, la pregunta central que orienta esta tesis es:
 
-\subsection{Pregunta de Investigación}
+\textbf{¿En qué medida una arquitectura IoT centrada en pasarelas de borde, que combine 6LoWPAN/CoAP/LwM2M sobre IEEE~802.15.4 para la red de campo y Wi-Fi HaLow (IEEE~802.11ah) para el enlace troncal, puede reducir latencia y sobrecarga de protocolos, mejorar disponibilidad durante fallos WAN y disminuir el costo total de propiedad frente a arquitecturas centradas en la nube en aplicaciones de energía inteligente?}
 
-Con base en el problema definido y su delimitación, la pregunta central que orienta esta tesis es la siguiente:
+Para responder esta pregunta es necesario demostrar que la combinación tecnológica propuesta no solo es técnicamente viable sino también económicamente ventajosa. La siguiente sección aborda esa justificación.
 
-\textbf{¿En qué medida una arquitectura IoT centrada en pasarelas de borde, que combine 6LoWPAN/CoAP/LwM2M sobre IEEE 802.15.4 para la red de campo y Wi-Fi HaLow (IEEE 802.11ah) para el enlace troncal, puede reducir latencia y sobrecarga de protocolos, mejorar disponibilidad durante fallos WAN y disminuir el costo total de propiedad frente a arquitecturas centradas en la nube en aplicaciones de energía inteligente (\textit{Smart Energy})?}
 
-\section{Justificación de la Investigación}
+%% ═══════════════════════════════════════════════════
+\section{Justificación}
 \label{sec:justificacion-investigacion}
+%% ═══════════════════════════════════════════════════
 
-La justificación de esta investigación se desarrolla como un argumento lineal que parte de la necesidad técnica, avanza hacia la viabilidad económica y concluye con el aporte académico y el impacto sectorial esperado.
+Responder la pregunta de investigación formulada requiere justificar que la combinación tecnológica propuesta es viable desde tres perspectivas complementarias: la necesidad técnica que no cubren las soluciones existentes, la viabilidad económica frente al modelo centrado en la nube y el aporte que la investigación representa para la comunidad académica y el sector energético.
 
-\subsection{Necesidad Técnica y Selección de Tecnologías}
+\subsection{Necesidad técnica}
 
-Las arquitecturas de computación en el borde (\textit{edge computing}) para IoT industrial requieren capacidades de procesamiento local, almacenamiento persistente y autonomía operacional que las soluciones centradas en la nube no pueden garantizar~\cite{satyanarayananEmergenceEdgeComputing2017,bonomiFogComputingItsRole2012}. Esta necesidad motiva la búsqueda de tecnologías de comunicación que satisfagan simultáneamente tres requisitos: rendimiento suficiente para agregación de datos de telemetría, operación sin costos recurrentes de conectividad, y alcance extendido sin dependencia de múltiples saltos.
-
-El ecosistema de tecnologías disponibles para el enlace troncal (\textit{backhaul}) de pasarelas de energía inteligente presenta limitaciones que restringen su aplicabilidad. Las tecnologías celulares como 5G/NR-Light, a pesar de ofrecer latencias teóricas de 1-10~ms, generan costos operacionales recurrentes de \$15-25 por dispositivo al mes, lo que en despliegues de 1.000 medidores alcanza \$180.000-300.000 anuales, haciendo la solución económicamente inviable. NB-IoT presenta un rendimiento nominal de 250~kbps (Release 13) que resulta insuficiente para la transmisión simultánea de formas de onda trifásicas de calidad de energía según IEC 61000-4-30, donde se requieren al menos 468~kbps. Las comunicaciones PLC (G3-PLC, PRIME) están limitadas por la topología de transformadores de distribución, que introducen atenuación de 40-60~dB requiriendo dispositivos de derivación (\textit{bypass}) con costos de \$500-1.200 por unidad. LoRaWAN, con un rendimiento máximo de 50~kbps, tampoco cumple los requisitos de capacidad para agregación de datos. Finalmente, Zigbee con alcance de 50-100~m requiere múltiples saltos que acumulan latencias de 45-150~ms, excediendo los límites aceptables para aplicaciones de control.
-
-La selección de Wi-Fi HaLow (IEEE 802.11ah) como tecnología de enlace troncal se fundamenta en su capacidad para satisfacer simultáneamente los tres requisitos identificados: rendimiento de hasta 43,3~Mbps a 8~MHz de ancho de banda (superando por un factor de 92 el rendimiento de NB-IoT), operación en espectro no licenciado ISM sin costos recurrentes, y alcance de 1~km en entornos urbanos sin línea de vista (hasta 3-5~km con línea de vista)~\cite{amrilPerformanceEvaluationWiFi2025,IEEE802.11ah-2016}. La Tabla~\ref{tab:exclusiones-justificadas} resume las limitaciones de las tecnologías descartadas.
-
-\begin{table}[H]
-\centering
-\caption{Resumen de limitaciones de tecnologías alternativas descartadas}
-\label{tab:exclusiones-justificadas}
-\small
-\begin{tabular}{|l|l|}
-\hline
-\rowcolor{gray!20}
-\textbf{Tecnología} & \textbf{Limitante principal} \\
-\hline
-\textbf{5G/NR-Light} & Costos operacionales recurrentes inviables a escala \\
-\hline
-\textbf{NB-IoT} & Rendimiento insuficiente para telemetría trifásica \\
-\hline
-\textbf{PLC (G3-PLC)} & Atenuación por transformadores, costos de derivación \\
-\hline
-\textbf{Zigbee Pro} & Alcance limitado, latencia acumulada por saltos \\
-\hline
-\textbf{LoRaWAN} & Rendimiento insuficiente para agregación de datos \\
-\hline
-\end{tabular}
-\end{table}
-
-\subsection{Viabilidad Económica}
-
-El análisis de costo total de propiedad (TCO, \textit{Total Cost of Ownership}) para un despliegue de 1.000 puntos de medición durante 5 años demuestra la ventaja económica de la arquitectura propuesta:
+Las arquitecturas de computación en el borde para IoT industrial requieren procesamiento local, almacenamiento persistente y autonomía sin conexión que las soluciones centradas en la nube no garantizan~\cite{satyanarayananEmergenceEdgeComputing2017,bonomiFogComputingItsRole2012}. Las alternativas de enlace troncal evaluadas presentan limitaciones que restringen su aplicabilidad:
 
 \begin{itemize}
-\item \textbf{Arquitectura centrada en la nube con LTE:} CAPEX \$150.000 (hardware) más OPEX \$180.000 (conectividad a \$15 por nodo al año), totalizando \$330.000.
-\item \textbf{Arquitectura propuesta con HaLow:} CAPEX \$200.000 (hardware y puntos de acceso HaLow) más OPEX \$25.000 (mantenimiento), totalizando \$225.000.
-\item \textbf{Ahorro proyectado:} 32\% (\$105.000 en 5 años)\footnote{Análisis económico de elaboración propia basado en cotizaciones comerciales de equipos HaLow (Alfa Networks, Morse Micro) y precios públicos de operadores MVNO durante el año 2024. El costo de conectividad LTE de \$15/nodo/año se basa en tarifas comerciales publicadas de operadores IoT/M2M (e.g., Hologram, 1NCE).}.
+    \item \textbf{5G/NR-Light:} costos operativos de \$180\,000--300\,000 anuales para 1\,000 medidores.
+    \item \textbf{NB-IoT:} rendimiento de 250~kbps, insuficiente para telemetría trifásica IEC~61000-4-30 (se requieren al menos 468~kbps).
+    \item \textbf{PLC (G3-PLC/PRIME):} requiere dispositivos de derivación por transformador con costos de \$500--1\,200 por unidad.
+    \item \textbf{LoRaWAN:} rendimiento máximo de 50~kbps, inadecuado para agregación de datos de múltiples medidores.
 \end{itemize}
 
-La ventaja económica se origina en la eliminación completa de costos recurrentes de conectividad celular, posibilitada por la operación de HaLow en espectro no licenciado con inversión única de capital~\cite{hossainComparativeStudyIoTCommunication2018}.
+Wi-Fi HaLow satisface simultáneamente los tres requisitos: rendimiento de hasta 43,3~Mbps, espectro no licenciado sin costos recurrentes, y alcance de 1~km sin línea de vista en entorno urbano~\cite{amrilPerformanceEvaluationWiFi2025,IEEE802.11ah-2016}.
 
-\subsection{Aporte Académico}
+No obstante, la superioridad técnica de una solución no basta si su despliegue resulta más costoso que las alternativas. A continuación se analiza la viabilidad económica de la arquitectura propuesta.
+
+\subsection{Viabilidad económica}
+
+El análisis del costo total de propiedad (TCO) para 1\,000 medidores durante 5~años favorece la arquitectura propuesta:
+
+\begin{itemize}
+    \item \textbf{Arquitectura nube + LTE:} inversión de capital \$150\,000 + gastos operativos de conectividad \$180\,000 = \textbf{\$330\,000}.
+    \item \textbf{Arquitectura propuesta con HaLow:} inversión de capital \$200\,000 + mantenimiento \$25\,000 = \textbf{\$225\,000}.
+    \item \textbf{Ahorro proyectado:} 32\% (\$105\,000 en 5~años)~\cite{hossainComparativeStudyIoTCommunication2018}.
+\end{itemize}
+
+La ventaja se origina en la eliminación completa de costos recurrentes de conectividad celular, posibilitada por la operación de HaLow en espectro no licenciado con inversión única de capital.
+
+Más allá del ahorro cuantificable, la investigación busca generar conocimiento transferible al ámbito académico y aportar soluciones al sector energético latinoamericano.
+
+\subsection{Aporte académico e impacto sectorial}
 
 La investigación contribuye al cuerpo de conocimiento en arquitecturas IoT heterogéneas mediante:
-\begin{itemize}
-\item Diseño de arquitectura de referencia para pasarelas con múltiples interfaces físicas (\textit{multi-PHY}) conformes con ISO/IEC 30141.
-\item Caracterización empírica de latencias en integración Thread $\leftrightarrow$ HaLow.
-\item Evaluación comparativa de estrategias de conmutación por fallo (\textit{failover}) con múltiples enlaces WAN en pasarelas IoT.
-\end{itemize}
 
-El trabajo aborda una brecha existente entre estudios comparativos de tecnologías LPWAN y validaciones experimentales de extremo a extremo en condiciones de despliegue real para energía inteligente. En particular, aporta evidencia cuantitativa integrada sobre latencia, disponibilidad, sobrecarga y costo total de propiedad bajo una arquitectura multicapa alineada con DLMS/COSEM e ISO/IEC 30141.
+\begin{enumerate}
+    \item Arquitectura de referencia con múltiples capas físicas (multi-PHY) conforme ISO/IEC~30141.
+    \item Caracterización empírica de latencias en la integración Thread--HaLow.
+    \item Caracterización empírica de la integración Thread--HaLow con malla 802.11s (latencias, rendimiento, fiabilidad).
+\end{enumerate}
 
-\subsection{Impacto Sectorial}
+Desde la perspectiva aplicada, la propuesta es relevante para operadores de red y comercializadores que requieren modernizar AMI con estándares abiertos, reduciendo dependencia de proveedores cerrados en el contexto de la transición energética latinoamericana.
 
-Desde la perspectiva aplicada, la propuesta es relevante para operadores de red, comercializadores y entidades territoriales que requieren modernizar infraestructura AMI con restricciones presupuestales y alta exigencia de continuidad operativa. La arquitectura planteada habilita un camino de adopción incremental con estándares abiertos, reduciendo dependencia de proveedores cerrados y facilitando estrategias de interoperabilidad con múltiples proveedores en el contexto de la transición energética.
+Sobre esta base de justificación técnica, económica y académica se definen los objetivos del trabajo.
 
+
+%% ═══════════════════════════════════════════════════
 \section{Objetivos}
+%% ═══════════════════════════════════════════════════
 
-\subsection{Objetivo General}
+La justificación anterior demuestra que existe tanto la necesidad técnica como la viabilidad económica para la arquitectura propuesta. Esta sección traduce esos argumentos en un objetivo general medible y ocho objetivos específicos que cubren desde el diseño de la arquitectura hasta la evaluación comparativa con las líneas base.
 
-Diseñar, implementar y validar una arquitectura IoT centrada en pasarelas de borde (\textit{edge gateways}) para aplicaciones de energía inteligente (\textit{Smart Energy}) que integre: (1) pila de protocolos optimizada 6LoWPAN/CoAP/LwM2M sobre IEEE 802.15.4 para reducción de latencia y sobrecarga, (2) capacidades de procesamiento en el borde para gestión de telemetría en tiempo real, y (3) conectividad mediante IEEE 802.11ah con estrategia multibanda (2/4/8~MHz) adaptada a casos de uso específicos, garantizando latencia de extremo a extremo menor que 100~ms, reducción de tráfico WAN mayor que 65\%, y disponibilidad mayor que 99\% con conformidad a estándares DLMS/COSEM e ISO/IEC 30141:2024.
+\subsection{Objetivo general}
 
-\subsection{Objetivos Específicos}
-
-\textbf{OE1 - Pila de Protocolos Optimizada 6LoWPAN/CoAP/LwM2M:}
-\begin{itemize}
-\item Validar la capa de adaptación 6LoWPAN (RFC 6282) con compresión IPHC/NHC sobre IEEE 802.15.4 mediante OpenThread, verificando reducción de sobrecarga de encabezados mayor que 85\% (de 48 bytes a menos de 7 bytes) en tráfico de telemetría de energía inteligente.
-\item Desplegar protocolo CoAP (RFC 7252) con modos CON/NON, Observe (RFC 7641) para suscripciones, y transferencia por bloques (RFC 7959), midiendo latencia menor que 30~ms para transacciones solicitud/respuesta en topologías en malla de 3-5 saltos.
-\item Integrar LwM2M 1.2 (OMA SpecWorks) con objetos estándar (Security, Server, Device, Connectivity Monitoring, Firmware Update) para gestión unificada de dispositivos, validando reducción de tráfico de gestión mayor que 75\% frente a soluciones HTTP/REST propietarias.
-\item Caracterizar empíricamente la tasa de entrega de paquetes (PDR), latencia por salto, y consumo energético por bit transmitido en función de topología en malla (estrella, árbol, malla completa) y carga de red (5/10/25/50 nodos).
-\end{itemize}
-
-\textbf{OE2 - Pasarela de Borde con Procesamiento en Tiempo Real:}
-\begin{itemize}
-\item Desplegar pila de servicios en contenedores (ThingsBoard Edge, PostgreSQL con TimescaleDB, Apache Kafka) sobre OpenWRT 23.05 con núcleo PREEMPT\_RT, garantizando latencias de procesamiento menores que 10~ms P99 para la cadena de ingesta MQTT, motor de reglas y persistencia en TimescaleDB.
-\item Validar resiliencia mediante almacenamiento temporal persistente local con capacidad mayor que 100.000 mensajes (aproximadamente 500~MB), sincronización bidireccional tras desconexión WAN mayor que 72~horas con recuperación en menos de 30 minutos, y disponibilidad de servicios locales (paneles de control, motor de reglas) mayor que 99\% durante particiones WAN.
-\end{itemize}
-
-\textbf{OE3 - Arquitectura Multibanda IEEE 802.11ah con Nodos HaLow:}
-\begin{itemize}
-\item Diseñar arquitectura de red basada en pasarelas de borde con nodos HaLow (Morse Micro MM6108) soportando topologías en estrella (simple), malla (\textit{mesh}) 802.11s (recuperación automática HWMP), y EasyMesh (IEEE 1905.1 con itinerancia coordinada), validando escalabilidad a más de 50 nodos por pasarela sin degradación mayor que 10\% de latencia.
-\item Caracterizar empíricamente el desempeño por ancho de banda:
-  \begin{itemize}
-  \item \textbf{2~MHz}: Sensibilidad -96~dBm, alcance mayor que 2~km NLOS urbano, 4-5~km con línea de vista en exteriores, rendimiento 300-450~kbps, MCS 1-2, latencia menor que 100~ms P95, PDR mayor que 98\% con SNR 8-12~dB. Caso de uso: sensores remotos, lecturas horarias, penetración interior.
-  \item \textbf{4~MHz}: Sensibilidad -91~dBm, alcance 1-2~km urbano, 3-4~km con línea de vista en exteriores, rendimiento aproximado 10~Mbps (MCS7-8), latencia menor que 50~ms P95, soporte de más de 50 nodos concurrentes. Caso de uso: gestión balanceada zonas suburbanas, lecturas cada 15 minutos.
-  \item \textbf{8~MHz}: Sensibilidad -85~dBm, alcance 0,5-1~km urbano denso, 2-3~km con línea de vista en exteriores, rendimiento mayor que 80~Mbps, MCS 5-7, latencia menor que 20~ms P99. Caso de uso: enlace troncal de concentradores en zonas urbanas, agregación de más de 100 dispositivos.
-  \end{itemize}
-\end{itemize}
-
-\textbf{OE4 - Escalabilidad y Selección Adaptativa de Ancho de Banda:}
-\begin{itemize}
-\item Evaluar e integrar mecanismos de selección adaptativa de ancho de banda, utilizando paquetes existentes como OpenWISP o soluciones equivalentes, basados en: (a) condiciones de propagación (RSSI, SNR, PDR histórico), (b) requisitos de aplicación (latencia, rendimiento, prioridad), y (c) densidad de red (número de nodos activos, carga agregada).
-\item Evaluar escalabilidad arquitectónica: topología en estrella (2.500 puntos finales, 3~km), malla 802.11s (7.500 puntos finales, 9~km, recuperación automática menor que 10~s), EasyMesh (12.500 puntos finales, itinerancia transparente, selección de banda 2/4/8~MHz).
-\end{itemize}
-
-\textbf{OE5 - Validación Experimental Comparativa:}
-\begin{itemize}
-\item Realizar evaluación comparativa cuantitativa frente a 2 líneas base: (a) centrada en la nube (MQTT/JSON/TCP sobre LTE Cat-M1), (b) borde simplificado (Node-RED local con sincronización MQTT en la nube).
-\item Métricas comparadas: latencia de extremo a extremo P50/P95/P99, sobrecarga de paquetes (bytes de encabezado frente a carga útil), tráfico WAN (GB/mes), disponibilidad fuera de línea (horas), alcance (km), consumo energético (mJ/bit).
-\item Generar conjuntos de datos públicos de mediciones (latencias, rendimiento, PDR) con más de 10 nodos IoT ESP32-C6 con Zephyr RTOS y Thread LwM2M en despliegue piloto de 72 horas continuas bajo condiciones variables de carga y propagación.
-\end{itemize}
-
-\section{Hipótesis de Trabajo}
-
-Como respuesta al problema planteado, esta tesis propone y valida la siguiente hipótesis:
-
-\textbf{Hipótesis General:} Una arquitectura IoT para energía inteligente (\textit{Smart Energy}) basada en: (1) pila de protocolos optimizada 6LoWPAN/CoAP/LwM2M sobre IEEE 802.15.4, (2) pasarelas de borde (\textit{edge gateways}) con capacidades de procesamiento local, y (3) conectividad de última milla mediante IEEE 802.11ah con selección adaptativa de ancho de banda (2/4/8~MHz), ofrece una alternativa viable para afrontar los retos de latencia, sobrecarga de protocolos y disponibilidad identificados en las arquitecturas tradicionales basadas en MQTT/HTTP sobre conectividad celular. Específicamente, se espera una reducción de latencia de extremo a extremo mayor que 70\%, una reducción de sobrecarga de paquetes mayor que 60\%, una reducción de tráfico WAN mayor que 65\%, y una disponibilidad mayor que 99\% durante desconexiones prolongadas.
-
-Estos umbrales se fundamentan en resultados reportados en la literatura: reducción de tráfico WAN del 70\% mediante procesamiento en el borde~\cite{jonnakutiEDGEBASEDFAULTDETECTION}, reducción de sobrecarga del 87\% con compresión IPHC en redes 6LoWPAN~\cite{alharbi6LoWPANBasedAMI2021}, y requisitos de disponibilidad mayor que 99\% establecidos por marcos regulatorios de infraestructura crítica~\cite{NISTFramework2022}. Los umbrales propuestos son conservadores respecto a los valores reportados, proporcionando margen para variabilidad experimental en condiciones de despliegue real.
-
-Las hipótesis específicas (H1-H8) que desglosan esta hipótesis general en componentes validables se presentan en el Anexo~\ref{anexo:hipotesis-detalladas}, cubriendo aspectos de compresión de protocolos, procesamiento en el borde (\textit{edge}), arquitectura multi-banda 802.11ah, eficiencia CoAP frente a MQTT, gestión LwM2M, procesamiento de eventos complejos (CEP) local, y ventaja comparativa integral.
-
-% Sección §1.3 "Justificación: Convergencia de Fibra, HaLow y Edge Computing" eliminada
-% por indicación del revisor — contenido redundante con §1.2.4 Justificación y §1.1.2-1.1.3.
-
-\section{Metodología de Investigación}
-
-Esta sección presenta el enfoque metodológico en nivel de síntesis para contextualizar el desarrollo de la tesis. Los detalles de implementación, instrumentación y resultados experimentales se desarrollan en los capítulos de arquitectura, implementación y validación.
-
-La investigación sigue un enfoque mixto que combina Design Science Research (DSR)~\cite{hevnerDesignScienceInformation2004,peffersDesignScienceResearch2007} para el diseño de artefactos tecnológicos, Investigación Experimental para la validación de hipótesis cuantitativas, y Estudio de Caso para la evaluación en contexto real.
-
-\subsection{Fases de la Investigación}
-
-\subsubsection{Fase 1 - Análisis y Diseño (Design Science)}
-
-\textbf{Objetivos:} Especificar requisitos funcionales/no funcionales, diseñar arquitectura de referencia multi-capa, definir interfaces entre componentes.
-
-\textbf{Actividades:}
-\begin{enumerate}
-\item Revisión de literatura sobre arquitecturas IoT en el borde (\textit{edge}) y estándares de energía inteligente (DLMS/COSEM, ISO/IEC 30141, IEC 61850).
-\item Análisis comparativo de tecnologías de comunicación (Thread, Zigbee, BLE Mesh, HaLow, LoRaWAN, LTE Cat-M1).
-\item Diseño de arquitectura de 4 capas: Conectividad, Orquestación, Procesamiento, Aplicación.
-\item Especificación de interfaces: OTBR APIs, tópicos MQTT, puntos de acceso REST de ThingsBoard.
-\item Modelado de latencias mediante teoría de colas (M/M/1 para pasarela, M/G/$\infty$ para nube).
-\end{enumerate}
-
-\textbf{Entregables:} Diagrama de arquitectura (Capítulo 3), especificación de requisitos (Capítulo 3.3), diseño de base de datos TimescaleDB (Anexo B).
-
-\subsubsection{Fase 2 - Implementación (Ingeniería)}
-
-\textbf{Objetivos:} Implementar pasarela prototipo funcional, integrar componentes de \textit{hardware}/\textit{software}, desarrollar servicios en contenedores.
-
-\textbf{Actividades:}
-\begin{enumerate}
-\item \textbf{Servidor ThingsBoard local (\textit{on-premise}):} Instalación y configuración ThingsBoard Professional Edition 3.6.0 en servidor dedicado (Ubuntu Server 22.04 LTS) con PostgreSQL 15 y TimescaleDB 2.13, Apache Kafka 7.5.0 para procesamiento de telemetría, configuración de reglas de alarmas y tableros de visualización (\textit{dashboards}).
-
-\item \textbf{Enrutadores Wi-Fi HaLow en exteriores:} Configuración de enrutadores (\textit{routers}) Alfa Networks AHPI7292S (\textit{chipset} Morse Micro MM6108) con OpenWRT, establecimiento de topología en malla (\textit{mesh}) 802.11s para enlace troncal extendido (3--5~km), configuración WPA3-SAE y anchos de banda adaptativos (2/4/8~MHz).
-
-\item \textbf{Pasarela de borde personalizada:} Desarrollo de imagen OpenWRT personalizada para Raspberry Pi 4 Model B integrando: (a) OpenThread Border Router (OTBR) con nRF52840 RCP vía USB, (b) Docker Engine para servicios en contenedores, (c) ThingsBoard Edge 3.6.0 para procesamiento local y almacenamiento temporal de telemetría, (d) mwan3 para conmutación por fallo (\textit{failover}) multi-WAN (Ethernet/HaLow/LTE).
-
-\item \textbf{Nodos IoT Thread:} Programación ESP32-C6 (Thread 1.3.0) con pila LwM2M (Leshan/Wakaama) para telemetría de sensores, desarrollo adaptador RS-485 para lectura de medidores inteligentes mediante protocolo DLMS/COSEM (IEC 62056), implementación de objetos LwM2M personalizados para mapeo de registros OBIS.
-
-\item \textbf{Integración DLMS/COSEM:} Implementación de interfaz RS-485 con protocolo DLMS/COSEM (IEC 62056) para lectura de medidores inteligentes, mapeo de registros OBIS a objetos LwM2M personalizados, y sincronización con ThingsBoard vía API REST.
-
-\item \textbf{Validación de extremo a extremo:} Pruebas de integración completa desde nodo IoT \textrightarrow{} pasarela de borde \textrightarrow{} enrutador HaLow \textrightarrow{} servidor ThingsBoard, verificación de latencias, persistencia de datos en TimescaleDB, y funcionamiento de alarmas y tableros de control.
-\end{enumerate}
-
-\textbf{Entregables:} Documentación de instalación (Anexo A), archivos docker-compose.yml (Anexo B), scripts de integración (Anexo C), código fuente nodos IoT (Anexo E).
-
-\subsubsection{Fase 3 - Validación Experimental}
-
-\textbf{Objetivos:} Validar hipótesis mediante mediciones empíricas, caracterizar rendimiento del sistema, evaluar resiliencia ante fallos.
-
-\textbf{Experimentos:}
+Diseñar, implementar y validar una arquitectura IoT centrada en pasarelas de borde para energía inteligente que integre:
 
 \begin{enumerate}
-\item \textbf{Exp. 1 - Latencia de extremo a extremo:} Medir latencia desde generación de telemetría en nodo IoT hasta persistencia en TimescaleDB. Variables independientes: número de nodos (N=5,10,25), frecuencia de muestreo (5s, 30s, 60s). Variables dependientes: latencia P50/P95/P99, fluctuación (\textit{jitter}). Duración: 72 horas por configuración.
-
-\item \textbf{Exp. 2 - Disponibilidad durante desconexión WAN:} Simular partición WAN de 48 horas desconectando Ethernet y deshabilitando LTE. Métricas: porcentaje de mensajes almacenados temporalmente de forma exitosa, tiempo de sincronización posterior a la reconexión, disponibilidad de servicios locales (tableros de control, alarmas).
-
-\item \textbf{Exp. 3 - Rendimiento agregado HaLow (\textit{throughput}):} Saturar enlace HaLow con tráfico concurrente de múltiples nodos. Medir rendimiento agregado frente a número de clientes (N=1,5,10,20). Configuraciones: 1~MHz/2~MHz de ancho de banda (\textit{bandwidth}), MCS (\textit{Modulation and Coding Scheme}) 0-10.
-
-\item \textbf{Exp. 4 - Sobrecarga de procesamiento (\textit{overhead}):} Caracterizar CPU/RAM/almacenamiento bajo cargas de 10/50/100 dispositivos. Identificar cuellos de botella mediante perfilado de rendimiento (\textit{profiling}).
+    \item Pila de protocolos 6LoWPAN/CoAP/LwM2M sobre IEEE~802.15.4 para la red de campo.
+    \item Procesamiento en el borde para telemetría en tiempo real.
+    \item Conectividad IEEE~802.11ah multibanda (2/4/8~MHz) para el enlace troncal.
 \end{enumerate}
 
-\textbf{Herramientas de medición:} Wireshark/tshark para captura de paquetes, Grafana + Prometheus para métricas de sistema, scripts Python para análisis estadístico (pandas, scipy).
+Garantizando latencia extremo a extremo menor a 100~ms, reducción de tráfico WAN superior al 65\% y disponibilidad mayor al 99\%, con conformidad DLMS/COSEM (IEC~62056) e ISO/IEC~30141:2024.
 
-\textbf{Entregables:} Conjuntos de datos de mediciones (repositorio GitHub), gráficas de resultados (Capítulo 4), análisis estadístico (ANOVA, pruebas t).
+Para alcanzar este objetivo general, se descompone el trabajo en cuatro objetivos específicos. Cada uno aborda un componente distinto de la arquitectura y se desarrolla en el capítulo correspondiente.
 
-\subsubsection{Fase 4 - Evaluación Comparativa}
+\subsection{Objetivos específicos}
 
-\textbf{Objetivos:} Comparar arquitectura propuesta frente a soluciones de referencia (centrada en la nube, borde simplificado).
+Los cuatro objetivos específicos se organizan siguiendo la estructura de la arquitectura propuesta, desde el diseño general hasta la validación experimental.
 
-\textbf{Referencia 1 - Centrada en la nube:} Nodos Thread \textrightarrow{} OTBR \textrightarrow{} Pasarela LTE \textrightarrow{} AWS IoT Core \textrightarrow{} Lambda \textrightarrow{} DynamoDB.
+\textbf{OE1 --- Arquitectura multicapa:} Diseñar arquitectura de cuatro capas (Conectividad, Orquestación, Procesamiento, Aplicación) alineada con ISO/IEC~30141:2024, con requisitos de latencia extremo a extremo menor a 700~ms, procesamiento en el borde menor a 10~ms P99 y disponibilidad mayor al 99\% durante particiones WAN. Desarrollo en Capítulo~\ref{chap:nodo-iot}.
 
-\textbf{Referencia 2 - Borde simplificado:} Nodos Thread \textrightarrow{} OTBR \textrightarrow{} Node-RED (local) \textrightarrow{} AWS IoT Core (sincronización).
+\textbf{OE2 --- Integración Thread--HaLow:} Implementar OTBR con nRF52840 RCP sobre RPi4, configurar enlaces HaLow (Morse Micro MM6108) en 2/4/8~MHz con topologías estrella y malla 802.11s, y validar la cadena nodo$\rightarrow$OTBR$\rightarrow$HaLow$\rightarrow$plataforma con tasa de entrega superior al 98\% y latencia por salto menor a 30~ms en 3--5 saltos con 60 nodos. Desarrollo en Capítulo~\ref{chap:gateway-halow}.
 
-\textbf{Criterios de comparación:} Latencia, disponibilidad durante partición WAN, rendimiento máximo (\textit{throughput}), consumo energético, costos operacionales y complejidad de despliegue (\textit{deployment}); véase el Capítulo 2 para un análisis detallado de compromisos (\textit{trade-offs}).
+\textbf{OE3 --- Plataforma en el borde en contenedores:} Desplegar 3 contenedores Docker (ThingsBoard Edge~3.6.2 con transporte LwM2M integrado, PostgreSQL~15, Redis~7.0) y OTBR como servicio nativo de OpenWRT sobre RPi4 4~GB, verificando huella de memoria menor a 3\,400~MB, latencia de ingesta menor a 10~ms P99, y almacenamiento sin conexión de más de 100\,000 mensajes con sincronización tras más de 72~h de desconexión. Desarrollo en Capítulo~\ref{chap:gateway-halow}.
 
-\textbf{Entregables:} Tabla comparativa (Capítulo 4), análisis de compromisos, recomendaciones de uso.
+\textbf{OE4 --- Caso de estudio:} Desplegar piloto con 1 medidor físico Emsitech P2000-T y nodos simulados (radio IEEE~802.15.4, Thread~1.4, LwM2M, interfaz RS-485 DLMS/COSEM), validando cumplimiento de todos los umbrales y publicando conjuntos de datos abiertos. Desarrollo en Capítulo~\ref{chap:resultados}.
 
+Los objetivos anteriores se operacionalizan mediante hipótesis cuantificables que definen los umbrales de validación.
+
+
+%% ═══════════════════════════════════════════════════
+\section{Hipótesis de trabajo}
+%% ═══════════════════════════════════════════════════
+
+\textbf{Hipótesis general:} Una arquitectura IoT para energía inteligente basada en (1)~6LoWPAN/CoAP/LwM2M sobre IEEE~802.15.4, (2)~pasarelas de borde con procesamiento local, y (3)~conectividad IEEE~802.11ah con selección adaptativa de ancho de banda, ofrece una alternativa viable frente a arquitecturas MQTT/HTTP sobre conectividad celular. Específicamente, se espera:
+
+\begin{itemize}
+    \item Reducción de latencia extremo a extremo superior al 70\%.
+    \item Reducción de sobrecarga de paquetes superior al 60\%.
+    \item Reducción de tráfico WAN superior al 65\%.
+    \item Disponibilidad superior al 99\% durante desconexiones prolongadas.
+\end{itemize}
+
+Estos umbrales se fundamentan en resultados reportados en la literatura: reducción de tráfico WAN del 70\% mediante procesamiento en el borde~\cite{jonnakutiEDGEBASEDFAULTDETECTION}, reducción de sobrecarga del 87\% con compresión IPHC en redes 6LoWPAN~\cite{alharbi6LoWPANBasedAMI2021}, y requisitos de disponibilidad superior al 99\% establecidos por marcos regulatorios de infraestructura crítica~\cite{NISTFramework2022}. Las hipótesis específicas (H1--H7) se detallan en la §\ref{sec:resultados-validacion-hipotesis}.
+
+Para validar estas hipótesis se diseñó una metodología en cuatro fases que se describe a continuación.
+
+
+%% ═══════════════════════════════════════════════════
+\section{Metodología}
+%% ═══════════════════════════════════════════════════
+
+La investigación sigue un enfoque mixto que combina tres aproximaciones metodológicas: (1)~Investigación en Ciencias del Diseño~\cite{hevnerDesignScienceInformation2004,peffersDesignScienceResearch2007} para el diseño de artefactos, (2)~investigación experimental para validación de hipótesis cuantitativas, y (3)~estudio de caso para evaluación en contexto real. El trabajo se estructura en tres fases secuenciales.
+
+
+\textbf{Fase~1 --- Análisis y diseño.}
+\begin{itemize}
+    \item Revisión sistemática de literatura sobre arquitecturas IoT en el borde y estándares de energía inteligente (DLMS/COSEM, ISO/IEC~30141, IEC~61850).
+    \item Análisis comparativo de tecnologías de comunicación (Thread, Zigbee, Bluetooth Mesh, HaLow, LoRaWAN, LTE Cat-M1).
+    \item Diseño de arquitectura de cuatro capas con especificación de interfaces (APIs OTBR, tópicos MQTT, puntos de acceso REST).
+    \item Modelado de latencias mediante teoría de colas (M/M/1 para pasarela, M/G/$\infty$ para nube).
+\end{itemize}
+
+
+\textbf{Fase~2 --- Implementación.} Comprende cuatro componentes que se desarrollan en detalle en los Capítulos~\ref{chap:nodo-iot} a~\ref{chap:gateway-halow}:
+\begin{itemize}
+    \item \textbf{Plataforma central:} ThingsBoard \emph{on-premise} como servidor de gestión con sincronización gRPC bidireccional hacia las pasarelas Edge.
+    \item \textbf{\emph{Hardware} HaLow:} Módulo Alfa Networks AHPI6108E (HAT RPi4, \emph{chipset} MM6108, interfaz SDIO) para HaLow nativo en las pasarelas, y 1 Tube AHM (\emph{Mesh Gate}) dedicado; OpenWRT y malla 802.11s para enlace troncal extendido.
+    \item \textbf{Pasarela de borde:} RPi4 con OpenWRT (bifurcación ---\emph{fork}--- de Morse Micro), OTBR como servicio nativo, y 3 contenedores Docker (ThingsBoard Edge con transporte LwM2M integrado, PostgreSQL, Redis).
+    \item \textbf{Nodos IoT:} nodos Zephyr con radio IEEE~802.15.4, Thread~1.4, LwM2M e interfaz RS-485 DLMS/COSEM.
+\end{itemize}
+
+
+\textbf{Fase~3 --- Validación experimental.} Cuatro experimentos principales, cuyos resultados se reportan en el Capítulo~\ref{chap:resultados}:
+\begin{enumerate}
+    \item \textbf{Latencia extremo a extremo:} $N = 5, 10, 25$ nodos; frecuencias de 5, 30 y 60~s; 72~h por configuración.
+    \item \textbf{Disponibilidad durante partición WAN:} desconexión simulada de 48~h; métricas de almacenamiento local y sincronización posterior.
+    \item \textbf{Rendimiento agregado HaLow:} saturación con $N = 1, 5, 10, 20$ clientes concurrentes.
+    \item \textbf{Sobrecarga de recursos:} caracterización de CPU, RAM y almacenamiento bajo cargas de 10, 50 y 100 dispositivos.
+\end{enumerate}
+
+Herramientas de medición: Grafana con Prometheus para métricas de sistema, y Python (pandas, scipy) para análisis estadístico.
+
+A continuación se delimitan los alcances y las limitaciones del trabajo para enmarcar adecuadamente los resultados que se presentan en los capítulos siguientes.
+
+
+%% ═══════════════════════════════════════════════════
 \section{Alcances y Limitaciones}
+%% ═══════════════════════════════════════════════════
 
-\subsection{Alcances}
+Toda investigación opera dentro de fronteras que condicionan la interpretación de sus resultados. En esta sección se explicitan, por un lado, los alcances que definen lo que el trabajo efectivamente entrega y, por otro, las limitaciones que acotan la generalización de las conclusiones.
 
+\textbf{Alcances:}
 \begin{enumerate}
-\item \textbf{Diseño arquitectónico}: Especificación completa de arquitectura multi-capa con definición de componentes, interfaces y flujos de datos, mapeo a vistas ISO/IEC 30141 (funcional, información, despliegue, operacional).
-
-\item \textbf{Implementación prototipo}: Pasarela funcional basada en Raspberry Pi 4 Model B con integración Thread (nRF52840 RCP), HaLow (Morse Micro MM6108), LTE (Quectel EG25-G), OpenWRT 23.05.x y pila Docker Compose con 7 servicios.
-
-\item \textbf{Conformidad con estándares}: Mapeo a ISO/IEC 30141:2024 (arquitectura de referencia IoT).
-
-\item \textbf{Nodos IoT}: Desarrollo de nodos ESP32-C6 con Zephyr RTOS y Thread, cliente LwM2M, interfaz RS-485 para medidores DLMS/COSEM y \textit{firmware} actualizable OTA, reforzando la interoperabilidad multi-proveedor mediante el uso de un RTOS independiente del fabricante.
-
-\item \textbf{Validación experimental}: Medición empírica de latencia, rendimiento, disponibilidad, conmutación por fallo y sobrecarga en condiciones controladas de laboratorio y despliegue piloto urbano.
-
-\item \textbf{Documentación técnica}: Anexos con guías de instalación (OpenWRT, docker-compose), configuraciones UCI completas, código fuente completo (GitHub).
+    \item Arquitectura multicapa completa con mapeo a vistas ISO/IEC~30141.
+    \item Prototipo funcional en RPi4 con Thread (nRF52840 RCP), HaLow (MM6108), OpenWRT y 3 contenedores Docker (ThingsBoard Edge, PostgreSQL, Redis).
+    \item Nodos Zephyr con radio IEEE~802.15.4, Thread~1.4, LwM2M, RS-485 DLMS/COSEM y actualización remota (OTA).
+    \item Validación experimental de latencia, rendimiento, disponibilidad y resiliencia de enlace troncal.
+    \item Documentación técnica completa con guías de instalación y código fuente en GitHub.
 \end{enumerate}
 
-\subsection{Limitaciones}
-
+\textbf{Limitaciones:}
 \begin{enumerate}
-\item \textbf{Escala de despliegue}: Validación con 10 nodos IoT y 2 pasarelas en área de 300 metros. No se valida escalabilidad a miles de dispositivos en despliegue real.
-
-\item \textbf{\textit{Hardware} específico}: Implementación dependiente de Morse Micro MM6108 (único \textit{chipset} HaLow comercialmente disponible en 2024). Resultados pueden no generalizar a futuros \textit{chipsets}.
-
-\item \textbf{Certificación formal}: No se realiza certificación formal Thread 1.3.1 ni DLMS/COSEM. Conformidad validada mediante interoperabilidad funcional, no certificación oficial.
-
-\item \textbf{Seguridad}: Implementación de TLS 1.2/1.3 y certificados X.509, pero sin auditoría de seguridad formal ni pruebas de penetración (\textit{penetration testing}) exhaustivas.
-
-\item \textbf{Estándares excluidos}: No se implementa IEC 61850 (comunicación en subestaciones) ni interoperabilidad PLC (Power Line Communication).
-
-\item \textbf{Cobertura geográfica}: Validación en entorno urbano/suburbano. No se valida en zonas rurales remotas con cobertura celular limitada.
-
-\item \textbf{Condiciones ambientales}: Pruebas en condiciones de laboratorio (20-25°C, humedad controlada). No se valida operación en extremos de rango industrial (-40°C a +85°C).
-
-\item \textbf{Regulaciones RF}: Operación en banda ISM 902-928 MHz (EE.UU./América). Requiere adaptación para bandas 863-868 MHz (Europa) o 755-787 MHz (China).
-
-\item \textbf{Consideraciones éticas y de privacidad}: Los datos de telemetría utilizados en la validación experimental corresponden a lecturas sintéticas generadas por los propios nodos IoT del prototipo, sin involucrar datos reales de consumo de usuarios. En caso de futuros despliegues piloto con medidores reales, se deberá garantizar el cumplimiento de la normativa de protección de datos personales aplicable (Ley 1581 de 2012 en Colombia, o su equivalente en la jurisdicción correspondiente) y obtener consentimiento informado de los usuarios participantes.
+    \item Validación con 1 medidor físico y nodos simulados, 2 pasarelas, sin escalar a miles de dispositivos.
+    \item Dependencia del circuito integrado Morse Micro MM6108 (único HaLow comercial en 2024).
+    \item Conformidad funcional sin certificación formal Thread ni DLMS/COSEM.
+    \item Seguridad TLS/X.509 implementada pero sin auditoría de penetración.
+    \item Entorno urbano/suburbano sin validación rural ni en extremos industriales ($-$40\,°C a +85\,°C).
+    \item Banda ISM 902--928~MHz (América); requiere adaptación para Europa/Asia.
+    \item Datos de validación sintéticos, sin datos reales de consumo de usuarios.
 \end{enumerate}
 
-\section{Contribuciones Esperadas}
+Estas limitaciones acotan los resultados pero no comprometen la validez de las contribuciones, que se enumeran a continuación.
 
-\subsection{Contribuciones Académicas}
 
+%% ═══════════════════════════════════════════════════
+\section{Contribuciones esperadas}
+%% ═══════════════════════════════════════════════════
+
+Dentro de los alcances descritos, el trabajo aspira a producir aportes tanto en el plano académico ---mediante arquitecturas de referencia y caracterizaciones empíricas--- como en el plano técnico, con artefactos de implementación reutilizables.
+
+\textbf{Contribuciones académicas:}
 \begin{enumerate}
-\item \textbf{Arquitectura de referencia IoT heterogénea}: Especificación de arquitectura multi-capa para pasarelas de borde (\textit{edge gateways}) que integra múltiples capas físicas (802.15.4, 802.11ah, LTE), conforme con ISO/IEC 30141:2024, documentando patrones de diseño, compromisos arquitectónicos y decisiones de ingeniería.
-
-\item \textbf{Caracterización empírica Thread $\leftrightarrow$ HaLow}: Caracterización empírica de latencias, rendimiento y fiabilidad en integración Thread-HaLow mediante puente Ethernet transparente, incluyendo análisis de sobrecarga de OTBR e impacto de topologías en malla.
-
-\item \textbf{Evaluación comparativa de arquitecturas IoT en el borde}: Conjunto de datos público de mediciones comparativas (latencia, rendimiento, sobrecarga) entre arquitecturas centrada en la nube, borde simplificado y borde completo, proporcionando guías de selección arquitectónica basadas en requisitos de aplicación.
+    \item Arquitectura de referencia IoT heterogénea multi-PHY conforme ISO/IEC~30141:2024.
+    \item Caracterización empírica de la integración Thread--HaLow (latencias, rendimiento, fiabilidad).
 \end{enumerate}
 
-\subsection{Contribuciones Técnicas}
-
+\textbf{Contribuciones técnicas:}
 \begin{enumerate}
-\item \textbf{Configuraciones OpenWRT para HaLow}: Documentación completa de configuración UCI para controlador Morse Micro MM6108 (SPI), incluyendo scripts de inicialización, configuración hostapd y resolución de problemas.
-
-\item \textbf{Pila Docker Compose optimizada}: Composición de servicios en el borde (ThingsBoard, TimescaleDB, Kafka) con gestión de recursos, verificaciones de salud y políticas de reinicio, optimizada para hardware Cortex-A53.
-
-\item \textbf{\textit{Firmware} nodos IoT Thread LwM2M}: Implementación con Zephyr RTOS para ESP32-C6 con cliente LwM2M (Wakaama), controlador RS-485 DLMS/COSEM, y actualización remota (OTA) segura, reforzando la portabilidad multi-proveedor. Los nodos operan alimentados directamente desde el medidor (5V), eliminando la necesidad de gestión de energía.
+    \item Configuración completa de HaLow (MM6108, hostapd, 802.11s) integrada con Thread.
+    \item Composición de servicios en el borde (ThingsBoard Edge con LwM2M integrado, PostgreSQL, Redis) optimizada para procesadores Cortex-A72.
+    \item \emph{Firmware} Zephyr RTOS con LwM2M y RS-485 DLMS/COSEM, portátil a cualquier SoC con radio IEEE~802.15.4.
 \end{enumerate}
 
-\subsection{Contribuciones a la Industria}
+\textbf{Trazabilidad:} OE1--OE2 sustentan las contribuciones académicas~1 y~2; OE3 sustentan las técnicas~1 y~2; OE4~sustenta el caso de estudio piloto.
 
-\begin{enumerate}
-\item \textbf{Reducción de costos operacionales}: Demostración de viabilidad económica de arquitectura basada en HaLow frente a LTE, con TCO 32\% inferior en despliegues de más de 1.000 puntos durante 5 años.
+Finalmente, se presenta la organización del documento para facilitar la lectura del trabajo.
 
-\item \textbf{Guía de implementación práctica}: Documentación técnica completa (instalación, configuración, resolución de problemas) que permite la replicación de la arquitectura por integradores de sistemas y empresas de servicios públicos.
 
-\item \textbf{Interoperabilidad con múltiples proveedores}: Validación de conformidad con estándares abiertos que facilita la integración con dispositivos de múltiples fabricantes, reduciendo la dependencia tecnológica de un único proveedor.
-\end{enumerate}
-
-\medskip
-\noindent\textbf{Trazabilidad Objetivos--Contribuciones:} OE1 sustenta las contribuciones académicas 1 y 2 (arquitectura de referencia y caracterización empírica), OE2 sustenta la contribución técnica 2 (pila Docker optimizada), OE3 y OE4 sustentan las contribuciones técnicas 1 y 3 (configuraciones OpenWRT y \textit{firmware} IoT), y OE5 genera la contribución académica 3 (evaluación comparativa) y las tres contribuciones industriales.
-
+%% ═══════════════════════════════════════════════════
 \section{Organización del Documento}
+%% ═══════════════════════════════════════════════════
 
-El presente documento se estructura en los siguientes capítulos:
+El resto de la tesis sigue una estructura que refleja la arquitectura de tres niveles propuesta, avanzando de lo general a lo particular:
 
-\textbf{Capítulo 1 - Introducción}: Contextualización del problema de telemetría Smart Energy, análisis comparativo de tecnologías IoT (Thread, Zigbee, BLE Mesh para redes de campo; LoRaWAN, HaLow, LTE para backhaul), justificación técnica y económica de la arquitectura propuesta, planteamiento de hipótesis cuantificables, objetivos generales y específicos, metodología de investigación en tres fases (diseño, implementación, validación), alcance del trabajo y contribuciones esperadas.
+\textbf{Capítulo~\ref{chap:marco-teorico} --- Marco teórico.} Fundamentos de 6LoWPAN, CoAP, Thread~1.4, LwM2M, IEEE~802.11ah, DLMS/COSEM, ISO/IEC~30141 y computación en el borde. Se revisa el estado del arte y se identifican las brechas que este trabajo aborda.
 
-\textbf{Capítulo 2 - Marco Teórico y Estado del Arte}: Fundamentos de comunicaciones IoT (6LoWPAN, CoAP, MQTT), protocolos Thread 1.3.0 y LwM2M, especificaciones técnicas IEEE 802.11ah (Wi-Fi HaLow) con análisis de presupuesto de enlace (\textit{link budget}) y rendimiento (\textit{throughput}), estándares de interoperabilidad DLMS/COSEM (IEC 62056) e ISO/IEC 30141:2024, tecnologías de computación en el borde (Docker, TimescaleDB, Kafka), arquitecturas de referencia AMI (\textit{Advanced Metering Infrastructure}), análisis de seguridad de extremo a extremo (WPA3, DTLS, TLS), y revisión crítica del estado del arte con identificación de brechas de investigación.
+\textbf{Capítulo~\ref{chap:nodo-iot} --- Capa de dispositivos.} Diseño e implementación de nodos Thread con Zephyr RTOS: pila de protocolos de campo, protocolo LwM2M con objeto personalizado 10242, interfaz RS-485 DLMS/COSEM y pruebas unitarias de consumo y latencia.
 
-\textbf{Capítulo 3 - Capa de Dispositivos (Nodos IoT Thread)}: Diseño e implementación de nodos Thread 1.3.0 con ESP32-C6, protocolo LwM2M para gestión de dispositivos y telemetría, interfaz RS-485 para lectura de medidores inteligentes DLMS/COSEM (IEC 62056), objetos LwM2M personalizados para mapeo de registros OBIS, actualización de \textit{firmware} OTA (\textit{Over-The-Air}) segura, y validación de operación continua alimentada directamente desde el medidor (5V, menor que 80~mA consumo típico).
+\textbf{Capítulo~\ref{chap:gateway-halow} --- Pasarela de borde y enlace troncal HaLow.} Pasarela multiprotocolo RPi4 con OpenWRT, OTBR como servicio nativo, ThingsBoard Edge con transporte LwM2M integrado, y malla HaLow 802.11s. Se detalla la configuración de cada componente y sus interfaces.
 
-\textbf{Capítulo 4 - Pasarela de Borde y Enlace Troncal HaLow}: Arquitectura de la pasarela multi-protocolo basada en Raspberry Pi 4 con OpenWRT 23.05.x, OpenThread Border Router (OTBR) con nRF52840 RCP, integración Wi-Fi HaLow (Morse Micro MM6108) para enlace troncal extendido (1~km urbano, 3--5~km en exteriores con línea de vista), conmutación por error (\textit{failover}) multi-WAN con mwan3 (Ethernet/HaLow/LTE), pila Docker Compose con ThingsBoard Edge 3.6.0, PostgreSQL 15, TimescaleDB 2.13 y Apache Kafka 7.5.0, almacenamiento temporal FIFO para operación sin conexión durante más de 48 horas, y análisis de latencias por componente.
+\textbf{Capítulo~\ref{chap:resultados} --- Resultados y validación.} Validación experimental: latencias extremo a extremo, disponibilidad sin conexión, rendimiento HaLow, resiliencia ante fallos y comparación cuantitativa con las arquitecturas de referencia.
 
-\textbf{Capítulo 5 - Servidor ThingsBoard}: Arquitectura de servidor ThingsBoard Professional Edition 3.6.0 en las instalaciones (\textit{on-premise}), ingesta de telemetría multi-protocolo (MQTT, HTTP, CoAP), procesamiento con Apache Kafka y almacenamiento de series de tiempo en TimescaleDB, reglas de alarmas y tableros de visualización (\textit{dashboards}), integración con servidor DLMS/COSEM (IEC 62056) para interoperabilidad con medidores inteligentes, y arquitectura escalable para despliegues de más de 1.000 dispositivos.
-
-\textbf{Capítulo 6 - Resultados Experimentales y Validación}: Validación empírica de hipótesis mediante experimentos controlados: (1) caracterización de latencias de extremo a extremo (nodo \textrightarrow{} pasarela \textrightarrow{} servidor) con mediciones por componente, (2) pruebas de disponibilidad durante desconexiones WAN de 48--72 horas con análisis de almacenamiento temporal y sincronización, (3) evaluación de resiliencia ante fallos (caída de servicios, sobrecarga de CPU), (4) comparación con arquitecturas centradas en la nube (AWS IoT Core) y de borde simplificado (Node-RED), (5) análisis de costos TCO para despliegues de más de 1.000 medidores durante 5 años.
-
-\textbf{Capítulo 7 - Conclusiones y Trabajo Futuro}: Síntesis de resultados obtenidos, cumplimiento de objetivos generales y específicos, validación de hipótesis con significancia estadística, contribuciones académicas (caracterización empírica Thread-HaLow, arquitectura de referencia de borde multi-protocolo), contribuciones técnicas (implementaciones de código abierto, configuraciones OpenWRT replicables), contribuciones industriales (análisis de viabilidad económica, guías de implementación práctica), limitaciones del trabajo (tamaño del banco de pruebas, escenarios de validación), lecciones aprendidas durante la implementación, y líneas de trabajo futuro (\textit{chipset} Morse Micro MM8108 con mayor alcance, integración con redes LoRaWAN para zonas rurales, aprendizaje automático para detección de anomalías).
-
-\textbf{Anexos}: Instalación OpenWRT personalizada en Raspberry Pi 4 y configuración HaLow (Anexo A), archivos docker-compose.yml completos con límites de recursos y verificaciones de salud (Anexo B), código fuente completo nodo IoT ESP32-C6 Thread LwM2M con RS-485 DLMS/COSEM (Anexo C), configuraciones OpenWRT UCI para mwan3, cortafuegos y malla 802.11s (Anexo D), y desarrollo detallado de hipótesis con metodología estadística (Anexo E).
-
-\section{Resumen del Capítulo}
-
-Este capítulo ha establecido el contexto y la justificación de la investigación, identificando las limitaciones críticas de las arquitecturas IoT tradicionales centradas en la nube para aplicaciones de infraestructura crítica en el sector energético. Se presentó un análisis comparativo exhaustivo de las tecnologías de comunicación disponibles (Thread, Zigbee, Bluetooth Mesh para redes de campo; LoRaWAN, LTE Cat-M1, Wi-Fi HaLow para conectividad de última milla), justificando la selección de Thread y HaLow como base de la arquitectura propuesta debido a sus ventajas en términos de interoperabilidad, latencia, rendimiento y costos operacionales.
-
-Se formularon ocho hipótesis cuantificables que serán validadas experimentalmente en los capítulos posteriores. Cinco de ellas abordan aspectos principales: eficiencia de protocolos (H1), procesamiento en el borde (H2), disponibilidad operacional (H3), eficiencia energética (H4) y costo-efectividad (H5); las tres restantes (H6--H8), que cubren aspectos complementarios de rendimiento HaLow, gestión LwM2M y procesamiento de eventos complejos, se detallan en el Anexo correspondiente. Los objetivos específicos plantean el diseño, implementación y validación experimental de una arquitectura IoT jerárquica de tres niveles (nodos, enrutadores, pasarelas) con cumplimiento de estándares internacionales DLMS/COSEM (IEC 62056) e ISO/IEC 30141.
-
-Las contribuciones esperadas del trabajo abarcan tres dimensiones: académicas (caracterización empírica Thread-HaLow, arquitectura de referencia de borde multi-protocolo), técnicas (implementaciones de código abierto, configuraciones OpenWRT, \textit{firmware} IoT con Zephyr RTOS) e industriales (reducción de costos operacionales, guías de implementación práctica).
-
-\subsection{Transición al Marco Teórico}
-
-El siguiente capítulo (Marco Teórico) proporciona los fundamentos teóricos necesarios para comprender el diseño propuesto, estructurado en las siguientes áreas:
-
-\begin{itemize}
-\item \textbf{Protocolos de comunicación IoT}: Análisis detallado de Thread, 6LoWPAN, CoAP, LwM2M y Wi-Fi HaLow (IEEE 802.11ah), incluyendo especificaciones técnicas, ventajas comparativas y casos de uso óptimos para cada tecnología.
-\item \textbf{Estándares de interoperabilidad}: Revisión exhaustiva de DLMS/COSEM (IEC 62056) para medidores inteligentes e ISO/IEC 30141:2024 (arquitectura de referencia IoT), estableciendo los requisitos de conformidad para la pasarela propuesta.
-\item \textbf{Arquitecturas de computación en el borde (\textit{Edge Computing})}: Estado del arte en plataformas de procesamiento en el borde (ThingsBoard Edge, Azure IoT Edge, AWS IoT Greengrass), bases de datos de series de tiempo (TimescaleDB, InfluxDB) y sistemas de mensajería (Kafka, MQTT).
-\item \textbf{Trabajos relacionados}: Comparativa crítica con soluciones académicas y comerciales existentes, identificando brechas específicas que motivan esta investigación.
-\end{itemize}
-
-Este marco conceptual establece las bases para el diseño de los nodos IoT Thread presentado en el Capítulo 3 y de la pasarela multi-protocolo que se describe en el Capítulo 4.
-
+\textbf{Capítulo~\ref{chap:conclusiones} --- Conclusiones y trabajo futuro.} Cumplimiento de objetivos e hipótesis, contribuciones académicas y técnicas, y líneas de trabajo futuro.

@@ -45,6 +45,17 @@
 %Idioma del documento
 %Use main para el idioma principal del documento
 \usepackage[main=spanish,english,german,french,portuguese]{babel}
+% Deactivate babel active chars that break TikZ/xcolor (<, >, ., ;, :, !, ?)
+\makeatletter
+\AtBeginDocument{%
+  \catcode`\!=12\relax
+  \catcode`\?=12\relax
+  \catcode`\;=12\relax
+  \catcode`\:=12\relax
+  \catcode`\<=12\relax
+  \catcode`\>=12\relax
+}
+\makeatother
 
 % ==== Convenciones de idioma (ver docs_sesiones/ESTILO_IDIOMA.md) ====
 % Término en inglés en itálica
@@ -119,28 +130,28 @@
 %Diligenciar aquí los datos para su carga automática donde se requiera en el documento
 %En el caso de tesis o trabajos finales, verificar que el título coincida con el aprobado por la Facultad
 \renewcommand{\studentname}{Juan Sebastian Giraldo Duque}
-\renewcommand{\thesisname}{Arquitectura IoT Centrada en Pasarelas de Borde\\ \vspace{2mm}\large{Implementación de Protocolos basados en 6LowPAN para Smart Energy}}
-\renewcommand{\thesisnameeng}{Nombre del trabajo o tesis en inglés}
+\renewcommand{\thesisname}{Arquitectura IoT Centrada en Pasarelas de Borde\\ \vspace{2mm}\large{Implementación de Protocolos basados en 6LoWPAN para Medición Inteligente}}
+\renewcommand{\thesisnameeng}{Edge-Centric IoT Architecture\\ \vspace{2mm}\large{Implementation of 6LoWPAN-Based Protocols for Smart Metering}}
 \renewcommand{\thesisnamelang}{Nombre del trabajo o tesis en un tercer idioma} %Usar solo si se requiere
-\renewcommand{\issuedate}{2025}
-\renewcommand{\submissiondate}{Noviembre 2025}
-\renewcommand{\director}{Prof. Dr. Director}
-\renewcommand{\directortitle}{Indicar si es Profesor Titular/Asociado}
-\renewcommand{\codirector}{Prof. Dr. Co director}
-\renewcommand{\codirectortitle}{Indicar si es Profesor Titular/Asociado}
+\renewcommand{\issuedate}{2026}
+\renewcommand{\submissiondate}{Febrero 2026}
+\renewcommand{\director}{Gustavo Osorio}
+\renewcommand{\directortitle}{Profesor - Departamento de Ingeniería Eléctrica, Electrónica y Computación}
+%\renewcommand{\codirector}{}
+%\renewcommand{\codirectortitle}{}
 \renewcommand{\academictitle}{Magíster en Ingeniería / Automatización Industrial}
-\renewcommand{\resgroupone}{Grupo A (Sigla Grupo Investigación 01) }
-\renewcommand{\resgrouptwo}{Grupo B (Sigla Grupo Investigación 02) }
-\renewcommand{\researchtopic}{Línea}
+\renewcommand{\resgroupone}{Percepción y Control Inteligente (PCI)}
+\renewcommand{\resgrouptwo}{}
+\renewcommand{\researchtopic}{Ciudades Inteligentes \\ Infraestructura Avanzada de Medición \\ Redes IPv6 para IoT}
 \renewcommand{\sede}{Sede Manizales} 
 \renewcommand{\department}{Departamento de Automatización Industrial}
-\renewcommand{\departmenttwo}{Departamento 2} %Usar solo si es necesario
+%\renewcommand{\departmenttwo}{} %No aplica
 \renewcommand{\faculty}{Facultad de Ingeniería y Arquitectura}
 
 %Palabras clave del documento - Actualizadas con análisis de 180 referencias CRÍTICAS
 %Basadas en keywords más frecuentes: security (2428), performance (1690), 802.11ah (1684)
-\renewcommand{\palabrasclave}{Internet de las Cosas (IoT), IEEE 802.11ah, Wi-Fi HaLow, Thread, 6LoWPAN, LwM2M, CoAP, MQTT, Smart Energy, IEEE 2030.5, AMI, Edge Computing, Gateway IoT, Seguridad IoT, ISO/IEC 30141, Calidad de servicio, Interoperabilidad} 
-\renewcommand{\keywords}{Internet of Things (IoT), IEEE 802.11ah, Wi-Fi HaLow, Thread, 6LoWPAN, LwM2M, CoAP, MQTT, Smart Energy, IEEE 2030.5, AMI, Edge Computing, IoT Gateway, IoT Security, ISO/IEC 30141, Quality of Service, Interoperability}
+\renewcommand{\palabrasclave}{Internet de las Cosas (IoT), IEEE 802.11ah, Wi-Fi HaLow, Thread, 6LoWPAN, LwM2M, CoAP, MQTT, Smart Energy, DLMS/COSEM, AMI, Edge Computing, Gateway IoT, Seguridad IoT, ISO/IEC 30141, Calidad de servicio, Interoperabilidad} 
+\renewcommand{\keywords}{Internet of Things (IoT), IEEE 802.11ah, Wi-Fi HaLow, Thread, 6LoWPAN, LwM2M, CoAP, MQTT, Smart Energy, DLMS/COSEM, AMI, Edge Computing, IoT Gateway, IoT Security, ISO/IEC 30141, Quality of Service, Interoperability}
 %\renewcommand{\schlusselworter}{}
 %\renewcommand{\palavraschave}{}
 
@@ -159,8 +170,8 @@
 \fancyhf{}%
 \renewcommand{\chaptermark}[1]{\markboth{\thechapter.\; #1}{}}
 \renewcommand{\sectionmark}[1]{\markright{\thesection.\; #1}{}}
-\fancyhead[LO,RE]{\leftmark}
-\fancyhead[RO,LE]{\rightmark}
+\fancyhead[LO,RE]{\scriptsize\leftmark}
+\fancyhead[RO,LE]{\scriptsize\rightmark}
 \fancyfoot[CO,CE]{\thepage}
 \thispagestyle{fancy}%
 
@@ -217,14 +228,27 @@
 
 %Permite incluir mecanismos y reacciones químicas
 \usepackage{tikz}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usepgfplotslibrary{statistics} % Para boxplots
 \usepackage{chemformula}
 \usepackage{chemfig}
 
 % Make TikZ compatible with babel Spanish
 \usetikzlibrary{babel}
-\usetikzlibrary{calc,arrows.meta,positioning,shapes.geometric}% per right to e left to
+\usetikzlibrary{calc,arrows.meta,positioning,shapes.geometric,shadows,fit,patterns,decorations.pathreplacing,decorations.pathmorphing,backgrounds}% per right to e left to
+% Fix babel active characters (<, >, ., ;, :, !, ?) breaking TikZ/xcolor
 \tikzset{
-myedge/.style={->, -{Latex[#1]}}
+  every picture/.prefix style={execute at begin picture={
+    \catcode`\!=12\relax
+    \catcode`\?=12\relax
+    \catcode`\;=12\relax
+    \catcode`\:=12\relax
+    \catcode`\<=12\relax
+    \catcode`\>=12\relax
+    \catcode`\.=12\relax
+  }},
+  myedge/.style={->, -{Latex[#1]}}
 }
 
 %Fuente de la presentación Ancizar Sans UNAL
@@ -303,23 +327,16 @@ myedge/.style={->, -{Latex[#1]}}
 \vspace{2.0cm}
 \textbf{Director(a):} \\
 \director \\
-\directortitle \; - \departmenttwo \\
+\directortitle \\
 \faculty \\
-\university \\ 
-\vspace{0.5cm}
-\textbf{Codirector(a):} \\
-\codirector \\
-\codirectortitle \; - \department \\
-\faculty \\
-\university 
+\university{} -- \sede
 \vspace{1.5cm} \\
 \textbf{Línea de investigación:} \\ 
 \researchtopic\\
 \textbf{Grupo de investigación:} \\
 \resgroupone \\
-\resgrouptwo \\
 \vspace{1.5cm} 
-\university \\
+\university{} -- \sede \\
 \faculty \\
 \department \\
 \issuedate
@@ -331,18 +348,27 @@ myedge/.style={->, -{Latex[#1]}}
 \begin{flushright}
 \begin{minipage}{12.5cm}
 \noindent
-\\[10em]
-%Modificar la cita que se quiere agregar
-{\Large Cita 01.}
-\\[3em]
-Autor
-\\ \textit{Fuente}
-\\[10em]
-%Para anular la adición de una segunda cita anule las siguientes lineas desde acá mediante comentario (%)
-{\Large \textit{Wenn du es nicht einfach erkl\"{a}ren kannst, hast du es nicht genug verstanden} - Si no eres capaz de explicar algo claramente, es que aún no lo has entendido lo suficiente.}
-\\[3em]
-Albert Einstein
-%Hasta acá!
+\\[6em]
+%Modificar las citas que se quieren agregar
+{\Large \textit{The Internet of Things has the potential to change the world, just as the Internet did. Maybe even more so.}}
+\\[0.5em]
+El Internet de las Cosas tiene el potencial de cambiar el mundo, tal como lo hizo Internet. Quizás incluso más.
+\\[2em]
+Kevin Ashton
+\\ \textit{That `Internet of Things' Thing, RFID Journal, 2009}
+\\[5em]
+{\Large \textit{Everything that can be automated, will be automated.}}
+\\[0.5em]
+Todo lo que puede ser automatizado, será automatizado.
+\\[2em]
+Vint Cerf
+\\[5em]
+{\Large \textit{If we want machines to think, we need to teach them to see.}}
+\\[0.5em]
+Si queremos que las máquinas piensen, debemos enseñarles a ver.
+\\[2em]
+Fei-Fei Li
+\\ \textit{TED Talk, 2015}
 \end{minipage}
 \end{flushright} 
 
@@ -386,15 +412,15 @@ Albert Einstein
 %%\include{00Objetivos}
 
 % ============================================================================
-% NUEVA ESTRUCTURA: Enfoque por NIVELES (aprobado por tutor 27/Nov/2025)
+% NUEVA ESTRUCTURA: Enfoque por NIVELES (aprobado por tutor 27/Nov/2025, actualizado Feb/2026)
 % ============================================================================
 \include{01Introduccion} % Cap 1: Introducción (sin cambios)
 \include{02MarcoTeorico_Rework_V2} % Cap 2: Marco Teórico (REESTRUCTURADO: 3 capas sin AI/LLM, DLMS/COSEM reemplaza IEEE 2030.5)
-\include{03NodoIoT_Thread_LwM2M} % Cap 3: Nivel 1 - Nodo IoT (Thread + LwM2M) (NUEVO)
-\include{04Gateway_HaLow_Edge} % Cap 4: Niveles 2-3 - Gateway + HaLow (NUEVO)
-\include{05Server_ThingsBoard_Kafka} % Cap 5: Nivel 4 - Server ThingsBoard (NUEVO)
-\include{06Resultados_Validacion} % Cap 6: Resultados End-to-End (CONSOLIDADO)
-\include{07Conclusiones_TrabajoFuturo} % Cap 7: Conclusiones y Trabajo Futuro (COMPLETADO)
+\include{03NodoIoT_Thread_LwM2M} % Cap 3: Nivel 1 - Nodo IoT (Thread + LwM2M)
+\include{04Gateway_HaLow_Edge} % Cap 4: Niveles 2-3 - Gateway + HaLow + Edge
+%\include{05Server_ThingsBoard_Kafka} % MOVIDO A ANEXO H - Server on-premise (Trabajo Futuro)
+\include{06Resultados_Validacion} % Cap 5: Resultados End-to-End (CONSOLIDADO)
+\include{07Conclusiones_TrabajoFuturo} % Cap 6: Conclusiones y Trabajo Futuro
 
 % ============================================================================
 % ARCHIVOS DEPRECADOS (estructura anterior por fases)
@@ -407,16 +433,17 @@ Albert Einstein
 %%\include{06Seccion06}
 %%\include{07Seccion07}
 
-%Inicio del apéndice o anexos
-\begin{appendix}
-\include{09AnexoA_InstalacionOpenWRT}
-\include{10AnexoB_DockerCompose}
-\include{11AnexoC_ScriptsIntegracion}
-\include{12AnexoD_EspecificacionesIEEE}
-\include{13AnexoE_NodoIoT}
-\include{14AnexoF_ConfiguracionesOpenWRT}
-\include{15AnexoG_HipotesisDetalladas}
-\end{appendix}
+%Inicio del apéndice o anexos --- OCULTOS para revisión de contenido principal
+%\begin{appendix}
+%\include{09AnexoA_InstalacionOpenWRT}
+%\include{10AnexoB_DockerCompose}
+%\include{11AnexoC_ScriptsIntegracion}
+%\include{12AnexoD_EspecificacionesIEEE}
+%\include{13AnexoE_NodoIoT}
+%\include{14AnexoF_ConfiguracionesOpenWRT}
+%\include{15AnexoG_HipotesisDetalladas}
+%\include{05Server_ThingsBoard_Kafka} % Anexo H: Arquitectura Server On-Premise (Trabajo Futuro)
+%\end{appendix}
 
 %Permite visualizar la bibliografía en la tabla de contenido
 %Cambie el nombre a Bibliografía o Literatura Citada en la siguiente línea de ser preciso

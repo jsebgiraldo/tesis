@@ -55,7 +55,6 @@ int thread_network_init(thread_state_cb_t state_cb)
 {
 	otInstance *instance;
 	otError error;
-	otOperationalDataset dataset;
 
 	user_state_cb = state_cb;
 
@@ -74,85 +73,64 @@ int thread_network_init(thread_state_cb_t state_cb)
 	openthread_mutex_lock();
 
 	/*
-	 * Configurar dataset COMPLETO del OTBR para unirse como child/router.
-	 * Kconfig sólo establece channel/panid/networkkey pero NO el PSKc
-	 * ni el Mesh Local Prefix, causando que el nodo cree su propia
-	 * partición Thread en vez de unirse al OTBR.
+	 * Configurar dataset usando TLVs raw EXACTOS del OTBR.
+	 *
+	 * Se usa otDatasetSetActiveTlvs() en vez de otDatasetSetActive() para
+	 * garantizar coincidencia byte-a-byte con el OTBR, incluyendo:
+	 *   - Security Policy de 4 bytes (Thread 1.2+, flags f7 f8)
+	 *   - TLV 0x4a (Discovery Request / Thread version info)
+	 *   - Channel Mask TLV 0x35
+	 *
+	 * Obtenido del OTBR con: ot-ctl dataset active -x
+	 * Red: AMI-Pilot-2025, Canal 25, PAN 0xABCD
 	 */
-	memset(&dataset, 0, sizeof(dataset));
-
-	/* Active Timestamp — debe ser >= al del OTBR */
-	dataset.mActiveTimestamp.mSeconds = 1;
-	dataset.mActiveTimestamp.mTicks = 0;
-	dataset.mActiveTimestamp.mAuthoritative = false;
-	dataset.mComponents.mIsActiveTimestampPresent = true;
-
-	/* Channel 25 */
-	dataset.mChannel = CONFIG_OPENTHREAD_CHANNEL;
-	dataset.mComponents.mIsChannelPresent = true;
-
-	/* Channel Mask */
-	dataset.mChannelMask = 0x07fff800;
-	dataset.mComponents.mIsChannelMaskPresent = true;
-
-	/* Extended PAN ID: 1234567890abcdef */
-	static const uint8_t ext_panid[] = {
-		0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef
+	static const uint8_t otbr_dataset_raw[] = {
+		/* Active Timestamp (type=0x0e, len=8): seconds=1 */
+		0x0e, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
+		0x00, 0x00,
+		/* TLV 0x4a (len=3): Thread version / discovery info */
+		0x4a, 0x03, 0x00, 0x00, 0x0d,
+		/* Channel Mask (type=0x35, len=6) */
+		0x35, 0x06, 0x00, 0x04, 0x00, 0x1f, 0xff, 0xe0,
+		/* Mesh Local Prefix (type=0x07, len=8): fdc6:63fd:328d:66df:: */
+		0x07, 0x08, 0xfd, 0xc6, 0x63, 0xfd, 0x32, 0x8d,
+		0x66, 0xdf,
+		/* PSKc (type=0x04, len=16) */
+		0x04, 0x10, 0x9d, 0x53, 0x61, 0xd2, 0x4a, 0x2d,
+		0x51, 0x80, 0x78, 0xeb, 0x9f, 0x8b, 0xc1, 0x96,
+		0x5b, 0x80,
+		/* Security Policy (type=0x0c, len=4): rotation=672, flags=f7 f8 */
+		0x0c, 0x04, 0x02, 0xa0, 0xf7, 0xf8,
+		/* Channel (type=0x00, len=3): page=0, channel=25 */
+		0x00, 0x03, 0x00, 0x00, 0x19,
+		/* PAN ID (type=0x01, len=2): 0xABCD */
+		0x01, 0x02, 0xab, 0xcd,
+		/* Extended PAN ID (type=0x02, len=8) */
+		0x02, 0x08, 0x12, 0x34, 0x56, 0x78, 0x90, 0xab,
+		0xcd, 0xef,
+		/* Network Name (type=0x03, len=14): AMI-Pilot-2025 */
+		0x03, 0x0e, 0x41, 0x4d, 0x49, 0x2d, 0x50, 0x69,
+		0x6c, 0x6f, 0x74, 0x2d, 0x32, 0x30, 0x32, 0x35,
+		/* Network Key (type=0x05, len=16) */
+		0x05, 0x10, 0x00, 0x11, 0x22, 0x33, 0x44, 0x55,
+		0x66, 0x77, 0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd,
+		0xee, 0xff,
 	};
-	memcpy(dataset.mExtendedPanId.m8, ext_panid, OT_EXT_PAN_ID_SIZE);
-	dataset.mComponents.mIsExtendedPanIdPresent = true;
 
-	/* Mesh Local Prefix: fdc6:63fd:328d:66df::/64 (del OTBR) */
-	static const uint8_t mesh_prefix[] = {
-		0xfd, 0xc6, 0x63, 0xfd, 0x32, 0x8d, 0x66, 0xdf
-	};
-	memcpy(dataset.mMeshLocalPrefix.m8, mesh_prefix, OT_MESH_LOCAL_PREFIX_SIZE);
-	dataset.mComponents.mIsMeshLocalPrefixPresent = true;
+	otOperationalDatasetTlvs dataset_tlvs;
 
-	/* Network Key: 00112233445566778899aabbccddeeff */
-	static const uint8_t network_key[] = {
-		0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77,
-		0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff
-	};
-	memcpy(dataset.mNetworkKey.m8, network_key, OT_NETWORK_KEY_SIZE);
-	dataset.mComponents.mIsNetworkKeyPresent = true;
+	memcpy(dataset_tlvs.mTlvs, otbr_dataset_raw,
+	       sizeof(otbr_dataset_raw));
+	dataset_tlvs.mLength = sizeof(otbr_dataset_raw);
 
-	/* Network Name: AMI-Pilot-2025 */
-	size_t name_len = strlen(CONFIG_OPENTHREAD_NETWORK_NAME);
-
-	memcpy(dataset.mNetworkName.m8, CONFIG_OPENTHREAD_NETWORK_NAME,
-	       name_len);
-	dataset.mNetworkName.m8[name_len] = '\0';
-	dataset.mComponents.mIsNetworkNamePresent = true;
-
-	/* PAN ID: 0xABCD */
-	dataset.mPanId = CONFIG_OPENTHREAD_PANID;
-	dataset.mComponents.mIsPanIdPresent = true;
-
-	/* PSKc del OTBR: 9d5361d24a2d518078eb9f8bc1965b80 */
-	static const uint8_t pskc[] = {
-		0x9d, 0x53, 0x61, 0xd2, 0x4a, 0x2d, 0x51, 0x80,
-		0x78, 0xeb, 0x9f, 0x8b, 0xc1, 0x96, 0x5b, 0x80
-	};
-	memcpy(dataset.mPskc.m8, pskc, OT_PSKC_MAX_SIZE);
-	dataset.mComponents.mIsPskcPresent = true;
-
-	/* Security Policy */
-	dataset.mSecurityPolicy.mRotationTime = 672;
-	dataset.mSecurityPolicy.mObtainNetworkKeyEnabled = true;
-	dataset.mSecurityPolicy.mNativeCommissioningEnabled = true;
-	dataset.mSecurityPolicy.mRoutersEnabled = true;
-	dataset.mSecurityPolicy.mExternalCommissioningEnabled = true;
-	dataset.mComponents.mIsSecurityPolicyPresent = true;
-
-	/* Aplicar dataset — esto sustituye lo que Kconfig haya puesto */
-	error = otDatasetSetActive(instance, &dataset);
+	error = otDatasetSetActiveTlvs(instance, &dataset_tlvs);
 	if (error != OT_ERROR_NONE) {
-		LOG_ERR("Failed to set active dataset: %d", error);
+		LOG_ERR("Failed to set active dataset TLVs: %d", error);
 		openthread_mutex_unlock();
 		return -EIO;
 	}
-	LOG_INF("Active dataset set (PSKc + MeshLocal from OTBR)");
+	LOG_INF("Active dataset set (raw TLVs from OTBR, %u bytes)",
+		dataset_tlvs.mLength);
 
 	/* Habilitar interfaz IPv6 */
 	error = otIp6SetEnabled(instance, true);
