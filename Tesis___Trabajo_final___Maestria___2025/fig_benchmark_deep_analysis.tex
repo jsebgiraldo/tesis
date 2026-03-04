@@ -1,0 +1,13 @@
+% Figuras análisis profundo 10s: utilización de red y completitud por key
+\begin{figure}[htbp]
+\centering
+\subfigure[Utilización del canal 802.15.4]{%
+    \includegraphics[width=0.48\textwidth]{figures/benchmark_deep_network_util}%
+    \label{fig:benchmark-deep-network}}%
+\hfill
+\subfigure[Sobrecarga de protocolos]{%
+    \includegraphics[width=0.48\textwidth]{figures/benchmark_deep_protocol_overhead}%
+    \label{fig:benchmark-deep-overhead}}%
+\caption{Análisis profundo del canal Thread (escenario 10\,s, 600\,s de captura). (a)~Utilización del canal: 0,22\% de la capacidad de 250\,kbps, permitiendo estimar hasta 461~nodos por red Thread sin saturación. (b)~Sobrecarga de protocolos: la eficiencia del \emph{payload} útil es del 23,6\% (9,69\,KB CoAP de 19,84\,KB totales en capa radio).}
+\label{fig:benchmark-deep-analysis}
+\end{figure}

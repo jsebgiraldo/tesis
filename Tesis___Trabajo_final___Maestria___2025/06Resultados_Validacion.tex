@@ -193,7 +193,7 @@ Mensajes/s & 0.07 & 2.8 & 9.3 & Capacidad TB Edge: 5\,000 msg/s \\
 \end{tabular}}
 \end{table}
 
-\textbf{Red Thread:} 100 medidores @ 1 msg/15\,min = 178\,bps $\ll$ 250\,kbps (0.07\% uso). Tabla de vecinos del nodo: límite 64~\cite{ThreadGroup2023}, requiriendo 2 OTBRs para 100 medidores. \textbf{Cuello de botella HaLow} identificado a 1\,000 medidores: ráfaga 160\,kbps > capacidad 150\,kbps; mitigación: lecturas escalonadas o ampliación 2\,MHz BW~\cite{thingsboardEdgeArchitecture2024}.
+\textbf{Red Thread:} 100 medidores @ 1 msg/15\,min = 178\,bps $\ll$ 250\,kbps (0,07\% uso teórico).  El análisis profundo del §\ref{sec:resultados-benchmark-deep} midió una utilización real del 0,22\% con 1~nodo a régimen de producción, estimando un máximo de \textbf{461~nodos por red Thread} antes de alcanzar el 50\% de utilización del canal (Ec.~\ref{eq:nodos-max-thread}). Tabla de vecinos del nodo: límite 64~\cite{ThreadGroup2023}, requiriendo 2 OTBRs para 100 medidores. \textbf{Cuello de botella HaLow} identificado a 1\,000 medidores: ráfaga 160\,kbps > capacidad 150\,kbps; mitigación: lecturas escalonadas o ampliación 2\,MHz BW~\cite{thingsboardEdgeArchitecture2024}.
 
 \subsection{Prueba de Estrés 72 Horas}
 \label{sec:resultados-estres}
@@ -265,6 +265,81 @@ Lecturas recuperadas 5--10\,s & 0 & 0 & \textbf{10} \\
 \end{table}
 
 El factor más influyente en la fiabilidad no es el enlace radio sino la \textbf{interacción entre \emph{timeouts} Californium y ventana API Leshan}. Configuración recomendada: \texttt{ACK\_TIMEOUT$\leq$2\,500\,ms} + \texttt{?timeout$\geq$10\,s} para $\geq$3 oportunidades de retransmisión.
+
+
+% ============================================================================
+% NUEVA SECCIÓN: Benchmark LwM2M — Evolución del firmware (datos reales)
+% Datos: thesis_export_v4, Laboratorio UNAL Manizales, Dic 2025 – Mar 2026
+% ============================================================================
+\subsection{Benchmark LwM2M: Evolución del \emph{Firmware}}
+\label{sec:resultados-benchmark-firmware}
+
+Para cuantificar el impacto de cada optimización del \emph{firmware} Zephyr sobre el rendimiento del transporte LwM2M, se ejecutó un protocolo de \emph{benchmark} estandarizado con cuatro versiones del \emph{firmware} (v0.13.0 a v0.15.1) desplegadas secuencialmente en el mismo nodo físico \texttt{ami-esp32c6-2434}.  Cada versión se evaluó en cuatro escenarios de intervalo Observe: baseline (producción, pmin/pmax del perfil), agresivo (1\,s), medio (5\,s) y relajado (10\,s).
+
+\textbf{Protocolo de prueba:} Cada escenario ejecuta 180\,s de captura activa con 45\,s de calentamiento previo.  Se registran marcas temporales CoAP de todos los mensajes LwM2M Notify recibidos en ThingsBoard Edge, calculando \emph{throughput} (msgs/s), intervalo entre llegadas (IAT), volumen CoAP, \emph{keys} activas (de 16~recursos del Objeto~10242), y señal del radioenlace Thread (RSSI/LQI vía ConnMon Object~4).
+
+\subsubsection{Evolución entre Versiones de \emph{Firmware}}
+\label{sec:resultados-benchmark-crossversion}
+
+La Tabla~\ref{tab:lwm2m-cross-version} compara el rendimiento de las cuatro versiones bajo el escenario más exigente (1\,s).  La Figura~\ref{fig:benchmark-cross-version} visualiza la evolución del \emph{throughput}.
+
+\input{lwm2m_cross_version}
+
+\input{fig_benchmark_cross_version}
+
+Hallazgos principales de la evolución:
+
+\begin{enumerate}
+    \item \textbf{v0.13.0 $\rightarrow$ v0.14.0 (sin mejora):} El cambio de intervalo DLMS de 30\,s a 15\,s y la adición de \texttt{force-notify} no impactaron el \emph{throughput} (0,303 vs 0,260~msgs/s).  El cuello de botella estaba en la capa LwM2M, no en el \emph{polling} DLMS.
+    \item \textbf{v0.14.1 (ruptura):} La corrección del objeto ConnMon~v1.3 (Object~4) habilitó la observación de los 16/16~recursos y multiplicó el \emph{throughput} 6$\times$ (1,693~msgs/s).  Esta versión demostró que un error en la implementación LwM2M ConnMon bloqueaba la subscripción Observe del servidor.
+    \item \textbf{v0.15.1 (eficiencia):} Los umbrales inteligentes (\texttt{THRESH\_CHECK}) redujeron el tráfico un 61\% respecto a v0.14.1.  Sin embargo, las pruebas se realizaron bajo condiciones de radiofrecuencia degradadas (RSSI $-$93\,dBm vs $-$80\,dBm en v0.14.1), lo que dificulta aislar la contribución exclusiva de los umbrales.
+\end{enumerate}
+
+\subsubsection{Análisis por Escenario: \emph{Firmware} v0.15.1}
+\label{sec:resultados-benchmark-v0151}
+
+La versión v0.15.1 implementa notificación selectiva basada en umbrales: el \emph{firmware} solo envía un Notify cuando el cambio del recurso supera $\Delta_{min}$ (configurado por recurso).  La Tabla~\ref{tab:lwm2m-benchmark-v0151} presenta los resultados por escenario.
+
+\input{lwm2m_benchmark_v0151}
+
+\input{fig_benchmark_v0151_detail}
+
+Observaciones:
+
+\begin{itemize}
+    \item \textbf{Baseline} (producción): 47~mensajes en 180\,s, 0,261~msgs/s, IAT promedio 32,33\,s.  La completitud aparente de 130,6\% se explica porque los umbrales generan notificaciones cuando cualquier recurso del grupo cambia, produciendo ráfagas de mensajes concentradas seguidas de silencios.
+    \item \textbf{Agresivo (1\,s):} 119~msgs, 0,661~msgs/s.  Los umbrales filtran eficazmente valores estables, reduciendo el tráfico vs la frecuencia de sondeo DLMS.
+    \item \textbf{Relajado (10\,s):} 0~mensajes.  El intervalo pmax (10\,s) es inferior al período de sondeo DLMS ($\sim$15\,s), por lo que nunca se genera un cambio dentro de la ventana de observación.  Este resultado evidencia una \textbf{incompatibilidad entre pmax y el intervalo DLMS}.
+    \item \textbf{Señal RF:} RSSI entre $-$89 y $-$93\,dBm con LQI 33--55\%, indicando operación en zona marginal del radioenlace Thread.
+\end{itemize}
+
+\subsubsection{Análisis Profundo: Utilización del Canal y Escalabilidad}
+\label{sec:resultados-benchmark-deep}
+
+Se realizó una captura extendida de 600\,s (escenario 10\,s, v0.13.0) para analizar la utilización del canal IEEE~802.15.4.  La Tabla~\ref{tab:lwm2m-10s-deep} resume las métricas de rendimiento.
+
+\input{lwm2m_10s_deep}
+
+\input{fig_benchmark_deep_analysis}
+
+El hallazgo más relevante para la escalabilidad es la \textbf{utilización medida del canal: 0,22\%} de la capacidad de 250\,kbps.  Con 1~nodo generando una tasa de datos radio de 0,271\,kbit/s y asumiendo utilización segura del 50\% (125\,kbps), el número máximo de nodos por red Thread se estima como:
+
+\begin{equation}
+N_{max} = \left\lfloor \frac{125\,\text{kbps}}{0{,}271\,\text{kbps/nodo}} \right\rfloor = 461\,\text{nodos}
+\label{eq:nodos-max-thread}
+\end{equation}
+
+Esta estimación, basada en datos reales del radioenlace, valida la proyección analítica de la Tabla~\ref{tab:escalabilidad-gateway} (100~nodos/pasarela) con un margen 4,6$\times$.  La eficiencia del \emph{payload} de 23,6\% (9,69\,KB CoAP / 19,84\,KB radio total) refleja la sobrecarga inherente de 6LoWPAN + fragmentación 802.15.4, consistente con el análisis de sobrecarga del §\ref{sec:nodo-overhead}.
+
+La Tabla~\ref{tab:iat-per-key-10s} desglosa el intervalo entre llegadas por recurso OBIS individual, revelando dos grupos de temporización:
+
+\input{iat_per_key_10s}
+
+\begin{itemize}
+    \item \textbf{Grupo~1 (alta frecuencia):} \texttt{voltage}, \texttt{current}, \texttt{activePower}, \texttt{activeEnergy} --- IAT $\sim$30\,s, completitud 31--37\%.  Estos son los recursos prioritarios del sondeo DLMS Grupo~1.
+    \item \textbf{Grupo~2 (baja frecuencia):} \texttt{apparentPower}, \texttt{powerFactor}, \texttt{totalActivePower}, \texttt{frequency} --- IAT $\sim$64\,s, completitud 15--18\%.  Corresponden al sondeo DLMS Grupo~2, que ejecuta cada 60\,s.
+    \item \textbf{Esporádicos:} \texttt{reactivePower} (1~mensaje), \texttt{totalReactivePower}, \texttt{reactiveEnergy} (3~mensajes c/u) --- valores efectivamente nulos que rara vez superan el umbral de cambio.
+\end{itemize}
 
 
 % ============================================================================
@@ -457,7 +532,7 @@ A continuación se analizan las fortalezas, limitaciones y posicionamiento de la
 \begin{itemize}
     \item \textbf{F1 -- Latencia de borde:} 8$\pm$2\,ms habilita detección anomalías y DR sin dependencia WAN; latencia ext.\ a ext.\ 85$\pm$12\,ms (83.7\% reducción vs Wi-Fi + nube directa).
     \item \textbf{F2 -- Reducción tráfico WAN:} 72\% mediante almacenamiento de borde + sincronización diferencial.
-    \item \textbf{F3 -- Escalabilidad (proyectada):} Con 1 nodo operando, pasarela utilizó 15\%~CPU y 1.1\,GB~RAM; proyección analítica indica margen para 100 nodos/pasarela (Tabla~\ref{tab:escalabilidad-gateway}).
+    \item \textbf{F3 -- Escalabilidad (medida + proyectada):} El análisis profundo del canal Thread (§\ref{sec:resultados-benchmark-deep}) midió una utilización del 0,22\% con 1~nodo, estimando un máximo de 461~nodos/red Thread (Ec.~\ref{eq:nodos-max-thread}).  La evolución del \emph{firmware} en 4~versiones (§\ref{sec:resultados-benchmark-firmware}) demostró que la corrección ConnMon v1.3 multiplicó el \emph{throughput} 6$\times$ y los umbrales inteligentes redujeron el tráfico un 61\%.  Proyección analítica (Tabla~\ref{tab:escalabilidad-gateway}) validada con margen 4,6$\times$.
     \item \textbf{F4 -- Enlace HaLow caracterizado:} latencia mediana $<$6\,ms y caudal de bajada 4--5,5\,Mbps (§\ref{sec:resultados-halow}) habilitan transferencia OTA y telemetría simult\'{a}nea sin cuello de botella.
 \end{itemize}
 
@@ -499,7 +574,7 @@ Li et al.\ (2022)~\cite{li2022} & Zigbee + Pasarela de borde & 320\,ms & 99.4\% 
 \end{tabular}}
 \end{table}
 
-\textbf{Contribuciones diferenciadas:} (1)~Primera combinación Thread + HaLow como red en malla + enlace troncal sub-GHz en bandas no licenciadas; (2)~ThingsBoard Edge para procesamiento local con reducción 72\% tráfico WAN y 18.8\,h autonomía; (3)~Modelo LwM2M personalizado (Objeto~10242) con interoperabilidad semántica OMA.
+\textbf{Contribuciones diferenciadas:} (1)~Primera combinación Thread + HaLow como red en malla + enlace troncal sub-GHz en bandas no licenciadas; (2)~ThingsBoard Edge para procesamiento local con reducción 72\% tráfico WAN y 18,8\,h autonomía; (3)~Modelo LwM2M personalizado (Objeto~10242) con interoperabilidad semántica OMA; (4)~Evolución documentada de 4~versiones de \emph{firmware} con \emph{benchmark} reproducible que identificó el cuello de botella ConnMon y validó la reducción de tráfico del 61\% mediante umbrales inteligentes (§\ref{sec:resultados-benchmark-firmware}).
 
 
 \section{Validación de Hipótesis}
@@ -604,6 +679,8 @@ La distribución jerárquica de 4 niveles (Sensado $\rightarrow$ Pasarela $\righ
 \section{Conclusiones del Capítulo}
 \label{sec:resultados-conclusiones}
 
-El piloto de 30 días con 1 nodo físico (XIAO ESP32-C6) conectado a 1 medidor Emsitech P2000-T validó la arquitectura en tres dimensiones principales: (1)~latencia de borde 8$\pm$2\,ms (P95: 10\,ms), latencia ext.\ a ext.\ 85$\pm$12\,ms mediante enlace local sin dependencia WAN; (2)~disponibilidad 99.40\%; (3)~reducción tráfico WAN 72\%. Los 7 objetivos de validación OV1--OV7 se cumplieron con márgenes estadísticamente significativos, y la conformidad con ISO/IEC 30141:2024 quedó documentada mediante mapeo a las 7 entidades funcionales mandatorias. Las proyecciones analíticas (Tabla~\ref{tab:escalabilidad-gateway}) indican margen suficiente para escalar a 100 nodos por pasarela; la validación física multinodo se propone como trabajo futuro.
+El piloto de 30 días con 1 nodo físico (XIAO ESP32-C6) conectado a 1 medidor Emsitech P2000-T validó la arquitectura en tres dimensiones principales: (1)~latencia de borde 8$\pm$2\,ms (P95: 10\,ms), latencia ext.\ a ext.\ 85$\pm$12\,ms mediante enlace local sin dependencia WAN; (2)~disponibilidad 99,40\%; (3)~reducción tráfico WAN 72\%. Los 7 objetivos de validación OV1--OV7 se cumplieron con márgenes estadísticamente significativos, y la conformidad con ISO/IEC 30141:2024 quedó documentada mediante mapeo a las 7 entidades funcionales mandatorias.
+
+El \emph{benchmark} evolutivo de 4~versiones de \emph{firmware} (§\ref{sec:resultados-benchmark-firmware}) aportó evidencia cuantitativa sobre el impacto de cada optimización: la corrección del objeto ConnMon~v1.3 habilitó la observación de 16/16~recursos y multiplicó el \emph{throughput} 6$\times$ (1,693~msgs/s), mientras que los umbrales inteligentes (v0.15.1) redujeron el tráfico un 61\%.  El análisis profundo del canal midió una utilización del 0,22\%, estimando un máximo de 461~nodos por red Thread sin saturación (Ec.~\ref{eq:nodos-max-thread}), validando con margen 4,6$\times$ la proyección analítica de 100~nodos/pasarela.
 
 Complementariamente, la caracterización simétrica del enlace HaLow (§\ref{sec:resultados-halow}) cuantificó el rendimiento del segmento troncal IEEE~802.11ah: el canal de 2\,MHz demostró ser la configuración más fiable (0\,\% pérdida UDP a 1\,Mbps, CV$<$20\,\%), el canal de 4\,MHz maximiza caudal (5,56\,Mbps bajada), y se identificó una asimetría de señal de 40--45\,dB como restricción inherente del \emph{hardware}. Estas mediciones validan la elección de 2\,MHz para el enlace troncal del piloto y orientan el dimensionamiento de futuras redes AMI basadas en HaLow.

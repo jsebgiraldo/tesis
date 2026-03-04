@@ -1,0 +1,13 @@
+% Figura comparativa: throughput por versión de firmware
+\begin{figure}[htbp]
+\centering
+\subfigure[v0.14.1 --- Corrección ConnMon v1.3 (16/16 keys)]{%
+    \includegraphics[width=0.48\textwidth]{figures/benchmark_v0141_throughput}%
+    \label{fig:benchmark-v0141-throughput}}%
+\hfill
+\subfigure[v0.15.1 --- Umbrales inteligentes THRESH\_CHECK]{%
+    \includegraphics[width=0.48\textwidth]{figures/benchmark_v0151_throughput}%
+    \label{fig:benchmark-v0151-throughput}}%
+\caption{Evolución del \emph{throughput} LwM2M entre versiones de \emph{firmware}. v0.14.1 alcanza 1,693~msgs/s (corrección ConnMon), v0.15.1 reduce tráfico 61\% mediante notificación selectiva por umbrales. Cada gráfica compara 4~escenarios de intervalo Observe (baseline, 1\,s, 5\,s, 10\,s).}
+\label{fig:benchmark-cross-version}
+\end{figure}

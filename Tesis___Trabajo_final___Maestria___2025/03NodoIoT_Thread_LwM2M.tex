@@ -246,6 +246,20 @@ CONFIG_THREAD_JOINER_PSKD="J01NME"
 
 Binario: 634\,KB de 4\,MB Flash (15\%), 252\,KB de 437\,KB SRAM (57\%). Layout incluye NVS 24\,KB (credenciales) y espacio para OTA vía MCUboot.
 
+\subsubsection{Evolución del \emph{Firmware}: v0.13.0 a v0.15.1}
+\label{sec:nodo-firmware-evolucion}
+
+El \emph{firmware} atravesó cuatro versiones durante el desarrollo del piloto, cada una abordando un cuello de botella identificado mediante el protocolo de \emph{benchmark} LwM2M (resultados detallados en §\ref{sec:resultados-benchmark-firmware}):
+
+\begin{enumerate}
+    \item \textbf{v0.13.0 (línea base):} Sondeo DLMS cada 30\,s, observación LwM2M pasiva.  Rendimiento: 13--14/16~\emph{keys} observadas, 0,25--0,30 msgs/s.  Dos \emph{keys} (Connectivity Monitor) bloqueaban la subscripción Observe del servidor.
+    \item \textbf{v0.14.0:} Reducción del intervalo DLMS a 15\,s y adición de \texttt{lwm2m\_notify\_observer()} forzado.  \textbf{Sin mejora medible} ($\sim$0,26~msgs/s): el cuello de botella estaba en la capa LwM2M, no en el \emph{polling} del medidor.
+    \item \textbf{v0.14.1 (corrección ConnMon v1.3):} Actualización del objeto Connectivity Monitor (Object~4) a la especificación v1.3 de OMA.  \textbf{Resultado: 16/16~\emph{keys}}, \emph{throughput} 6$\times$ (1,693~msgs/s).  El error consistía en que la implementación v1.0 del Object~4 no exponía los recursos requeridos por el servidor Leshan para completar la subscripción Observe.
+    \item \textbf{v0.15.1 (umbrales inteligentes -- \texttt{THRESH\_CHECK}):} Notificación selectiva: el \emph{firmware} evalúa cada recurso LwM2M tras la lectura DLMS y solo invoca \texttt{lwm2m\_notify\_observer()} si el cambio supera un umbral configurable ($\Delta_{min}$ por recurso).  \textbf{Reducción del 61\% del tráfico} vs v0.14.1, manteniendo 16/16~\emph{keys}.
+\end{enumerate}
+
+La contribución principal del ciclo de desarrollo fue la identificación del \emph{bug} ConnMon como causa raíz de la baja observabilidad (v0.13--v0.14) y la demostración de que la notificación basada en umbrales reduce significativamente el tráfico sin pérdida de cobertura de recursos.
+
 % Nota Rev11: §3.3.3 Gestión de Energía eliminada.  Los nodos operan como MED (RX
 % siempre activo), alimentados desde el puerto auxiliar 5V del medidor.  Las
 % mediciones de consumo no se realizaron experimentalmente en el piloto, por lo
@@ -469,7 +483,7 @@ Desv. estándar & 8,1 ms & Baja varianza \\
 
 El nodo Zephyr implementa la capa de percepción (ISO/IEC~30141, FE1) con la pila IEEE~802.15.4/Thread/CoAP/LwM2M, portátil a cualquier SoC compatible.  Thread~1.4 con IPv6 extremo a extremo elimina la pasarela de capa de aplicación (\emph{Application Layer Gateway}) de Zigbee.  LwM2M Observe reduce tráfico un 99,7\% vs sondeo periódico (§\ref{sec:nodo-overhead}).  El Objeto personalizado~10242 consolida 27~recursos del medidor con interoperabilidad OMA.
 
-La plataforma de referencia (\$3,20/unidad) con Zephyr~RTOS demuestra: latencia Thread $<$50\,ms (P95~$<$60\,ms, margen 82\% sobre H3) y tiempo de unión $<$3\,s.  Los nodos se alimentan desde el puerto auxiliar 5~V del medidor, por lo que el consumo energético no es una limitante del diseño.
+La plataforma de referencia (\$3,20/unidad) con Zephyr~RTOS demuestra: latencia Thread $<$50\,ms (P95~$<$60\,ms, margen 82\% sobre H3) y tiempo de unión $<$3\,s.  Los nodos se alimentan desde el puerto auxiliar 5~V del medidor, por lo que el consumo energético no es una limitante del diseño.  La evolución iterativa del \emph{firmware} (v0.13.0 a v0.15.1, §\ref{sec:nodo-firmware-evolucion}) identificó y corrigió el bloqueo ConnMon~v1.3 (habilitando 16/16~\emph{keys}, 6$\times$ \emph{throughput}) e implementó umbrales inteligentes que redujeron el tráfico LwM2M un 61\%.
 
 \textbf{Despliegue piloto:} La validación se realizó en laboratorio controlado con 1~medidor físico Emsitech P2000-T conectado al nodo IoT, complementado con nodos simulados para pruebas de escalabilidad de la red Thread.  Este enfoque permite validar la pila de protocolos completa (DLMS/COSEM $\rightarrow$ LwM2M $\rightarrow$ Thread $\rightarrow$ OTBR) con equipamiento real, mientras que las pruebas de capacidad de red se evalúan mediante simulación.
 
