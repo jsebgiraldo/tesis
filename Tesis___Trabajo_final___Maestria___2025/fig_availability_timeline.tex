@@ -22,19 +22,19 @@
   \node[below, font=\tiny] at (\dv*\daylen, -0.5) {D\dv};
 }
 % Meses
-\node[below, font=\scriptsize\bfseries, gray!60] at (15*\daylen, -1) {Oct 2024};
-\node[below, font=\scriptsize\bfseries, gray!60] at (45*\daylen, -1) {Nov 2024};
-\node[below, font=\scriptsize\bfseries, gray!60] at (75*\daylen, -1) {Dic 2024};
+\node[below, font=\scriptsize\bfseries, gray!60] at (15*\daylen, -1) {Oct 2025};
+\node[below, font=\scriptsize\bfseries, gray!60] at (45*\daylen, -1) {Nov 2025};
+\node[below, font=\scriptsize\bfseries, gray!60] at (75*\daylen, -1) {Dic 2025};
 
-% === CARRIL 1: Thread Mesh (60 nodos) ===
+% === CARRIL 1: Thread Mesh (1 nodo) ===
 \def\ty{5.5}
-\node[left, font=\scriptsize\bfseries, text width=2.5cm, align=right] at (-0.2, \ty) {Thread Mesh\\(60 nodos)};
+\node[left, font=\scriptsize\bfseries, text width=2.5cm, align=right] at (-0.2, \ty) {Thread Mesh\\(1 nodo)};
 % Uptime verde
 \fill[green!40] (0, \ty-0.4) rectangle (\tw, \ty+0.4);
 % Incidente: 3 nodos offline D35 (2h firmware update manual)
 \fill[yellow!60] (35*\daylen-0.15, \ty-0.4) rectangle (35*\daylen+0.15, \ty+0.4);
 \draw[-{Latex[length=1.5mm]}, orange!70!black, line width=0.4pt] (35*\daylen, \ty+0.5) -- (35*\daylen, \ty+0.4);
-\node[above, font=\tiny, orange!70!black, text width=2cm, align=center] at (35*\daylen, \ty+0.5) {FW update\\3 nodos 2h};
+\node[above, font=\tiny, orange!70!black, text width=2cm, align=center] at (35*\daylen, \ty+0.5) {FW update\\1 nodo 2h};
 % Disponibilidad
 \node[right, font=\scriptsize\bfseries, green!50!black] at (\tw+0.1, \ty) {99.87\%};
 
@@ -99,6 +99,6 @@
 
 \end{tikzpicture}%
 }% end resizebox
-\caption{L\'{i}nea temporal de disponibilidad del sistema durante el piloto de 90 d\'{i}as (Oct--Dic 2024). Tres carriles muestran el estado operativo de cada capa: malla Thread (60 nodos, 99{,}87\,\%), pasarela de borde RPi4 con Docker (99{,}62\,\%), y troncal HaLow (99{,}90\,\%). Se registraron 5 incidentes totalizando 490 minutos de tiempo inactivo, alcanzando disponibilidad combinada de 99{,}62\,\%, superior al objetivo de dise\~{n}o $>$99{,}5\,\%.}
+\caption{L\'{i}nea temporal de disponibilidad del sistema durante el piloto de 90 d\'{i}as (Oct--Dic 2025). Tres carriles muestran el estado operativo de cada capa: malla Thread (1 nodo, 99{,}87\,\%), pasarela de borde RPi4 con Docker (99{,}62\,\%), y troncal HaLow (99{,}90\,\%). Se registraron 5 incidentes totalizando 490 minutos de tiempo inactivo, alcanzando disponibilidad combinada de 99{,}62\,\%, superior al objetivo de dise\~{n}o $>$99{,}5\,\%.}
 \label{fig:availability-timeline}
 \end{figure}

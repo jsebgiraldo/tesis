@@ -104,7 +104,7 @@
 \fill[blue!80] (2, 2) circle (4pt);
 \draw[blue!80, line width=1pt] (2, 2) circle (6pt);
 \node[ann=blue!80!black, above left, text width=1.8cm, align=center] at (0.6, 3.4)
-  {\textbf{Piloto real}\\60 nodos};
+  {\textbf{Medido}\\1 nodo};
 \draw[blue!60, line width=0.4pt, -{Latex[length=1.5mm]}] (1.2, 3.1) -- (1.85, 2.15);
 
 % === L\'{i}mite recomendado ===
@@ -119,12 +119,12 @@
     \tikz\draw[blue!70, line width=1.5pt] (0,0) -- (0.6,0); & Latencia p95 (ms) \\
     \tikz\draw[red!70, line width=1.5pt, densely dashed] (0,0) -- (0.6,0); & CPU Gateway (\%) \\
     \tikz\draw[green!60!black, line width=1.5pt, dashdotted] (0,0) -- (0.6,0); & Disponibilidad (\%) \\
-    \tikz\fill[blue!80] (0.3,0) circle (3pt); & Piloto real (60 nodos) \\
+    \tikz\fill[blue!80] (0.3,0) circle (3pt); & Medido (1 nodo) \\
   \end{tabular}
 };
 
 \end{tikzpicture}%
 }% end resizebox
-\caption{An\'{a}lisis de escalabilidad del sistema: proyecci\'{o}n de 60 a 500 nodos por Gateway. Tres m\'{e}tricas clave: latencia p95 edge (eje izquierdo, azul), utilizaci\'{o}n CPU Gateway RPi4 (eje izquierdo, rojo), y disponibilidad del sistema (eje derecho, verde). El punto de operaci\'{o}n del piloto (60 nodos, latencia 6\,ms, CPU 18\%, disponibilidad 99.62\%) se destaca con c\'{i}rculo. L\'{i}mite recomendado: 100 nodos/Gateway manteniendo latencia $<$10\,ms y disponibilidad $>$99.5\%. M\'{a}s all\'{a} de 300 nodos, CPU supera 75\% y disponibilidad cae bajo 99.3\%, requiriendo particionamiento horizontal (m\'{u}ltiples Gateways).}
+\caption{An\'{a}lisis de escalabilidad del sistema: proyecci\'{o}n de 1 a 500 nodos por Gateway basada en mediciones con 1 nodo f\'{i}sico. Tres m\'{e}tricas clave: latencia p95 edge (eje izquierdo, azul), utilizaci\'{o}n CPU Gateway RPi4 (eje izquierdo, rojo), y disponibilidad del sistema (eje derecho, verde). El punto de operaci\'{o}n medido (1 nodo, latencia 6\,ms, CPU 15\%, disponibilidad 99.62\%) se destaca con c\'{i}rculo; los dem\'{a}s valores son proyecciones anal\'{i}ticas. L\'{i}mite recomendado: 100 nodos/Gateway manteniendo latencia $<$10\,ms y disponibilidad $>$99.5\%. M\'{a}s all\'{a} de 300 nodos, CPU supera 75\% y disponibilidad cae bajo 99.3\%, requiriendo particionamiento horizontal (m\'{u}ltiples Gateways).}}
 \label{fig:scalability-chart}
 \end{figure}

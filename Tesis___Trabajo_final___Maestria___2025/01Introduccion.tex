@@ -227,7 +227,7 @@ La investigación se circunscribe a \textbf{redes de telemetría para energía i
 
 \textbf{Escala y requisitos:}
 \begin{itemize}
-    \item Topologías de 60--100 nodos por pasarela; validación experimental con 60 nodos.
+    \item Topologías de 60--100 nodos por pasarela; validación experimental con 1 nodo físico y estimaciones de escalabilidad analítica.
     \item Enlace troncal HaLow de 1--2~km, latencia objetivo menor a 100~ms en P95.
 \end{itemize}
 
@@ -319,11 +319,11 @@ Los cuatro objetivos específicos se organizan siguiendo la estructura de la arq
 
 \textbf{OE1 --- Arquitectura multicapa:} Diseñar arquitectura de cuatro capas (Conectividad, Orquestación, Procesamiento, Aplicación) alineada con ISO/IEC~30141:2024, con requisitos de latencia extremo a extremo menor a 700~ms, procesamiento en el borde menor a 10~ms P99 y disponibilidad mayor al 99\% durante particiones WAN. Desarrollo en Capítulo~\ref{chap:nodo-iot}.
 
-\textbf{OE2 --- Integración Thread--HaLow:} Implementar OTBR con nRF52840 RCP sobre RPi4, configurar enlaces HaLow (Morse Micro MM6108) en 2/4/8~MHz con topologías estrella y malla 802.11s, y validar la cadena nodo$\rightarrow$OTBR$\rightarrow$HaLow$\rightarrow$plataforma con tasa de entrega superior al 98\% y latencia por salto menor a 30~ms en 3--5 saltos con 60 nodos. Desarrollo en Capítulo~\ref{chap:gateway-halow}.
+\textbf{OE2 --- Integración Thread--HaLow:} Implementar OTBR con nRF52840 RCP sobre RPi4, configurar enlaces HaLow (Morse Micro MM6108) en 2/4/8~MHz con topologías estrella y malla 802.11s, y validar la cadena nodo$\rightarrow$OTBR$\rightarrow$HaLow$\rightarrow$plataforma con tasa de entrega superior al 98\% y latencia por salto menor a 30~ms en 3--5 saltos. Desarrollo en Capítulo~\ref{chap:gateway-halow}.
 
 \textbf{OE3 --- Plataforma en el borde en contenedores:} Desplegar 3 contenedores Docker (ThingsBoard Edge~3.6.2 con transporte LwM2M integrado, PostgreSQL~15, Redis~7.0) y OTBR como servicio nativo de OpenWRT sobre RPi4 4~GB, verificando huella de memoria menor a 3\,400~MB, latencia de ingesta menor a 10~ms P99, y almacenamiento sin conexión de más de 100\,000 mensajes con sincronización tras más de 72~h de desconexión. Desarrollo en Capítulo~\ref{chap:gateway-halow}.
 
-\textbf{OE4 --- Caso de estudio:} Desplegar piloto con 1 medidor físico Emsitech P2000-T y nodos simulados (radio IEEE~802.15.4, Thread~1.4, LwM2M, interfaz RS-485 DLMS/COSEM), validando cumplimiento de todos los umbrales y publicando conjuntos de datos abiertos. Desarrollo en Capítulo~\ref{chap:resultados}.
+\textbf{OE4 --- Caso de estudio:} Desplegar piloto de 30 días con 1 nodo físico (XIAO ESP32-C6 con Zephyr/OpenThread, interfaz RS-485 DLMS/COSEM) conectado a 1 medidor físico Emsitech P2000-T, validando cumplimiento de todos los umbrales. Estimar escalabilidad a 60--100 nodos mediante análisis de recursos de la pasarela y pruebas de estrés. Publicar conjuntos de datos abiertos. Desarrollo en Capítulo~\ref{chap:resultados}.
 
 Los objetivos anteriores se operacionalizan mediante hipótesis cuantificables que definen los umbrales de validación.
 
@@ -401,7 +401,7 @@ Toda investigación opera dentro de fronteras que condicionan la interpretación
 
 \textbf{Limitaciones:}
 \begin{enumerate}
-    \item Validación con 1 medidor físico y nodos simulados, 2 pasarelas, sin escalar a miles de dispositivos.
+    \item Validación con 1 nodo físico y 1 medidor físico, 1 pasarela, sin escalar a decenas ni miles de dispositivos físicos; la escalabilidad se estima analíticamente.
     \item Dependencia del circuito integrado Morse Micro MM6108 (único HaLow comercial en 2024).
     \item Conformidad funcional sin certificación formal Thread ni DLMS/COSEM.
     \item Seguridad TLS/X.509 implementada pero sin auditoría de penetración.

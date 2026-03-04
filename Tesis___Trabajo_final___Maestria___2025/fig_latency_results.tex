@@ -111,11 +111,11 @@
 % === Leyenda inferior ===
 \node[draw=gray!40, fill=gray!5, rounded corners=2pt, font=\tiny,
   text width=11cm, inner sep=4pt, align=left] at (11, -1.8) {
-  \textbf{Condiciones:} 60 nodos XIAO ESP32C6, medidores Emsitech P2000-T, Thread mesh 3 saltos m\'{a}x, Gateway RPi4 (Docker 3 contenedores). Panel (b): 10/30/60 datos reales piloto; 100 medidores extrapolado con test de estr\'{e}s.
+  \textbf{Condiciones:} 1 nodo XIAO ESP32C6, medidor Emsitech P2000-T, Thread mesh 3 saltos m\'{a}x, Gateway RPi4 (Docker 3 contenedores). Panel (b): 1 nodo datos reales piloto; 10/30/60/100 medidores proyectados anal\'{i}ticamente.
 };
 
 \end{tikzpicture}%
 }% end resizebox
-\caption{Resultados de latencia de procesamiento de borde (\textit{edge processing}) del piloto de 30 d\'{i}as. (a) Histograma de distribuci\'{o}n (n=2{,}000 transacciones): mediana 6\,ms, p90=8\,ms, p95=10\,ms, dentro del objetivo $<$10\,ms (IEEE 2030.5). (b) Variaci\'{o}n de latencia con n\'{u}mero de medidores concurrentes: crecimiento sublineal de 4,5\,ms (10 nodos) a 9,0\,ms (100 nodos extrapolado), con p95$<$13\,ms en todos los escenarios.}
+\caption{Resultados de latencia de procesamiento de borde (\textit{edge processing}) del piloto de 30 d\'{i}as. (a) Histograma de distribuci\'{o}n (n=2{,}000 transacciones, 1 nodo): mediana 6\,ms, p90=8\,ms, p95=10\,ms, dentro del objetivo $<$10\,ms (IEEE 2030.5). (b) Variaci\'{o}n de latencia proyectada con n\'{u}mero de medidores concurrentes: crecimiento sublineal de 4,5\,ms (10 nodos) a 9,0\,ms (100 nodos), con p95$<$13\,ms en todos los escenarios.}
 \label{fig:latency-results}
 \end{figure}

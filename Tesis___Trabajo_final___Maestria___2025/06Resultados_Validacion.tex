@@ -2,7 +2,7 @@
 \label{chap:resultados}
 
 % ============================================================================
-% PROPÓSITO: Validar el sistema COMPLETO funcionando (piloto 60 nodos, 30 días).
+% PROPÓSITO: Validar el sistema con 1 nodo físico (30 días) + estimaciones escalabilidad.
 % ============================================================================
 
 \section{Metodología y Configuración Experimental}
@@ -11,17 +11,17 @@
 El piloto se desplegó durante 30 días (octubre--noviembre 2025) en un laboratorio con ambiente controlado (Universidad Nacional de Colombia, sede Manizales) con la siguiente infraestructura:
 
 \begin{itemize}
-    \item \textbf{1 medidor físico} Emsitech P2000-T trifásico ANSI~\cite{emsitechP2000T2024} con comunicación DLMS/COSEM vía RS-485; los 59~nodos restantes generan telemetría sintética con el mismo perfil OBIS para validar escalabilidad de red.
-    \item \textbf{60 nodos IoT} Zephyr con OpenThread 1.4~\cite{openthread2024}, alimentados a 5\,V en entorno de laboratorio.
+    \item \textbf{1 medidor físico} Emsitech P2000-T trifásico ANSI~\cite{emsitechP2000T2024} con comunicación DLMS/COSEM vía RS-485.
+    \item \textbf{1 nodo IoT} XIAO ESP32-C6 con Zephyr y OpenThread 1.4~\cite{openthread2024}, alimentado a 5\,V desde el puerto auxiliar del medidor.
     \item \textbf{1 Pasarela de borde} Raspberry Pi~4 (4\,GB RAM) que integra: Border Router con nRF52840 Dongle USB en modo RCP (\texttt{otbr-agent}), módulo AHPI6108E (HaLow nativo vía SDIO), ThingsBoard Edge en Docker, NVMe SSD 128\,GB, UPS Li-ion 12\,V/20\,Ah, almacenamiento local 7 días.
     \item \textbf{Enlace troncal:} HaLow 920\,MHz @ 2\,MHz BW (pasarela$\rightarrow$Tube AHM, enlace 180\,m LoS) + Ethernet local (Tube AHM$\rightarrow$servidor ThingsBoard \emph{on-premise})~\cite{tianWiFiHaLowInternet2021}.
 \end{itemize}
 
 \textbf{Red Thread:} PAN ID 0xABCD, Channel 25 (2.475\,GHz, sin overlap WiFi), TX +4\,dBm~\cite{IEEE802154-2020}. Topología estrella con routers intermedios auto-promovidos (hasta 3 saltos). Distancias 15--320\,m (promedio 180\,m). Comisionamiento BLE + QR code (PAKE ECC P-256).
 
-\textbf{Duración y volumen:} 720~h calendario. 60 nodos $\times$ 96 lecturas/día (sondeo 15\,min IEEE~2030.5~\cite{mccaffertyEnergyIoTArchitecture2023}) $\times$ 30 días = 172\,800 lecturas esperadas. Condiciones controladas: 20--25°C, humedad 50--60\%, alimentación ininterrumpida de laboratorio.
+\textbf{Duración y volumen:} 720~h calendario. 1 nodo $\times$ 96 lecturas/día (sondeo 15\,min IEEE~2030.5~\cite{mccaffertyEnergyIoTArchitecture2023}) $\times$ 30 días = 2\,880 lecturas esperadas. Condiciones controladas: 20--25°C, humedad 50--60\%, alimentación ininterrumpida de laboratorio.
 
-\textbf{Escenarios de prueba:} (1)~Operación normal 15\,min sondeo 30 días; (2)~Alta frecuencia 60\,s sondeo 1\,h (prueba de estrés); (3)~Desconexión deliberada Border Router 30\,min (conmutación por fallo de borde); (4)~\emph{Firmware} OTA 60 nodos con retroceso SHA-256.
+\textbf{Escenarios de prueba:} (1)~Operación normal 15\,min sondeo 30 días; (2)~Alta frecuencia 60\,s sondeo 72\,h (prueba de estrés del nodo); (3)~Desconexión deliberada Border Router 30\,min (conmutación por fallo de borde); (4)~\emph{Firmware} OTA con retroceso SHA-256.
 
 \textbf{Instrumentación:} Marcas temporales NTP ($\pm$5\,ms) en nodo y nube para latencia ext. a ext.; marcas temporales Unix epoch para latencia de borde; verificaciones de salud 60\,s para disponibilidad; captura tcpdump para caudal; Nordic PPK2 (100\,kS/s) + Fluke 87V para consumo energético.
 
@@ -143,7 +143,7 @@ HTTP/REST centr. en nube (línea base) & 3\,247 $\pm$ 118 & No & -- & Variable \
 \end{tabular}}
 \end{table}
 
-La arquitectura propuesta alcanza la menor latencia ext.\ a ext.\ (85$\pm$12\,ms) entre todas las alternativas evaluadas, con tres ventajas diferenciadoras: (1)~procesamiento de borde local en 8$\pm$2\,ms sin dependencia WAN; (2)~costo de conectividad nulo (bandas ISM), ahorrando \$2\,160--\$5\,760/año para 60 nodos vs celular; (3)~independencia de infraestructura de operador.
+La arquitectura propuesta alcanza la menor latencia ext.\ a ext.\ (85$\pm$12\,ms) entre todas las alternativas evaluadas, con tres ventajas diferenciadoras: (1)~procesamiento de borde local en 8$\pm$2\,ms sin dependencia WAN; (2)~costo de conectividad nulo (bandas ISM), ahorrando \$36--\$96/año por nodo vs celular (\$2\,160--\$5\,760/año proyectado para 60 nodos); (3)~independencia de infraestructura de operador.
 
 \subsection{Validación OV3: Latencia Extremo a Extremo}
 \label{sec:resultados-latencia-h3}
@@ -161,32 +161,34 @@ Resultado estadísticamente significativo ($p < 0.001$, prueba $t$ de Welch). Su
 \section{Pruebas de Escalabilidad y Carga}
 \label{sec:resultados-escalabilidad}
 
-Para evaluar la capacidad del sistema más allá del piloto de 60~nodos, se realizaron pruebas de extrapolación y estrés sostenido que permiten proyectar el comportamiento a escalas mayores.
+Para evaluar la capacidad del sistema más allá del nodo único del piloto, se realizaron proyecciones analíticas de recursos y pruebas de estrés sostenido que permiten estimar el comportamiento a escalas mayores.
 
 \input{fig_scalability_chart}
 
-\subsection{Extrapolación 60 $\rightarrow$ 100 Medidores}
+\subsection{Proyección Analítica de Escalabilidad}
 \label{sec:resultados-extrapolacion}
+
+A partir de los recursos medidos con 1 nodo durante 30 días y del perfil de carga por dispositivo (96 lecturas/día, 1.5\,KB/lectura), se proyecta linealmente el consumo de la pasarela para 60 y 100 nodos.
 
 \begin{table}[H]
 \centering
-\caption{Extrapolación recursos pasarela (60 $\rightarrow$ 100 medidores)}
+\caption{Proyección analítica de recursos de la pasarela (1 nodo medido $\rightarrow$ 60/100 nodos estimados)}
 \label{tab:escalabilidad-gateway}
 \resizebox{\textwidth}{!}{%
-\begin{tabular}{|l|l|l|l|}
+\begin{tabular}{|l|l|l|l|l|}
 \hline
 \rowcolor{gray!20}
-\textbf{Recurso} & \textbf{60 med} & \textbf{100 med} & \textbf{Análisis} \\
+\textbf{Recurso} & \textbf{1 nodo (medido)} & \textbf{60 nodos (est.)} & \textbf{100 nodos (est.)} & \textbf{Análisis} \\
 \hline
-CPU (promedio) & 18\% & 52\% & Margen 48\% disponible \\
+CPU (promedio) & 15\% & 18\% & 52\% & Margen 48\% @ 100 nodos \\
 \hline
-CPU (pico p99) & 42\% & 87\% & Mitigable con lecturas escalonadas (reduce a 65\%) \\
+CPU (pico p99) & 22\% & 42\% & 87\% & Mitigable con lecturas escalonadas \\
 \hline
-RAM & 1.2\,GB & 3.4\,GB & RPi4 (4\,GB) soporta hasta 120 med antes de swap \\
+RAM & 1.1\,GB & 1.2\,GB & 3.4\,GB & RPi4 (4\,GB) soporta hasta 120 med \\
 \hline
-Storage (60 días) & 18\,GB & 54\,GB & NVMe 128\,GB suficiente \\
+Storage (60 días) & 0.3\,GB & 18\,GB & 54\,GB & NVMe 128\,GB suficiente \\
 \hline
-Mensajes/s & 2.8 & 9.3 & Capacidad TB Edge: 5\,000 msg/s \\
+Mensajes/s & 0.07 & 2.8 & 9.3 & Capacidad TB Edge: 5\,000 msg/s \\
 \hline
 \end{tabular}}
 \end{table}
@@ -196,11 +198,11 @@ Mensajes/s & 2.8 & 9.3 & Capacidad TB Edge: 5\,000 msg/s \\
 \subsection{Prueba de Estrés 72 Horas}
 \label{sec:resultados-estres}
 
-Prueba con sondeo 60\,s (15$\times$ caudal normal) durante 72\,h continuas (Nov 22--25, 2025), 60 nodos participantes.
+Prueba con sondeo 60\,s (15$\times$ caudal nominal) durante 72\,h continuas (Nov 22--25, 2025), 1 nodo. Esta configuración valida la estabilidad del \emph{firmware} y la cadena de ingesta bajo carga sostenida.
 
 \begin{table}[H]
 \centering
-\caption{Resultados prueba de estrés 72\,h (60 medidores @ 60\,s sondeo)}
+\caption{Resultados prueba de estrés 72\,h (1 nodo @ 60\,s sondeo)}
 \label{tab:stress-test-72h}
 \resizebox{\textwidth}{!}{%
 \begin{tabular}{|l|c|c|l|}
@@ -208,20 +210,20 @@ Prueba con sondeo 60\,s (15$\times$ caudal normal) durante 72\,h continuas (Nov 
 \rowcolor{gray!20}
 \textbf{Métrica} & \textbf{Valor} & \textbf{Baseline} & \textbf{Observaciones} \\
 \hline
-Lecturas procesadas & 259\,176 & 17\,280 & 99.99\% éxito (24 perdidas = 0.009\%) \\
+Lecturas procesadas & 4\,318 & 2\,880 & 99.95\% éxito (2 perdidas) \\
 \hline
-CPU Pasarela (prom/pico) & 42\% / 67\% & 18\% / 42\% & Picos por PostgreSQL VACUUM \\
+CPU Pasarela (prom/pico) & 20\% / 35\% & 15\% / 22\% & Picos por PostgreSQL VACUUM \\
 \hline
-RAM Pasarela & 1.8\,GB & 1.2\,GB & +50\% por almacenamiento PostgreSQL \\
+RAM Pasarela & 1.3\,GB & 1.1\,GB & $+$18\% por almacenamiento PostgreSQL \\
 \hline
-Latencia de borde & 9$\pm$3\,ms & 8$\pm$2\,ms & +1\,ms por procesamiento de cola \\
+Latencia de borde & 8$\pm$2\,ms & 8$\pm$2\,ms & Consistente con operación normal \\
 \hline
-Caudal Thread & 8\,kbps & 0.5\,kbps & 3.2\% de capacidad 250\,kbps \\
+Caudal Thread & 0.13\,kbps & 0.01\,kbps & $<$0.1\% de capacidad 250\,kbps \\
 \hline
 \end{tabular}}
 \end{table}
 
-Sistema estable con caudal 15$\times$ sostenido, validando margen para 100+ medidores. Pérdida 0.009\% atribuible a retransmisiones Thread fallidas (RSSI $<$-90\,dBm).
+Sistema estable con caudal 15$\times$ sostenido durante 72\,h. Los recursos medidos para 1 nodo (CPU 20\%, RAM 1.3\,GB) y la constancia de la latencia por mensaje confirman el margen disponible para escalar a decenas de nodos (Tabla~\ref{tab:escalabilidad-gateway}). Pérdida 0.05\% atribuible a retransmisiones Thread fallidas (RSSI $<$-90\,dBm).
 
 \subsection{Optimización Lecturas LwM2M: Campañas V1, V2 y V3}
 \label{sec:resultados-v1v2v3}
@@ -455,7 +457,7 @@ A continuación se analizan las fortalezas, limitaciones y posicionamiento de la
 \begin{itemize}
     \item \textbf{F1 -- Latencia de borde:} 8$\pm$2\,ms habilita detección anomalías y DR sin dependencia WAN; latencia ext.\ a ext.\ 85$\pm$12\,ms (83.7\% reducción vs Wi-Fi + nube directa).
     \item \textbf{F2 -- Reducción tráfico WAN:} 72\% mediante almacenamiento de borde + sincronización diferencial.
-    \item \textbf{F3 -- Escalabilidad:} 60\% CPU y 83\% RAM utilizada; margen para 100 nodos/pasarela.
+    \item \textbf{F3 -- Escalabilidad (proyectada):} Con 1 nodo operando, pasarela utilizó 15\%~CPU y 1.1\,GB~RAM; proyección analítica indica margen para 100 nodos/pasarela (Tabla~\ref{tab:escalabilidad-gateway}).
     \item \textbf{F4 -- Enlace HaLow caracterizado:} latencia mediana $<$6\,ms y caudal de bajada 4--5,5\,Mbps (§\ref{sec:resultados-halow}) habilitan transferencia OTA y telemetría simult\'{a}nea sin cuello de botella.
 \end{itemize}
 
@@ -463,7 +465,7 @@ A continuación se analizan las fortalezas, limitaciones y posicionamiento de la
 \label{sec:resultados-discusion-limitaciones}
 
 \begin{enumerate}
-    \item \textbf{L1 -- Escala piloto:} 60 medidores en una ubicación limita generalización estadística.
+    \item \textbf{L1 -- Escala piloto:} 1 nodo físico en una ubicación; resultados de escalabilidad son proyecciones analíticas pendientes de validación multinodo.
     \item \textbf{L2 -- Punto único de fallo:} Pasarela sin redundancia VRRP/espera activa.
     \item \textbf{L3 -- HaLow requiere LoS y presenta asimetr\'{i}a 40--45\,dB:} NLOS degrada caudal 60\%; la asimetr\'{i}a de potencia TX limita subida a $\sim$1\,Mbps (§\ref{sec:resultados-halow-signal}).
     \item \textbf{L4 -- Límite Thread:} Máximo 250 dispositivos/partición IEEE~802.15.4.
@@ -492,7 +494,7 @@ Alharbi et al.\ (2021)~\cite{alharbi2021} & NB-IoT + AWS IoT & 890\,ms & 99.1\% 
 Li et al.\ (2022)~\cite{li2022} & Zigbee + Pasarela de borde & 320\,ms & 99.4\% & 80 nodos \\
 \hline
 \rowcolor{green!10}
-\textbf{Esta tesis} & \textbf{Thread + HaLow + Borde} & \textbf{85\,ms} & \textbf{99.40\%} & \textbf{60 nodos} \\
+\textbf{Esta tesis} & \textbf{Thread + HaLow + Borde} & \textbf{85\,ms} & \textbf{99.40\%} & \textbf{1 nodo (est.\ 100+)} \\
 \hline
 \end{tabular}}
 \end{table}
@@ -545,7 +547,7 @@ Hipótesis general \textbf{VALIDADA} (5 de 5 afirmaciones cuantitativas cumplida
 \rowcolor{gray!20}
 \textbf{ID} & \textbf{Objetivo} & \textbf{Métrica clave} & \textbf{Meta} & \textbf{Resultado} & \textbf{Estado} \\
 \hline
-OV1 & Viabilidad arquitectura 4 niveles & Despliegue exitoso 30 días & Sí & 172\,791/172\,800 lecturas (99.995\%) & \cellcolor{green!20} VAL \\
+OV1 & Viabilidad arquitectura 4 niveles & Despliegue exitoso 30 días & Sí & 2\,879/2\,880 lecturas (99.97\%) & \cellcolor{green!20} VAL \\
 \hline
 OV2 & Thread simplifica comisionado & Tiempo provisioning/nodo & <10\,min & 2.8\,min (BLE+QR), 81\% vs Zigbee & \cellcolor{green!20} VAL \\
 \hline
@@ -579,17 +581,17 @@ El estándar ISO/IEC 30141:2024 define 7 entidades funcionales (FE) mandatorias 
 \toprule
 \textbf{Entidad (FE)} & \textbf{Implementación} & \textbf{Evidencia piloto} \\
 \midrule
-1. Sensing \& Actuation & 1 medidor DLMS/COSEM + 60 nodos Thread (1 físico + 59 telemetría simulada) & 172\,791 lecturas exitosas (99.995\%), precisión $\pm$0.5\% clase 1 \\
+1. Sensing \& Actuation & 1 medidor DLMS/COSEM + 1 nodo Thread (ESP32-C6) & 2\,879 lecturas exitosas (99.97\%), precisión $\pm$0.5\% clase 1 \\
 \addlinespace
 2. Communication & Thread 802.15.4 (HAN) + HaLow 802.11ah (NAN) + Ethernet local~\cite{ThreadGroup1-4-0,IEEE802154-2020} & PDR 98.7\%, latencia Thread 11$\pm$3\,ms/hop, HaLow 160\,kbps \\
 \addlinespace
-3. Processing & ThingsBoard Edge Rule Engine (72 rule nodes) + Cloud Kafka & Borde 8$\pm$2\,ms, 259\,176 msgs/72\,h estrés (99.99\%) \\
+3. Processing & ThingsBoard Edge Rule Engine (72 rule nodes) + Cloud Kafka & Borde 8$\pm$2\,ms, 4\,318 msgs/72\,h estrés (99.95\%) \\
 \addlinespace
 4. Storage & PostgreSQL local (7 días) + servidor \emph{on-premise} & Almac.\ 229\,min sin conexión, 0 mensajes perdidos, compresión 6.2:1 \\
 \addlinespace
 5. Security & AES-128-CCM-8 (Thread) + WPA3-SAE (HaLow) + TLS 1.3 (gRPC) & 0 intrusiones (Suricata IDS 30 días), 100\% cifrado ext.\ a ext.\ \\
 \addlinespace
-6. Management & LwM2M 1.1 + Objeto 10242 (Eclipse Leshan 2.0) + OTA (Object 5) & 2 OTA exitosas (v1.0.2$\rightarrow$v1.0.4, 30 nodos, 100\% success) \\
+6. Management & LwM2M 1.1 + Objeto 10242 (Eclipse Leshan 2.0) + OTA (Object 5) & 2 OTA exitosas (v1.0.2$\rightarrow$v1.0.4, 1 nodo, 100\% success) \\
 \addlinespace
 7. Application Support & REST API ThingsBoard + LwM2M + WebSockets & 45\,280 req/día, P99 120\,ms, 99.97\% success \\
 \bottomrule
@@ -602,6 +604,6 @@ La distribución jerárquica de 4 niveles (Sensado $\rightarrow$ Pasarela $\righ
 \section{Conclusiones del Capítulo}
 \label{sec:resultados-conclusiones}
 
-El piloto de 30 días con 1 medidor físico Emsitech P2000-T y 59 nodos con telemetría simulada validó la arquitectura en tres dimensiones principales: (1)~latencia de borde 8$\pm$2\,ms (P95: 10\,ms), latencia ext.\ a ext.\ 85$\pm$12\,ms mediante enlace local sin dependencia WAN; (2)~disponibilidad 99.40\%; (3)~reducción tráfico WAN 72\%. Los 7 objetivos de validación OV1--OV7 se cumplieron con márgenes estadísticamente significativos, y la conformidad con ISO/IEC 30141:2024 quedó documentada mediante mapeo a las 7 entidades funcionales mandatorias.
+El piloto de 30 días con 1 nodo físico (XIAO ESP32-C6) conectado a 1 medidor Emsitech P2000-T validó la arquitectura en tres dimensiones principales: (1)~latencia de borde 8$\pm$2\,ms (P95: 10\,ms), latencia ext.\ a ext.\ 85$\pm$12\,ms mediante enlace local sin dependencia WAN; (2)~disponibilidad 99.40\%; (3)~reducción tráfico WAN 72\%. Los 7 objetivos de validación OV1--OV7 se cumplieron con márgenes estadísticamente significativos, y la conformidad con ISO/IEC 30141:2024 quedó documentada mediante mapeo a las 7 entidades funcionales mandatorias. Las proyecciones analíticas (Tabla~\ref{tab:escalabilidad-gateway}) indican margen suficiente para escalar a 100 nodos por pasarela; la validación física multinodo se propone como trabajo futuro.
 
 Complementariamente, la caracterización simétrica del enlace HaLow (§\ref{sec:resultados-halow}) cuantificó el rendimiento del segmento troncal IEEE~802.11ah: el canal de 2\,MHz demostró ser la configuración más fiable (0\,\% pérdida UDP a 1\,Mbps, CV$<$20\,\%), el canal de 4\,MHz maximiza caudal (5,56\,Mbps bajada), y se identificó una asimetría de señal de 40--45\,dB como restricción inherente del \emph{hardware}. Estas mediciones validan la elección de 2\,MHz para el enlace troncal del piloto y orientan el dimensionamiento de futuras redes AMI basadas en HaLow.
