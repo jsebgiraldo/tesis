@@ -1,4 +1,9 @@
-# LaTeX auxiliary files
+# ============================================================
+# .gitignore — Tesis Maestría IoT Smart Energy
+# Última actualización: 2026-03-17
+# ============================================================
+
+# ------ LaTeX auxiliares ------
 *.aux
 *.lof
 *.log
@@ -11,33 +16,23 @@
 *.cb
 *.cb2
 .*.lb
-
-# LaTeX intermediate files
 *.dvi
 *.xdv
 *-converted-to.*
-
-# LaTeX bibliography files
 *.bbl
 *.bcf
 *.blg
 *-blx.aux
 *-blx.bib
 *.run.xml
-
-# LaTeX build tool files
 *.fdb_latexmk
 *.synctex
 *.synctex(busy)
 *.synctex.gz
 *.synctex.gz(busy)
 *.pdfsync
-
-# LaTeX minted (code highlighting)
 _minted*
 *.pyg
-
-# LaTeX glossaries
 *.acn
 *.acr
 *.glg
@@ -46,26 +41,14 @@ _minted*
 *.glsdefs
 *.lzo
 *.lzs
-
-# LaTeX gnuplot files
 *.gnuplot
 *.table
-
-# LaTeX hyperref
 *.brf
-
-# LaTeX knitr
 *-concordance.tex
-
-# LaTeX listings
 *.lol
-
-# LaTeX makeidx
 *.idx
 *.ilg
 *.ind
-
-# LaTeX minitoc
 *.maf
 *.mlf
 *.mlt
@@ -73,143 +56,79 @@ _minted*
 *.slf[0-9]*
 *.slt[0-9]*
 *.stc[0-9]*
-
-# LaTeX nomencl
 *.nlg
 *.nlo
 *.nls
-
-# LaTeX pax
 *.pax
-
-# LaTeX pdfpages
 *.pdf_tex
-
-# LaTeX sagetex
 *.sagetex.sage
 *.sagetex.py
 *.sagetex.scmd
-
-# LaTeX scrwfile
 *.wrt
-
-# LaTeX sympy
 *.sout
 *.sympy
 sympy-plots-for-*.tex/
-
-# LaTeX pdfcomment
 *.upa
 *.upb
-
-# LaTeX pythontex
 *.pytxcode
 pythontex-files-*/
-
-# LaTeX tcolorbox
 *.listing
-
-# LaTeX thmtools
 *.thm
-
-# LaTeX TikZ & PGF
 *.dpth
 *.md5
 *.auxlock
-
-# LaTeX todonotes
 *.tdo
-
-# LaTeX vhistory
 *.hst
 *.ver
-
-# LaTeX xindy
 *.xdy
-
-# LaTeX xypic precompiled matrices
 *.xyc
-
-# LaTeX endfloat
 *.ttt
 *.fff
-
-# LaTeX latexindent backup files
 indent.log
-
-# LaTeX Beamer
 *.nav
 *.pre
 *.snm
 *.vrb
-
-# LaTeX standalone
 *-standalone.pdf
-
-# LaTeX algorithm2e
 *.alg
-
-# LaTeX changes
 *.soc
-
-# LaTeX comment
 comment.cut
-
-# LaTeX fixme
 *.lox
-
-# LaTeX glossaries-extra
 *.glg-abr
 *.glo-abr
 *.gls-abr
-
-# LaTeX translations
 *.dict
-
-# LaTeX siunitx
 *.siunits
-
-# Output PDFs (comentar la siguiente línea si quieres versionar el PDF final)
-# *.pdf
-
-# PDFs de referencias (muy pesados, no trackear)
-ref/*.pdf
-ref/**/*.pdf
-
-# Archivos LaTeX duplicados en raíz
-*Introduccion.tex
-*Gateway*.tex
-*Arquitectura*.tex
-*Conclusiones*.tex
-*MarcoTeorico.tex
-
-# Scripts y documentación temporal
-PLAN_*.md
-ANALISIS_*.md
-ZOTERO_*.md
-ACTUALIZACION_*.md
-RESUMEN_*.md
-INSTRUCCIONES_*.md
-actualizar_*.ps1
-agregar_*.ps1
-agregar_*.py
-fix_*.ps1
-fix_*.py
-organizar_*.ps1
-sync_*.ps1
-verificar_*.ps1
-analizar_*.py
-
-# MiKTeX specific
 *.miktex
+compile_*.txt
+compile_log*.txt
 
-# Backup files
-*~
-*.backup
-*.bak
-*.sav
+# ------ PDFs de referencia (pesados, no versionar) ------
+ref/
+Tesis___Trabajo_final___Maestria___2025/ref_canon/
+Tesis___Trabajo_final___Maestria___2025/referencias_organizadas_completo/
+Tesis___Trabajo_final___Maestria___2025/rev/
 
-# OS generated files
+# ------ Revisiones PDF (pesados, no versionar) ------
+rev/
+
+# ------ Python / venv ------
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# ------ Firmware / Zephyr ------
+codigo/zephyr-app/build/
+codigo/lwm2m-thread-app/build/
+
+# ------ Obsidian (mantener config, ignorar estado volátil) ------
+.obsidian/workspace*
+.obsidian/cache/
+.obsidian/graph.json.bak
+
+# ------ OS ------
 .DS_Store
 .DS_Store?
 ._*
@@ -219,69 +138,102 @@ ehthumbs.db
 Thumbs.db
 Desktop.ini
 
-# Editor specific files
+# ------ Editores / IDEs ------
 .vscode/
 .idea/
 *.swp
 *.swo
-*~
 
-# Temporary files
+# ------ Backups / temporales ------
+*~
+*.backup
+*.bak
+*.bak[0-9]*
+*.sav
+*.tmp
 tmp/
 temp/
-*.tmp
+nul
+typescript
 
-# Build directories
+# ------ Build / dist ------
 build/
 out/
 dist/
 
-# Windows specific
+# ------ Windows ------
 $RECYCLE.BIN/
 *.lnk
 
-# Git specific (no necesario pero por claridad)
-.git/
-.gitattributes
-
-# Obsidian (versionar notas/canvas; ignorar estado local volátil)
-.obsidian/workspace*
-.obsidian/cache/
-.obsidian/graph.json.bak
-
-# LaTeX compilation logs
-compile_*.txt
-compile_log*.txt
-
-# --- Zephyr / Firmware build artifacts ---
-codigo/zephyr-app/build/
-__pycache__/
-*.pyc
-
-# PDF revisiones (pesados, no versionar)
-rev/*.pdf
-
-# Patches temporales
+# ------ Patches temporales ------
 *.patch
 
-# --- Archivos temporales de sesión ---
-# Scripts de recuperación/extracción de sesión (prefijo _)
+# ------ Archivos binarios pesados en raíz (no versionar) ------
+rework.docx
+tesis.drawio
+thingsboard-architecture.svg
+.$tesis.drawio.bkp
+
+# ------ Scripts de sesión / recuperación (prefijo _) ------
 _*.py
 
-# Backups de edición
-*.bak
-*.bak[0-9]*
-
-# Archivos basura (Windows NUL, terminal typescript)
-nul
-typescript
-
-# Paquetes de entrega temporales
+# ------ Paquetes de entrega temporales ------
 thesis_package_*/
 thesis_symmetric_package/
 
-# Documentos de extracción obsoletos
+# ------ Documentos obsoletos / archivados ------
 EXTRACCION_TECNICA_COMPLETA_OLD.md
-
-# Capítulos archivados (ya no compilan)
 04Implementacion_NEW_ARCHIVED.tex
+intro_cleanup.patch
+TODO_REVISION_COMPLETA.md
+INVENTARIO_FIGURAS_COMPLETO.md
+Untitled.canvas
+.$tesis.drawio.bkp
+refactor.pdf
+
+# ------ Archivos Obsidian vacíos / placeholder ------
+Obsidian_Personal/
+tesis_notes/
+figuras/
+
+# ------ Scripts PowerShell temporales (Windows) ------
+actualizar_*.ps1
+agregar_*.ps1
+fix_*.ps1
+organizar_*.ps1
+sync_*.ps1
+verificar_*.ps1
+
+# ------ Documentos de sesion temporales (solo raiz) ------
+/PLAN_*.md
+/ANALISIS_*.md
+/ZOTERO_*.md
+/ACTUALIZACION_*.md
+/RESUMEN_*.md
+/INSTRUCCIONES_*.md
+/agregar_*.py
+/analizar_*.py
+/fix_*.py
+
+# ------ Datos exportados (regenerables; conservar v7 actual) ------
+datos/thesis_export_v4/
+
+# ------ Archivos LaTeX de refactoring/backup que ya no compilan ------
+Tesis___Trabajo_final___Maestria___2025/02MarcoTeorico_Rework.tex
+Tesis___Trabajo_final___Maestria___2025/02MarcoTeorico_Rework_BACKUP_PRE_RESTRUCTURE.tex
+Tesis___Trabajo_final___Maestria___2025/02MarcoTeorico_Rework_V2.tex
+Tesis___Trabajo_final___Maestria___2025/02MarcoTeorico_REFACTORED.tex
+Tesis___Trabajo_final___Maestria___2025/02MarcoTeorico_SECCION_2_3_NUEVA_BACKUP.tex
+Tesis___Trabajo_final___Maestria___2025/02MarcoTeorico_SECCION_2_3_NUEVA_BACKUP2.tex
+Tesis___Trabajo_final___Maestria___2025/02MarcoTeorico_SECCION_2_4_1_NUEVA_BACKUP.tex
+Tesis___Trabajo_final___Maestria___2025/03Arquitectura_REFACTORED.tex
+Tesis___Trabajo_final___Maestria___2025/03Gateway_backup.tex
+Tesis___Trabajo_final___Maestria___2025/03Gateway_compressed.tex
+Tesis___Trabajo_final___Maestria___2025/03Gateway_optimized.tex
+Tesis___Trabajo_final___Maestria___2025/04Arquitectura_backup.tex
+Tesis___Trabajo_final___Maestria___2025/04Arquitectura_compressed.tex
+Tesis___Trabajo_final___Maestria___2025/05Conclusiones_SECCION_5_5_NUEVA.tex
+Tesis___Trabajo_final___Maestria___2025/07Conclusiones_TrabajoFuturo_REDUCED.tex
+Tesis___Trabajo_final___Maestria___2025/fig_esp32c6_block_diagram_backup.tex
+Tesis___Trabajo_final___Maestria___2025/fig_arquitectura_tres_niveles_v1_backup.tex
+Tesis___Trabajo_final___Maestria___2025/fig_lwm2m_registration_flow_backup.tex
