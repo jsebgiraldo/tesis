@@ -7,19 +7,19 @@ Esta tesis diseñó, implementó y validó una arquitectura IoT centrada en pasa
 
 \subsection{Cumplimiento de Objetivos}
 
-\textbf{Objetivo General --- CUMPLIDO:} Reducción de latencia ext. a ext. de 97.4\% (85$\pm$12~ms vs 3\,247$\pm$118~ms línea base, p<0.0001), disponibilidad 99.40\% durante 30 días de piloto con 1 nodo físico, e integración bidireccional Thread$\rightarrow$HaLow sin pérdida de mensajes en 72~h de prueba de estrés.
+\textbf{Objetivo General --- CUMPLIDO:} Reducción de latencia ext. a ext. de 97,4\% (85$\pm$12~ms vs 3\,247$\pm$118~ms línea base, p<0,0001), disponibilidad 99,40\% durante 30 días de piloto con 1 nodo físico, e integración bidireccional Thread$\rightarrow$HaLow sin pérdida de mensajes en 72~h de prueba de estrés.
 
 \textbf{Objetivos Específicos:}
 \begin{itemize}
 \item \textbf{OE1 --- Arquitectura multi-capa (CUMPLIDO):} 4 capas (Conectividad, Orquestación, Procesamiento, Aplicación) con interfaces estándar (Cap.~\ref{chap:nodo-iot}).
 \item \textbf{OE2 --- Integración Thread-HaLow (CUMPLIDO):} OTBR + nRF52840 RCP + Morse Micro MM6108, latencia Thread$\rightarrow$HaLow 38$\pm$7~ms (3-hop).
 \item \textbf{OE3 --- Plataforma de borde en contenedores (CUMPLIDO):} Docker Compose con 3 servicios (ThingsBoard Edge~3.6.2 con transporte LwM2M integrado, PostgreSQL~15, Redis~7.0) y OTBR como servicio nativo de OpenWRT; $\sim$2,5 núcleos / $\sim$1,8~GB RAM en RPi4, dejando $\sim$2,2~GB libres para OTBR y sistema operativo. Almacenamiento local con sincronización gRPC bidireccional hacia servidor \emph{on-premise}; 0\% pérdida de mensajes durante desconexiones de 30~min (Cap.~\ref{chap:gateway-halow}).
-\item \textbf{OE4 --- Caso de estudio energía inteligente (CUMPLIDO):} 1 nodo físico (XIAO ESP32-C6) + enlace HaLow, 30 días, 2\,880 mensajes; almacenamiento local 100\% durante desconexión 30~min.  Adicionalmente, \emph{benchmark} LwM2M de 4~versiones de \emph{firmware} con datos reales del medidor Emsitech P2000-T: corrección ConnMon 6$\times$ \emph{throughput}, umbrales inteligentes $-$61\% tráfico, utilización del canal 0,22\% $\rightarrow$ 461~nodos estimados (Cap.~\ref{chap:resultados}).
+\item \textbf{OE4 --- Caso de estudio energía inteligente (CUMPLIDO):} 1 nodo físico (XIAO ESP32-C6) + enlace HaLow, 30 días, 2\,880 mensajes; almacenamiento local 100\% durante desconexión 30~min.  Adicionalmente, \emph{benchmark} LwM2M del \emph{firmware} final v0.18.0 con datos reales del medidor Emsitech P2000-T: 3~escenarios Observe (producción, agresivo~1\,s, medio~5\,s) con control de tasa mediante macro \texttt{PUSH\_FIELD} y parámetros estándar pmin/pmax, 117/117~pruebas unitarias y utilización del canal 0,05\% $\rightarrow$ 461~nodos estimados (Cap.~\ref{chap:resultados}).
 \end{itemize}
 
 \section{Validación de Hipótesis}
 
-La hipótesis general fue \textbf{validada}: reducción de latencia >60\% (logrado 97.4\%, p<0.0001) y disponibilidad >99\% durante 30 días de piloto (logrado 99.40\%). Las siete hipótesis específicas (H1--H7) fueron evaluadas mediante los experimentos de los Capítulos~\ref{chap:nodo-iot} y~\ref{chap:gateway-halow}. La Tabla~\ref{tab:hipotesis-validacion} resume la validación: 7 de 7 completamente validadas.
+La hipótesis general fue \textbf{validada}: reducción de latencia >60\% (logrado 97,4\%, p<0,0001) y disponibilidad >99\% durante 30 días de piloto (logrado 99,40\%). Las siete hipótesis específicas (H1--H7) fueron evaluadas mediante los experimentos de los Capítulos~\ref{chap:nodo-iot} y~\ref{chap:gateway-halow}. La Tabla~\ref{tab:hipotesis-validacion} resume la validación: 7 de 7 completamente validadas.
 
 \begin{table}[h]
 \centering
@@ -56,23 +56,23 @@ Las contribuciones de esta investigación se organizan en dos ejes:
 
 \textbf{Contribuciones académicas:}
 \begin{enumerate}
-\item \textbf{Arquitectura de referencia IoT heterogénea conforme a ISO/IEC~30141:} Primera integración funcional validada experimentalmente de HaLow + 6LoWPAN/Thread + despliegue de servicios en contenedores en el borde para energía inteligente. Ningún trabajo previo identificado en 230+ referencias (2018--2026) combina estos tres elementos.
-\item \textbf{Caracterización empírica Thread$\leftrightarrow$HaLow:} Primera medición publicada de latencia, caudal y confiabilidad en integración Thread-HaLow vía OTBR con HaLow nativo (AHPI6108E, SDIO): 38$\pm$7~ms ext. a ext. (3-hop), 2.4~Mbps sostenido. Proyección analítica indica escalabilidad hasta 68 nodos sin degradación >10\% en P95.
+\item \textbf{Arquitectura de referencia IoT heterogénea conforme a ISO/IEC~30141:} Integración funcional validada experimentalmente de HaLow + 6LoWPAN/Thread + despliegue de servicios en contenedores en el borde para energía inteligente. En el alcance de la revisión bibliográfica realizada (230+ referencias, 2018--2026), esta combinación aparece escasamente reportada de forma integrada y con validación de extremo a extremo.
+\item \textbf{Caracterización empírica Thread$\leftrightarrow$HaLow:} Caracterización experimental de latencia, caudal y confiabilidad en integración Thread-HaLow vía OTBR con HaLow nativo (AHPI6108E, SDIO): 38$\pm$7~ms ext. a ext. (3-hop), 2.4~Mbps sostenido. Proyección analítica indica escalabilidad hasta 68 nodos sin degradación >10\% en P95.
 \end{enumerate}
 
 \textbf{Contribuciones técnicas:}
 \begin{enumerate}
 \item \textbf{Configuración HaLow y Thread para pasarela de borde:} Implementación operativa OTBR + HaLow nativo vía AHPI6108E (SDIO, MM6108) con UCI OpenWRT + selección adaptativa multi-banda HaLow (2/4/8~MHz).
 \item \textbf{Despliegue de servicios de telemetría en pasarela de borde:} Pila Docker Compose de 3 servicios (ThingsBoard Edge con LwM2M integrado, PostgreSQL, Redis) con verificaciones de estado (\emph{health checks}), límites de recursos (\emph{resource limits}) y operación autónoma sin conexión 48~h+.
-\item \textbf{Diseño del \emph{firmware} del nodo 6LoWPAN para medidores inteligentes:} Cliente LwM2M Object~10242 sobre Thread~1.4 en nodo Zephyr con lectura RS-485 DLMS/COSEM.  Evolución iterativa documentada de 4~versiones (v0.13.0 a v0.15.1): identificación y corrección del bloqueo ConnMon~v1.3 (16/16~keys, 6$\times$ throughput) e implementación de umbrales inteligentes (\texttt{THRESH\_CHECK}, $-$61\% tráfico).
-\item \textbf{Protocolo de \emph{benchmark} LwM2M reproducible:} Metodología estandarizada de 4~escenarios $\times$ 4~versiones con análisis profundo de utilización del canal (0,22\%, 461~nodos máx.\ estimados), eficiencia del \emph{payload} (23,6\%) y caracterización temporal por recurso OBIS.
+\item \textbf{Diseño del \emph{firmware} del nodo 6LoWPAN para medidores inteligentes:} Cliente LwM2M Object~10242 sobre Thread~1.4 en nodo Zephyr con lectura RS-485 DLMS/COSEM.  El \emph{firmware} final v0.18.0 implementa la macro \texttt{PUSH\_FIELD} con control de tasa estándar LwM2M (pmin/pmax), arquitectura de protección de 5~capas y 117/117~pruebas unitarias, manteniendo observabilidad de 16/16~\emph{keys} en escenarios operativos.
+\item \textbf{Protocolo de \emph{benchmark} LwM2M reproducible:} Metodología estandarizada de 3~escenarios (producción, agresivo~1\,s, medio~5\,s) sobre el \emph{firmware} final v0.18.0, con análisis profundo de utilización del canal (0,05\%, 461~nodos máx.\ estimados), caracterización temporal por recurso OBIS y cobertura completa de pruebas unitarias (117/117).
 \end{enumerate}
 
 \subsection{Conclusiones Técnicas}
 
-\textbf{Arquitectura multi-protocolo viable y ventajosa.} La combinación Thread (malla interior densa) + HaLow (última milla 300~m exterior) demostró superioridad operacional sobre arquitecturas de protocolo único: cobertura optimizada por capa, eficiencia energética (nodos MED alimentados desde puerto 5V del medidor, 27~mA), y caudal adaptativo (250~kbps Thread para telemetría, 4~Mbps HaLow para agregación).
+\textbf{Arquitectura multi-protocolo viable y ventajosa.} La combinación Thread (malla interior densa) + HaLow (última milla 300~m exterior) mostró ventajas operacionales en el escenario evaluado frente a alternativas de protocolo único: cobertura optimizada por capa, eficiencia energética (nodos MED alimentados desde puerto 5V del medidor, 27~mA), y caudal adaptativo (250~kbps Thread para telemetría, 4~Mbps HaLow para agregación).
 
-\textbf{Computación de borde reduce latencia drásticamente.} Latencia de procesamiento de borde local: \textbf{8$\pm$2~ms} (P50=7.8~ms, P99=18.7~ms), habilitando analítica en tiempo real. Latencia ext. a ext. completa: 85$\pm$12~ms medida experimentalmente (39~ms estimada por componentes), cumpliendo IEC~62056 (<1~s) con amplio margen. Reducción 97.4\% vs línea base centrada en nube (p<0.0001).
+\textbf{Computación de borde reduce latencia drásticamente.} Latencia de procesamiento de borde local: \textbf{8$\pm$2~ms} (P50=7,8~ms, P99=18,7~ms), habilitando analítica en tiempo real. Latencia ext. a ext. completa: 85$\pm$12~ms medida experimentalmente (39~ms estimada por componentes), cumpliendo IEC~62056 (<1~s) con amplio margen. Reducción 97,4\% vs línea base centrada en nube (p<0,0001).
 
 \textbf{Despliegue modular en contenedores sin sacrificio de rendimiento.} Docker introduce sobrecarga aceptable (+0.8$\pm$0.2~ms latencia, <2\% caudal) con ventajas operativas decisivas: actualizaciones graduales, retroceso instantáneo, aislamiento de fallos.
 
@@ -86,7 +86,7 @@ Se organizan las limitaciones en tres categorías: técnicas, de seguridad y eco
 
 \subsection{Limitaciones Técnicas}
 
-\textbf{L1 --- Escalabilidad validada con 1 dispositivo físico:} Aunque el \emph{benchmark} LwM2M midió una utilización del canal del 0,22\% (estimando 461~nodos/red Thread), los resultados de escalabilidad a 60--100 nodos siguen siendo proyecciones analíticas.  La validación física multinodo requiere despliegue con decenas de medidores y nodos reales, considerando latencia por salto (+12~ms), congestión en enrutador de borde (>50 nodos concurrentes), y sobrecarga de enrutamiento MLE.
+\textbf{L1 --- Escalabilidad validada con 1 dispositivo físico:} Aunque el \emph{benchmark} LwM2M midió una utilización del canal del 0,05\% (estimando 461~nodos/red Thread), los resultados de escalabilidad a 60--100 nodos siguen siendo proyecciones analíticas.  La validación física multinodo requiere despliegue con decenas de medidores y nodos reales, considerando latencia por salto (+12~ms), congestión en enrutador de borde (>50 nodos concurrentes), y sobrecarga de enrutamiento MLE.
 
 \textbf{L2 --- Cobertura HaLow limitada a 300~m en entorno urbano NLOS:} Alcance teórico 1~km asume LoS. Extensiones >500~m requieren repetidores en malla, antenas direccionales 9~dBi, o mayor potencia TX (30~dBm).
 
@@ -106,7 +106,7 @@ Se organizan las limitaciones en tres categorías: técnicas, de seguridad y eco
 
 Se identifican cinco líneas principales de investigación ordenadas por prioridad e impacto:
 
-\textbf{Línea 1 --- Validación Multinodo y Escalabilidad.} El \emph{benchmark} LwM2M del presente trabajo estimó 461~nodos/red Thread a partir de la utilización medida del canal (0,22\%).  El siguiente paso es desplegar un piloto físico con 60--100 nodos Thread para contrastar esta proyección con mediciones reales de congestión, latencia multinodo y degradación de caudal. Validar la arquitectura con 1\,000+ dispositivos mediante simulación NS-3 y emulación Docker, identificando cuellos de botella (CPU, memoria, red). Implementar agrupación de alta disponibilidad (\emph{clustering} HA) activo-pasivo con consenso Raft y replicación PostgreSQL por flujo continuo (\emph{streaming}) para eliminar punto único de falla.
+\textbf{Línea 1 --- Validación Multinodo y Escalabilidad.} El \emph{benchmark} LwM2M del presente trabajo estimó 461~nodos/red Thread a partir de la utilización medida del canal (0,05\%).  El siguiente paso es desplegar un piloto físico con 60--100 nodos Thread para contrastar esta proyección con mediciones reales de congestión, latencia multinodo y degradación de caudal. Validar la arquitectura con 1\,000+ dispositivos mediante simulación NS-3 y emulación Docker, identificando cuellos de botella (CPU, memoria, red). Implementar agrupación de alta disponibilidad (\emph{clustering} HA) activo-pasivo con consenso Raft y replicación PostgreSQL por flujo continuo (\emph{streaming}) para eliminar punto único de falla.
 
 \textbf{Línea 2 --- Inteligencia Artificial en el Borde.} Integrar motores de inferencia LLM (Ollama/Llama~3.2) en la pasarela RPi4 para clasificación de anomalías y asistencia conversacional. Implementar detección de anomalías en series temporales (autoencoders LSTM, Isolation Forest) para identificar robo energético y fallas de transformador, con entrenamiento en la nube (\emph{cloud}) y despliegue en el borde (\emph{edge}) vía ONNX/TFLite. Desarrollar predicción (\emph{forecasting}) de generación renovable (XGBoost + LSTM híbrido) para gestión proactiva de almacenamiento.
 
@@ -118,10 +118,10 @@ Se identifican cinco líneas principales de investigación ordenadas por priorid
 
 \textbf{Línea 6 --- Servidor ThingsBoard \emph{On-Premise}.} Implementar servidor local \emph{on-premise} (ThingsBoard PE + Kafka + PostgreSQL/TimescaleDB) para despliegues >1\,000 medidores, con análisis comparativo de costos en la nube (\emph{cloud}) vs local (\emph{on-premise}) y federación multi-sitio Kubernetes.
 
-\textbf{Recursos estimados:} 18.5 persona-año (equipo de 3 investigadores $\times$ 6 años). Financiamiento: convocatorias Minciencias, FENOGE, colaboración con empresas de servicios públicos colombianas.
+\textbf{Recursos estimados:} 18 persona-año (equipo de 3 investigadores $\times$ 6 años). Financiamiento: convocatorias Minciencias, FENOGE, colaboración con empresas de servicios públicos colombianas.
 
 \section{Reflexiones Finales}
 
-La presente investigación demostró que una arquitectura IoT de borde (\emph{edge}) bien diseñada, combinando protocolos heterogéneos (Thread, HaLow), despliegue en contenedores y conformidad con estándares abiertos (ISO/IEC~30141, DLMS/COSEM), puede satisfacer simultáneamente requerimientos aparentemente contradictorios: baja latencia y alta disponibilidad, procesamiento inteligente y eficiencia energética, interoperabilidad multi-vendor y seguridad robusta.
+La presente investigación aporta evidencia de que una arquitectura IoT de borde (\emph{edge}) bien diseñada, combinando protocolos heterogéneos (Thread, HaLow), despliegue en contenedores y conformidad con estándares abiertos (ISO/IEC~30141, DLMS/COSEM), puede satisfacer simultáneamente requerimientos aparentemente contradictorios: baja latencia y alta disponibilidad, procesamiento inteligente y eficiencia energética, interoperabilidad multi-vendor y seguridad robusta.
 
 El cambio de paradigma centrado en la nube (\emph{cloud-centric}) a centrado en el borde (\emph{edge-centric}) no es mera optimización técnica, sino habilitador de casos de uso transformadores: control volt-VAR en tiempo real, gestión autónoma de microrredes, detección predictiva de fallas. La convergencia de protocolos 6LoWPAN, plataformas de borde de código abierto (\emph{open-source}) y estándares de interoperabilidad crea condiciones para ecosistemas de energía inteligente (\emph{Smart Energy}) genuinamente abiertos. Este trabajo aspira ser contribución concreta hacia esa visión.
