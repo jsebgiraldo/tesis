@@ -23,28 +23,22 @@ El diseño requiere un SoC con: (1)~radio IEEE~802.15.4, (2)~soporte Zephyr RTOS
 
 Para comunicación RS-485 con medidores DLMS/COSEM se utiliza un transceptor MAX485 con aislamiento galvánico 2,5\,kV~\cite{seeedstudioRS485Breakout2024}, terminal 3-pin (A+, B$-$, GND) con resistencia terminación 120\,$\Omega$ seleccionable. Conexión vía cable CAT5e al puerto RJ45 del medidor, alimentación 5\,V desde PoE auxiliar (200\,mA disponibles). Consumo sistema completo: 27\,mA @ 5\,V (véase Capítulo~\ref{chap:resultados}).
 
-\begin{table}[H]
+\begin{figure}[H]
 \centering
-\caption{Componentes principales de la plataforma de referencia del nodo IoT}
-\label{tab:plataforma-referencia}
-\begin{tabular}{llp{6.5cm}}
-\toprule
-\textbf{Componente} & \textbf{Parámetro} & \textbf{Valor} \\
-\midrule
-\multirow{5}{*}{\parbox{3cm}{\textbf{SoC / Módulo}\\\small XIAO ESP32-C6~\cite{seeedstudioXIAOESP32C62024}}}
-  & CPU          & RISC-V RV32IMAC @ 160\,MHz \\
-  & SRAM / Flash & 512\,KB / 4\,MB \\
-  & Radio        & IEEE~802.15.4: TX +21\,dBm, RX $-$103\,dBm \\
-  & Dimensiones  & 21$\times$17{,}5\,mm \\
-  & Precio       & \$3{,}20\,USD (volumen) \\
-\midrule
-\multirow{3}{*}{\parbox{3cm}{\textbf{Transceptor RS-485}\\\small MAX485~\cite{seeedstudioRS485Breakout2024}}}
-  & Aislamiento  & Galvánico 2{,}5\,kV \\
-  & Interfaz     & A$+$, B$-$, GND; terminación 120\,$\Omega$ \\
-  & Alimentación & 5\,V desde puerto auxiliar del medidor \\
-\bottomrule
-\end{tabular}
-\end{table}
+\begin{minipage}{0.45\textwidth}
+    \centering
+    \includegraphics[width=0.9\textwidth]{figures/1-113991254-seeedxiao-esp32c6-45font_1.jpg}
+    \small\textbf{(a)} Módulo SoC con radio 802.15.4
+\end{minipage}
+\hfill
+\begin{minipage}{0.45\textwidth}
+    \centering
+    \includegraphics[width=0.9\textwidth]{figures/1-113991354_1.jpg}
+    \small\textbf{(b)} Transceptor RS-485 con aislamiento galvánico
+\end{minipage}
+\caption{Plataforma de referencia utilizada en el piloto. Fuente:~\cite{seeedstudioXIAOESP32C62024,seeedstudioRS485Breakout2024}}
+\label{fig:xiao-hardware}
+\end{figure}
 
 \input{fig_esp32c6_block_diagram}
 

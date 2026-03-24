@@ -1,140 +1,73 @@
-% Diagrama de bloques TikZ del ESP32-C6 / XIAO ESP32C6 — Nodo IoT Thread
-% v3 — Hispanizado, rutas limpias sin cruces, bloques más espaciados
+% Diagrama de bloques simplificado del Nodo IoT ESP32-C6  v4
 
 \begin{figure}[ht]
 \centering
-\resizebox{0.95\textwidth}{!}{%
 \begin{tikzpicture}[
-  % Estilos base
-  blockbase/.style={rounded corners=3pt, minimum height=1.0cm, font=\scriptsize\sffamily,
-    inner sep=5pt, line width=0.6pt, align=center},
-  block-blue/.style={blockbase, draw=blue!65!black, fill=blue!12,
-    drop shadow={shadow xshift=0.4mm, shadow yshift=-0.4mm, opacity=0.15}},
-  block-purple/.style={blockbase, draw=purple!65!black, fill=purple!12,
-    drop shadow={shadow xshift=0.4mm, shadow yshift=-0.4mm, opacity=0.15}},
-  block-green/.style={blockbase, draw=green!50!black, fill=green!10,
-    drop shadow={shadow xshift=0.4mm, shadow yshift=-0.4mm, opacity=0.15}},
-  block-teal/.style={blockbase, draw=teal!65!black, fill=teal!12,
-    drop shadow={shadow xshift=0.4mm, shadow yshift=-0.4mm, opacity=0.15}},
-  block-orange/.style={blockbase, draw=orange!65!black, fill=orange!12,
-    drop shadow={shadow xshift=0.4mm, shadow yshift=-0.4mm, opacity=0.15}},
-  block-red/.style={blockbase, draw=red!60!black, fill=red!10,
-    drop shadow={shadow xshift=0.4mm, shadow yshift=-0.4mm, opacity=0.15}},
-  soc/.style={draw=blue!70!black, fill=blue!4, rounded corners=5pt,
-    line width=1.4pt, inner sep=8pt},
-  extblockbase/.style={rounded corners=3pt, minimum height=1.1cm, font=\scriptsize\sffamily,
-    inner sep=5pt, line width=0.7pt, align=center,
-    drop shadow={shadow xshift=0.3mm, shadow yshift=-0.3mm, opacity=0.12}},
-  extblock-green/.style={extblockbase, draw=green!40!black, fill=green!5},
-  extblock-purple/.style={extblockbase, draw=purple!55, fill=purple!6},
-  extblock-orange/.style={extblockbase, draw=orange!55, fill=orange!6},
-  extblock-brown/.style={extblockbase, draw=brown!55, fill=brown!6},
-  extblock-red/.style={extblockbase, draw=red!45, fill=red!5},
-  extblock-darkred/.style={extblockbase, draw=red!50, fill=red!5},
-  extblock-gray/.style={extblockbase, draw=gray!55, fill=gray!6},
-  conn/.style={-{Latex[length=2mm]}, line width=0.7pt, #1},
-  bidi/.style={{Latex[length=2mm]}-{Latex[length=2mm]}, line width=0.7pt, #1},
+  blkbase/.style={draw=black!70, rounded corners=4pt,
+    minimum width=2.6cm, minimum height=3.2cm,
+    font=\small\sffamily, align=center, inner sep=6pt},
+  socblk/.style={draw=blue!60!black, fill=blue!7, rounded corners=4pt,
+    minimum width=3.8cm, minimum height=3.2cm,
+    font=\small\sffamily, align=center, inner sep=8pt, line width=1.2pt},
+  lbl/.style={font=\scriptsize\sffamily, align=center},
+  arr/.style={-{Latex[length=2.5mm,width=1.5mm]}, line width=1pt},
+  biarr/.style={{Latex[length=2.5mm,width=1.5mm]}-{Latex[length=2.5mm,width=1.5mm]}, line width=1pt},
 ]
 
-% === Límite del SoC ===
-\draw[soc] (-6.5, -2.8) rectangle (6.5, 4.8);
-\node[font=\footnotesize\bfseries\sffamily, blue!70!black] at (0, 4.4) {ESP32-C6 SoC (QFN 5$\times$5\,mm)};
-
-% === CPU ===
-\node[block-blue, minimum width=4.0cm, minimum height=1.3cm] (cpu) at (0, 3.2) {};
-\node[font=\scriptsize\bfseries\sffamily] at (0, 3.5) {RISC-V RV32IMAC};
-\node[font=\scriptsize\sffamily] at (0, 2.95) {Núcleo único @ 160\,MHz (400\,DMIPS)};
-
-% === Memorias ===
-\node[block-purple, minimum width=1.8cm] (sram) at (-3.8, 3.2) {SRAM\\512\,KB};
-\node[block-purple, minimum width=1.8cm] (rom) at (3.8, 3.2) {ROM\\320\,KB};
-
-% === Radio 802.15.4 ===
-\node[block-green, minimum width=3.2cm, minimum height=1.3cm] (radio154) at (-3.0, 1) {};
-\node[font=\scriptsize\bfseries\sffamily] at (-3.0, 1.35) {Radio IEEE 802.15.4};
-\node[font=\scriptsize\sffamily] at (-3.0, 0.85) {2,4\,GHz | TX: +21\,dBm};
-\node[font=\scriptsize\sffamily] at (-3.0, 0.5) {RX: $-$105\,dBm};
-
-% === Radio Wi-Fi ===
-\node[block-teal, minimum width=2.8cm, minimum height=1.1cm] (radiowifi) at (3.0, 1) {};
-\node[font=\scriptsize\bfseries\sffamily] at (3.0, 1.25) {Radio Wi-Fi 6};
-\node[font=\scriptsize\sffamily] at (3.0, 0.85) {802.11ax 2,4\,GHz};
-
-% === Periféricos internos — una sola fila espaciada ===
-\node[block-orange, minimum width=1.6cm] (uart) at (-4.5, -0.9) {UART $\times$2};
-\node[block-orange, minimum width=1.4cm] (spi)  at (-2.2, -0.9) {SPI $\times$2};
-\node[block-orange, minimum width=1.2cm] (i2c)  at (0.0, -0.9) {I2C};
-\node[block-orange, minimum width=1.6cm] (adc)  at (2.5, -0.9) {ADC 12 bits\\$\times$7};
-\node[block-orange, minimum width=1.4cm] (gpio) at (4.8, -0.9) {GPIO\\$\times$22};
-
-% === Seguridad ===
-\node[block-red, minimum width=11.5cm, minimum height=0.8cm] (crypto) at (0, -2.0) {};
-\node[font=\scriptsize\bfseries\sffamily] at (0, -1.85) {Seguridad HW: AES-256 | SHA-256 | RSA/ECC | Arranque seguro};
-
-% === Bus interno ===
-\draw[blue!25!gray, line width=2.5pt, opacity=0.4] (-5.8, 2.1) -- (5.8, 2.1);
-\draw[blue!40!gray, line width=0.6pt] (-5.8, 2.1) -- (5.8, 2.1);
-\node[font=\scriptsize\bfseries\sffamily, blue!40!gray, fill=blue!4, inner sep=2pt, rounded corners=1pt] at (0, 2.28) {Bus AHB/APB};
-\draw[gray!35, line width=0.4pt] (cpu.south) -- (0, 2.1);
-\draw[gray!35, line width=0.4pt] (sram.south) -- (-3.8, 2.1);
-\draw[gray!35, line width=0.4pt] (rom.south) -- (3.8, 2.1);
-\draw[gray!35, line width=0.4pt] (radio154.north) -- (-3.0, 2.1);
-\draw[gray!35, line width=0.4pt] (radiowifi.north) -- (3.0, 2.1);
-
-% === COMPONENTES EXTERNOS ===
-
-% Antena 802.15.4 — horizontal directa
-\node[extblock-green, minimum width=1.8cm] (ant154) at (-8.8, 1) {Antena PCB\\2,4\,GHz};
-\draw[bidi=green!55!black] (radio154.west) -- (ant154.east);
-
-% Memoria Flash externa — horizontal directa desde SPI
-\node[extblock-purple, minimum width=1.8cm] (flash) at (-8.8, -0.9) {Flash SPI\\4\,MB};
-\draw[bidi=purple!55] (spi.west) -- (flash.east);
-
-% Transceptor RS-485 — sale por abajo de UART (ruta limpia)
-\node[extblock-orange, minimum width=2cm] (rs485) at (-8.8, -2.8) {MAX485\\RS-485};
-\draw[bidi=orange!55] (uart.south) -- (-4.5, -2.8) -- (rs485.east);
-
-% Medidor
-\node[extblock-brown, minimum width=2.2cm, minimum height=1.2cm] (meter) at (-12.2, -2.8) {Medidor\\Emsitech\\P2000-T\\DLMS/COSEM};
-\draw[bidi=brown!55, line width=0.8pt] (rs485.west) -- (meter.east)
-  node[midway, above, font=\tiny\sffamily] {9600\,bps};
-
-% Regulador LDO — horizontal desde borde derecho
-\node[extblock-red, minimum width=1.8cm] (ldo) at (8.8, -2.0) {LDO 3,3\,V\\AMS1117};
-\draw[conn=red!55] (ldo.west) -- (6.7, -2.0);
-\node[font=\scriptsize\sffamily, red!55!black] at (8.8, -2.85) {3,3\,V @ 800\,mA};
-
-% Alimentación desde medidor
-\node[extblock-darkred, minimum width=2cm] (pwr) at (12.2, -2.0) {Puerto aux.\\medidor\\5\,V / 100\,mA};
-\draw[conn=red!65, line width=0.8pt] (pwr.west) -- (ldo.east)
-  node[midway, above, font=\tiny\sffamily] {5\,V};
-
-% Conector USB (depuración) — horizontal al GPIO
-\node[extblock-gray, minimum width=1.8cm] (usb) at (8.8, -0.5) {USB-C\\(depuración)};
-\draw[bidi=gray!55] (6.7, -0.5) -- (usb.west);
-
-% === CONSUMO ===
-\node[draw=red!40, fill=red!3, rounded corners=3pt, font=\scriptsize\sffamily,
-  text width=3.5cm, inner sep=4pt] at (9.5, 1.5) {
-  \textbf{Consumo (5\,V):}\\
-  TX pico: 190\,mA\\
-  RX activo: 19,3\,mA (SoC)\\
-  Sistema completo: 27\,mA\\
-  Reposo (\emph{idle}): 7\,mA
+\node[blkbase, fill=brown!12, text width=2.4cm] (meter) at (0,0) {
+  \textbf{Medidor}\\
+  \textbf{Emsitech P2000-T}\\[4pt]
+  \scriptsize DLMS/COSEM\\
+  \scriptsize RS-485 (RJ45)\\
+  \scriptsize 9\,600\,bps, 8N1\\[4pt]
+  \scriptsize Puerto 5\,V / 200\,mA
 };
 
-% === ETIQUETA MÓDULO XIAO ===
-\node[draw=blue!35, fill=blue!3, rounded corners=3pt, font=\scriptsize\sffamily,
-  text width=3cm, inner sep=4pt] at (9.5, 3.5) {
-  \textbf{Módulo:} XIAO ESP32C6\\
-  \textbf{Fabricante:} Seeed Studio\\
-  \textbf{Dimensiones:} 21$\times$17,5\,mm\\
-  \textbf{Temp.:} $-$40$^\circ$C a +85$^\circ$C
+\node[blkbase, fill=orange!10, text width=2.2cm] (rs485) at (4.2,0) {
+  \textbf{MAX485}\\[4pt]
+  \scriptsize Aislamiento\\
+  \scriptsize galv. 2,5\,kV\\[4pt]
+  \scriptsize Term. 120\,$\Omega$\\
+  \scriptsize Half-duplex
 };
 
-\end{tikzpicture}%
-}% end resizebox
-\caption{Diagrama de bloques del nodo IoT basado en ESP32-C6 (módulo XIAO ESP32C6, Seeed Studio). El SoC integra CPU RISC-V RV32IMAC @ 160\,MHz, radio IEEE~802.15.4 (TX +21\,dBm, RX $-$105\,dBm) para red Thread, 512\,KB SRAM y acelerador criptográfico AES-256/SHA-256/RSA. Periféricos: UART$\times$2 (consola + RS-485 vía MAX485 hacia medidor Emsitech P2000-T @ 9600\,bps), SPI (flash 4\,MB), I2C, ADC 12 bits. Alimentación: 5\,V desde puerto auxiliar del medidor, regulado a 3,3\,V con LDO. Consumo: 19,3\,mA SoC activo, 27\,mA sistema completo (incluyendo RS-485 + LDO).}
+\node[socblk, text width=3.6cm] (soc) at (8.8,0) {
+  \textbf{ESP32-C6}\\
+  \textbf{\small(XIAO, 21$\times$17,5\,mm)}\\[4pt]
+  \scriptsize RISC-V @ 160\,MHz\\
+  \scriptsize 512\,KB SRAM -- 4\,MB Flash\\
+  \scriptsize Radio 802.15.4 (+21\,dBm)\\[3pt]
+  \rule{3cm}{0.3pt}\\[2pt]
+  \scriptsize \textbf{Zephyr RTOS v4.2}\\
+  \scriptsize OpenThread FTD\\
+  \scriptsize CoAP + LwM2M 1.1\\
+  \scriptsize Cliente DLMS/COSEM
+};
+
+\node[blkbase, fill=green!10, text width=2.2cm] (thread) at (13.4,0) {
+  \textbf{Red Thread}\\[4pt]
+  \scriptsize IEEE 802.15.4\\
+  \scriptsize 2,4\,GHz\\[4pt]
+  \scriptsize Canal 25 -- PANID 0xABCD\\
+  \scriptsize FTD (enrutador)
+};
+
+\draw[biarr, brown!60!black]
+  (meter.east) -- node[above, lbl] {RS-485\\HDLC} (rs485.west);
+\draw[biarr, orange!70!black]
+  (rs485.east) -- node[above, lbl] {UART1\\9600\,bps} (soc.west);
+\draw[arr, green!50!black, line width=1.2pt]
+  (soc.east) -- node[above, lbl] {Thread\\802.15.4} (thread.west);
+
+\node[draw=red!50, fill=red!4, rounded corners=3pt,
+  font=\scriptsize\sffamily, align=center, inner sep=5pt,
+  minimum width=7cm] (pwr) at (4.4,-2.6)
+  {\textbf{Alimentacion:} puerto aux. medidor 5\,V $\rightarrow$ LDO 3,3\,V (AMS1117) \quad
+   Consumo: 27\,mA activo -- 7\,mA reposo};
+\draw[arr, red!50] (meter.south) -- ++(0,-0.7) -| (pwr.west);
+\draw[arr, red!50] (pwr.east) -| (soc.south);
+
+\end{tikzpicture}
+\caption{Diagrama de bloques del nodo IoT. El medidor Emsitech P2000-T se comunica con el SoC ESP32-C6 mediante RS-485; el SoC ejecuta Zephyr~RTOS con cliente DLMS/COSEM, pila OpenThread~FTD y protocolo LwM2M~1.1 sobre CoAP. La conectividad inal\'{a}mbrica se realiza por IEEE~802.15.4. Alimentaci\'{o}n: 5\,V del puerto auxiliar del medidor.}
 \label{fig:esp32c6-block-diagram}
 \end{figure}
