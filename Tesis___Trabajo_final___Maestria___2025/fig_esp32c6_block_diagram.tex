@@ -35,7 +35,7 @@
   \textbf{ESP32-C6}\\
   \textbf{\small(XIAO, 21$\times$17,5\,mm)}\\[4pt]
   \scriptsize RISC-V @ 160\,MHz\\
-  \scriptsize 512\,KB SRAM -- 4\,MB Flash\\
+  \scriptsize 512\,KB SRAM \textbullet{} 4\,MB Flash\\
   \scriptsize Radio 802.15.4 (+21\,dBm)\\[3pt]
   \rule{3cm}{0.3pt}\\[2pt]
   \scriptsize \textbf{Zephyr RTOS v4.2}\\
@@ -48,22 +48,23 @@
   \textbf{Red Thread}\\[4pt]
   \scriptsize IEEE 802.15.4\\
   \scriptsize 2,4\,GHz\\[4pt]
-  \scriptsize Canal 25 -- PANID 0xABCD\\
+  \scriptsize Canal 25\\
+  \scriptsize PANID 0xABCD\\
   \scriptsize FTD (enrutador)
 };
 
 \draw[biarr, brown!60!black]
-  (meter.east) -- node[above, lbl] {RS-485\\HDLC} (rs485.west);
+  (meter.east) -- node[above, lbl, midway] {\scriptsize RS-485 / HDLC} (rs485.west);
 \draw[biarr, orange!70!black]
-  (rs485.east) -- node[above, lbl] {UART1\\9600\,bps} (soc.west);
-\draw[arr, green!50!black, line width=1.2pt]
-  (soc.east) -- node[above, lbl] {Thread\\802.15.4} (thread.west);
+  (rs485.east) -- node[above, lbl, midway] {\scriptsize UART1 / 9600\,bps} (soc.west);
+\draw[biarr, green!50!black, line width=1.2pt]
+  (soc.east) -- node[above, lbl, midway] {\scriptsize Thread 802.15.4} (thread.west);
 
 \node[draw=red!50, fill=red!4, rounded corners=3pt,
   font=\scriptsize\sffamily, align=center, inner sep=5pt,
   minimum width=7cm] (pwr) at (4.4,-2.6)
-  {\textbf{Alimentacion:} puerto aux. medidor 5\,V $\rightarrow$ LDO 3,3\,V (AMS1117) \quad
-   Consumo: 27\,mA activo -- 7\,mA reposo};
+  {\textbf{Alimentaci\'{o}n:} puerto aux. medidor 5\,V $\rightarrow$ LDO 3,3\,V (AMS1117) \quad
+   Consumo: 27\,mA activo $\cdot$ 7\,mA reposo};
 \draw[arr, red!50] (meter.south) -- ++(0,-0.7) -| (pwr.west);
 \draw[arr, red!50] (pwr.east) -| (soc.south);
 
