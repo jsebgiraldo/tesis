@@ -1,14 +1,23 @@
-\chapter[Pasarela de Borde: Thread y HaLow]{Pasarela Inteligente de Borde: Agregación Thread y Enlace Troncal HaLow}
+\chapter[Gateway IoT y Dominio de Borde]{Gateway IoT y Dominio de Borde}
 \label{chap:gateway-halow}
 
 % ============================================================================
-% PROPÓSITO: Detallar implementación del Gateway (RPi4 + OpenWRT + OTBR +
-% ThingsBoard Edge) y red HaLow. Se agota 802.11ah + OTBR + Edge aquí.
-% Rev11-com: reestructurado para reflejar arquitectura real desplegada.
+% Rev12: Reestructurado a 10 secciones con foco en overhead/latencia/protocolos.
 % ============================================================================
 
-\section{Introducción}
+%======================================================================
+\section{Introducci\'{o}n}
 \label{sec:gateway-intro}
+
+Este cap\'{i}tulo documenta los Niveles~2 y~3 de la arquitectura AMI: la \textbf{pasarela de borde} basada en Raspberry~Pi~4 y la \textbf{red de distribuci\'{o}n} Wi-Fi HaLow (IEEE~802.11ah) en malla 802.11s~\cite{qiaoSurveyWiFiHaLow2018}.
+
+La pasarela concentra tres responsabilidades que se analizan en detalle a lo largo del cap\'{i}tulo: (1)~puente Thread--IP mediante OpenThread Border Router (OTBR), (2)~plataforma de computaci\'{o}n en el borde con ThingsBoard Edge, y (3)~nodo de distribuci\'{o}n HaLow para la conectividad de \'{u}ltima milla entre pasarelas.
+
+\textbf{Estructura del cap\'{i}tulo:} \S\ref{sec:gateway-rol} define el rol de la pasarela en la arquitectura. \S\ref{sec:gateway-arquitectura} presenta la arquitectura \emph{hardware}. \S\ref{sec:gateway-sw} detalla el sistema operativo y software. \S\ref{sec:gateway-otbr} describe la implementaci\'{o}n de OTBR. \S\ref{sec:gateway-borde} documenta el procesamiento en el borde. \S\ref{sec:gateway-halow} analiza la red troncal HaLow. \S\ref{sec:gateway-integracion} describe la integraci\'{o}n con la plataforma IoT. \S\ref{sec:gateway-flujo-datos} presenta el flujo de datos extremo a extremo. \S\ref{sec:gateway-conclusiones} cierra el cap\'{i}tulo.
+
+%======================================================================
+\section{Rol del gateway en la arquitectura IoT}
+\label{sec:gateway-rol}
 
 Este capítulo documenta la implementación de los Niveles~2 y~3 de la arquitectura: la pasarela de borde basada en Raspberry~Pi~4 y la red de distribución Wi-Fi HaLow (IEEE~802.11ah) en malla 802.11s~\cite{qiaoSurveyWiFiHaLow2018}.  La pasarela de borde constituye el elemento central de la arquitectura, desempeñando tres funciones:
 
@@ -23,14 +32,15 @@ La elección de Raspberry~Pi~4 como plataforma de \emph{hardware} se fundamenta 
 \textbf{Estructura del capítulo:} §\ref{sec:gateway-arquitectura} presenta el \emph{hardware} de la pasarela y la justificación de selección.  §\ref{sec:gateway-openwrt} detalla el sistema operativo OpenWRT y su configuración para HaLow.  §\ref{sec:gateway-otbr} describe la implementación de OTBR.  §\ref{sec:gateway-tb-edge} documenta ThingsBoard Edge como plataforma de borde.  §\ref{sec:gateway-topologia} presenta la topología de red general, la implementación de la malla HaLow 802.11s y el flujo de datos extremo a extremo.  La infraestructura de servidor central se documenta en el Capítulo~\ref{chap:resultados}.
 
 %======================================================================
-\section{Arquitectura de la Pasarela Raspberry Pi 4}
+
+La arquitectura en tres niveles --- nodo IoT (Cap\'{i}tulo~\ref{chap:nodo-iot}), pasarela de borde y servidor \emph{on-premise} --- minimiza el tr\'{a}fico WAN mediante procesamiento local y reduce la latencia extremo a extremo al mantener el procesamiento cr\'{i}tico cerca de los dispositivos.
+
+%======================================================================
+\section{Arquitectura hardware del gateway}
 \label{sec:gateway-arquitectura}
 
-La implementación desplegó dos \textbf{pasarelas de borde Raspberry~Pi~4} (RPi4-01, RPi4-02) en un laboratorio controlado, equipadas con el módulo \textbf{Alfa Networks AHPI6108E} (formato HAT, chipset Morse Micro MM6108, interfaz SDIO)~\cite{morsemicroMM8108ProductBrief2025} que proporciona conectividad HaLow 802.11ah nativa.  Las pasarelas participan como \emph{Mesh Points} (estaciones) en una red en malla IEEE~802.11s junto con un nodo \textbf{Alfa Networks Tube~AHM} dedicado como \emph{Mesh Gate} (punto de acceso) con enlace troncal Ethernet hacia el \emph{switch} local y el servidor ThingsBoard \emph{on-premise}.
+La implementaci\'{o}n despleg\'{o} dos \textbf{pasarelas de borde Raspberry~Pi~4} (RPi4-01, RPi4-02) en un laboratorio controlado, equipadas con el m\'{o}dulo \textbf{Alfa Networks AHPI6108E} (formato HAT, chipset Morse Micro MM6108, interfaz SDIO)~\cite{morsemicroMM8108ProductBrief2025} para conectividad HaLow 802.11ah nativa, y un nRF52840 USB Dongle para OTBR.
 
-Cada pasarela desempeña tres roles: (1)~\textbf{Thread Border Router} mediante nRF52840 USB Dongle con OpenThread~\cite{openthread2024}, ejecutado como servicio nativo de OpenWRT; (2)~\textbf{Plataforma de Computación en el Borde} con ThingsBoard Edge~3.6.2 en Docker, incluyendo transporte LwM2M integrado, motor de reglas y almacenamiento local; y (3)~\textbf{Nodo de malla HaLow nativo} mediante el módulo AHPI6108E, con enrutamiento HWMP dinámico en la red 802.11s.
-
-% --------------------------------------------------------------------------
 \subsection{Especificaciones del \emph{Hardware}}
 \label{sec:gateway-hardware}
 
@@ -67,7 +77,10 @@ Decisión & \textcolor{green}{\textbf{SELECCIONADO}} & Descartado (costo) & Desc
 RPi4 seleccionado por precio óptimo (27--69\% ahorro CAPEX), consumo 8,5~W (29--66\% menor), ecosistema Docker ARM64 maduro (imágenes oficiales ThingsBoard, PostgreSQL), disponibilidad global y operación sin ventilador.  El compromiso aceptado es una CPU menos potente que las alternativas, pero suficiente para los servicios de borde desplegados, como se valida en §\ref{sec:gateway-tb-edge-validacion}.
 
 %======================================================================
-\section{Sistema Operativo: OpenWRT con Soporte HaLow}
+
+%======================================================================
+\section{Sistema operativo y software del gateway}
+\label{sec:gateway-sw}
 \label{sec:gateway-openwrt}
 
 La pasarela ejecuta \textbf{OpenWRT~23.05}, compilado desde el \emph{fork} oficial de Morse Micro\footnote{\url{https://github.com/MorseMicro/openwrt}}, como sistema operativo base.  La selección de OpenWRT, en lugar de distribuciones convencionales como Ubuntu Server o Raspberry Pi OS, responde a tres requisitos técnicos:
@@ -97,7 +110,9 @@ La pasarela configura tres interfaces mediante UCI:
 \end{itemize}
 
 %======================================================================
-\section{OpenThread Border Router (OTBR)}
+
+%======================================================================
+\section{Gateway como Thread Border Router}
 \label{sec:gateway-otbr}
 
 OTBR interconecta la red Thread IEEE~802.15.4~\cite{IEEE802154-2020} con la infraestructura IP de la pasarela, actuando como puente bidireccional: traduce tráfico Thread (IPv6 6LoWPAN, prefijo \texttt{fd00::/64}) hacia IPv4/IPv6 vía NAT64/DNS64, y enruta comandos descendentes hacia los nodos Thread.  La implementación utiliza un nRF52840 USB Dongle en modo RCP (\emph{Radio Co-Processor}), donde el \emph{stack} Thread completo se ejecuta en el \emph{host} RPi4 mediante el servicio \texttt{otbr-agent}, reduciendo la latencia respecto a una implementación NCP.
@@ -134,7 +149,10 @@ Métricas de validación en laboratorio:
 \end{itemize}
 
 %======================================================================
-\section{Plataforma de Borde: ThingsBoard Edge}
+
+%======================================================================
+\section{Procesamiento en el borde}
+\label{sec:gateway-borde}
 \label{sec:gateway-tb-edge}
 
 ThingsBoard Edge~3.6.2 se despliega en la pasarela RPi4 mediante Docker Compose, proporcionando una plataforma completa de gestión IoT en el borde~\cite{minhEdgeComputingIoTEnabled2022}.  A diferencia de arquitecturas basadas en múltiples microservicios independientes (servidor LwM2M, \emph{broker} MQTT, base de datos, motor de reglas), ThingsBoard Edge integra todos estos componentes en una única plataforma:
@@ -220,20 +238,6 @@ ThingsBoard Edge ejecuta cadenas de reglas (\emph{Rule Chains}) localmente, logr
 \textbf{RC4 --- Comandos Descendentes:}  Valida y reenvía comandos RPC desde el servidor central hacia los nodos Thread, con fluctuación aleatoria 0--30~s para prevenir avalanchas y tiempo límite de 60~s con reintento exponencial.
 
 % --------------------------------------------------------------------------
-\subsection{Comunicación con el Servidor ThingsBoard \emph{On-Premise}}
-\label{sec:gateway-tb-edge-onpremise}
-
-ThingsBoard Edge se sincroniza bidireccionalmente con un servidor ThingsBoard \emph{on-premise} desplegado en un servidor local de prueba.  La comunicación utiliza gRPC sobre el enlace WAN (malla HaLow $\rightarrow$ \emph{switch} local $\rightarrow$ servidor):
-
-\begin{itemize}
-    \item \textbf{Edge $\rightarrow$ Servidor:} Telemetría agregada por las cadenas de reglas, alarmas, eventos de conectividad de dispositivos y estado de sincronización.  Transmisión por lotes para optimizar el uso del enlace.
-    \item \textbf{Servidor $\rightarrow$ Edge:} Configuración de \emph{Device Profiles}, plantillas de cadenas de reglas, paneles de control, actualizaciones de \emph{firmware} OTA y comandos RPC descendentes.
-    \item \textbf{Resolución de conflictos:} Política de última escritura gana con sincronización NTP ($\pm$50~ms); el servidor central es autoritativo en caso de conflicto.
-\end{itemize}
-
-La arquitectura \emph{on-premise} permite soberanía completa de datos en la infraestructura local, eliminando la dependencia de servicios en la nube pública y los costos operativos asociados.
-
-% --------------------------------------------------------------------------
 \subsection{Operación sin Conexión y Resiliencia}
 \label{sec:gateway-tb-edge-offline}
 
@@ -273,26 +277,13 @@ Dependencia de proveedor & No & Sí (AWS) & Sí (Azure) \\
 \label{sec:gateway-topologia}
 
 % --------------------------------------------------------------------------
-\subsection{Arquitectura General de Red}
-\label{sec:gateway-topologia-general}
 
-La Figura~\ref{fig:network-topology} presenta la topología de red del sistema completo.  La arquitectura implementa tres segmentos de red diferenciados:
-
-\input{fig_network_topology.tex}
-
-\begin{enumerate}
-    \item \textbf{Segmento 1 --- Red Thread (IEEE~802.15.4, 2,4~GHz):} Los nodos IoT (Capítulo~\ref{chap:nodo-iot}) se comunican con la pasarela RPi4 mediante OTBR.  Protocolo de aplicación: LwM2M sobre CoAP/UDP.  Alcance: $\sim$30~m en interiores, múltiples saltos en malla.
-
-    \item \textbf{Segmento 2 --- Red HaLow (IEEE~802.11ah, 900~MHz):} Las pasarelas RPi4, equipadas con el módulo AHPI6108E (HaLow nativo vía SDIO), participan directamente como \emph{Mesh Points} en la red 802.11s con protocolo HWMP.  Un Alfa Networks Tube~AHM dedicado actúa como \emph{Mesh Gate} con enlace troncal Ethernet hacia el \emph{switch} local.  Alcance: hasta 1,2~km LOS.
-
-    \item \textbf{Segmento 3 --- Red local Ethernet:} El servidor ThingsBoard \emph{on-premise} se conecta al \emph{switch} local.  Recibe telemetría sincronizada desde ThingsBoard Edge vía gRPC.
-\end{enumerate}
-
-A continuación se detallan la tecnología HaLow del Segmento~2, el \emph{hardware} y la topología en malla 802.11s que conforman el enlace troncal de la arquitectura.
-
-% --------------------------------------------------------------------------
-\subsection{Enlace Troncal HaLow (IEEE~802.11ah)}
+%======================================================================
+\section{Red troncal basada en Wi-Fi HaLow}
 \label{sec:gateway-halow}
+
+\subsection{Enlace Troncal HaLow (IEEE~802.11ah)}
+\label{sec:gateway-halow-enlace}
 
 El enlace troncal de última milla utiliza Wi-Fi HaLow (IEEE~802.11ah) en banda sub-1~GHz (902--928~MHz ISM).  HaLow ofrece tres ventajas clave sobre Wi-Fi~2,4/5~GHz~\cite{tianWiFiHaLowInternet2021}: (1)~alcance hasta 1,2~km LOS (+23~dBm TX, propagación Fresnel favorable), (2)~penetración interior superior ($-$8~dB @ 900~MHz vs $-$15~dB @ 2,4~GHz, reducción del 47\% en pérdida)~\cite{khanWiFiHalowSignal2020}, y (3)~eficiencia espectral con RAW/TWT que reducen colisiones 60\% vs EDCA puro.
 
@@ -403,7 +394,49 @@ Donde $O = 364$\,\textmu s (sobrecarga SIFS+DIFS+ACK), $B_t = 1024$~bytes, $r$~=
 \textbf{Conclusión:} Red HaLow cumple: caudal $>$1~Mbps en $>$90\% del área, latencia $<$15~ms P95, pérdida de paquetes $<$0,1\%.
 
 % --------------------------------------------------------------------------
-\subsection{Flujo de Datos Extremo a Extremo}
+
+%======================================================================
+\section{Integraci\'{o}n con la plataforma IoT}
+\label{sec:gateway-integracion}
+
+ThingsBoard Edge se sincroniza bidireccionalmente con un servidor ThingsBoard \emph{on-premise} desplegado en un servidor local de prueba. La comunicaci\'{o}n utiliza gRPC sobre el enlace WAN (malla HaLow $\rightarrow$ \emph{switch} local $\rightarrow$ servidor):
+
+\label{sec:gateway-tb-edge-onpremise}
+
+ThingsBoard Edge se sincroniza bidireccionalmente con un servidor ThingsBoard \emph{on-premise} desplegado en un servidor local de prueba.  La comunicación utiliza gRPC sobre el enlace WAN (malla HaLow $\rightarrow$ \emph{switch} local $\rightarrow$ servidor):
+
+\begin{itemize}
+    \item \textbf{Edge $\rightarrow$ Servidor:} Telemetría agregada por las cadenas de reglas, alarmas, eventos de conectividad de dispositivos y estado de sincronización.  Transmisión por lotes para optimizar el uso del enlace.
+    \item \textbf{Servidor $\rightarrow$ Edge:} Configuración de \emph{Device Profiles}, plantillas de cadenas de reglas, paneles de control, actualizaciones de \emph{firmware} OTA y comandos RPC descendentes.
+    \item \textbf{Resolución de conflictos:} Política de última escritura gana con sincronización NTP ($\pm$50~ms); el servidor central es autoritativo en caso de conflicto.
+\end{itemize}
+
+La arquitectura \emph{on-premise} permite soberanía completa de datos en la infraestructura local, eliminando la dependencia de servicios en la nube pública y los costos operativos asociados.
+
+% --------------------------------------------------------------------------
+
+La Figura~\ref{fig:network-topology} presenta la topolog\'{i}a de red del sistema completo, con los tres segmentos diferenciados: (1)~red Thread (IEEE~802.15.4, 2,4~GHz), (2)~red HaLow (IEEE~802.11ah, 900~MHz) y (3)~red local Ethernet hacia el servidor central.
+
+\label{sec:gateway-topologia-general}
+
+La Figura~\ref{fig:network-topology} presenta la topología de red del sistema completo.  La arquitectura implementa tres segmentos de red diferenciados:
+
+\input{fig_network_topology.tex}
+
+\begin{enumerate}
+    \item \textbf{Segmento 1 --- Red Thread (IEEE~802.15.4, 2,4~GHz):} Los nodos IoT (Capítulo~\ref{chap:nodo-iot}) se comunican con la pasarela RPi4 mediante OTBR.  Protocolo de aplicación: LwM2M sobre CoAP/UDP.  Alcance: $\sim$30~m en interiores, múltiples saltos en malla.
+
+    \item \textbf{Segmento 2 --- Red HaLow (IEEE~802.11ah, 900~MHz):} Las pasarelas RPi4, equipadas con el módulo AHPI6108E (HaLow nativo vía SDIO), participan directamente como \emph{Mesh Points} en la red 802.11s con protocolo HWMP.  Un Alfa Networks Tube~AHM dedicado actúa como \emph{Mesh Gate} con enlace troncal Ethernet hacia el \emph{switch} local.  Alcance: hasta 1,2~km LOS.
+
+    \item \textbf{Segmento 3 --- Red local Ethernet:} El servidor ThingsBoard \emph{on-premise} se conecta al \emph{switch} local.  Recibe telemetría sincronizada desde ThingsBoard Edge vía gRPC.
+\end{enumerate}
+
+A continuación se detallan la tecnología HaLow del Segmento~2, el \emph{hardware} y la topología en malla 802.11s que conforman el enlace troncal de la arquitectura.
+
+% --------------------------------------------------------------------------
+
+%======================================================================
+\section{Flujo de datos extremo a extremo}
 \label{sec:gateway-flujo-datos}
 
 El flujo de datos desde el medidor hasta el servidor central sigue esta secuencia:
@@ -417,7 +450,9 @@ El flujo de datos desde el medidor hasta el servidor central sigue esta secuenci
 \end{enumerate}
 
 %======================================================================
-\section{Conclusiones del Capítulo}
+
+%======================================================================
+\section{Conclusiones del capítulo}
 \label{sec:gateway-conclusiones}
 
 Este capítulo presentó la implementación de la pasarela de borde y la red de distribución HaLow (Niveles~2 y~3 de la arquitectura), demostrando la viabilidad técnica y económica de computación en el borde para AMI.
