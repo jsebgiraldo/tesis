@@ -44,7 +44,7 @@
 
 %Idioma del documento
 %Use main para el idioma principal del documento
-\usepackage[main=spanish,english,german,french,portuguese]{babel}
+\usepackage[main=spanish,english,ngerman,french,portuguese]{babel}
 % Deactivate babel active chars that break TikZ/xcolor (<, >, ., ;, :, !, ?)
 \makeatletter
 \AtBeginDocument{%
@@ -130,8 +130,8 @@
 %Diligenciar aquí los datos para su carga automática donde se requiera en el documento
 %En el caso de tesis o trabajos finales, verificar que el título coincida con el aprobado por la Facultad
 \renewcommand{\studentname}{Juan Sebastian Giraldo Duque}
-\renewcommand{\thesisname}{Arquitectura IoT Centrada en Pasarelas de Borde\\ \vspace{2mm}\large{Implementación de Protocolos basados en 6LoWPAN para Medición Inteligente}}
-\renewcommand{\thesisnameeng}{Edge-Centric IoT Architecture\\ \vspace{2mm}\large{Implementation of 6LoWPAN-Based Protocols for Smart Metering}}
+\renewcommand{\thesisname}{Diseño y Evaluación Experimental de una Arquitectura IoT Centrada en Pasarelas de Borde Multiprotocolo para Infraestructura Avanzada de Medición (AMI)}
+\renewcommand{\thesisnameeng}{Design and Experimental Evaluation of a Multiprotocol Edge-Centric IoT Architecture for Advanced Metering Infrastructure (AMI)}
 \renewcommand{\thesisnamelang}{Nombre del trabajo o tesis en un tercer idioma} %Usar solo si se requiere
 \renewcommand{\issuedate}{2026}
 \renewcommand{\submissiondate}{Febrero 2026}
@@ -144,7 +144,7 @@
 \renewcommand{\resgrouptwo}{}
 \renewcommand{\researchtopic}{Ciudades Inteligentes \\ Infraestructura Avanzada de Medición \\ Redes IPv6 para IoT}
 \renewcommand{\sede}{Sede Manizales} 
-\renewcommand{\department}{Departamento de Automatización Industrial}
+\renewcommand{\department}{Departamento de Ingeniería Eléctrica, Electrónica y Computación}
 %\renewcommand{\departmenttwo}{} %No aplica
 \renewcommand{\faculty}{Facultad de Ingeniería y Arquitectura}
 
@@ -161,9 +161,10 @@
 \pagestyle{fancyplain}
 \textheight22.5cm \topmargin0cm \textwidth16.5cm \headheight30pt
 \oddsidemargin0.5cm \evensidemargin-0.5cm%
+\newcommand{\shortthesisname}{Arquitectura IoT centrada en Pasarelas de Borde Multi-protocolo}
 \fancypagestyle{plain}{
 \fancyhead[RO,LE]{}
-\fancyhead[RE,LO]{\scriptsize \textbf{\thesisname}}
+\fancyhead[RE,LO]{\scriptsize \textbf{\shortthesisname}}
 \fancyfoot[CO,CE]{\thepage}
 }
 \pagestyle{fancy}
