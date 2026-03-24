@@ -54,13 +54,13 @@ Esta sección revisa las tecnologías y arquitecturas relevantes para el diseño
 \subsection{Tecnologías LPWAN para Conectividad de Largo Alcance}
 \label{sec:lpwan-technologies}
 
-Las tecnologías LPWAN constituyen alternativas para conectividad de medición inteligente, cada una con compromisos distintos entre alcance, caudal, latencia y costo~\cite{chaudhariLPWANTechnologiesEmerging2020,ugwuanyiSurveyIoTDeveloping2021}.
+Las tecnologías LPWAN constituyen alternativas para conectividad de medición inteligente, cada una con compromisos distintos entre alcance, tasa de datos, latencia y costo~\cite{chaudhariLPWANTechnologiesEmerging2020,ugwuanyiSurveyIoTDeveloping2021}.
 
-\textbf{LoRaWAN} (Sub-1~GHz ISM) ofrece alcance de 15~km y consumo ultrabajo, pero su caudal (50~kbps) y latencia (1--5~s) lo restringen a telemetría simple. Para AMI avanzada, el caudal es 8$\times$ insuficiente para formas de onda de calidad de energía~\cite{chaudhariLPWANTechnologiesEmerging2020}.
+\textbf{LoRaWAN} (Sub-1~GHz ISM) ofrece alcance de 15~km y consumo ultrabajo, pero su tasa de datos (50~kbps) y latencia (1--5~s) lo restringen a telemetría simple. Para AMI avanzada, la tasa de datos es 8$\times$ insuficiente para formas de onda de calidad de energía~\cite{chaudhariLPWANTechnologiesEmerging2020}.
 
 \textbf{NB-IoT} (3GPP Rel.~13, banda licenciada) proporciona cobertura en interiores (\emph{indoor}) superior (MCL 164~dB) y 250~kbps, pero introduce OPEX recurrente (\$12--36/año) y latencia de 837~ms, con consumo energético +3,7~mAh por transacción respecto a LoRaWAN~\cite{ugwuanyiSurveyIoTDeveloping2021,zhengPerformancePowerConsumption2018}.
 
-\textbf{Wi-Fi HaLow} (IEEE 802.11ah, Sub-1~GHz) combina alcance de 1~km con 4~Mbps (MCS7, 2~MHz), latencia 10--50~ms y QoS EDCA~\cite{zhengPerformancePowerConsumption2018}. El análisis de caudal para formas de onda (\emph{waveforms}) de calidad de energía (10~kHz $\times$ 16~bits $\times$ 2,5~canales $\approx$ 400~kbps): LoRaWAN 8$\times$ insuficiente, NB-IoT 1,6$\times$ insuficiente, HaLow 10$\times$ margen --- viable con capacidad para 10 medidores simultáneos.
+\textbf{Wi-Fi HaLow} (IEEE 802.11ah, Sub-1~GHz) combina alcance de 1~km con 4~Mbps (MCS7, 2~MHz), latencia 10--50~ms y QoS EDCA~\cite{zhengPerformancePowerConsumption2018}. El análisis de tasa de datos para formas de onda (\emph{waveforms}) de calidad de energía (10~kHz $\times$ 16~bits $\times$ 2,5~canales $\approx$ 400~kbps): LoRaWAN 8$\times$ insuficiente, NB-IoT 1,6$\times$ insuficiente, HaLow 10$\times$ margen --- viable con capacidad para 10 medidores simultáneos.
 
 La Tabla~\ref{tab:lpwan-comparative-analysis} consolida la comparación cuantitativa multi-criterio.
 
@@ -75,9 +75,9 @@ La Tabla~\ref{tab:lpwan-comparative-analysis} consolida la comparación cuantita
 \rowcolor{blue!20}
 \textbf{Criterio} & \textbf{LoRaWAN} & \textbf{NB-IoT} & \textbf{Wi-SUN FAN} & \textbf{Wi-Fi HaLow} & \textbf{Referencia} \\
 \hline
-\textbf{Alcance (km)} & \textcolor{green}{\textbf{15 km}} & 10--15 km & 2--5 km & 1 km & \cite{ugwuanyiSurveyIoTDeveloping2021,haradaIEEE802154g2017} \\
+\textbf{Distancia máx. (km)} & \textcolor{green}{\textbf{15 km}} & 10--15 km & 2--5 km & 1 km & \cite{ugwuanyiSurveyIoTDeveloping2021,haradaIEEE802154g2017} \\
 \hline
-\textbf{Caudal} & 50 kbps & 250 kbps & 300 kbps & \textcolor{green}{\textbf{4 Mbps (MCS7)}} & \cite{chaudhariLPWANTechnologiesEmerging2020} \\
+\textbf{Tasa (\textit{throughput})} & 50 kbps & 250 kbps & 300 kbps & \textcolor{green}{\textbf{4 Mbps (MCS7)}} & \cite{chaudhariLPWANTechnologiesEmerging2020} \\
 \hline
 \textbf{Latencia} & 1--5 s & 837 ms & 500 ms--2 s & \textcolor{green}{\textbf{10--50 ms}} & \cite{ugwuanyiSurveyIoTDeveloping2021} \\
 \hline
@@ -85,11 +85,11 @@ La Tabla~\ref{tab:lpwan-comparative-analysis} consolida la comparación cuantita
 \hline
 \textbf{OPEX (USD/año)} & \textcolor{green}{\textbf{\$0}} & \$12--36 & \$0 & \$0 & Análisis mercado \\
 \hline
-\textbf{Formas de onda ($>$1 Mbps)} & \textcolor{red}{\xmark} & \textcolor{red}{\xmark} & \textcolor{red}{\xmark} & \textcolor{green}{\checkmark} & \cite{zhengPerformancePowerConsumption2018} \\
+\textbf{Formas de onda ($>$400~kbps)} & \textcolor{red}{\xmark} & \textcolor{red}{\xmark} & \textcolor{red}{\xmark} & \textcolor{green}{\checkmark} & \cite{zhengPerformancePowerConsumption2018} \\
 \hline
 \textbf{Control DER ($<$100 ms)} & \textcolor{red}{\xmark} & \textcolor{orange}{$\triangle$} & \textcolor{orange}{$\triangle$} & \textcolor{green}{\checkmark} & \cite{IEEERecommendedPractice} \\
 \hline
-\textbf{Despliegue documentado} & Millones (EU/US) & Millones (telecom) & \textcolor{green}{\textbf{$>$100M (Itron/L+G)}} & Emergente (600M pot.) & \cite{zhengPerformancePowerConsumption2018,haradaIEEE802154g2017} \\
+\textbf{Despliegue documentado} & Millones (EU/US) & Millones (telecom) & \textcolor{green}{\textbf{Decenas M (Japón)}} & Emergente (600M pot.) & \cite{zhengPerformancePowerConsumption2018,haradaIEEE802154g2017} \\
 \hline
 \end{tabular}%
 }
@@ -99,12 +99,12 @@ La Tabla~\ref{tab:lpwan-comparative-analysis} consolida la comparación cuantita
 
 \input{fig_lpwan_comparison}
 
-Los datos de la tabla evidencian que Wi-Fi HaLow domina en caudal y latencia, pero carece de topología en malla. El competidor más maduro en despliegues AMI es Wi-SUN FAN, cuya comparación directa con la combinación Thread~+~HaLow resulta determinante para la selección tecnológica.
+Los datos de la tabla evidencian que Wi-Fi HaLow domina en tasa efectiva y latencia, pero carece de topología en malla. El competidor más maduro en despliegues AMI es Wi-SUN FAN, cuya comparación directa con la combinación Thread~+~HaLow resulta determinante para la selección tecnológica.
 
 \subsubsection{Wi-SUN FAN vs Thread + HaLow}
 \label{sec:marco-wisun}
 
-Wi-SUN FAN (IEEE 802.15.4g) cuenta con más de 100~millones de nodos desplegados~\cite{haradaIEEE802154g2017} y constituye el principal competidor de la arquitectura propuesta. La selección de Thread~+~HaLow se fundamenta en cuatro factores: (1)~\textbf{separación espectral} --- Wi-SUN (915~MHz) y HaLow (902--928~MHz) generan interferencia mutua; Thread (2,4~GHz) + HaLow (900~MHz) provee separación clara; (2)~\textbf{caudal de agregación (\emph{throughput})} --- pico DCU con 100 medidores requiere 800~kbps en ráfaga (\emph{burst}); Wi-SUN (300~kbps) es 2,7$\times$ insuficiente vs HaLow (4~Mbps) con 5$\times$ margen~\cite{zhengPerformancePowerConsumption2018}; (3)~\textbf{integración} --- OTBR opera como servicio nativo de OpenWRT vs SDK propietario Wi-SUN con NRE $\sim$\$3\,600~\cite{openthreadOpenThreadBorderRouter2024}; (4)~\textbf{convergencia Matter} --- Thread es transporte obligatorio de Matter (CSA 2022), habilitando interoperabilidad DER futura. El compromiso es que el chipset Wi-SUN (TI CC1312R, \$2,70) es 32\% más económico que Thread (nRF52840, \$4,00), pero la necesidad de 2--4$\times$ más concentradores y el NRE de integración propietaria anulan este ahorro.  Cabe mencionar que Silicon Labs ha anunciado el SoC EFR25 con soporte Wi-SUN~1.1 FAN, que mejora el caudal hasta 2,4~Mbps; sin embargo, a la fecha de escritura de este trabajo no existen módulos comerciales disponibles ni despliegues documentados.
+Wi-SUN FAN (IEEE 802.15.4g) cuenta con decenas de millones de nodos desplegados, principalmente en Japón~\cite{haradaIEEE802154g2017} y constituye el principal competidor de la arquitectura propuesta. La selección de Thread~+~HaLow se fundamenta en cuatro factores: (1)~\textbf{separación espectral} --- Wi-SUN (915~MHz) y HaLow (902--928~MHz) generan interferencia mutua; Thread (2,4~GHz) + HaLow (900~MHz) provee separación clara; (2)~\textbf{tasa de agregación (\emph{throughput})} --- pico DCU con 100 medidores requiere 800~kbps en ráfaga (\emph{burst}); Wi-SUN (300~kbps) es 2,7$\times$ insuficiente vs HaLow (4~Mbps) con 5$\times$ margen~\cite{zhengPerformancePowerConsumption2018}; (3)~\textbf{integración} --- OTBR opera como servicio nativo de OpenWRT vs SDK propietario Wi-SUN con NRE $\sim$\$3\,600~\cite{openthreadOpenThreadBorderRouter2024}; (4)~\textbf{convergencia Matter} --- Thread es transporte obligatorio de Matter (CSA 2022), habilitando interoperabilidad DER futura. El compromiso es que el chipset Wi-SUN (TI CC1312R, \$2,70) es 32\% más económico que Thread (nRF52840, \$4,00), pero la necesidad de 2--4$\times$ más concentradores y el NRE de integración propietaria anulan este ahorro.  Cabe mencionar que Silicon Labs ha anunciado el SoC EFR25 con soporte Wi-SUN~1.1 FAN, que mejora la tasa efectiva hasta 2,4~Mbps; sin embargo, a la fecha de escritura de este trabajo no existen módulos comerciales disponibles ni despliegues documentados.
 
 Las tecnologías LPWAN resuelven la última milla entre el concentrador y la nube, pero dentro del armario o la subestación los medidores necesitan una red de campo de corto alcance con topología en malla para sortear obstáculos y garantizar redundancia. A continuación se evalúan las principales alternativas.
 
@@ -235,7 +235,7 @@ Estas carencias no son casuales: reflejan vacíos sistemáticos en la literatura
 
 El análisis del estado del arte revela cuatro brechas que motivan las decisiones de diseño:
 
-\textbf{Brecha 1 --- Ausencia de HaLow en pasarelas de borde:} Ningún trabajo integra Wi-Fi HaLow como enlace troncal primario en malla 802.11s para AMI, a pesar de su ventaja de caudal (4~Mbps vs $<$300~kbps LPWAN) requerida para formas de onda de calidad de energía ($>$400~kbps)~\cite{chaudhariLPWANTechnologiesEmerging2020}. El Capítulo~\ref{chap:gateway-halow} implementa pasarela con red HaLow en malla con latencia $<$15~ms.
+\textbf{Brecha 1 --- Ausencia de HaLow en pasarelas de borde:} Ningún trabajo integra Wi-Fi HaLow como enlace troncal primario en malla 802.11s para AMI, a pesar de su ventaja de tasa efectiva (4~Mbps vs $<$300~kbps LPWAN) requerida para formas de onda de calidad de energía ($>$400~kbps)~\cite{chaudhariLPWANTechnologiesEmerging2020}. El Capítulo~\ref{chap:gateway-halow} implementa pasarela con red HaLow en malla con latencia $<$15~ms.
 
 \textbf{Brecha 2 --- Conformidad limitada DLMS/COSEM + ISO/IEC 30141:} Soluciones comerciales emplean protocolos propietarios sin conformidad completa con interfaces COSEM mandatorias. Prototipos académicos no documentan mapeo a las cuatro vistas de ISO/IEC~30141. Esta tesis provee mapeo explícito a las 7 FE y documenta traducción DLMS/COSEM a LwM2M.
 

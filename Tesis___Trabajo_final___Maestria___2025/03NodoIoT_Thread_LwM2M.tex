@@ -386,7 +386,7 @@ Los fundamentos teóricos se presentaron en el Capítulo~\ref{chap:marco-teorico
 \subsection{Capa Física y Enlace: IEEE 802.15.4}
 \label{sec:nodo-ieee802154}
 
-IEEE~802.15.4-2020~\cite{IEEE802154-2020} define PHY y MAC para redes LR-WPAN. Thread utiliza la banda ISM 2,4\,GHz (16~canales, 11--26, separación 5\,MHz) con modulación O-QPSK y DSSS, proporcionando 250\,kbps en capa física y \emph{caudal} útil de $\sim$127\,kbps. El MTU es 127\,bytes, limitando \emph{payload} a 102--116\,bytes según direccionamiento~\cite{shelby6LoWPANWirelessEmbedded2009, RFC4944}.
+IEEE~802.15.4-2020~\cite{IEEE802154-2020} define PHY y MAC para redes LR-WPAN. Thread utiliza la banda ISM 2,4\,GHz (16~canales, 11--26, separación 5\,MHz) con modulación O-QPSK y DSSS, proporcionando 250\,kbps en capa física y tasa efectiva (\textit{throughput}) de $\sim$127\,kbps. El MTU es 127\,bytes, limitando \emph{payload} a 102--116\,bytes según direccionamiento~\cite{shelby6LoWPANWirelessEmbedded2009, RFC4944}.
 
 Radios comerciales modernos (ESP32-C6, nRF52840) alcanzan sensibilidad de $-$100 a $-$103\,dBm (vs $-$85\,dBm mínimo del estándar), con potencia TX configurable hasta +20\,dBm, operada típicamente a +4\,dBm para balance consumo-alcance. La capa MAC opera en modo \emph{non-beacon} con CSMA/CA: CCA de 128\,$\mu$s, \emph{backoff} aleatorio exponencial (BE=3 a 5), y reconocimientos inmediatos (ACK en 864\,$\mu$s) con hasta 3~reintentos, garantizando entrega confiable con latencia adicional $<$10\,ms.
 

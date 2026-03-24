@@ -15,7 +15,7 @@ La propuesta de esta tesis surge de la confluencia de tres tendencias: el crecim
 La transición energética global hacia sistemas descentralizados, con alta penetración de energías renovables y gestión activa del consumo, exige infraestructuras de medición inteligente (AMI) robustas y escalables~\cite{velasquezSmartGridsEmpowered2024,gungorSmartGridTechnologies2011}. Se anticipa la instalación de más de 1.300 millones de medidores inteligentes para 2030, generando aproximadamente 15~PB de datos de telemetría diarios~\cite{dianeSystematicComprehensiveReview2025}. Sin embargo, las arquitecturas tradicionales dispositivo--nube presentan tres limitaciones recurrentes:
 
 \begin{itemize}
-    \item \textbf{Latencias elevadas:} superiores a 200~ms, insuficientes para telemetría en tiempo real~\cite{laghariInternetThingsIoT2024}.
+    \item \textbf{Latencias elevadas:} superiores a 200~ms extremo a extremo (nodo a servidor vía nube), insuficientes para telemetría en tiempo real~\cite{laghariInternetThingsIoT2024}.
     \item \textbf{Dependencia de conectividad WAN continua:} las redes celulares LTE alcanzan disponibilidades de apenas 94--96\%, equivalentes a 18--25~días de inactividad acumulada al año.
     \item \textbf{Costos prohibitivos a escala:} las plataformas IoT en la nube cobran por volumen de mensajes, resultando en gastos operativos inviables cuando la densidad de medidores es alta~\cite{alsafranChallengesImplementingIoT2025,alsuwaidiSecuringSmartGrid2024}.
 \end{itemize}
@@ -130,7 +130,7 @@ Wi-Fi HaLow (IEEE~802.11ah) combina rendimiento superior (43,3~Mbps), latencia d
 \begin{itemize}
     \item \textbf{LoRaWAN:} rendimiento insuficiente (50~kbps) para agregar datos de múltiples medidores.
     \item \textbf{LTE Cat-M1 y NB-IoT:} operan en espectro licenciado con costos recurrentes que, en despliegues de más de 1\,000 medidores, totalizan \$150\,000 en 5~años solo en conectividad.
-    \item \textbf{LTE privado (CBRS):} inversión de capital superior a \$50\,000 por celda, con regulación no disponible en Latinoamérica.
+    \item \textbf{LTE privado (CBRS):} inversión de capital superior a \$50\,000 por celda; en Latinoamérica el marco regulatorio para bandas compartidas es aún limitado, con licencias y esquemas de incentivos que varían significativamente por país.
     \item \textbf{Redes no terrestres (LEO-IoT):} nula cobertura en interiores, latencia variable (20--600~ms) y costo por terminal \$1--5/mes.
 \end{itemize}
 
@@ -341,7 +341,19 @@ Los objetivos anteriores se operacionalizan mediante hipótesis cuantificables q
     \item Disponibilidad superior al 99\% durante desconexiones prolongadas.
 \end{itemize}
 
-Estos umbrales se fundamentan en resultados reportados en la literatura: reducción de tráfico WAN del 70\% mediante procesamiento en el borde~\cite{jonnakutiEDGEBASEDFAULTDETECTION}, reducción de sobrecarga del 87\% con compresión IPHC en redes 6LoWPAN~\cite{alharbi6LoWPANBasedAMI2021}, y requisitos de disponibilidad superior al 99\% establecidos por marcos regulatorios de infraestructura crítica~\cite{NISTFramework2022}. Las hipótesis específicas (H1--H7) se detallan en la §\ref{sec:resultados-validacion-hipotesis}.
+Estos umbrales se fundamentan en resultados reportados en la literatura: reducción de tráfico WAN del 70\% mediante procesamiento en el borde~\cite{jonnakutiEDGEBASEDFAULTDETECTION}, reducción de sobrecarga del 87\% con compresión IPHC en redes 6LoWPAN~\cite{alharbi6LoWPANBasedAMI2021}, y requisitos de disponibilidad superior al 99\% establecidos por marcos regulatorios de infraestructura crítica~\cite{NISTFramework2022}. Los objetivos de validación específicos (OV1--OV7) que operacionalizan estas hipótesis son:
+
+\begin{enumerate}
+    \item[OV1] \textbf{Viabilidad arquitectura 4 niveles:} despliegue funcional continuo ($\geq$30 días) con $>$99\% de lecturas exitosas.
+    \item[OV2] \textbf{Thread simplifica comisionado:} tiempo de aprovisionamiento por nodo menor a 10~min.
+    \item[OV3] \textbf{Latencia de borde en tiempo real:} latencia P95 en el borde $<$10~ms; reducción extremo a extremo $>$70\% frente a línea base centrada en la nube.
+    \item[OV4] \textbf{Alcance HaLow:} enlace funcional $>$500~m en línea de vista (LOS).
+    \item[OV5] \textbf{Consumo de nodo:} nodo alimentado desde medidor con consumo $<$150~mW.
+    \item[OV6] \textbf{Disponibilidad:} tiempo activo $>$99\% con cero pérdida de mensajes durante desconexiones WAN prolongadas.
+    \item[OV7] \textbf{Reducción de tráfico WAN:} el procesamiento en el borde reduce el tráfico WAN $>$70\% frente a arquitectura directa a la nube.
+\end{enumerate}
+
+Su validación cuantitativa se detalla en la §\ref{sec:resultados-validacion-hipotesis}.
 
 Para validar estas hipótesis se diseñó una metodología en cuatro fases que se describe a continuación.
 
