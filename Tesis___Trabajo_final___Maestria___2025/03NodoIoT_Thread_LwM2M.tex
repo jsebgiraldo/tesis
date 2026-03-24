@@ -6,9 +6,9 @@
 
 Este capítulo describe el nodo IoT que vincula cada medidor inteligente con la red de campo \emph{mesh}. El análisis sigue el recorrido del dato: desde su origen en el \textbf{medidor trifásico} y su pila de comunicación \textbf{DLMS/COSEM} sobre RS-485, pasando por el \textbf{modelo de dispositivo} LwM2M, la \textbf{implementación del firmware} en Zephyr~RTOS, hasta la transmisión por la \textbf{red Thread} en malla (\emph{mesh}).
 
-§\ref{sec:nodo-hardware} presenta la plataforma de referencia: SoC~ESP32-C6 con radio IEEE~802.15.4 y transceptor RS-485 con aislamiento galvánico. §\ref{sec:nodo-medidor-dlms} especifica el medidor Emsitech~P2000-T, el protocolo DLMS/COSEM y los 17~registros OBIS relevantes. §\ref{sec:nodo-lwm2m} define el Objeto~10242 (\emph{3-Phase Power Meter}) con sus 27~recursos y el perfil LwM2M configurado en ThingsBoard. §\ref{sec:nodo-firmware} detalla el \emph{firmware} Zephyr~RTOS con pila CoAP/OpenThread, ciclo principal y parámetros Kconfig. §\ref{sec:nodo-pila-protocolos} describe la red de campo Thread: capa IEEE~802.15.4, topología, auto-formación y direccionamiento IPv6, \textbf{agotando el tema Thread aquí} según la Regla de Exclusión. §\ref{sec:nodo-pruebas} presenta el análisis de carga y las pruebas de latencia que validan H3 ($<$250\,ms).
+§\ref{sec:nodo-hardware} presenta la plataforma de referencia: SoC~ESP32-C6 con radio IEEE~802.15.4 y transceptor RS-485 con aislamiento galvánico. §\ref{sec:nodo-medidor-dlms} especifica el medidor Emsitech~P2000-T, el protocolo DLMS/COSEM y los 27~códigos OBIS implementados. §\ref{sec:nodo-lwm2m} define el Objeto~10242 (\emph{3-Phase Power Meter}) con sus 27~recursos y el perfil LwM2M configurado en ThingsBoard. §\ref{sec:nodo-firmware} detalla el \emph{firmware} Zephyr~RTOS con pila CoAP/OpenThread, ciclo principal y parámetros Kconfig. §\ref{sec:nodo-pila-protocolos} describe la red de campo Thread: capa IEEE~802.15.4, topología, auto-formación y direccionamiento IPv6, \textbf{agotando el tema Thread aquí} según la Regla de Exclusión. §\ref{sec:nodo-pruebas} presenta el análisis de carga y las pruebas de latencia que validan H3 ($<$250\,ms).
 
-Los nodos se alimentan directamente desde el puerto auxiliar 5\,V del medidor (27\,mA promedio), sin restricción energética. El piloto valida la pila completa DLMS/COSEM $\rightarrow$ LwM2M $\rightarrow$ CoAP/Thread con 1~medidor físico Emsitech~P2000-T. Los listados de código fuente están disponibles en el repositorio del proyecto\footnote{\url{https://github.com/jsebgiraldo/Tesis-app}}.
+Los nodos se alimentan directamente desde el puerto auxiliar 5\,V del medidor (27\,mA promedio), sin restricción energética. El piloto valida la pila completa DLMS/COSEM $\rightarrow$ LwM2M $\rightarrow$ CoAP/Thread con 1~medidor físico Emsitech~P2000-T. Los listados de código fuente están disponibles en el repositorio del proyecto\footnote{\url{https://github.com/jsebgiraldo/ami-lwm2m-node}}.
 
 
 \section{Arquitectura del nodo IoT}
@@ -63,51 +63,83 @@ El piloto utiliza 1~medidor trifásico Emsitech P2000-T~\cite{emsitechP2000T2024
 \subsection{Registros OBIS del Medidor}
 \label{sec:nodo-registros-obis}
 
-El sistema OBIS (IEC~62056-61)~\cite{DLMSBluebookOBIS2023} identifica magnitudes con formato \texttt{A-B:C.D.E*F}. Los 17~registros leídos cada 15~minutos:
+El sistema OBIS (IEC~62056-61)~\cite{DLMSBluebookOBIS2023} identifica magnitudes con formato \texttt{A-B:C.D.E*F}. Los 27~códigos OBIS leídos cada 15~segundos (intervalo configurable entre 5 y 300\,s):
 
 \begin{table}[H]
 \centering
-\caption{Registros OBIS medidor trifásico Emsitech P2000-T}
+\caption{Códigos OBIS implementados --- medidor Emsitech P2000-T (27 códigos, modo trifásico)}
 \label{tab:obis-registers}
 \resizebox{\textwidth}{!}{%
-\begin{tabular}{|l|l|l|l|l|}
+\begin{tabular}{|l|l|c|c|c|}
 \hline
 \rowcolor{gray!20}
-\textbf{Código OBIS} & \textbf{Descripción} & \textbf{Tipo} & \textbf{Unidad} & \textbf{Uso en tesis} \\
+\textbf{Código OBIS} & \textbf{Descripción} & \textbf{Clase DLMS} & \textbf{RID LwM2M} & \textbf{Unidad} \\
 \hline
-1-0:1.8.0*255 & Energía activa importada total & double-long-unsigned & kWh & Facturación \\
+\multicolumn{5}{|c|}{\cellcolor{gray!10}\textbf{Fase R (L1)}} \\
 \hline
-1-0:2.8.0*255 & Energía activa exportada total & double-long-unsigned & kWh & Generación distribuida \\
+1-1:32.7.0*255 & Tensión fase R & 3 & 4 & V \\
 \hline
-1-0:3.8.0*255 & Energía reactiva inductiva total & double-long-unsigned & kvarh & Factor de potencia \\
+1-1:31.7.0*255 & Corriente fase R & 3 & 5 & A \\
 \hline
-1-0:4.8.0*255 & Energía reactiva capacitiva total & double-long-unsigned & kvarh & Compensación reactivos \\
+1-1:21.7.0*255 & Potencia activa fase R & 3 & 6 & W \\
 \hline
-1-0:32.7.0*255 & Voltaje fase L1 instantáneo & unsigned & V & Detección voltage sag/swell \\
+1-1:23.7.0*255 & Potencia reactiva fase R & 3 & 7 & var \\
 \hline
-1-0:52.7.0*255 & Voltaje fase L2 instantáneo & unsigned & V & Monitoreo desbalance \\
+1-1:29.7.0*255 & Potencia aparente fase R & 3 & 10 & VA \\
 \hline
-1-0:72.7.0*255 & Voltaje fase L3 instantáneo & unsigned & V & Calidad de energía \\
+1-1:33.7.0*255 & Factor de potencia fase R & 3 & 11 & --- \\
 \hline
-1-0:31.7.0*255 & Corriente fase L1 instantánea & unsigned & A & Detección sobrecarga \\
+\multicolumn{5}{|c|}{\cellcolor{gray!10}\textbf{Fase S (L2) --- omitida en modo monofásico}} \\
 \hline
-1-0:51.7.0*255 & Corriente fase L2 instantánea & unsigned & A & Balance de carga \\
+1-1:52.7.0*255 & Tensión fase S & 3 & 14 & V \\
 \hline
-1-0:71.7.0*255 & Corriente fase L3 instantánea & unsigned & A & Límite térmico \\
+1-1:51.7.0*255 & Corriente fase S & 3 & 15 & A \\
 \hline
-1-0:13.7.0*255 & Factor de potencia total & unsigned & adim. & Penalización reactivos \\
+1-1:41.7.0*255 & Potencia activa fase S & 3 & 16 & W \\
 \hline
-1-0:14.7.0*255 & Frecuencia de red & unsigned & Hz & Detección inestabilidad \\
+1-1:43.7.0*255 & Potencia reactiva fase S & 3 & 17 & var \\
 \hline
-1-0:1.6.0*255 & Demanda máxima activa & double-long-unsigned & kW & Gestión de demanda \\
+1-1:49.7.0*255 & Potencia aparente fase S & 3 & 20 & VA \\
 \hline
-1-0:1.6.0*1 & Marca de tiempo (\emph{timestamp}) demanda máxima & octet-string & --- & Análisis histórico \\
+1-1:53.7.0*255 & Factor de potencia fase S & 3 & 21 & --- \\
 \hline
-0-0:96.1.0*255 & Número de serie medidor & octet-string & ASCII & Identificación única \\
+\multicolumn{5}{|c|}{\cellcolor{gray!10}\textbf{Fase T (L3) --- omitida en modo monofásico}} \\
 \hline
-0-0:96.5.5*255 & Estado relé de corte & unsigned & 0/1 & Control remoto \\
+1-1:72.7.0*255 & Tensión fase T & 3 & 24 & V \\
 \hline
-0-0:96.7.0*255 & Contador fallas de fase & unsigned & count & Calidad de suministro \\
+1-1:71.7.0*255 & Corriente fase T & 3 & 25 & A \\
+\hline
+1-1:61.7.0*255 & Potencia activa fase T & 3 & 26 & W \\
+\hline
+1-1:63.7.0*255 & Potencia reactiva fase T & 3 & 27 & var \\
+\hline
+1-1:69.7.0*255 & Potencia aparente fase T & 3 & 30 & VA \\
+\hline
+1-1:73.7.0*255 & Factor de potencia fase T & 3 & 31 & --- \\
+\hline
+\multicolumn{5}{|c|}{\cellcolor{gray!10}\textbf{Totales trifásicos}} \\
+\hline
+1-1:1.7.0*255 & Potencia activa total & 3 & 34 & W \\
+\hline
+1-1:3.7.0*255 & Potencia reactiva total & 3 & 35 & var \\
+\hline
+1-1:9.7.0*255 & Potencia aparente total & 3 & 38 & VA \\
+\hline
+1-1:13.7.0*255 & Factor de potencia total & 3 & 39 & --- \\
+\hline
+\multicolumn{5}{|c|}{\cellcolor{gray!10}\textbf{Energía acumulada}} \\
+\hline
+1-1:1.8.0*255 & Energía activa importada & 3 & 41 & kWh \\
+\hline
+1-1:3.8.0*255 & Energía reactiva & 3 & 42 & kvarh \\
+\hline
+1-1:9.8.0*255 & Energía aparente & 3 & 45 & kVAh \\
+\hline
+\multicolumn{5}{|c|}{\cellcolor{gray!10}\textbf{Sistema}} \\
+\hline
+1-1:14.7.0*255 & Frecuencia de red & 3 & 49 & Hz \\
+\hline
+1-1:91.7.0*255 & Corriente de neutro & 3 & 50 & A \\
 \hline
 \end{tabular}}%
 \end{table}
@@ -126,11 +158,11 @@ LwM2M define arquitectura cliente-servidor~\cite{OMA_LwM2M2020}. El \textbf{Clie
 \subsection{Objeto Custom 10242: Medidor de Potencia Trifásico}
 \label{sec:nodo-lwm2m-objetos}
 
-La arquitectura implementa \textbf{Object~10242} (\emph{3-Phase Power Meter}) registrado en el OMA LwM2M Registry. Una única instancia \texttt{/10242/0} consolida \textbf{27~recursos} (IDs~0--26) del medidor Emsitech P2000-T, eliminando la fragmentación de múltiples objetos IPSO genéricos. La definición XML se carga en Leshan para decodificación automática.
+La arquitectura implementa \textbf{Object~10242} (\emph{3-Phase Power Meter}) registrado en el OMA LwM2M Registry. Una única instancia \texttt{/10242/0} consolida \textbf{27~recursos de medición} (según registro OMA) del medidor Emsitech P2000-T, eliminando la fragmentación de múltiples objetos IPSO genéricos. La definición XML se carga en Leshan para decodificación automática.
 
 \begin{table}[H]
 \centering
-\caption{Recursos del Objeto 10242 --- 3-Phase Power Meter implementado en piloto}
+\caption{Recursos del Objeto 10242 --- 3-Phase Power Meter (RIDs según registro OMA)}
 \label{tab:lwm2m-ipso-objects}
 {\footnotesize
 \setlength{\tabcolsep}{4pt}
@@ -142,53 +174,53 @@ La arquitectura implementa \textbf{Object~10242} (\emph{3-Phase Power Meter}) re
 \hline
 \multicolumn{5}{|c|}{\cellcolor{gray!10}\textbf{Fase R (L1)}} \\
 \hline
-0 & Voltage\_R & Float & V & /10242/0/0 \\
-1 & Current\_R & Float & A & /10242/0/1 \\
-2 & Active\_Power\_R & Float & kW & /10242/0/2 \\
-3 & Reactive\_Power\_R & Float & kvar & /10242/0/3 \\
-4 & Apparent\_Power\_R & Float & kVA & /10242/0/4 \\
-5 & Power\_Factor\_R & Float & --- & /10242/0/5 \\
+4  & Voltage\_R       & Float & V    & /10242/0/4  \\
+5  & Current\_R       & Float & A    & /10242/0/5  \\
+6  & Active\_Power\_R  & Float & W    & /10242/0/6  \\
+7  & Reactive\_Power\_R& Float & var  & /10242/0/7  \\
+10 & Apparent\_Power\_R& Float & VA   & /10242/0/10 \\
+11 & Power\_Factor\_R  & Float & ---  & /10242/0/11 \\
 \hline
 \multicolumn{5}{|c|}{\cellcolor{gray!10}\textbf{Fase S (L2)}} \\
 \hline
-6 & Voltage\_S & Float & V & /10242/0/6 \\
-7 & Current\_S & Float & A & /10242/0/7 \\
-8 & Active\_Power\_S & Float & kW & /10242/0/8 \\
-9 & Reactive\_Power\_S & Float & kvar & /10242/0/9 \\
-10 & Apparent\_Power\_S & Float & kVA & /10242/0/10 \\
-11 & Power\_Factor\_S & Float & --- & /10242/0/11 \\
+14 & Voltage\_S       & Float & V    & /10242/0/14 \\
+15 & Current\_S       & Float & A    & /10242/0/15 \\
+16 & Active\_Power\_S  & Float & W    & /10242/0/16 \\
+17 & Reactive\_Power\_S& Float & var  & /10242/0/17 \\
+20 & Apparent\_Power\_S& Float & VA   & /10242/0/20 \\
+21 & Power\_Factor\_S  & Float & ---  & /10242/0/21 \\
 \hline
 \multicolumn{5}{|c|}{\cellcolor{gray!10}\textbf{Fase T (L3)}} \\
 \hline
-12 & Voltage\_T & Float & V & /10242/0/12 \\
-13 & Current\_T & Float & A & /10242/0/13 \\
-14 & Active\_Power\_T & Float & kW & /10242/0/14 \\
-15 & Reactive\_Power\_T & Float & kvar & /10242/0/15 \\
-16 & Apparent\_Power\_T & Float & kVA & /10242/0/16 \\
-17 & Power\_Factor\_T & Float & --- & /10242/0/17 \\
+24 & Voltage\_T       & Float & V    & /10242/0/24 \\
+25 & Current\_T       & Float & A    & /10242/0/25 \\
+26 & Active\_Power\_T  & Float & W    & /10242/0/26 \\
+27 & Reactive\_Power\_T& Float & var  & /10242/0/27 \\
+30 & Apparent\_Power\_T& Float & VA   & /10242/0/30 \\
+31 & Power\_Factor\_T  & Float & ---  & /10242/0/31 \\
 \hline
 \multicolumn{5}{|c|}{\cellcolor{gray!10}\textbf{Totales Trifásicos}} \\
 \hline
-18 & Total\_Active\_Power & Float & kW & /10242/0/18 \\
-19 & Total\_Reactive\_Power & Float & kvar & /10242/0/19 \\
-20 & Total\_Apparent\_Power & Float & kVA & /10242/0/20 \\
-21 & Total\_Power\_Factor & Float & --- & /10242/0/21 \\
+34 & Total\_Active\_Power    & Float & W    & /10242/0/34 \\
+35 & Total\_Reactive\_Power   & Float & var  & /10242/0/35 \\
+38 & Total\_Apparent\_Power   & Float & VA   & /10242/0/38 \\
+39 & Total\_Power\_Factor     & Float & ---  & /10242/0/39 \\
 \hline
 \multicolumn{5}{|c|}{\cellcolor{gray!10}\textbf{Energía Acumulada}} \\
 \hline
-22 & Active\_Energy & Float & kWh & /10242/0/22 \\
-23 & Reactive\_Energy & Float & kvarh & /10242/0/23 \\
-24 & Apparent\_Energy & Float & kVAh & /10242/0/24 \\
+41 & Active\_Energy   & Float & kWh  & /10242/0/41 \\
+42 & Reactive\_Energy & Float & kvarh& /10242/0/42 \\
+45 & Apparent\_Energy & Float & kVAh & /10242/0/45 \\
 \hline
 \multicolumn{5}{|c|}{\cellcolor{gray!10}\textbf{Sistema}} \\
 \hline
-25 & Frequency & Float & Hz & /10242/0/25 \\
-26 & Neutral\_Current & Float & A & /10242/0/26 \\
+49 & Frequency        & Float & Hz   & /10242/0/49 \\
+50 & Neutral\_Current  & Float & A    & /10242/0/50 \\
 \hline
 \end{tabular}}%
 \end{table}
 
-\textbf{Ventajas frente a IPSO genéricos:} (1)~Registro y descubrimiento simplificado (1~objeto vs 35~instancias IPSO). (2)~Acceso atómico: \texttt{Read /10242/0} retorna 27~recursos en único payload TLV. (3)~Semántica \emph{domain-specific} sin \emph{lookup tables}. (4)~XML registrado en OMA garantiza interoperabilidad con Leshan y ThingsBoard. El mapeo OBIS→LwM2M se detalla en las Tablas~\ref{tab:obis-registers} y~\ref{tab:lwm2m-tb-mapping}. El \emph{polling} completo ejecuta en 280--320\,ms (Modbus RTU @ 9600\,baud, 12~frames).
+\textbf{Ventajas frente a IPSO genéricos:} (1)~Registro y descubrimiento simplificado (1~objeto vs 35~instancias IPSO). (2)~Acceso atómico: \texttt{Read /10242/0} retorna 27~recursos en único payload TLV. (3)~Semántica \emph{domain-specific} sin \emph{lookup tables}. (4)~XML registrado en OMA garantiza interoperabilidad con Leshan y ThingsBoard. El mapeo OBIS→LwM2M se detalla en las Tablas~\ref{tab:obis-registers} y~\ref{tab:lwm2m-tb-mapping}. En modo trifásico completo (27~códigos OBIS) cada ciclo DLMS tarda típicamente 6--10\,s a 9600\,bps; en modo monofásico (\texttt{CONFIG\_AMI\_SINGLE\_PHASE=y}, 15~códigos) el ciclo se reduce a 3--5\,s.
 
 \subsection{Modo Observación y Notificaciones}
 \label{sec:nodo-lwm2m-observacion}
@@ -202,7 +234,7 @@ La Figura~\ref{fig:lwm2m-registration-flow} ilustra el flujo completo del ciclo 
 \subsection{Perfil del medidor en ThingsBoard}
 \label{sec:nodo-configuracion-lwm2m}
 
-Device Profile \texttt{ESP32-Thread-Meter} en ThingsBoard: transporte LwM2M~v1.2, \emph{lifetime}~3600\,s, binding UDP, pmin=300\,s, pmax=900\,s. Write-Attributes aplicados automáticamente al registro.
+Device Profile \texttt{ESP32-Thread-Meter} en ThingsBoard: transporte LwM2M~v1.1, \emph{lifetime}~300\,s, binding UDP, pmin=60\,s, pmax=300\,s. Write-Attributes aplicados automáticamente al registro.
 
 \subsubsection{Mapeo de Objetos LwM2M a Telemetría ThingsBoard}
 \label{sec:nodo-mapeo-telemetria}
@@ -221,36 +253,36 @@ Gateway ejecuta traductor LwM2M-MQTT que transforma notificaciones CoAP en mensa
 \hline
 \multicolumn{5}{|c|}{\cellcolor{gray!10}\textbf{Fase L1 (Phase R)}} \\
 \hline
-/10242/0/0 & voltage\_r\_v & float & V & Voltaje fase L1 (1-0:32.7.0) \\
-/10242/0/1 & current\_r\_a & float & A & Corriente fase L1 (1-0:31.7.0) \\
-/10242/0/2 & power\_active\_r\_kw & float & kW & Potencia activa fase L1 \\
-/10242/0/5 & power\_factor\_r & float & --- & Factor de potencia L1 \\
+/10242/0/4  & voltage\_r\_v          & float & V    & Tensión fase L1 (1-1:32.7.0) \\
+/10242/0/5  & current\_r\_a          & float & A    & Corriente fase L1 (1-1:31.7.0) \\
+/10242/0/6  & power\_active\_r\_w     & float & W    & Potencia activa fase L1 \\
+/10242/0/11 & power\_factor\_r       & float & ---  & Factor de potencia L1 \\
 \hline
-\multicolumn{5}{|c|}{\cellcolor{gray!10}\textbf{Fases L2 y L3 --- mapeo análogo (resources 6--11 y 12--17)}} \\
+\multicolumn{5}{|c|}{\cellcolor{gray!10}\textbf{Fases L2 y L3 --- mapeo análogo (resources 14--21 y 24--31)}} \\
 \hline
 \multicolumn{5}{|c|}{\cellcolor{gray!10}\textbf{Totales Trifásicos}} \\
 \hline
-/10242/0/18 & power\_3ph\_kw & float & kW & Potencia activa total \\
-/10242/0/19 & power\_reactive\_3ph\_kvar & float & kvar & Potencia reactiva total \\
-/10242/0/20 & power\_apparent\_3ph\_kva & float & kVA & Potencia aparente total \\
-/10242/0/21 & power\_factor\_3ph & float & --- & FP total (1-0:13.7.0) \\
+/10242/0/34 & power\_3ph\_w          & float & W    & Potencia activa total \\
+/10242/0/35 & power\_reactive\_3ph\_var & float & var  & Potencia reactiva total \\
+/10242/0/38 & power\_apparent\_3ph\_va  & float & VA   & Potencia aparente total \\
+/10242/0/39 & power\_factor\_3ph     & float & ---  & FP total (1-1:13.7.0) \\
 \hline
 \multicolumn{5}{|c|}{\cellcolor{gray!10}\textbf{Energía y Sistema}} \\
 \hline
-/10242/0/22 & energy\_active\_kwh & float & kWh & Energía activa (1-0:1.8.0) \\
-/10242/0/23 & energy\_reactive\_kvarh & float & kvarh & Energía reactiva (1-0:3.8.0) \\
-/10242/0/25 & frequency\_hz & float & Hz & Frecuencia (1-0:14.7.0) \\
-/10242/0/26 & current\_neutral\_a & float & A & Corriente neutro \\
+/10242/0/41 & energy\_active\_kwh    & float & kWh  & Energía activa (1-1:1.8.0) \\
+/10242/0/42 & energy\_reactive\_kvarh & float & kvarh & Energía reactiva (1-1:3.8.0) \\
+/10242/0/49 & frequency\_hz         & float & Hz   & Frecuencia (1-1:14.7.0) \\
+/10242/0/50 & current\_neutral\_a    & float & A    & Corriente neutro \\
 \hline
 \multicolumn{5}{|c|}{\cellcolor{gray!10}\textbf{Metadata Dispositivo}} \\
 \hline
-/3/0/2 & meter\_serial & string & --- & Serial medidor (0-0:96.1.0) \\
-/4/0/2 & rssi\_dbm & int & dBm & RSSI Thread (EWMA $\alpha{=}0{,}2$) \\
+/3/0/2 & meter\_serial & string & --- & Serial medidor (Object~3) \\
+/4/0/2 & rssi\_dbm     & int    & dBm & RSSI Thread (EWMA $\alpha{=}0{,}2$) \\
 \hline
 \end{tabular}}%
 \end{table}
 
-Fases L2 y L3 siguen idéntico patrón (resources 6--11 y 12--17, keys \texttt{voltage\_s\_v} / \texttt{voltage\_t\_v}, etc.). Transformaciones: energía directa en kWh, timestamp vía RTC+NTP cada 24\,h (alarma ``Clock Drift'' si desfase $>$300\,s), factor de potencia con signo ($+$inductivo/$-$capacitivo).
+Fases L2 y L3 siguen idéntico patrón (resources 14--21 y 24--31, keys \texttt{voltage\_s\_v} / \texttt{voltage\_t\_v}, etc.). Transformaciones: energía directa en kWh, timestamp vía RTC+NTP cada 24\,h (alarma ``Clock Drift'' si desfase $>$300\,s), factor de potencia con signo ($+$inductivo/$-$capacitivo).
 
 \subsubsection{Configuración de Alarmas y Umbrales}
 \label{sec:nodo-alarmas}
@@ -308,9 +340,9 @@ El firmware opera sobre \textbf{Zephyr RTOS v4.2.0} con HAL independiente del fa
 \hline
 OpenThread \emph{Stack} & Pila Thread 1.4 (MLE, 6LoWPAN, CoAP, TCP) & 220 KB & 56 KB \\
 \hline
-Parser DLMS/COSEM & Decodificación HDLC/OBIS (51 registros) & 28 KB & 4 KB \\
+Parser DLMS/COSEM & Decodificación HDLC/OBIS (27 códigos OBIS) & 28 KB & 4 KB \\
 \hline
-Cliente LwM2M & Registro, observación, DTLS 1.2 (PSK) & 120 KB & 16 KB \\
+Cliente LwM2M & Registro, observación, NoSec (modo~3, sin DTLS) & 120 KB & 16 KB \\
 \hline
 Zephyr Kernel + HAL & Planificador (\emph{scheduler}), controladores (\emph{drivers}), net\_mgmt & 266 KB & 176 KB \\
 \hline
@@ -321,7 +353,7 @@ Zephyr Kernel + HAL & Planificador (\emph{scheduler}), controladores (\emph{driv
 \end{tabular}
 \end{table}
 
-El firmware utiliza 4~hilos cooperativos Zephyr (stack 4\,KB c/u): \texttt{main} (inicialización, ciclo de sensores cada 30\,s), \texttt{openthread} (stack MLE/CoAP/6LoWPAN), \texttt{lwm2m\_engine} (registro, observación), y \texttt{net\_mgmt} (eventos conectividad L4 vía semáforo).
+El firmware organiza la ejecución en hilos Zephyr: \texttt{main} (inicialización y ciclo de supervisión DLMS cada 15\,s, stack 4\,KB), \texttt{dlms\_tid} (sondeo DLMS no bloqueante orquestado por semáforo, stack 4\,KB), \texttt{openthread} (pila MLE/CoAP/6LoWPAN, gestionada por Zephyr) y \texttt{lwm2m\_engine} (registro LwM2M/RD y observación, stack 8\,KB).
 
 \subsubsection{Ciclo Principal del \emph{Firmware}}
 \label{sec:nodo-firmware-main}
@@ -334,18 +366,29 @@ El hilo principal espera conectividad IPv6 Thread mediante un semáforo Zephyr, 
 \subsubsection{Configuración Kconfig y Layout de Memoria}
 \label{sec:nodo-firmware-kconfig}
 
-Credenciales Thread estáticas en \texttt{prj.conf} (canal, Network Key, PAN~ID). Configuraciones clave:
+Credenciales Thread estáticas en \texttt{prj.conf} (canal, Network Key, PAN~ID). Configuraciones clave del proyecto \texttt{ami-lwm2m-client~v0.4.0}:
 
 \begin{verbatim}
-CONFIG_OPENTHREAD=y
+# Thread network credentials
+CONFIG_OPENTHREAD_THREAD_VERSION_1_4=y
+CONFIG_OPENTHREAD_FTD=y
+CONFIG_OPENTHREAD_CHANNEL=25
+CONFIG_OPENTHREAD_PANID=43981
+CONFIG_OPENTHREAD_NETWORK_NAME="AMI-Pilot-2025"
+# LwM2M engine
 CONFIG_LWM2M=y
-CONFIG_LWM2M_VERSION_1_1=y
-CONFIG_LWM2M_IPSO_SUPPORT=y
-CONFIG_LWM2M_SERVER_URI="coap://[fd00::1]:5683"
-CONFIG_THREAD_JOINER_PSKD="J01NME"
+CONFIG_LWM2M_ENGINE_DEFAULT_LIFETIME=300
+CONFIG_LWM2M_ENGINE_STACK_SIZE=8192
+# CoAP retransmission
+CONFIG_COAP_INIT_ACK_TIMEOUT_MS=5000
+CONFIG_COAP_MAX_RETRANSMIT=3
+# Stack sizes
+CONFIG_MAIN_STACK_SIZE=4096
+# AMI: single-phase mode (pre-skips Phase S/T OBIS codes)
+CONFIG_AMI_SINGLE_PHASE=y
 \end{verbatim}
 
-Binario: 634\,KB de 4\,MB Flash (15\%), 252\,KB de 437\,KB SRAM (57\%). Layout incluye NVS 24\,KB (credenciales) y espacio para OTA vía MCUboot.
+Binario: 634\,KB de 4\,MB Flash (15\%), 252\,KB de 437\,KB SRAM (57\%). Modo \texttt{CONFIG\_AMI\_SINGLE\_PHASE=y} activo por defecto: omite fases S y T (12~códigos OBIS), reduciendo a 15~lecturas por ciclo y ahorrando $\approx$5\,s de sondeo en medidores monofásicos.
 
 % Nota Rev11: §3.3.3 Gestión de Energía eliminada.  Los nodos operan como MED (RX
 % siempre activo), alimentados desde el puerto auxiliar 5V del medidor.  Las
@@ -399,7 +442,7 @@ Thread implementa topología jerárquica con cuatro roles~\cite{NordicThread2024
     \item \textbf{End Device:} Nodos terminales sin \emph{routing}. Variantes: \textbf{MED} (RX \emph{always-on}, latencia $<$50\,ms, 19\,mA), \textbf{SED} (RX periódico, $<$1\,mA, latencia 100--3000\,ms).
 \end{enumerate}
 
-Los nodos del piloto operan como \textbf{MED}, eliminando latencia de \emph{polling} y garantizando entrega $<$100\,ms para comandos Demand Response. Alimentados desde el medidor (5\,V, 200\,mA disponibles), el consumo típico de 19\,mA no representa restricción.
+Los nodos del piloto se configuran como \textbf{FTD} (\emph{Full Thread Device}, \texttt{CONFIG\_OPENTHREAD\_FTD=y}), lo que permite que cualquier nodo pueda promover a Router y reforzar la malla. En la validación experimental el nodo opera como \emph{Child} del Border Router; con RX siempre activo garantiza entrega $<$100\,ms para comandos Demand Response. Alimentados desde el medidor (5\,V, 200\,mA disponibles), el consumo en modo FTD no representa restricción.
 
 \subsubsection{Auto-Formación y Auto-Reparación}
 \label{sec:nodo-thread-autoformacion}
@@ -480,7 +523,7 @@ Desv. estándar & 8,1 ms & Baja varianza \\
 \section{Conclusiones del capítulo}
 \label{sec:nodo-conclusiones}
 
-El recorrido del dato implementado en este capítulo tiene cuatro etapas: (1)~el medidor Emsitech~P2000-T expone 17~registros OBIS vía DLMS/COSEM/RS-485 (§\ref{sec:nodo-medidor-dlms}); (2)~el \emph{firmware} Zephyr lee, parsea y empaqueta los valores en el Objeto~10242 con 27~recursos LwM2M (§\ref{sec:nodo-lwm2m}); (3)~CoAP/Observe notifica cambios al servidor con 99,7\% menos tráfico que sondeo periódico (§\ref{sec:nodo-overhead}); y (4)~Thread~1.4 transporta los paquetes hasta el Border Router con latencia P95~$<$60\,ms, validando H3 (§\ref{sec:nodo-pruebas}).
+El recorrido del dato implementado en este capítulo tiene cuatro etapas: (1)~el \emph{firmware} lee 27~códigos OBIS del medidor Emsitech~P2000-T vía DLMS/COSEM/RS-485 (§\ref{sec:nodo-medidor-dlms}); (2)~el \emph{firmware} Zephyr lee, parsea y empaqueta los valores en el Objeto~10242 con 27~recursos LwM2M (§\ref{sec:nodo-lwm2m}); (3)~CoAP/Observe notifica cambios al servidor con 99,7\% menos tráfico que sondeo periódico (§\ref{sec:nodo-overhead}); y (4)~Thread~1.4 transporta los paquetes hasta el Border Router con latencia P95~$<$60\,ms, validando H3 (§\ref{sec:nodo-pruebas}).
 
 La plataforma de referencia ESP32-C6 (\$3,20/unidad) con Zephyr~RTOS demuestra portabilidad multi-SoC: latencia Thread promedio 45,2\,ms (P95~58,3\,ms, margen 82\% sobre H3 de 250\,ms) y tiempo de unión Thread $<$3\,s. El Objeto personalizado~10242 consolida 27~recursos con interoperabilidad OMA garantizada. Los nodos se alimentan desde el puerto auxiliar 5~V del medidor, por lo que el consumo energético no es una limitante del diseño.
 
