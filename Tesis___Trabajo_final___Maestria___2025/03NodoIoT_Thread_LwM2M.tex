@@ -6,7 +6,7 @@
 
 Este capítulo describe el nodo IoT que vincula cada medidor inteligente con la red de campo \emph{mesh}. El análisis sigue el recorrido del dato: desde su origen en el \textbf{medidor trifásico} y su pila de comunicación \textbf{DLMS/COSEM} sobre RS-485, pasando por el \textbf{modelo de dispositivo} LwM2M, la \textbf{implementación del firmware} en Zephyr~RTOS, hasta la transmisión por la \textbf{red Thread} en malla (\emph{mesh}).
 
-§\ref{sec:nodo-hardware} presenta la plataforma de referencia: SoC~ESP32-C6 con radio IEEE~802.15.4 y transceptor RS-485 con aislamiento galvánico. §\ref{sec:nodo-medidor-dlms} especifica el medidor Emsitech~P2000-T, el protocolo DLMS/COSEM y los 27~códigos OBIS implementados. §\ref{sec:nodo-lwm2m} define el Objeto~10242 (\emph{3-Phase Power Meter}) con sus 27~recursos y el perfil LwM2M configurado en ThingsBoard. §\ref{sec:nodo-firmware} detalla el \emph{firmware} Zephyr~RTOS con pila CoAP/OpenThread, ciclo principal y parámetros Kconfig. §\ref{sec:nodo-pila-protocolos} describe la red de campo Thread: capa IEEE~802.15.4, topología, auto-formación y direccionamiento IPv6, \textbf{agotando el tema Thread aquí} según la Regla de Exclusión. §\ref{sec:nodo-pruebas} presenta el análisis de carga y las pruebas de latencia que validan H3 ($<$250\,ms).
+§\ref{sec:nodo-hardware} presenta la plataforma de referencia: SoC~ESP32-C6 con radio IEEE~802.15.4 y transceptor RS-485 con aislamiento galvánico. §\ref{sec:nodo-medidor-dlms} especifica el medidor Emsitech~P2000-T, el protocolo DLMS/COSEM y los 27~códigos OBIS implementados. §\ref{sec:nodo-lwm2m} define el Objeto~10242 (\emph{3-Phase Power Meter}) con sus 27~recursos y el perfil LwM2M configurado en ThingsBoard. §\ref{sec:nodo-firmware} detalla el \emph{firmware} Zephyr~RTOS con pila CoAP/OpenThread, ciclo principal y estrategias de optimización de sobrecarga. §\ref{sec:nodo-pila-protocolos} describe la red de campo Thread: capa IEEE~802.15.4, topología, auto-formación y direccionamiento IPv6, \textbf{agotando el tema Thread aquí} según la Regla de Exclusión. §\ref{sec:nodo-pruebas} presenta el análisis de carga y las pruebas de latencia que validan H3 ($<$250\,ms).
 
 Los nodos se alimentan directamente desde el puerto auxiliar 5\,V del medidor (27\,mA promedio), sin restricción energética. El piloto valida la pila completa DLMS/COSEM $\rightarrow$ LwM2M $\rightarrow$ CoAP/Thread con 1~medidor físico Emsitech~P2000-T. Los listados de código fuente están disponibles en el repositorio del proyecto\footnote{\url{https://github.com/jsebgiraldo/ami-lwm2m-node}}.
 
@@ -362,39 +362,6 @@ El firmware organiza la ejecución en hilos Zephyr: \texttt{main} (inicializaci�
 El hilo principal espera conectividad IPv6 Thread mediante un semáforo Zephyr, configura los objetos LwM2M y registra el cliente ante el servidor Leshan del gateway (Capítulo~\ref{chap:gateway-halow}).  La Figura~\ref{fig:firmware-main-loop} presenta el diagrama de flujo del ciclo completo.
 
 \input{fig_firmware_main_loop}
-
-\subsubsection{Configuración Kconfig y Layout de Memoria}
-\label{sec:nodo-firmware-kconfig}
-
-Credenciales Thread estáticas en \texttt{prj.conf} (canal, Network Key, PAN~ID). Configuraciones clave del proyecto \texttt{ami-lwm2m-client~v0.4.0}:
-
-\begin{verbatim}
-# Thread network credentials
-CONFIG_OPENTHREAD_THREAD_VERSION_1_4=y
-CONFIG_OPENTHREAD_FTD=y
-CONFIG_OPENTHREAD_CHANNEL=25
-CONFIG_OPENTHREAD_PANID=43981
-CONFIG_OPENTHREAD_NETWORK_NAME="AMI-Pilot-2025"
-# LwM2M engine
-CONFIG_LWM2M=y
-CONFIG_LWM2M_ENGINE_DEFAULT_LIFETIME=300
-CONFIG_LWM2M_ENGINE_STACK_SIZE=8192
-# CoAP retransmission
-CONFIG_COAP_INIT_ACK_TIMEOUT_MS=5000
-CONFIG_COAP_MAX_RETRANSMIT=3
-# Stack sizes
-CONFIG_MAIN_STACK_SIZE=4096
-# AMI: single-phase mode (pre-skips Phase S/T OBIS codes)
-CONFIG_AMI_SINGLE_PHASE=y
-\end{verbatim}
-
-Binario: 634\,KB de 4\,MB Flash (15\%), 252\,KB de 437\,KB SRAM (57\%). Modo \texttt{CONFIG\_AMI\_SINGLE\_PHASE=y} activo por defecto: omite fases S y T (12~códigos OBIS), reduciendo a 15~lecturas por ciclo y ahorrando $\approx$5\,s de sondeo en medidores monofásicos.
-
-% Nota Rev11: §3.3.3 Gestión de Energía eliminada.  Los nodos operan como MED (RX
-% siempre activo), alimentados desde el puerto auxiliar 5V del medidor.  Las
-% mediciones de consumo no se realizaron experimentalmente en el piloto, por lo
-% que se omite la sección de perfiles de consumo.  La alimentación externa hace
-% que el presupuesto energético no sea una limitante del diseño.
 
 \subsection{Optimización de Sobrecarga}
 \label{sec:nodo-optimizacion-overhead}
