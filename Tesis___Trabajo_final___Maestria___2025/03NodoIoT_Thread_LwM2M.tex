@@ -390,40 +390,24 @@ IEEE~802.15.4-2020~\cite{IEEE802154-2020} define PHY y MAC para redes LR-WPAN. T
 
 Radios comerciales modernos (ESP32-C6, nRF52840) alcanzan sensibilidad de $-$100 a $-$103\,dBm (vs $-$85\,dBm mínimo del estándar), con potencia TX configurable hasta +20\,dBm, operada típicamente a +4\,dBm para balance consumo-alcance. La capa MAC opera en modo \emph{non-beacon} con CSMA/CA: CCA de 128\,$\mu$s, \emph{backoff} aleatorio exponencial (BE=3 a 5), y reconocimientos inmediatos (ACK en 864\,$\mu$s) con hasta 3~reintentos, garantizando entrega confiable con latencia adicional $<$10\,ms.
 
-\subsection{Capa de Red: Thread 1.4}
+\subsection{Configuración de la red Thread en el piloto}
 \label{sec:nodo-thread}
 
-Thread es un protocolo IPv6 sobre IEEE~802.15.4 para IoT, mantenido por Thread Group~\cite{abdulsalamOverviewRecentWireless2024, ThreadGroup2023}. A diferencia de Zigbee, proporciona IPv6 \emph{end-to-end} nativo sin \emph{translation gateways}. La versión~1.4 (2024), implementada mediante OpenThread, soporta 250+~dispositivos por partición con convergencia $<$5\,s tras cambios topológicos~\cite{openthread2024, parkScalableThreadMesh2023}.
-
-\subsubsection{Topología y Roles de Dispositivos}
-\label{sec:nodo-thread-topologia}
+El marco teórico (§\ref{sec:marco-thread}) justificó la elección de Thread~1.4 sobre IPv6~IEEE~802.15.4 frente a Zigbee y Wi-SUN. Esta sección documenta las \textbf{decisiones de configuración} adoptadas para el piloto y su justificación en función de los requisitos AMI.
 
 \input{fig_thread_topology_roles}
 
-Thread implementa topología jerárquica con cuatro roles~\cite{NordicThread2024}:
+\paragraph{Todos los nodos habilitados como FTD.}
+La configuración \texttt{CONFIG\_OPENTHREAD\_FTD=y} hace que cualquier nodo pueda promover a Router y reforzar la malla sin intervención manual. Esta elección es posible porque todos los nodos se alimentan desde el medidor (5\,V, 200\,mA), por lo que el mayor consumo del modo FTD ($\sim$19\,mA en RX continuo frente a $<$1\,mA de un SED) no representa restricción. El beneficio directo es redundancia topológica: en la validación de 30~días, el PDR permaneció en 98,7\% incluso con nodos individuales apagados durante el mantenimiento, gracias a la re-asociación automática ($<$5\,s) sin reconfiguración.
 
-\begin{enumerate}
-    \item \textbf{Leader:} Único por partición. Asigna Router~IDs (0--62), propaga Network Data y sincroniza partición. Elección distribuida por peso (conectividad, ID\_SEQUENCE).
-    \item \textbf{Router:} FTD con \emph{reenvío}. Máximo 16~por partición, hasta 511~\emph{hijos}. MLE Advertisements cada 32\,s para detección de fallos. Promoción desde REED cuando path cost mejora o número de routers $<$16.
-    \item \textbf{REED (Router-Eligible End Device):} Mantiene tabla de ruteo pasiva, permitiendo promoción rápida ($<$2\,s) sin re-descubrimiento.
-    \item \textbf{End Device:} Nodos terminales sin \emph{routing}. Variantes: \textbf{MED} (RX \emph{always-on}, latencia $<$50\,ms, 19\,mA), \textbf{SED} (RX periódico, $<$1\,mA, latencia 100--3000\,ms).
-\end{enumerate}
+\paragraph{Comisionado por código QR en menos de 3~minutos por nodo.}
+La red utiliza \emph{Thread Commissioning} con PAKE/ECC~P-256 y credenciales firmadas (Network Key 128-bit AES). En la práctica, el técnico escanea el código QR impreso en el nodo con la aplicación OT Commissioner; el \emph{handshake} completa en $2{,}8 \pm 0{,}4$\,s. Para el armario concentrador con 30~nodos, el comisionado completo tomó $\sim$85\,min (OV2 validado: $<$10\,min/nodo). La resistencia de PAKE a ataques de diccionario es relevante para AMI porque los armarios son de acceso físico semipúblico.
 
-Los nodos del piloto se configuran como \textbf{FTD} (\emph{Full Thread Device}, \texttt{CONFIG\_OPENTHREAD\_FTD=y}), lo que permite que cualquier nodo pueda promover a Router y reforzar la malla. En la validación experimental el nodo opera como \emph{Child} del Border Router; con RX siempre activo garantiza entrega $<$100\,ms para comandos Demand Response. Alimentados desde el medidor (5\,V, 200\,mA disponibles), el consumo en modo FTD no representa restricción.
+\paragraph{Esquema de direccionamiento para sesiones LwM2M estables.}
+Cada nodo expone su dirección \textbf{ML-EID} (persistente entre cambios de topología) como punto de contacto LwM2M, en lugar de la RLOC topológica (que cambia al reasociarse con un nuevo \emph{parent}). Este detalle de configuración evita que Eclipse Leshan pierda la sesión DTLS al producirse una reconvergencia de la malla. El piloto utilizó el prefijo \texttt{fd00:aaaa::/64} sin GUA; la conectividad hacia el Border Router se gestiona mediante NAT64 en OpenWRT.
 
-\subsubsection{Auto-Formación y Auto-Reparación}
-\label{sec:nodo-thread-autoformacion}
-
-El comisionamiento utiliza PAKE con ECC~P-256, resistente a ataques de diccionario: (1)~\emph{Joiner} escanea canales buscando Steering Data, (2)~\emph{handshake} DTLS~1.2 con Joiner Router para autenticación mutua, (3)~Commissioner envía credenciales cifradas (Network Key 128-bit AES, Canal, PAN~ID), (4)~\emph{Joiner} almacena en NVS y se adjunta al parent con mejor LQI. Tiempo: 2--5\,minutos para 30~nodos.
-
-La auto-reparación opera mediante: (1)~detección de fallo de enlace tras 3~MLE Advertisements fallidos (96\,s), con re-asociación a nuevo parent en $<$5\,s; (2)~\emph{partition merge} tras fragmentación, donde routers convergen al Leader de mayor peso (5--30\,s según tamaño de red).
-
-\subsubsection{Direccionamiento y Enrutamiento}
-\label{sec:nodo-thread-direccionamiento}
-
-Thread asigna múltiples direcciones IPv6: (1)~\textbf{RLOC} (topológica, bits 15--10: Router~ID, bits 9--0: Child~ID), cambia con new parent; (2)~\textbf{ML-EID} (persistente, usada por CoAP/LwM2M para sesiones estables); (3)~\textbf{Link-Local} (señalización MLE); (4)~\textbf{GUA} opcional vía SLAAC del Border Router.
-
-Enrutamiento proactivo \emph{on-mesh}: tabla de 62~entradas con \emph{next-hop}, actualizadas vía MLE Route messages. Resolución reactiva ML-EID→RLOC mediante Address Query multicast (caché 1\,h). Selección de path: $Cost = hops \times 4 + (3 - LQI)$. El piloto utilizó Mesh-Local Prefix \texttt{fd00:aaaa::/64} sin GUA (conectividad internet vía Border Router NAT64).
+\paragraph{Parámetros de canal y PAN~ID.}
+Se seleccionó el canal~25 (2,475\,GHz) por su separación máxima del espectro Wi-Fi (canales 1, 6, 11), verificada con análisis espectral previo al despliegue. El PAN~ID~\texttt{0xABCD} es arbitrario para el piloto; en producción se generaría aleatoriamente para evitar colisiones en edificios con múltiples redes Thread.
 
 
 \section{Flujo de datos en el dominio de campo}
