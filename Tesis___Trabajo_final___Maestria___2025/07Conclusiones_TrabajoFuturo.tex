@@ -7,19 +7,19 @@ Esta tesis diseñó, implementó y validó una arquitectura IoT centrada en pasa
 
 \subsection{Cumplimiento de Objetivos}
 
-\textbf{Objetivo General --- CUMPLIDO:} Reducción de latencia ext. a ext. de 97.4\% (85$\pm$12~ms vs 3\,247$\pm$118~ms línea base, p<0.0001), disponibilidad 99.40\% durante 30 días de piloto, e integración bidireccional Thread$\rightarrow$HaLow con 60 nodos sin pérdida de mensajes en 72~h.
+\textbf{Objetivo General --- CUMPLIDO:} Reducción de latencia ext. a ext. de 97,4\% (85$\pm$12~ms vs 3\,247$\pm$118~ms línea base, p<0,0001), disponibilidad 99,40\% durante 30 días de piloto, e integración bidireccional Thread$\rightarrow$HaLow con 1~medidor físico y 59~nodos con telemetría sintética sin pérdida de mensajes en 72~h.
 
 \textbf{Objetivos Específicos:}
 \begin{itemize}
 \item \textbf{OE1 --- Arquitectura multi-capa (CUMPLIDO):} 4 capas (Conectividad, Orquestación, Procesamiento, Aplicación) con interfaces estándar (Cap.~\ref{chap:nodo-iot}).
 \item \textbf{OE2 --- Integración Thread-HaLow (CUMPLIDO):} OTBR + nRF52840 RCP + Morse Micro MM6108, latencia Thread$\rightarrow$HaLow 38$\pm$7~ms (3-hop).
-\item \textbf{OE3 --- Plataforma de borde en contenedores (CUMPLIDO):} Docker Compose con 3 servicios (ThingsBoard Edge~3.6.2 con transporte LwM2M integrado, PostgreSQL~15, Redis~7.0) y OTBR como servicio nativo de OpenWRT; $\sim$2,5 núcleos / $\sim$1,8~GB RAM en RPi4, dejando $\sim$2,2~GB libres para OTBR y sistema operativo. Almacenamiento local con sincronización gRPC bidireccional hacia servidor \emph{on-premise}; 0\% pérdida de mensajes durante desconexiones de 30~min (Cap.~\ref{chap:gateway-halow}).
-\item \textbf{OE4 --- Caso de estudio energía inteligente (CUMPLIDO):} 60 nodos Zephyr + enlace HaLow, 30 días, 172\,800 mensajes; almacenamiento local 100\% durante desconexión 30~min (Cap.~\ref{chap:resultados}).
+\item \textbf{OE3 --- Plataforma de borde en contenedores (CUMPLIDO):} Docker Compose con 3 servicios (ThingsBoard Edge~3.6.2 con transporte LwM2M integrado, PostgreSQL~15, Redis~7.0) y OTBR como servicio nativo de OpenWRT; $\sim$2,5 núcleos / $\sim$1,2~GB RAM en RPi4 en operación normal ($\sim$1,8~GB bajo estrés 15$\times$), dejando $\sim$2,8~GB libres para OTBR y sistema operativo. Almacenamiento local con sincronización gRPC bidireccional hacia servidor \emph{on-premise}; 0\% pérdida de mensajes durante desconexiones de 30~min (Cap.~\ref{chap:gateway-halow}).
+\item \textbf{OE4 --- Caso de estudio energía inteligente (CUMPLIDO):} 1~medidor físico Emsitech P2000-T + 59~nodos con telemetría sintética + enlace HaLow, 30 días, 172\,800 mensajes; almacenamiento local 100\% durante desconexión 30~min (Cap.~\ref{chap:resultados}).
 \end{itemize}
 
 \section{Validación de Hipótesis}
 
-La hipótesis general fue \textbf{validada}: reducción de latencia >60\% (logrado 97.4\%, p<0.0001) y disponibilidad >99\% durante 30 días de piloto (logrado 99.40\%). Las siete hipótesis específicas (H1--H7) fueron evaluadas mediante los experimentos de los Capítulos~\ref{chap:nodo-iot} y~\ref{chap:gateway-halow}. La Tabla~\ref{tab:hipotesis-validacion} resume la validación: 7 de 7 completamente validadas.
+La hipótesis general fue \textbf{validada}: reducción de latencia >60\% (logrado 97,4\%, p<0,0001) y disponibilidad >99\% durante 30 días de piloto (logrado 99,40\%). Las siete hipótesis específicas (H1--H7) fueron evaluadas mediante los experimentos de los Capítulos~\ref{chap:nodo-iot} y~\ref{chap:gateway-halow}. La Tabla~\ref{tab:hipotesis-validacion} resume la validación: 7 de 7 completamente validadas.
 
 \begin{table}[h]
 \centering
@@ -31,57 +31,51 @@ La hipótesis general fue \textbf{validada}: reducción de latencia >60\% (logra
 \hline
 \textbf{H1} & 6LoWPAN/CoAP/LwM2M reduce sobrecarga >70\% y latencia >40\% & Sobrecarga <30\%, Lat. <15~ms/hop & Sobrecarga $-$91\%, Lat. 11$\pm$3~ms/hop & \textbf{VALIDADA} & Cap.~\ref{chap:gateway-halow} \\
 \hline
-\textbf{H2} & Edge reduce tráfico WAN >65\% y disponibilidad >99\% & Tráfico <35\% línea base, Disp. >99\% & Tráfico $-$72\%, Disp. 99.40\% & \textbf{VALIDADA} & Cap.~\ref{chap:gateway-halow} \\
+\textbf{H2} & Borde reduce tráfico WAN >65\% y disponibilidad >99\% & Tráfico <35\% línea base, Disp. >99\% & Tráfico $-$72\%, Disp. 99,40\% & \textbf{VALIDADA} & Cap.~\ref{chap:gateway-halow} \\
 \hline
-\textbf{H3} & HaLow multi-banda optimiza eficiencia según caso de uso & PDR >98\% @ 2~MHz & PDR 99.2\% @ 2~MHz, 68 nodos @ 4~MHz & \textbf{VALIDADA} & Cap.~\ref{chap:gateway-halow} \\
+\textbf{H3} & HaLow multi-banda optimiza eficiencia según caso de uso & PDR >98\% @ 2~MHz & PDR 99,2\% @ 2~MHz, 68 nodos @ 4~MHz & \textbf{VALIDADA} & Cap.~\ref{chap:gateway-halow} \\
 \hline
-\textbf{H4} & IPHC reduce cabeceras >85\% (48B$\rightarrow$<7B) & Cabeceras <7~bytes & Cabeceras 4.2$\pm$1.1~B (91\%) & \textbf{VALIDADA} & Cap.~\ref{chap:gateway-halow} \\
+\textbf{H4} & IPHC reduce cabeceras >85\% (48B$\rightarrow$<7B) & Cabeceras <7~bytes & Cabeceras 4,2$\pm$1,1~B (91\%) & \textbf{VALIDADA} & Cap.~\ref{chap:gateway-halow} \\
 \hline
 \textbf{H5} & CoAP reduce latencia >50\% vs MQTT/TCP & Lat. <30~ms & Lat. 18$\pm$4~ms ($-$65\%) & \textbf{VALIDADA} & Cap.~\ref{chap:gateway-halow} \\
 \hline
-\textbf{H6} & LwM2M reduce tráfico gestión >75\% & Tráfico <25\% & Tráfico $-$82\% (OTA 450~KB vs 2.1~MB) & \textbf{VALIDADA} & Cap.~\ref{chap:gateway-halow} \\
+\textbf{H6} & LwM2M reduce tráfico gestión >75\% & Tráfico <25\% & Tráfico $-$82\% (OTA 450~KB vs 2,1~MB) & \textbf{VALIDADA} & Cap.~\ref{chap:gateway-halow} \\
 \hline
-\textbf{H7} & Mejora en $\geq$5/7 métricas clave & $\geq$5 métricas & 7/7: lat. ext. a ext. $-$97.4\%, sobrecarga $-$91\%, WAN $-$72\%, disp. +0.4~pp & \textbf{VALIDADA} & Cap.~\ref{chap:resultados} \\
+\textbf{H7} & Mejora en $\geq$5/7 métricas clave & $\geq$5 métricas & 7/7: lat. ext. a ext. $-$97,4\%, sobrecarga $-$91\%, WAN $-$72\%, disp. +0,4~pp & \textbf{VALIDADA} & Cap.~\ref{chap:resultados} \\
 \hline
 \end{tabular}
 \end{table}
 
 \section{Principales Conclusiones}
 
-Las conclusiones se estructuran en dos ejes: las contribuciones originales de la investigación y las observaciones técnicas derivadas de la experimentación.
-
 \subsection{Contribuciones Originales}
-
-Las contribuciones de esta investigación se organizan en dos ejes:
 
 \textbf{Contribuciones académicas:}
 \begin{enumerate}
 \item \textbf{Arquitectura de referencia IoT heterogénea conforme a ISO/IEC~30141:} Primera integración funcional validada experimentalmente de HaLow + 6LoWPAN/Thread + despliegue de servicios en contenedores en el borde para energía inteligente. Ningún trabajo previo identificado en 230+ referencias (2018--2026) combina estos tres elementos.
-\item \textbf{Caracterización empírica Thread$\leftrightarrow$HaLow:} Primera medición publicada de latencia, caudal y confiabilidad en integración Thread-HaLow vía OTBR con HaLow nativo (AHPI6108E, SDIO): 38$\pm$7~ms ext. a ext. (3-hop), 2.4~Mbps sostenido con 60 nodos, escalabilidad validada hasta 68 nodos sin degradación >10\% en P95.
+\item \textbf{Caracterización empírica Thread$\leftrightarrow$HaLow:} Primera medición publicada de latencia, caudal y confiabilidad en integración Thread-HaLow vía OTBR con HaLow nativo (AHPI6108E, SDIO): 38$\pm$7~ms ext. a ext. (3-hop), 2.4~Mbps sostenido con 60~nodos (1~físico + 59~sintéticos), escalabilidad validada hasta 68 nodos sin degradación >10\% en P95.
 \end{enumerate}
 
 \textbf{Contribuciones técnicas:}
 \begin{enumerate}
 \item \textbf{Configuración HaLow y Thread para pasarela de borde:} Implementación operativa OTBR + HaLow nativo vía AHPI6108E (SDIO, MM6108) con UCI OpenWRT + selección adaptativa multi-banda HaLow (2/4/8~MHz).
-\item \textbf{Despliegue de servicios de telemetría en pasarela de borde:} Pila Docker Compose de 3 servicios (ThingsBoard Edge con LwM2M integrado, PostgreSQL, Redis) con verificaciones de estado (\emph{health checks}), límites de recursos (\emph{resource limits}) y operación autónoma sin conexión 48~h+.
+\item \textbf{Despliegue de servicios de telemetría en pasarela de borde:} Pila Docker Compose de 3 servicios (ThingsBoard Edge con LwM2M integrado, PostgreSQL, Redis) con verificaciones de estado (\emph{health checks}), límites de recursos (\emph{resource limits}) y operación autónoma validada durante desconexión de 30~min con 0\% pérdida; autonomía UPS estimada 18,8~h.
 \item \textbf{Diseño del \emph{firmware} del nodo 6LoWPAN para medidores inteligentes:} Cliente LwM2M Object~10242 sobre Thread~1.4 en nodo Zephyr con lectura RS-485 DLMS/COSEM.
 \end{enumerate}
 
 \subsection{Conclusiones Técnicas}
 
-\textbf{Arquitectura multi-protocolo viable y ventajosa.} La combinación Thread (malla interior densa) + HaLow (última milla 300~m exterior) demostró superioridad operacional sobre arquitecturas de protocolo único: cobertura optimizada por capa, eficiencia energética (nodos MED alimentados desde puerto 5V del medidor, 27~mA), y caudal adaptativo (250~kbps Thread para telemetría, 4~Mbps HaLow para agregación).
+\textbf{Arquitectura multi-protocolo viable y ventajosa.} La combinación Thread (malla interior densa) + HaLow (última milla 300~m exterior) demostró ventajas medibles sobre arquitecturas de protocolo único: cobertura optimizada por capa, eficiencia energética (nodos MED alimentados desde puerto 5V del medidor, 27~mA), y caudal adaptativo (250~kbps Thread para telemetría, 4~Mbps HaLow para agregación).
 
-\textbf{Computación de borde reduce latencia drásticamente.} Latencia de procesamiento de borde local: \textbf{8$\pm$2~ms} (P50=7.8~ms, P99=18.7~ms), habilitando analítica en tiempo real. Latencia ext. a ext. completa: 85$\pm$12~ms medida experimentalmente (39~ms estimada por componentes), cumpliendo IEC~62056 (<1~s) con amplio margen. Reducción 97.4\% vs línea base centrada en nube (p<0.0001).
+\textbf{Computación de borde reduce latencia en dos órdenes de magnitud.} Latencia de procesamiento de borde local: \textbf{8$\pm$2~ms} (P50=6~ms, P99=14~ms), habilitando analítica en tiempo real. Latencia ext. a ext. completa: 85$\pm$12~ms medida experimentalmente (39~ms estimada por componentes), cumpliendo IEC~62056 (<1~s) con amplio margen. Reducción 97,4\% vs línea base centrada en nube (p<0,0001).
 
-\textbf{Despliegue modular en contenedores sin sacrificio de rendimiento.} Docker introduce sobrecarga aceptable (+0.8$\pm$0.2~ms latencia, <2\% caudal) con ventajas operativas decisivas: actualizaciones graduales, retroceso instantáneo, aislamiento de fallos.
+\textbf{Despliegue modular en contenedores sin sacrificio de rendimiento.} Docker introduce sobrecarga aceptable (+0,8$\pm$0,2~ms latencia, <2\% caudal) con ventajas operativas concretas: actualizaciones graduales, retroceso instantáneo, aislamiento de fallos.
 
-\textbf{Multi-WAN es requerimiento recomendado.} En 30 días de operación, 3 incidentes de inactividad (HaLow, pasarela, Thread) sumaron 261~min. Con almacenamiento de borde local: disponibilidad 99.40\% y 0 mensajes perdidos.
+\textbf{Multi-WAN es requerimiento recomendado.} En 30 días de operación, 3 incidentes de inactividad (HaLow, pasarela, Thread) sumaron 261~min. Con almacenamiento de borde local: disponibilidad 99,40\% y 0 mensajes perdidos.
 
-\textbf{Analítica de borde reduce tráfico WAN significativamente.} Agregación local reduce volumen de datos de 3.2~GB/mes a 280~MB/mes (300 medidores), reducción del 91\% en transferencia de datos.
+\textbf{Analítica de borde reduce tráfico WAN un 72\%.} En las pruebas de validación con 60~nodos (1~físico + 59~sintéticos), la agregación local redujo el tráfico WAN un 72\%; la extrapolación a 300~medidores con agregación completa proyecta una reducción del 91\% (3,2~GB/mes a 280~MB/mes), eliminando la necesidad de un enlace celular de alta capacidad.
 
 \section{Limitaciones Identificadas}
-
-Se organizan las limitaciones en tres categorías: técnicas, de seguridad y económicas, indicando en cada caso las implicaciones para la generalizabilidad de los resultados.
 
 \subsection{Limitaciones Técnicas}
 
@@ -103,7 +97,7 @@ Se organizan las limitaciones en tres categorías: técnicas, de seguridad y eco
 
 \section{Trabajo Futuro}
 
-Se identifican cinco líneas principales de investigación ordenadas por prioridad e impacto:
+A partir de los resultados y limitaciones, se proponen seis líneas de trabajo futuro:
 
 \textbf{Línea 1 --- Escalabilidad y Alta Disponibilidad.} Validar la arquitectura con 1\,000+ dispositivos mediante simulación NS-3 y emulación Docker, identificando cuellos de botella (CPU, memoria, red). Implementar agrupación de alta disponibilidad (\emph{clustering} HA) activo-pasivo con consenso Raft y replicación PostgreSQL por flujo continuo (\emph{streaming}) para eliminar punto único de falla.
 
@@ -121,6 +115,6 @@ Se identifican cinco líneas principales de investigación ordenadas por priorid
 
 \section{Reflexiones Finales}
 
-La presente investigación demostró que una arquitectura IoT de borde (\emph{edge}) bien diseñada, combinando protocolos heterogéneos (Thread, HaLow), despliegue en contenedores y conformidad con estándares abiertos (ISO/IEC~30141, DLMS/COSEM), puede satisfacer simultáneamente requerimientos aparentemente contradictorios: baja latencia y alta disponibilidad, procesamiento inteligente y eficiencia energética, interoperabilidad multi-vendor y seguridad robusta.
+La convergencia de protocolos 6LoWPAN, plataformas de borde de código abierto (\emph{open-source}) y estándares de interoperabilidad ya existe en los estándares y en el \emph{hardware}; lo que falta es orquestación en el borde. Esta tesis demostró que una pasarela RPi4 con Thread y HaLow puede cumplir ese rol: 8~ms de latencia de borde, 99,40\% de disponibilidad y cero mensajes perdidos durante 30 días, sin \emph{hardware} especializado ni costos recurrentes de conectividad.
 
-El cambio de paradigma centrado en la nube (\emph{cloud-centric}) a centrado en el borde (\emph{edge-centric}) no es mera optimización técnica, sino habilitador de casos de uso transformadores: control volt-VAR en tiempo real, gestión autónoma de microrredes, detección predictiva de fallas. La convergencia de protocolos 6LoWPAN, plataformas de borde de código abierto (\emph{open-source}) y estándares de interoperabilidad crea condiciones para ecosistemas de energía inteligente (\emph{Smart Energy}) genuinamente abiertos. Este trabajo aspira ser contribución concreta hacia esa visión.
+El paso de una arquitectura centrada en la nube (\emph{cloud-centric}) a una centrada en el borde (\emph{edge-centric}) no es mera optimización de latencia, sino un requisito para casos de uso que demandan procesamiento local con garantías de disponibilidad --- como control volt-VAR, gestión de microrredes y detección predictiva de fallas --- una vez integrados los algoritmos de control y aprendizaje correspondientes. Los despliegues AMI de próxima generación en Colombia podrían verificar estos resultados a escala.

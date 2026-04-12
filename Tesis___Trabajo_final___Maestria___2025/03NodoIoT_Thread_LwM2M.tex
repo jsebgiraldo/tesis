@@ -1,12 +1,7 @@
 \chapter[Nodo IoT y Red de Campo]{Nodo IoT y Red de Campo}
 \label{chap:nodo-iot}
 
-\section{Introducción}
-\label{sec:nodo-intro}
-
 Este capítulo describe el nodo IoT que vincula cada medidor inteligente con la red de campo \emph{mesh}. El análisis sigue el recorrido del dato: desde su origen en el \textbf{medidor trifásico} y su pila de comunicación \textbf{DLMS/COSEM} sobre RS-485, pasando por el \textbf{modelo de dispositivo} LwM2M, la \textbf{implementación del firmware} en Zephyr~RTOS, hasta la transmisión por la \textbf{red Thread} en malla (\emph{mesh}).
-
-§\ref{sec:nodo-hardware} presenta la plataforma de referencia: SoC~ESP32-C6 con radio IEEE~802.15.4 y transceptor RS-485 con aislamiento galvánico. §\ref{sec:nodo-medidor-dlms} especifica el medidor Emsitech~P2000-T, el protocolo DLMS/COSEM y los 27~códigos OBIS implementados. §\ref{sec:nodo-lwm2m} define el Objeto~10242 (\emph{3-Phase Power Meter}) con sus 27~recursos y el perfil LwM2M configurado en ThingsBoard. §\ref{sec:nodo-firmware} detalla el \emph{firmware} Zephyr~RTOS con pila CoAP/OpenThread, ciclo principal y estrategias de optimización de sobrecarga. §\ref{sec:nodo-pila-protocolos} describe la red de campo Thread: capa IEEE~802.15.4, topología, auto-formación y direccionamiento IPv6, \textbf{agotando el tema Thread aquí} según la Regla de Exclusión. §\ref{sec:nodo-pruebas} presenta el análisis de carga y las pruebas de latencia que validan H3 ($<$250\,ms).
 
 Los nodos se alimentan directamente desde el puerto auxiliar 5\,V del medidor (27\,mA promedio), sin restricción energética. El piloto valida la pila completa DLMS/COSEM $\rightarrow$ LwM2M $\rightarrow$ CoAP/Thread con 1~medidor físico Emsitech~P2000-T. Los listados de código fuente están disponibles en el repositorio del proyecto\footnote{\url{https://github.com/jsebgiraldo/ami-lwm2m-node}}.
 
@@ -46,7 +41,7 @@ Para comunicación RS-485 con medidores DLMS/COSEM se utiliza un transceptor MAX
 \section{Interfaz con el medidor inteligente}
 \label{sec:nodo-medidor-dlms}
 
-El enlace entre el nodo Zephyr y la infraestructura de medición se realiza a través del protocolo DLMS/COSEM sobre RS-485. A continuación se detallan las características del medidor seleccionado para el piloto y los registros OBIS leídos periódicamente.
+El enlace entre el nodo Zephyr y la infraestructura de medición se realiza a través del protocolo DLMS/COSEM sobre RS-485. El medidor impone dos restricciones al diseño del nodo: enlace serial \emph{half-duplex} a 9600~bps y alimentación limitada a 200~mA por el puerto auxiliar.
 
 \subsection{Especificaciones del Medidor Emsitech P2000-T}
 \label{sec:nodo-medidor-specs}
@@ -56,7 +51,7 @@ El piloto utiliza 1~medidor trifásico Emsitech P2000-T~\cite{emsitechP2000T2024
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.35\textwidth]{figures/emsitech_p2000t}
-\caption{Medidor trifásico Emsitech P2000-T utilizado en el piloto. Equipo de clase~0,2s con protocolo DLMS/COSEM nativo, interfaz RS-485 half-duplex y puerto auxiliar 5\,V para alimentación del nodo IoT. Fuente: Emsitech~\cite{emsitechP2000T2024}.}
+\caption{Medidor trifásico Emsitech P2000-T utilizado en el piloto. Equipo de clase~0,2s con protocolo DLMS/COSEM nativo, interfaz RS-485 \emph{half-duplex} y puerto auxiliar 5\,V para alimentación del nodo IoT. Fuente: Emsitech~\cite{emsitechP2000T2024}.}
 \label{fig:emsitech-p2000t}
 \end{figure}
 
@@ -148,17 +143,17 @@ El sistema OBIS (IEC~62056-61)~\cite{DLMSBluebookOBIS2023} identifica magnitudes
 \section{Modelo de dispositivo IoT}
 \label{sec:nodo-lwm2m}
 
-LwM2M (\emph{Lightweight Machine-to-Machine}) v1.2 (OMA SpecWorks) define el modelo de dispositivo que expone los datos leídos vía DLMS/COSEM como recursos estandarizados accesibles desde el servidor de gestión. Cada medidor es representado por una instancia del \textbf{Objeto~10242} (\emph{3-Phase Power Meter}), registrado en el OMA LwM2M Registry, que consolida 27~recursos correspondientes a las magnitudes eléctricas medidas~\cite{OMA_LwM2M2020, haEnablingDynamicLightweight2018, karaagacLightweightM2MSurvey2018}.
+LwM2M (\emph{Lightweight Machine-to-Machine}) v1.2 (OMA SpecWorks) define el modelo de dispositivo que expone los datos leídos vía DLMS/COSEM como recursos estandarizados accesibles desde el servidor de gestión. Cada medidor es representado por una instancia del \textbf{Objeto~10242} (\emph{3-Phase Power Meter}), registrado en el OMA LwM2M Registry con 51~recursos definidos, de los cuales la implementación utiliza 27 correspondientes a las magnitudes eléctricas del medidor Emsitech~P2000-T~\cite{OMA_LwM2M2020, haEnablingDynamicLightweight2018, karaagacLightweightM2MSurvey2018}.
 
 \subsection{Arquitectura del cliente LwM2M}
 \label{sec:nodo-lwm2m-arquitectura}
 
-LwM2M define arquitectura cliente-servidor~\cite{OMA_LwM2M2020}. El \textbf{Client} (nodo Zephyr) expone recursos mediante modelo jerárquico de 3~niveles: \textbf{Object} (tipo, 16-bit ID) → \textbf{Instance} (instancia específica) → \textbf{Resource} (atributo individual). Path: \texttt{/ObjectID/InstanceID/ResourceID}. Operaciones soportadas: Read, Write, Execute, Create/Delete, y \textbf{Observe} (suscripciones \emph{push} que reducen tráfico 90--95\%). La implementación usa serialización TLV en Thread mesh (optimiza MTU 127\,bytes); el gateway traduce a JSON para ThingsBoard REST API.
+LwM2M define arquitectura cliente-servidor~\cite{OMA_LwM2M2020}. El \textbf{Client} (nodo Zephyr) expone recursos mediante modelo jerárquico de 3~niveles: \textbf{Object} (tipo, 16-bit ID) → \textbf{Instance} (instancia específica) → \textbf{Resource} (atributo individual). Path: \texttt{/ObjectID/InstanceID/ResourceID}. Operaciones soportadas: Read, Write, Execute, Create/Delete, y \textbf{Observe} (suscripciones \emph{push} que, según la especificación OMA, reducen tráfico entre 90 y 95\% frente a sondeo periódico). La implementación usa serialización TLV en Thread mesh (optimiza MTU 127\,bytes); el gateway traduce a JSON para ThingsBoard REST API.
 
 \subsection{Objeto Custom 10242: Medidor de Potencia Trifásico}
 \label{sec:nodo-lwm2m-objetos}
 
-La arquitectura implementa \textbf{Object~10242} (\emph{3-Phase Power Meter}) registrado en el OMA LwM2M Registry. Una única instancia \texttt{/10242/0} consolida \textbf{27~recursos de medición} (según registro OMA) del medidor Emsitech P2000-T, eliminando la fragmentación de múltiples objetos IPSO genéricos. La definición XML se carga en Leshan para decodificación automática.
+La arquitectura implementa \textbf{Object~10242} (\emph{3-Phase Power Meter}) registrado en el OMA LwM2M Registry, que define 51~recursos. Una única instancia \texttt{/10242/0} utiliza \textbf{27~recursos de medición} del medidor Emsitech P2000-T (Tabla~\ref{tab:lwm2m-ipso-objects}), eliminando la fragmentación de múltiples objetos IPSO genéricos. La definición XML se carga en Leshan para decodificación automática.
 
 \begin{table}[H]
 \centering
@@ -220,26 +215,26 @@ La arquitectura implementa \textbf{Object~10242} (\emph{3-Phase Power Meter}) re
 \end{tabular}}%
 \end{table}
 
-\textbf{Ventajas frente a IPSO genéricos:} (1)~Registro y descubrimiento simplificado (1~objeto vs 35~instancias IPSO). (2)~Acceso atómico: \texttt{Read /10242/0} retorna 27~recursos en único payload TLV. (3)~Semántica \emph{domain-specific} sin \emph{lookup tables}. (4)~XML registrado en OMA garantiza interoperabilidad con Leshan y ThingsBoard. El mapeo OBIS→LwM2M se detalla en las Tablas~\ref{tab:obis-registers} y~\ref{tab:lwm2m-tb-mapping}. En modo trifásico completo (27~códigos OBIS) cada ciclo DLMS tarda típicamente 6--10\,s a 9600\,bps; en modo monofásico (\texttt{CONFIG\_AMI\_SINGLE\_PHASE=y}, 15~códigos) el ciclo se reduce a 3--5\,s.
+\textbf{Ventajas frente a IPSO genéricos:} (1)~Registro y descubrimiento simplificado (1~objeto vs 35~instancias IPSO). (2)~Acceso atómico: \texttt{Read /10242/0} retorna 27~recursos en único payload TLV. (3)~Semántica específica del dominio (\emph{domain-specific}) sin tablas de correspondencia. (4)~XML registrado en OMA garantiza interoperabilidad con Leshan y ThingsBoard. El mapeo OBIS→LwM2M se detalla en las Tablas~\ref{tab:obis-registers} y~\ref{tab:lwm2m-tb-mapping}. En modo trifásico completo (27~códigos OBIS) cada ciclo DLMS tarda típicamente 6--10\,s a 9600\,bps; en modo monofásico (\texttt{CONFIG\_AMI\_SINGLE\_PHASE=y}, 15~códigos) el ciclo se reduce a 3--5\,s.
 
 \subsection{Modo Observación y Notificaciones}
 \label{sec:nodo-lwm2m-observacion}
 
-CoAP Observe (RFC~7641) reemplaza \emph{polling} ineficiente: el server subscribe a recursos y el client envía notificaciones cuando valores cambian según atributos configurables vía Write-Attributes: \textbf{pmin}=60\,s (mínimo entre notificaciones), \textbf{pmax}=900\,s (\emph{heartbeat}), \textbf{gt/lt} (umbrales), \textbf{st} (paso mínimo). Mensajes \textbf{CON} (con ACK, 4~reintentos exponenciales) para alarmas críticas (voltage sag/swell); \textbf{NON} (\emph{fire-and-forget}) para telemetría periódica no crítica.
+CoAP Observe (RFC~7641) reemplaza el sondeo (\emph{polling}) ineficiente: el servidor se suscribe a recursos y el cliente envía notificaciones cuando los valores cambian según atributos configurables mediante Write-Attributes: \textbf{pmin}=60\,s (mínimo entre notificaciones), \textbf{pmax}=300\,s (latido de supervisión, \emph{heartbeat}), \textbf{gt/lt} (umbrales), \textbf{st} (paso mínimo). Mensajes \textbf{CON} (con acuse de recibo, 4~reintentos exponenciales) para alarmas críticas (caída o elevación de tensión); \textbf{NON} (envío sin confirmación, \emph{fire-and-forget}) para telemetría periódica no crítica.
 
 La Figura~\ref{fig:lwm2m-registration-flow} ilustra el flujo completo del ciclo de vida LwM2M del nodo, desde el \emph{Thread Join} hasta la sincronización edge-cloud y actualizaciones OTA.
 
 \input{fig_lwm2m_registration_flow}
 
-\subsection{Perfil del medidor en ThingsBoard}
+\subsection{Perfil del medidor en el nodo}
 \label{sec:nodo-configuracion-lwm2m}
 
-Device Profile \texttt{ESP32-Thread-Meter} en ThingsBoard: transporte LwM2M~v1.1, \emph{lifetime}~300\,s, binding UDP, pmin=60\,s, pmax=300\,s. Write-Attributes aplicados automáticamente al registro.
+El perfil de dispositivo (\emph{Device Profile}) \texttt{ESP32-Thread-Meter} configurado en ThingsBoard define los parámetros de comunicación del nodo: transporte LwM2M~v1.2, tiempo de vida (\emph{lifetime}) de 300\,s ---~intervalo máximo antes de que el servidor considere al nodo desconectado~---, enlace (\emph{binding}) UDP, intervalo mínimo entre notificaciones pmin=60\,s e intervalo máximo pmax=300\,s. Estos atributos de escritura (\emph{Write-Attributes}) se aplican automáticamente durante el proceso de registro del nodo ante el servidor LwM2M.
 
 \subsubsection{Mapeo de Objetos LwM2M a Telemetría ThingsBoard}
 \label{sec:nodo-mapeo-telemetria}
 
-Gateway ejecuta traductor LwM2M-MQTT que transforma notificaciones CoAP en mensajes MQTT (\texttt{v1/devices/me/telemetry}):
+La pasarela ejecuta un traductor LwM2M-MQTT que transforma las notificaciones CoAP en mensajes MQTT publicados en el tópico\\\texttt{v1/devices/me/telemetry}:
 
 \begin{table}[H]
 \centering
@@ -282,7 +277,7 @@ Gateway ejecuta traductor LwM2M-MQTT que transforma notificaciones CoAP en mensa
 \end{tabular}}%
 \end{table}
 
-Fases L2 y L3 siguen idéntico patrón (resources 14--21 y 24--31, keys \texttt{voltage\_s\_v} / \texttt{voltage\_t\_v}, etc.). Transformaciones: energía directa en kWh, timestamp vía RTC+NTP cada 24\,h (alarma ``Clock Drift'' si desfase $>$300\,s), factor de potencia con signo ($+$inductivo/$-$capacitivo).
+Fases L2 y L3 siguen idéntico patrón (resources 14--21 y 24--31, keys \texttt{voltage\_s\_v} / \texttt{voltage\_t\_v}, etc.). Transformaciones: energía directa en kWh, marca temporal (\emph{timestamp}) sincronizada cada 24\,h (alarma ``Clock Drift'' si desfase $>$300\,s), factor de potencia con signo ($+$inductivo/$-$capacitivo).
 
 \subsubsection{Configuración de Alarmas y Umbrales}
 \label{sec:nodo-alarmas}
@@ -310,23 +305,23 @@ Dispositivo fuera de línea & MENOR & last\_activity > 1800\,s & Despeje automá
 \end{tabular}}%
 \end{table}
 
-Además de reglas \emph{server-side}, el firmware genera alarmas locales (\emph{edge intelligence}): \emph{watchdog} de voltaje evalúa recursos del Objeto~10242 cada lectura DLMS; si cualquier fase $<$207\,V durante 3~lecturas consecutivas (45\,min), envía LwM2M Send (CoAP~CON, 4~reintentos exponenciales). Alarmas almacenadas en NVS si ACK no recibido (cola circular, 50~eventos). Latencia alarma \emph{end-to-end}: \textbf{67\,ms} (P95: 120\,ms), cumpliendo IEEE~2030.5 Demand Response ($<$500\,ms).
+Además de las reglas del lado del servidor (\emph{server-side}), el \emph{firmware} genera alarmas locales (inteligencia en el borde): el temporizador de vigilancia (\emph{watchdog}) de voltaje evalúa recursos del Objeto~10242 cada lectura DLMS; si cualquier fase $<$207\,V durante 3~lecturas consecutivas (45\,s), envía LwM2M Send (CoAP~CON, 4~reintentos exponenciales). Alarmas almacenadas en NVS si ACK no recibido (cola circular, 50~eventos). Latencia alarma \emph{end-to-end}: \textbf{67\,ms} (P95: 120\,ms), cumpliendo IEEE~2030.5 Demand Response ($<$500\,ms).
 
 
-\section{Stack de comunicación del nodo}
+\section{Protocolos de comunicación del nodo}
 \label{sec:nodo-firmware}
 
-El \emph{stack} de comunicación del nodo integra el transporte CoAP sobre UDP, la pila OpenThread y el cliente LwM2M, todo ejecutado sobre \textbf{Zephyr~RTOS~v4.2.0} con HAL independiente del fabricante, garantizando portabilidad multi-SoC.
+La pila de comunicación del nodo integra el transporte CoAP sobre UDP, la pila OpenThread y el cliente LwM2M, todo ejecutado sobre \textbf{Zephyr~RTOS~v4.2.0}.
 
-\subsection{Transporte CoAP}
+\subsection{Transporte CoAP sobre UDP}
 \label{sec:nodo-coap}
 
-CoAP (RFC~7252) opera sobre UDP con \emph{header} compacto de 4\,bytes, latencia cero de conexión, y extensión Observe (RFC~7641) para suscripciones \emph{push}~\cite{shahinzadehSmartHomeConnectivity2024, RFC7252, karimiIIoTCommunicationProtocols2025}. LwM2M~v1.2 (OMA SpecWorks) provee gestión completa: aprovisionamiento, monitoreo y actualización OTA~\cite{haEnablingDynamicLightweight2018, karaagacLightweightM2MSurvey2018}.
+El protocolo CoAP (\emph{Constrained Application Protocol}, RFC~7252) opera sobre UDP con una cabecera (\emph{header}) compacta de apenas 4\,bytes, lo que elimina la latencia asociada al establecimiento de conexión típica de TCP y resulta idóneo para dispositivos con recursos limitados de memoria y procesamiento. Su extensión Observe (RFC~7641) permite suscripciones de tipo \emph{push}, donde el servidor recibe notificaciones únicamente cuando los valores observados cambian, evitando el sondeo periódico innecesario~\cite{shahinzadehSmartHomeConnectivity2024, RFC7252, karimiIIoTCommunicationProtocols2025}. Sobre este transporte, LwM2M~v1.2 (OMA SpecWorks) construye una capa de gestión completa que abarca aprovisionamiento, monitoreo y actualización de \emph{firmware} por vía inalámbrica (OTA)~\cite{haEnablingDynamicLightweight2018, karaagacLightweightM2MSurvey2018}.
 
 \subsection{Plataforma de \emph{Firmware}: Zephyr RTOS y OpenThread}
 \label{sec:nodo-firmware-zephyr}
 
-El firmware opera sobre \textbf{Zephyr RTOS v4.2.0} con HAL independiente del fabricante, garantizando portabilidad multi-SoC y reduciendo riesgo de \emph{vendor lock-in} (§\ref{chap:introduccion}). El mismo binario compila sin cambios funcionales para ESP32-C6, nRF52840 u otros targets Zephyr con radio 802.15.4.
+El \emph{firmware} opera sobre \textbf{Zephyr RTOS v4.2.0} con HAL independiente del fabricante, lo que garantiza portabilidad entre múltiples SoC y reduce el riesgo de dependencia del proveedor (\emph{vendor lock-in}) (§\ref{chap:introduccion}). El mismo binario compila sin cambios funcionales para ESP32-C6, nRF52840 u otros \emph{targets} Zephyr con radio 802.15.4.
 
 \begin{table}[H]
 \centering
@@ -338,7 +333,7 @@ El firmware opera sobre \textbf{Zephyr RTOS v4.2.0} con HAL independiente del fa
 \rowcolor{gray!20}
 \textbf{Componente} & \textbf{Función principal} & \textbf{Flash} & \textbf{RAM} \\
 \hline
-OpenThread \emph{Stack} & Pila Thread 1.4 (MLE, 6LoWPAN, CoAP, TCP) & 220 KB & 56 KB \\
+OpenThread (Pila) & Pila Thread 1.4 (MLE, 6LoWPAN, CoAP, TCP) & 220 KB & 56 KB \\
 \hline
 Parser DLMS/COSEM & Decodificación HDLC/OBIS (27 códigos OBIS) & 28 KB & 4 KB \\
 \hline
@@ -353,7 +348,9 @@ Zephyr Kernel + HAL & Planificador (\emph{scheduler}), controladores (\emph{driv
 \end{tabular}
 \end{table}
 
-El firmware organiza la ejecución en hilos Zephyr: \texttt{main} (inicialización y ciclo de supervisión DLMS cada 15\,s, stack 4\,KB), \texttt{dlms\_tid} (sondeo DLMS no bloqueante orquestado por semáforo, stack 4\,KB), \texttt{openthread} (pila MLE/CoAP/6LoWPAN, gestionada por Zephyr) y \texttt{lwm2m\_engine} (registro LwM2M/RD y observación, stack 8\,KB).
+\textbf{Justificación de NoSec (modo~3, sin DTLS):} La red Thread cifra todo el tráfico a nivel de enlace con AES-128-CCM-8 (IEEE~802.15.4 Security Level~5), proporcionando confidencialidad, integridad y autenticación de origen en cada trama. Dado que los nodos LwM2M se comunican exclusivamente dentro de la malla Thread cifrada hasta el Border Router co-ubicado en la pasarela de borde, DTLS constituiría una capa de cifrado redundante que duplicaría el \emph{overhead} criptográfico (+13~bytes/trama) y reduciría la carga útil disponible en el MTU limitado de 127~bytes. El tramo pasarela--servidor utiliza TLS~1.3 (gRPC), cerrando la cadena de seguridad extremo a extremo sin depender de DTLS en el segmento Thread.
+
+El firmware organiza la ejecución en hilos Zephyr: \texttt{main} (inicialización y ciclo de supervisión DLMS cada 15\,s, pila 4\,KB), \texttt{dlms\_tid} (sondeo DLMS no bloqueante orquestado por semáforo, pila 4\,KB), \texttt{openthread} (pila MLE/CoAP/6LoWPAN, gestionada por Zephyr) y \texttt{lwm2m\_engine} (registro LwM2M/RD y observación, pila 8\,KB).
 
 \subsubsection{Ciclo Principal del \emph{Firmware}}
 \label{sec:nodo-firmware-main}
@@ -370,8 +367,8 @@ El hilo principal espera conectividad IPv6 Thread mediante un semáforo Zephyr, 
 Tres estrategias complementarias reducen la sobrecarga de comunicación:
 
 \begin{enumerate}
-    \item \textbf{UDP sin estado vía CoAP:} Cabecera UDP de 8\,bytes vs 20+\,bytes TCP. Elimina \emph{handshake} de 3~vías (120\,bytes, 50--150\,ms) y estado de conexión (4--8\,KB RAM/socket).
-    \item \textbf{Análisis local DLMS:} El firmware analiza respuestas HDLC (153\,bytes) y extrae valores útiles a estructura \texttt{meter\_data\_t} (68\,bytes), eliminando 55\% de sobrecarga de enmarcado HDLC.
+    \item \textbf{UDP sin estado vía CoAP:} Cabecera UDP de 8\,bytes frente a 20+\,bytes de TCP. Elimina el \emph{handshake} de 3~vías (120\,bytes, 50--150\,ms) y el estado de conexión (4--8\,KB RAM/\emph{socket}).
+    \item \textbf{Análisis local DLMS:} El \emph{firmware} analiza las respuestas HDLC (153\,bytes) y extrae los valores útiles a la estructura \texttt{meter\_data\_t} (68\,bytes), eliminando el 55\% de sobrecarga de enmarcado HDLC.
     \item \textbf{LwM2M Observe vs sondeo:} En régimen estacionario, $\sim$6~notificaciones/h (252\,bytes/h) vs 1.020~solicitudes/h con sondeo (85,6\,KB/h) = \textbf{99,7\% reducción}. Para $n$~nodos la reducción escala linealmente.
 \end{enumerate}
 
@@ -413,29 +410,29 @@ Se seleccionó el canal~25 (2,475\,GHz) por su separación máxima del espectro 
 \section{Flujo de datos en el dominio de campo}
 \label{sec:nodo-pruebas}
 
-Esta sección cuantifica el flujo de datos extremo a extremo: primero se analiza la estructura y carga del \emph{payload} CoAP/Thread, y luego se reportan los resultados experimentales de latencia que validan la hipótesis H3 ($<$250\,ms).
+Esta sección cuantifica el flujo de datos extremo a extremo: primero se analiza la estructura y el volumen de la carga útil (\emph{payload}) CoAP/Thread, y luego se reportan los resultados experimentales de latencia que validan la hipótesis H3 ($<$250\,ms).
 
 \subsection{Análisis de Payload y Carga de Red}
 \label{sec:nodo-payload-analysis}
 
-El nodo transmite vía CoAP/Thread con sobrecarga (\emph{overhead}) de protocolos de 42\,bytes (CoAP~12 + UDP~8 + IPv6~6LoWPAN~7 + 802.15.4~15). Fragmentación 6LoWPAN en 5~tramas (MTU~127\,B) resulta en \textbf{451\,bytes/mensaje}, TX total $\sim$26\,ms.
+El nodo transmite vía CoAP/Thread con sobrecarga (\emph{overhead}) de protocolos de 42\,bytes (CoAP~12 + UDP~8 + IPv6~6LoWPAN~7 + 802.15.4~15). La fragmentación 6LoWPAN en 5~tramas (MTU~127\,B) resulta en \textbf{451\,bytes/mensaje}, con un tiempo de transmisión total de $\sim$26\,ms.
 
 Para \textbf{100~medidores} con sondeo (\emph{polling}) cada 15~minutos:
 \begin{equation}
 R_{avg} = \frac{100 \times 451 \times 8}{900} = 401\,\text{bps} = 0{,}16\%\text{ utilización}
 \end{equation}
 
-Capacidad residual 99,84\% para eventos asíncronos. Latencia agregada (3~saltos): \textbf{90\,ms} nodo$\rightarrow$Border Router. Almacenamiento pasarela (7~días, 100~medidores): 303\,MB, validando escalabilidad hasta 500+ medidores. La carga útil (\emph{payload}) de 451\,bytes justifica HaLow (4\,Mbps) como enlace troncal (\emph{backhaul}) para agregación de múltiples pasarelas Thread.
+Capacidad residual 99,84\% para eventos asíncronos. Latencia agregada (3~saltos): \textbf{90\,ms} nodo$\rightarrow$Border Router. Almacenamiento en la pasarela (7~días, 100~medidores): 303\,MB, lo que valida la escalabilidad hasta 500+ medidores. La carga útil (\emph{payload}) de 451\,bytes justifica HaLow (4\,Mbps) como enlace troncal (\emph{backhaul}) para la agregación de múltiples pasarelas Thread.
 
 \subsection{Pruebas de Latencia Local Thread}
 \label{sec:nodo-pruebas-latencia}
 
-Validación experimental \textbf{aislada} (sin \emph{gateway} ni servidor).  \emph{Setup}: 1$\times$ nodo Thread (plataforma de referencia), 1$\times$ nRF52840 Dongle (OTBR), 48\,h continuas en laboratorio controlado (23$\pm$2\,°C).
+Validación experimental \textbf{aislada} (sin pasarela ni servidor).  Configuración de la prueba: 1$\times$ nodo Thread (plataforma de referencia), 1$\times$ nRF52840 Dongle (OTBR), durante 48\,h continuas en laboratorio controlado (23$\pm$2\,°C).
 
-% Nota Rev11: §3.7.1 Pruebas de Consumo Energético eliminada.
+% Nota Rev11: \S3.7.1 Pruebas de Consumo Energético eliminada.
 % No se realizaron mediciones con PPK2 en el piloto.
 
-Latencia medida desde inicio \emph{polling} DLMS hasta recepción CoAP en OTBR. GPIO toggle + captura 802.15.4. 500~muestras, 1~msg/min, 8,3\,h.
+La latencia se midió desde el inicio del sondeo (\emph{polling}) DLMS hasta la recepción del mensaje CoAP en el OTBR, utilizando activación de GPIO (\emph{toggle}) y captura 802.15.4. Se recopilaron 500~muestras a razón de 1~mensaje por minuto durante 8,3\,h.
 
 \begin{table}[H]
 \centering
@@ -464,20 +461,20 @@ Desv. estándar & 8,1 ms & Baja varianza \\
 \end{tabular}
 \end{table}
 
-\emph{Breakdown}: DLMS polling 8,5\,ms + LwM2M encode 2,8\,ms + CoAP build 1,1\,ms + 6LoWPAN 0,9\,ms + CSMA/CA 3,2\,ms + 802.15.4~TX 4,8\,ms + ACK 0,9\,ms + OTBR processing 2,1\,ms = 24,3\,ms teórico; overhead real +20,9\,ms (reintentos 10\%, MLE \emph{keep-alive}, scheduling Zephyr RTOS).
+\emph{Desglose}: sondeo DLMS 8,5\,ms + codificación LwM2M 2,8\,ms + construcción CoAP 1,1\,ms + compresión 6LoWPAN 0,9\,ms + acceso CSMA/CA 3,2\,ms + transmisión 802.15.4 4,8\,ms + acuse de recibo (ACK) 0,9\,ms + procesamiento OTBR 2,1\,ms = 24,3\,ms teórico; sobrecarga real +20,9\,ms (reintentos 10\%, mensajes MLE de mantenimiento, planificación Zephyr RTOS).
 
-\textbf{Thread join time} (30~iteraciones, \emph{cold start}): $2{,}8 \pm 0{,}4$\,s, dentro de especificación Thread $<$5\,s. \emph{Breakdown}: MLE Discovery 380\,ms + Parent Request 520\,ms + Child ID 680\,ms + Address Query 480\,ms + primer CoAP 740\,ms.
+\textbf{Tiempo de unión a la red Thread} (30~iteraciones, arranque en frío): $2{,}8 \pm 0{,}4$\,s, dentro de la especificación Thread $<$5\,s. Desglose: descubrimiento MLE 380\,ms + solicitud de padre 520\,ms + identificación de hijo 680\,ms + consulta de dirección 480\,ms + primer mensaje CoAP 740\,ms.
 
-\textbf{Conclusión pruebas:} El nodo Zephyr valida H3 (latencia $<$250\,ms) con margen 82\% (45\,ms medido). Firmware estable 48\,h sin \emph{memory leaks} ni \emph{watchdog resets}. Resultados con intervalos de confianza en Capítulo~\ref{chap:resultados}.
+\textbf{Conclusión de las pruebas:} El nodo Zephyr valida H3 (latencia $<$250\,ms) con un margen del 82\% (45\,ms medido). El \emph{firmware} se mantuvo estable durante 48\,h sin fugas de memoria (\emph{memory leaks}) ni reinicios por vigilancia (\emph{watchdog resets}). Los resultados con intervalos de confianza se presentan en el Capítulo~\ref{chap:resultados}.
 
 
 \section{Conclusiones del capítulo}
 \label{sec:nodo-conclusiones}
 
-El recorrido del dato implementado en este capítulo tiene cuatro etapas: (1)~el \emph{firmware} lee 27~códigos OBIS del medidor Emsitech~P2000-T vía DLMS/COSEM/RS-485 (§\ref{sec:nodo-medidor-dlms}); (2)~el \emph{firmware} Zephyr lee, parsea y empaqueta los valores en el Objeto~10242 con 27~recursos LwM2M (§\ref{sec:nodo-lwm2m}); (3)~CoAP/Observe notifica cambios al servidor con 99,7\% menos tráfico que sondeo periódico (§\ref{sec:nodo-overhead}); y (4)~Thread~1.4 transporta los paquetes hasta el Border Router con latencia P95~$<$60\,ms, validando H3 (§\ref{sec:nodo-pruebas}).
+El recorrido del dato implementado en este capítulo comprende cuatro etapas: (1)~el \emph{firmware} lee 27~códigos OBIS del medidor Emsitech~P2000-T mediante DLMS/COSEM sobre RS-485 (§\ref{sec:nodo-medidor-dlms}); (2)~el \emph{firmware} Zephyr analiza y empaqueta los valores en el Objeto~10242 con 27~recursos LwM2M (§\ref{sec:nodo-lwm2m}); (3)~CoAP/Observe notifica cambios al servidor con 99,7\% menos tráfico que el sondeo periódico (§\ref{sec:nodo-overhead}); y (4)~Thread~1.4 transporta los paquetes hasta el Border Router con latencia P95~$<$60\,ms, validando H3 (§\ref{sec:nodo-pruebas}).
 
-La plataforma de referencia ESP32-C6 (\$3,20/unidad) con Zephyr~RTOS demuestra portabilidad multi-SoC: latencia Thread promedio 45,2\,ms (P95~58,3\,ms, margen 82\% sobre H3 de 250\,ms) y tiempo de unión Thread $<$3\,s. El Objeto personalizado~10242 consolida 27~recursos con interoperabilidad OMA garantizada. Los nodos se alimentan desde el puerto auxiliar 5~V del medidor, por lo que el consumo energético no es una limitante del diseño.
+La plataforma de referencia ESP32-C6 (\$3,20/unidad) con Zephyr~RTOS demuestra portabilidad entre múltiples SoC: latencia Thread promedio 45,2\,ms (P95~58,3\,ms, margen del 82\% sobre H3 de 250\,ms) y tiempo de unión a la red Thread inferior a 3\,s. El Objeto personalizado~10242 consolida 27~recursos con interoperabilidad OMA garantizada. Los nodos se alimentan desde el puerto auxiliar 5~V del medidor, por lo que el consumo energético no es una limitante del diseño.
 
 \textbf{Despliegue piloto:} La validación se realizó en laboratorio controlado con 1~medidor físico Emsitech~P2000-T conectado al nodo IoT, complementado con nodos simulados para pruebas de escalabilidad de la red Thread. Este enfoque permite validar la pila de protocolos completa (DLMS/COSEM $\rightarrow$ LwM2M $\rightarrow$ Thread $\rightarrow$ OTBR) con equipamiento real, mientras que las pruebas de capacidad de red se evalúan mediante simulación.
 
-\textbf{Según la regla de exclusión, Thread no se menciona en capítulos posteriores.}  El siguiente capítulo aborda los Niveles~2--3: interconexión de nodos Thread hacia la pasarela de borde mediante Thread Border Router + Wi-Fi HaLow (Capítulo~\ref{chap:gateway-halow}).
+El siguiente capítulo aborda los Niveles~2--3 de la arquitectura: la interconexión de los nodos Thread hacia la pasarela de borde mediante Thread Border Router y la red de distribución Wi-Fi HaLow (Capítulo~\ref{chap:gateway-halow}).

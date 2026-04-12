@@ -8,7 +8,7 @@ Este capítulo guía al lector desde el contexto general de las redes de energí
 \section{Contexto y Motivación}
 %% ═══════════════════════════════════════════════════
 
-La propuesta de esta tesis surge de la confluencia de tres tendencias: el crecimiento exponencial de medidores inteligentes, la madurez de protocolos de malla IPv6 como Thread y la disponibilidad comercial de enlaces sub-GHz de alto rendimiento como Wi-Fi HaLow. En esta sección se examina primero el desafío que plantean las redes de energía inteligente a escala global, luego se comparan las tecnologías de comunicación candidatas para la red de campo y el enlace troncal, se identifican las brechas que persisten en las arquitecturas actuales y, finalmente, se describe el escenario de despliegue concreto que motiva la investigación.
+La propuesta de esta tesis surge de la confluencia de tres tendencias: el crecimiento exponencial de medidores inteligentes, la madurez de protocolos de malla IPv6 como Thread y la disponibilidad comercial de enlaces sub-GHz de alto rendimiento como Wi-Fi HaLow.
 
 \subsection{El desafío de las redes de energía inteligente}
 
@@ -16,7 +16,7 @@ La transición energética global hacia sistemas descentralizados, con alta pene
 
 \begin{itemize}
     \item \textbf{Latencias elevadas:} superiores a 200~ms extremo a extremo (nodo a servidor vía nube), insuficientes para telemetría en tiempo real~\cite{laghariInternetThingsIoT2024}.
-    \item \textbf{Dependencia de conectividad WAN continua:} las redes celulares LTE alcanzan disponibilidades de apenas 94--96\%, equivalentes a 18--25~días de inactividad acumulada al año.
+    \item \textbf{Dependencia de conectividad WAN continua:} las redes celulares LTE en entornos rurales y periurbanos presentan disponibilidades limitadas, con interrupciones acumuladas que pueden alcanzar días al año~\cite{laghariInternetThingsIoT2024}.
     \item \textbf{Costos prohibitivos a escala:} las plataformas IoT en la nube cobran por volumen de mensajes, resultando en gastos operativos inviables cuando la densidad de medidores es alta~\cite{alsafranChallengesImplementingIoT2025,alsuwaidiSecuringSmartGrid2024}.
 \end{itemize}
 
@@ -75,7 +75,7 @@ Thread emerge como protocolo preferencial para la red de campo por tres razones:
 \begin{enumerate}
     \item \textbf{Enrutamiento IPv6 nativo:} elimina pasarelas de traducción propietarias y facilita la integración directa con infraestructuras IP existentes.
     \item \textbf{Estandarización completa:} la certificación del Thread Group garantiza interoperabilidad entre fabricantes, reduciendo la dependencia de proveedor.
-    \item \textbf{Latencia significativamente menor:} 40--60~ms en tres saltos, frente a 80--120~ms de Zigbee y 100--200~ms de Bluetooth Mesh~\cite{shelby6LoWPANWirelessEmbedded2009,parkScalableThreadMesh2023}.
+    \item \textbf{Latencia menor:} 40--60~ms en tres saltos, frente a 80--120~ms de Zigbee y 100--200~ms de Bluetooth Mesh~\cite{shelby6LoWPANWirelessEmbedded2009,parkScalableThreadMesh2023}.
 \end{enumerate}
 
 \paragraph{Descarte de alternativas en malla sub-GHz.}
@@ -129,14 +129,12 @@ Wi-Fi HaLow (IEEE~802.11ah) combina rendimiento superior (43,3~Mbps), latencia d
 
 \begin{itemize}
     \item \textbf{LoRaWAN:} rendimiento insuficiente (50~kbps) para agregar datos de múltiples medidores.
-    \item \textbf{LTE Cat-M1 y NB-IoT:} operan en espectro licenciado con costos recurrentes que, en despliegues de más de 1\,000 medidores, totalizan \$150\,000 en 5~años solo en conectividad.
-    \item \textbf{LTE privado (CBRS):} inversión de capital superior a \$50\,000 por celda; en Latinoamérica el marco regulatorio para bandas compartidas es aún limitado, con licencias y esquemas de incentivos que varían significativamente por país.
-    \item \textbf{Redes no terrestres (LEO-IoT):} nula cobertura en interiores, latencia variable (20--600~ms) y costo por terminal \$1--5/mes.
+    \item \textbf{LTE Cat-M1 y NB-IoT:} operan en espectro licenciado con costos recurrentes de conectividad significativos a escala, que se incrementan linealmente con el número de dispositivos.
+    \item \textbf{LTE privado (CBRS):} inversión de capital elevada por celda; en Latinoamérica el marco regulatorio para bandas compartidas es aún limitado, con licencias y esquemas de incentivos que varían significativamente por país.
+    \item \textbf{Redes no terrestres (LEO-IoT):} nula cobertura en interiores, latencia variable (20--600~ms) y costos por terminal que se acumulan mensualmente.
 \end{itemize}
 
 HaLow opera en banda 902--928~MHz con penetración en edificaciones 15--20~dB superior a 2,4~GHz, posicionándose como tecnología óptima para el enlace troncal en entornos urbanos y suburbanos.
-
-Habiendo justificado la selección de Thread para la red de campo y HaLow para el enlace troncal, a continuación se identifican las brechas concretas en las arquitecturas existentes que motivan la propuesta.
 
 
 \subsection{Brechas en las arquitecturas IoT existentes}
@@ -144,9 +142,9 @@ Habiendo justificado la selección de Thread para la red de campo y HaLow para e
 El análisis del estado del arte revela limitaciones estructurales que no se resuelven adoptando solamente Thread y HaLow~\cite{laghariInternetThingsIoT2024}:
 
 \begin{itemize}
-    \item \textbf{Dependencia de la nube:} puntos únicos de fallo en enlaces WAN con disponibilidades de 94--96\% en LTE (18--25~días de inactividad al año), insuficientes para infraestructura crítica.
+    \item \textbf{Dependencia de la nube:} puntos únicos de fallo en enlaces WAN con disponibilidades limitadas en redes celulares~\cite{laghariInternetThingsIoT2024}, insuficientes para infraestructura crítica.
     \item \textbf{Sobrecarga de traducción:} cadenas de protocolos Thread--MQTT--HTTP--nube introducen 150--300~ms de latencia acumulada y complejidad en los mapeos de datos.
-    \item \textbf{Escalabilidad costosa:} plataformas IoT en la nube cobran \$5--10 por millón de mensajes; con 10\,000 medidores reportando cada 5~min, el costo mensual solo en ingesta alcanza \$2\,880.
+    \item \textbf{Escalabilidad costosa:} plataformas IoT en la nube cobran por volumen de mensajes, generando costos de ingesta que crecen linealmente con la densidad de medidores y la frecuencia de reporte.
     \item \textbf{Ausencia de interoperabilidad:} interfaces propietarias dificultan la migración entre proveedores y bloquean a los operadores en ecosistemas cerrados~\cite{tangResearchInteroperabilityIoT,ISOIEC30141v2024}.
 \end{itemize}
 
@@ -187,19 +185,19 @@ Las redes de telemetría para energía inteligente enfrentan tres limitaciones i
 
 \textbf{Problema~1 --- Sobrecarga de protocolos.} Las arquitecturas tradicionales (MQTT/JSON sobre TCP/IP) generan sobrecarga del 60--80\% en tramas IEEE~802.15.4 (MTU de 127~bytes). Un paquete MQTT/JSON típico (15--20~bytes útiles) transporta 48~bytes de encabezados, resultando en eficiencia menor al 30\%. Esta sobrecarga se amplifica en topologías en malla con múltiples saltos, acumulando latencias de 150--300~ms en 3--5 saltos y consumo energético excesivo en el canal de radio.
 
-\textbf{Problema~2 --- Dependencia de conectividad WAN.} Las arquitecturas centradas en la nube presentan disponibilidades de 94--96\% en LTE (15--22~días de inactividad al año). Durante las particiones WAN se pierden simultáneamente:
+\textbf{Problema~2 --- Dependencia de conectividad WAN.} Las arquitecturas centradas en la nube dependen de enlaces WAN celulares cuya disponibilidad resulta insuficiente para infraestructura crítica~\cite{laghariInternetThingsIoT2024}. Durante las particiones WAN se pierden simultáneamente:
 \begin{itemize}
     \item Visualización de telemetría en tiempo real.
     \item Ejecución de reglas de negocio (alarmas, eventos).
     \item Persistencia de datos históricos.
     \item Gestión remota de dispositivos.
 \end{itemize}
-Las latencias estructurales superan 200~ms en P50 y 450~ms en P99, excediendo los requisitos de telemetría en tiempo real ($<$100~ms) y coordinación de microrredes ($<$50~ms).
+Las latencias estructurales superan 200~ms en P50 (mediana) y 450~ms en P99 (percentil 99), excediendo los requisitos de telemetría en tiempo real ($<$100~ms) y coordinación de microrredes ($<$50~ms).
 
 \textbf{Problema~3 --- Limitaciones del enlace troncal.} Las tecnologías de área amplia existentes no satisfacen simultáneamente los requisitos de rendimiento, latencia, alcance y costo:
 \begin{itemize}
     \item LoRaWAN alcanza 50~kbps máximo con latencias de 1--5~s.
-    \item LTE Cat-M1 genera costos operativos de \$150\,000 en 5~años para 1\,000 medidores.
+    \item LTE Cat-M1 genera costos operativos recurrentes de conectividad que crecen linealmente con la cantidad de dispositivos.
     \item Wi-Fi tradicional tiene alcance limitado a 50--100~m.
 \end{itemize}
 La ausencia de una tecnología que combine alcance superior a 1~km, rendimiento mayor a 4~Mbps, latencia menor a 50~ms y espectro no licenciado limita la viabilidad económica de redes de telemetría a gran escala~\cite{kandahNavigatingIoTSecurity2025}.
@@ -227,7 +225,7 @@ La investigación se circunscribe a \textbf{redes de telemetría para energía i
 
 \textbf{Escala y requisitos:}
 \begin{itemize}
-    \item Topologías de 60--100 nodos por pasarela; validación experimental con 60 nodos.
+    \item Topologías de 60--100 nodos por pasarela; validación experimental con 1~medidor físico y 59~nodos con telemetría sintética.
     \item Enlace troncal HaLow de 1--2~km, latencia objetivo menor a 100~ms en P95.
 \end{itemize}
 
@@ -239,24 +237,21 @@ A partir del problema definido y su delimitación, la pregunta central que orien
 
 \textbf{¿En qué medida una arquitectura IoT centrada en pasarelas de borde, que combine 6LoWPAN/CoAP/LwM2M sobre IEEE~802.15.4 para la red de campo y Wi-Fi HaLow (IEEE~802.11ah) para el enlace troncal, puede reducir latencia y sobrecarga de protocolos, mejorar disponibilidad durante fallos WAN y disminuir el costo total de propiedad frente a arquitecturas centradas en la nube en aplicaciones de energía inteligente?}
 
-Para responder esta pregunta es necesario demostrar que la combinación tecnológica propuesta no solo es técnicamente viable sino también económicamente ventajosa. La siguiente sección aborda esa justificación.
 
 
-%% ═══════════════════════════════════════════════════
+%% ═════════════════════════════════════════════════
 \section{Justificación}
 \label{sec:justificacion-investigacion}
-%% ═══════════════════════════════════════════════════
-
-Responder la pregunta de investigación formulada requiere justificar que la combinación tecnológica propuesta es viable desde tres perspectivas complementarias: la necesidad técnica que no cubren las soluciones existentes, la viabilidad económica frente al modelo centrado en la nube y el aporte que la investigación representa para la comunidad académica y el sector energético.
+%% ═════════════════════════════════════════════════
 
 \subsection{Necesidad técnica}
 
 Las arquitecturas de computación en el borde para IoT industrial requieren procesamiento local, almacenamiento persistente y autonomía sin conexión que las soluciones centradas en la nube no garantizan~\cite{satyanarayananEmergenceEdgeComputing2017,bonomiFogComputingItsRole2012}. Las alternativas de enlace troncal evaluadas presentan limitaciones que restringen su aplicabilidad:
 
 \begin{itemize}
-    \item \textbf{5G/NR-Light:} costos operativos de \$180\,000--300\,000 anuales para 1\,000 medidores.
+    \item \textbf{5G/NR-Light:} costos operativos recurrentes significativos en espectro licenciado, que limitan la viabilidad a gran escala.
     \item \textbf{NB-IoT:} rendimiento de 250~kbps, insuficiente para telemetría trifásica IEC~61000-4-30 (se requieren al menos 468~kbps).
-    \item \textbf{PLC (G3-PLC/PRIME):} requiere dispositivos de derivación por transformador con costos de \$500--1\,200 por unidad.
+    \item \textbf{PLC (G3-PLC/PRIME):} requiere dispositivos de derivación por transformador con costos significativos por unidad.
     \item \textbf{LoRaWAN:} rendimiento máximo de 50~kbps, inadecuado para agregación de datos de múltiples medidores.
 \end{itemize}
 
@@ -266,15 +261,7 @@ No obstante, la superioridad técnica de una solución no basta si su despliegue
 
 \subsection{Viabilidad económica}
 
-El análisis del costo total de propiedad (TCO) para 1\,000 medidores durante 5~años favorece la arquitectura propuesta:
-
-\begin{itemize}
-    \item \textbf{Arquitectura nube + LTE:} inversión de capital \$150\,000 + gastos operativos de conectividad \$180\,000 = \textbf{\$330\,000}.
-    \item \textbf{Arquitectura propuesta con HaLow:} inversión de capital \$200\,000 + mantenimiento \$25\,000 = \textbf{\$225\,000}.
-    \item \textbf{Ahorro proyectado:} 32\% (\$105\,000 en 5~años)~\cite{hossainComparativeStudyIoTCommunication2018}.
-\end{itemize}
-
-La ventaja se origina en la eliminación completa de costos recurrentes de conectividad celular, posibilitada por la operación de HaLow en espectro no licenciado con inversión única de capital.
+La principal ventaja económica de la arquitectura propuesta radica en la eliminación de costos recurrentes de conectividad celular. Mientras que las soluciones basadas en LTE Cat-M1 o NB-IoT incurren en tarifas mensuales por dispositivo que se acumulan linealmente con la escala del despliegue, Wi-Fi HaLow opera en espectro no licenciado (902--928~MHz) con inversión única de capital~\cite{hossainComparativeStudyIoTCommunication2018}. Esta diferencia estructural favorece la arquitectura propuesta a medida que crece el número de medidores, al sustituir gastos operativos recurrentes por una inversión puntual en infraestructura local.
 
 Más allá del ahorro cuantificable, la investigación busca generar conocimiento transferible al ámbito académico y aportar soluciones al sector energético latinoamericano.
 
@@ -284,20 +271,14 @@ La investigación contribuye al cuerpo de conocimiento en arquitecturas IoT hete
 
 \begin{enumerate}
     \item Arquitectura de referencia con múltiples capas físicas (multi-PHY) conforme ISO/IEC~30141.
-    \item Caracterización empírica de latencias en la integración Thread--HaLow.
     \item Caracterización empírica de la integración Thread--HaLow con malla 802.11s (latencias, rendimiento, fiabilidad).
 \end{enumerate}
 
 Desde la perspectiva aplicada, la propuesta es relevante para operadores de red y comercializadores que requieren modernizar AMI con estándares abiertos, reduciendo dependencia de proveedores cerrados en el contexto de la transición energética latinoamericana.
 
-Sobre esta base de justificación técnica, económica y académica se definen los objetivos del trabajo.
-
-
-%% ═══════════════════════════════════════════════════
+%% ═════════════════════════════════════════════════
 \section{Objetivos}
-%% ═══════════════════════════════════════════════════
-
-La justificación anterior demuestra que existe tanto la necesidad técnica como la viabilidad económica para la arquitectura propuesta. Esta sección traduce esos argumentos en un objetivo general medible y ocho objetivos específicos que cubren desde el diseño de la arquitectura hasta la evaluación comparativa con las líneas base.
+%% ═════════════════════════════════════════════════
 
 \subsection{Objetivo general}
 
@@ -429,7 +410,6 @@ Estas limitaciones acotan los resultados pero no comprometen la validez de las c
 \section{Contribuciones esperadas}
 %% ═══════════════════════════════════════════════════
 
-Dentro de los alcances descritos, el trabajo aspira a producir aportes tanto en el plano académico ---mediante arquitecturas de referencia y caracterizaciones empíricas--- como en el plano técnico, con artefactos de implementación reutilizables.
 
 \textbf{Contribuciones académicas:}
 \begin{enumerate}

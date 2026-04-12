@@ -6,16 +6,6 @@
 % ============================================================================
 
 %======================================================================
-\section{Introducci\'{o}n}
-\label{sec:gateway-intro}
-
-Este cap\'{i}tulo documenta los Niveles~2 y~3 de la arquitectura AMI: la \textbf{pasarela de borde} basada en Raspberry~Pi~4 y la \textbf{red de distribuci\'{o}n} Wi-Fi HaLow (IEEE~802.11ah) en malla 802.11s~\cite{qiaoSurveyWiFiHaLow2018}.
-
-La pasarela concentra tres responsabilidades que se analizan en detalle a lo largo del cap\'{i}tulo: (1)~puente Thread--IP mediante OpenThread Border Router (OTBR), (2)~plataforma de computaci\'{o}n en el borde con ThingsBoard Edge, y (3)~nodo de distribuci\'{o}n HaLow para la conectividad de \'{u}ltima milla entre pasarelas.
-
-\textbf{Estructura del cap\'{i}tulo:} \S\ref{sec:gateway-rol} define el rol de la pasarela en la arquitectura. \S\ref{sec:gateway-arquitectura} presenta la arquitectura \emph{hardware}. \S\ref{sec:gateway-sw} detalla el sistema operativo y software. \S\ref{sec:gateway-otbr} describe la implementaci\'{o}n de OTBR. \S\ref{sec:gateway-borde} documenta el procesamiento en el borde. \S\ref{sec:gateway-halow} analiza la red troncal HaLow. \S\ref{sec:gateway-integracion} describe la integraci\'{o}n con la plataforma IoT. \S\ref{sec:gateway-flujo-datos} presenta el flujo de datos extremo a extremo. \S\ref{sec:gateway-conclusiones} cierra el cap\'{i}tulo.
-
-%======================================================================
 \section{Rol del gateway en la arquitectura IoT}
 \label{sec:gateway-rol}
 
@@ -27,24 +17,24 @@ Este capítulo documenta la implementación de los Niveles~2 y~3 de la arquitect
     \item \textbf{Nodo de distribución HaLow:} La conectividad de última milla entre pasarelas utiliza Wi-Fi HaLow en banda sub-1~GHz, con alcance extendido hasta 1,2~km LOS y soporte de cientos de clientes mediante RAW~\cite{leeWiFiHaLowLongRange2021, kimIEEE80211ahHaLow2021}.
 \end{enumerate}
 
-La elección de Raspberry~Pi~4 como plataforma de \emph{hardware} se fundamenta en su procesador quad-core Cortex-A72, capacidad suficiente para ejecutar servicios de borde en contenedores Docker, y un ecosistema maduro con soporte ARM64.  El sistema operativo OpenWRT, compilado desde el \emph{fork} de Morse Micro, proporciona la compatibilidad nativa con radios HaLow IEEE~802.11ah, mientras que OTBR se integra como servicio del sistema para la gestión de la red Thread.
+La elección de Raspberry~Pi~4 como plataforma de \emph{hardware} se fundamenta en su procesador \emph{quad-core} Cortex-A72, capacidad suficiente para ejecutar servicios de borde en contenedores Docker, y un ecosistema maduro con soporte ARM64.  El sistema operativo OpenWRT, compilado desde el repositorio oficial de Morse Micro, proporciona la compatibilidad nativa con radios HaLow IEEE~802.11ah, mientras que OTBR se integra como servicio del sistema para la gestión de la red Thread.
 
-\textbf{Estructura del capítulo:} §\ref{sec:gateway-arquitectura} presenta el \emph{hardware} de la pasarela y la justificación de selección.  §\ref{sec:gateway-openwrt} detalla el sistema operativo OpenWRT y su configuración para HaLow.  §\ref{sec:gateway-otbr} describe la implementación de OTBR.  §\ref{sec:gateway-tb-edge} documenta ThingsBoard Edge como plataforma de borde.  §\ref{sec:gateway-topologia} presenta la topología de red general, la implementación de la malla HaLow 802.11s y el flujo de datos extremo a extremo.  La infraestructura de servidor central se documenta en el Capítulo~\ref{chap:resultados}.
+La infraestructura de servidor central (\emph{on-premise}) se aborda en la Sección~\ref{sec:gateway-tb-edge} como componente de la pasarela de borde.
 
 %======================================================================
 
-La arquitectura en tres niveles --- nodo IoT (Cap\'{i}tulo~\ref{chap:nodo-iot}), pasarela de borde y servidor \emph{on-premise} --- minimiza el tr\'{a}fico WAN mediante procesamiento local y reduce la latencia extremo a extremo al mantener el procesamiento cr\'{i}tico cerca de los dispositivos.
+La arquitectura en tres niveles --- nodo IoT (Cap\'{i}tulo~\ref{chap:nodo-iot}), pasarela de borde y servidor \emph{on-premise} --- busca minimizar el tr\'{a}fico WAN mediante procesamiento local y reducir la latencia extremo a extremo al mantener el procesamiento cr\'{i}tico cerca de los dispositivos.
 
 %======================================================================
 \section{Arquitectura hardware del gateway}
 \label{sec:gateway-arquitectura}
 
-La implementaci\'{o}n despleg\'{o} dos \textbf{pasarelas de borde Raspberry~Pi~4} (RPi4-01, RPi4-02) en un laboratorio controlado, equipadas con el m\'{o}dulo \textbf{Alfa Networks AHPI6108E} (formato HAT, chipset Morse Micro MM6108, interfaz SDIO)~\cite{morsemicroMM8108ProductBrief2025} para conectividad HaLow 802.11ah nativa, y un nRF52840 USB Dongle para OTBR.
+La implementaci\'{o}n despleg\'{o} una \textbf{pasarela de borde Raspberry~Pi~4} en un laboratorio controlado, equipada con el m\'{o}dulo \textbf{Alfa Networks AHPI6108E} (formato HAT, chipset Morse Micro MM6108, interfaz SDIO)~\cite{morsemicroMM8108ProductBrief2025} para conectividad HaLow 802.11ah nativa, y un nRF52840 USB Dongle para OTBR.
 
 \subsection{Especificaciones del \emph{Hardware}}
 \label{sec:gateway-hardware}
 
-La pasarela utiliza Raspberry~Pi~4 Model~B (4~GB LPDDR4-3200), procesador Broadcom BCM2711 quad-core Cortex-A72 @ 1,5~GHz, almacenamiento MicroSD 128~GB (SanDisk Extreme Pro), módulo \textbf{Alfa Networks AHPI6108E} (HAT, chipset MM6108, interfaz SDIO) para conectividad HaLow 802.11ah nativa (902--928~MHz, hasta 32,5~Mbps PHY), y nRF52840 USB Dongle para OTBR.  El sistema operativo es OpenWRT~23.05 (§\ref{sec:gateway-openwrt}), compilado desde el \emph{fork} de Morse Micro con controladores nativos \texttt{kmod-morse} para la radio HaLow conectada por SDIO.  Consumo medido: 8,5~W promedio, 12~W pico.
+La pasarela utiliza Raspberry~Pi~4 Model~B (4~GB LPDDR4-3200), procesador Broadcom BCM2711 quad-core Cortex-A72 @ 1,5~GHz, almacenamiento MicroSD 128~GB (SanDisk Extreme Pro), módulo \textbf{Alfa Networks AHPI6108E} (HAT, chipset MM6108, interfaz SDIO) para conectividad HaLow 802.11ah nativa (902--928~MHz, hasta 32,5~Mbps PHY), y nRF52840 USB Dongle para OTBR.  El sistema operativo es OpenWRT~23.05 (§\ref{sec:gateway-openwrt}), compilado desde el repositorio oficial de Morse Micro con controladores nativos \texttt{kmod-morse} para la radio HaLow conectada por SDIO.  Consumo medido: 8,5~W promedio, 12~W pico.
 
 \begin{table}[H]
 \centering
@@ -83,10 +73,10 @@ RPi4 seleccionado por precio óptimo (27--69\% ahorro CAPEX), consumo 8,5~W (29-
 \label{sec:gateway-sw}
 \label{sec:gateway-openwrt}
 
-La pasarela ejecuta \textbf{OpenWRT~23.05}, compilado desde el \emph{fork} oficial de Morse Micro\footnote{\url{https://github.com/MorseMicro/openwrt}}, como sistema operativo base.  La selección de OpenWRT, en lugar de distribuciones convencionales como Ubuntu Server o Raspberry Pi OS, responde a tres requisitos técnicos:
+La pasarela ejecuta \textbf{OpenWRT~23.05}, compilado desde el repositorio oficial de Morse Micro\footnote{\url{https://github.com/MorseMicro/openwrt}}, como sistema operativo base.  La selección de OpenWRT, en lugar de distribuciones convencionales como Ubuntu Server o Raspberry Pi OS, responde a tres requisitos técnicos:
 
 \begin{enumerate}
-    \item \textbf{Compatibilidad nativa con radios HaLow (IEEE~802.11ah):} El \emph{fork} de Morse Micro incluye los controladores del \emph{kernel} (\texttt{kmod-morse}), \emph{firmware} binario (\texttt{morse-fw-6108}) y \emph{device tree overlays} (\texttt{mm610x-sdio}, \texttt{morse-ps}) necesarios para operar el chipset MM6108 del módulo AHPI6108E conectado por interfaz SDIO al HAT GPIO de la Raspberry~Pi~4.  Estos controladores no están disponibles en repositorios OpenWRT \emph{upstream} ni en distribuciones alternativas.
+    \item \textbf{Compatibilidad nativa con radios HaLow (IEEE~802.11ah):} El repositorio de Morse Micro incluye los controladores del \emph{kernel} (\texttt{kmod-morse}), \emph{firmware} binario (\texttt{morse-fw-6108}) y \emph{device tree overlays} (\texttt{mm610x-sdio}, \texttt{morse-ps}) necesarios para operar el chipset MM6108 del módulo AHPI6108E conectado por interfaz SDIO al HAT GPIO de la Raspberry~Pi~4.  Estos controladores no están disponibles en repositorios OpenWRT \emph{upstream} ni en distribuciones alternativas.
     \item \textbf{Gestión unificada de red mediante UCI:} El sistema de configuración UCI (\emph{Unified Configuration Interface}) permite administrar las tres interfaces de red (\texttt{eth0}, \texttt{mesh0} HaLow, \texttt{wpan0} Thread), \emph{firewall}, DHCP y servicios de sistema mediante archivos declarativos en \texttt{/etc/config/}, facilitando la replicabilidad de configuraciones entre pasarelas.
     \item \textbf{Huella reducida con soporte Docker:} OpenWRT en modo \emph{target} \texttt{bcm27xx/bcm2711} (ARM64v8) proporciona un sistema base inferior a 200~MB, dejando recursos suficientes para Docker y los servicios de borde.  El \emph{kernel} Linux~5.15 LTS con parches BCM2711 garantiza estabilidad a largo plazo.
 \end{enumerate}
@@ -95,7 +85,7 @@ La pasarela ejecuta \textbf{OpenWRT~23.05}, compilado desde el \emph{fork} ofici
 \subsection{Compilación de la Imagen}
 \label{sec:gateway-openwrt-build}
 
-La imagen se compiló desde el repositorio del proyecto\footnote{\url{https://github.com/jsebgiraldo/openwrt}} (derivado del \emph{fork} Morse Micro) con la siguiente configuración: \emph{target} \texttt{bcm27xx/bcm2711} (Raspberry Pi 4, 64-bit ARMv8), \emph{subtarget device} \texttt{rpi-4-mmeval}, arquitectura \texttt{aarch64\_cortex-a72}, libc musl~1.2.4.  Los paquetes específicos HaLow incluidos son: \texttt{kmod-morse} (controlador 802.11ah PHY/MAC, bus SDIO), \texttt{morse-fw-6108} (\emph{firmware} para MM6108), \texttt{netifd-morse} (integración UCI) y \texttt{morse-utils} (herramientas de diagnóstico).  El procedimiento detallado de compilación e instalación se documenta en el repositorio del proyecto.
+La imagen se compiló desde el repositorio del proyecto\footnote{\url{https://github.com/jsebgiraldo/openwrt}} (derivado del repositorio de Morse Micro) con la siguiente configuración: \emph{target} \texttt{bcm27xx/bcm2711} (Raspberry Pi 4, 64-bit ARMv8), \emph{subtarget device} \texttt{rpi-4-mmeval}, arquitectura \texttt{aarch64\_cortex-a72}, libc musl~1.2.4.  Los paquetes específicos HaLow incluidos son: \texttt{kmod-morse} (controlador 802.11ah PHY/MAC, bus SDIO), \texttt{morse-fw-6108} (\emph{firmware} para MM6108), \texttt{netifd-morse} (integración UCI) y \texttt{morse-utils} (herramientas de diagnóstico).  El procedimiento detallado de compilación e instalación se documenta en el repositorio del proyecto.
 
 % --------------------------------------------------------------------------
 \subsection{Configuración de Red}
@@ -115,7 +105,7 @@ La pasarela configura tres interfaces mediante UCI:
 \section{Gateway como Thread Border Router}
 \label{sec:gateway-otbr}
 
-OTBR interconecta la red Thread IEEE~802.15.4~\cite{IEEE802154-2020} con la infraestructura IP de la pasarela, actuando como puente bidireccional: traduce tráfico Thread (IPv6 6LoWPAN, prefijo \texttt{fd00::/64}) hacia IPv4/IPv6 vía NAT64/DNS64, y enruta comandos descendentes hacia los nodos Thread.  La implementación utiliza un nRF52840 USB Dongle en modo RCP (\emph{Radio Co-Processor}), donde el \emph{stack} Thread completo se ejecuta en el \emph{host} RPi4 mediante el servicio \texttt{otbr-agent}, reduciendo la latencia respecto a una implementación NCP.
+OTBR interconecta la red Thread IEEE~802.15.4~\cite{IEEE802154-2020} con la infraestructura IP de la pasarela, actuando como puente bidireccional: traduce tráfico Thread (IPv6 6LoWPAN, prefijo \texttt{fd00::/64}) hacia IPv4/IPv6 vía NAT64/DNS64, y enruta comandos descendentes hacia los nodos Thread.  La implementación utiliza un nRF52840 USB Dongle en modo RCP (\emph{Radio Co-Processor}), donde la pila Thread completa se ejecuta en el \emph{host} RPi4 mediante el servicio \texttt{otbr-agent}, reduciendo la latencia respecto a una implementación NCP.
 
 La integración de OTBR en OpenWRT se realizó como servicio nativo del sistema, configurado mediante UCI y gestionado por \texttt{procd} (gestor de procesos de OpenWRT).  La configuración detallada del servicio OTBR está disponible en el repositorio del proyecto\footnote{\url{https://github.com/jsebgiraldo/openwrt}}.
 
@@ -179,7 +169,7 @@ El despliegue en Docker Compose comprende tres contenedores:
     \item \textbf{Redis 7.0} (\texttt{redis}): Caché de sesiones, atributos de dispositivos y resultados de consultas frecuentes, reduciendo la carga sobre PostgreSQL.  Puerto: 6379.  RAM asignada: 256~MB.
 \end{enumerate}
 
-\textbf{Recursos totales del \emph{stack}:} CPU $\sim$2,5 núcleos, RAM $\sim$1,8~GB.  El sistema deja $\sim$2,2~GB de RAM libre para OTBR y servicios del sistema operativo OpenWRT.  La Figura~\ref{fig:edge-architecture-official} ilustra la arquitectura interna de ThingsBoard Edge.
+\textbf{Recursos totales del despliegue:} CPU $\sim$2,5 núcleos, RAM $\sim$1,8~GB.  El sistema deja $\sim$2,2~GB de RAM libre para OTBR y servicios del sistema operativo OpenWRT.  La Figura~\ref{fig:edge-architecture-official} ilustra la arquitectura interna de ThingsBoard Edge.
 
 \input{fig_thingsboard_edge_architecture.tex}
 
@@ -193,7 +183,7 @@ ThingsBoard Edge incluye un servidor LwM2M nativo basado en la biblioteca Eclips
     \item El nodo Zephyr, tras unirse a la red Thread (§\ref{sec:gateway-otbr}), envía un mensaje \texttt{Registration} LwM2M al servidor de la pasarela (dirección ULA del OTBR, puerto CoAP~5685).
     \item ThingsBoard Edge recibe el registro y crea automáticamente el dispositivo, asociándolo al \emph{Device Profile} configurado con transporte LwM2M.
     \item El \emph{Device Profile} define el mapeo entre objetos LwM2M (Objeto~10242 del medidor trifásico, Objeto~3 del dispositivo) y las claves de telemetría ThingsBoard (ver Tabla~\ref{tab:lwm2m-tb-mapping} del Capítulo~\ref{chap:nodo-iot}).
-    \item Se activan las suscripciones \emph{Observe} en los recursos configurados (\texttt{pmin=60, pmax=900, st=0.05}).
+    \item Se activan las suscripciones \emph{Observe} en los recursos configurados (\texttt{pmin=60, pmax=300, st=0.05}).
 \end{enumerate}
 
 Esta integración elimina la necesidad de un puente CoAP-MQTT externo y de un servidor Leshan \emph{standalone}, simplificando la arquitectura y reduciendo el consumo de recursos.
@@ -206,7 +196,7 @@ Esta integración elimina la necesidad de un puente CoAP-MQTT externo y de un se
 \begin{tabular}{|l|l|l|}
 \hline
 \rowcolor{gray!20}
-\textbf{Criterio} & \textbf{Leshan externo + Bridge CoAP-MQTT} & \textbf{TB Edge con LwM2M integrado} \\
+\textbf{Criterio} & \textbf{Leshan externo + puente (\emph{bridge}) CoAP-MQTT} & \textbf{TB Edge con LwM2M integrado} \\
 \hline
 Contenedores adicionales & 2 (Leshan + Bridge Python) & 0 (integrado en TB Edge) \\
 \hline
@@ -270,61 +260,12 @@ Dependencia de proveedor & No & Sí (AWS) & Sí (Azure) \\
 \end{tabular}
 \end{table}
 
-\textbf{Justificación de ThingsBoard Edge:} (1)~Cero OPEX por ser código abierto~\cite{thingsboardEdgeArchitecture2024}; (2)~transporte LwM2M integrado que simplifica la arquitectura; (3)~paneles locales para resolución de problemas sin WAN; (4)~almacenamiento sin conexión de 7~días validado; (5)~motor de reglas visual; (6)~sincronización bidireccional con servidor \emph{on-premise}~\cite{thingsboardCloudArchitecture2024}; (7)~ejecución sobre hardware genérico RPi4.
-
-%======================================================================
-\section[Topología, HaLow y Flujo de Datos]{Topología de Red, Enlace Troncal HaLow y Flujo de Datos}
-\label{sec:gateway-topologia}
-
-% --------------------------------------------------------------------------
+ThingsBoard Edge se seleccionó por tres razones cuantificables: cero OPEX al ser código abierto~\cite{thingsboardEdgeArchitecture2024}, transporte LwM2M integrado que elimina contenedores adicionales y reduce latencia de traducción de 5--10~ms a $<$2~ms (Tabla~\ref{tab:lwm2m-transport-comparison}), y almacenamiento sin conexión de 7~días validado experimentalmente. Además, la sincronización bidireccional con servidor \emph{on-premise}~\cite{thingsboardCloudArchitecture2024} y la ejecución sobre \emph{hardware} genérico RPi4 eliminan dependencia de proveedor.
 
 %======================================================================
 \section{Red troncal basada en Wi-Fi HaLow}
 \label{sec:gateway-halow}
-
-\subsection{Enlace Troncal HaLow (IEEE~802.11ah)}
-\label{sec:gateway-halow-enlace}
-
-El enlace troncal de última milla utiliza Wi-Fi HaLow (IEEE~802.11ah) en banda sub-1~GHz (902--928~MHz ISM).  HaLow ofrece tres ventajas clave sobre Wi-Fi~2,4/5~GHz~\cite{tianWiFiHaLowInternet2021}: (1)~alcance hasta 1,2~km LOS (+23~dBm TX, propagación Fresnel favorable), (2)~penetración interior superior ($-$8~dB @ 900~MHz vs $-$15~dB @ 2,4~GHz, reducción del 47\% en pérdida)~\cite{khanWiFiHalowSignal2020}, y (3)~eficiencia espectral con RAW/TWT que reducen colisiones 60\% vs EDCA puro.
-
-La topología en malla 802.11s con HWMP~\cite{qiaoSurveyWiFiHaLow2018} elimina cableado Ethernet exterior (CAPEX: 1$\times$ Tube~AHM @ \$89 + 2$\times$ AHPI6108E @ \$45 = \$179 vs \$6\,000 cableado Cat6 exterior).  Redundancia automática: fallo de un nodo en malla no interrumpe conectividad, HWMP redirige en $<$2~s.
-
-La implementación piloto configura: banda 902--928~MHz ISM (compatible ANE Resolución~711), canal~11 (915~MHz, 4~MHz BW), MCS7 (16-QAM, tasa 1/2) = 4~Mbps con sensibilidad RX $-$91~dBm, potencia TX +20~dBm (PIRE 25~dBm con antena 5~dBi, cumple FCC $<$30~dBm).
-
-\begin{table}[H]
-\centering
-\caption{Comparación Wi-Fi HaLow (802.11ah) vs Wi-Fi tradicional para enlace troncal AMI}
-\label{tab:halow-vs-wifi}
-\resizebox{\textwidth}{!}{%
-\begin{tabular}{|l|l|l|l|}
-\hline
-\rowcolor{gray!20}
-\textbf{Característica} & \textbf{802.11ah HaLow} & \textbf{802.11n 2,4\,GHz} & \textbf{802.11ac 5\,GHz} \\
-\hline
-Frecuencia & \textcolor{green}{\textbf{900\,MHz}} & 2,4\,GHz & 5\,GHz \\
-\hline
-Alcance LOS & \textcolor{green}{\textbf{1,2\,km}} & 100--150\,m & 50--80\,m \\
-\hline
-Penetración pared & \textcolor{green}{\textbf{$-$8\,dB}} & $-$15\,dB & $-$22\,dB \\
-\hline
-Caudal real & \textcolor{blue}{\textbf{4\,Mbps}} & 50--100\,Mbps & 200--400\,Mbps \\
-\hline
-Latencia & 11\,ms & 5--10\,ms & 3--8\,ms \\
-\hline
-EST máx & \textcolor{green}{\textbf{8191}} & 255 & 255 \\
-\hline
-Consumo TX & \textcolor{green}{\textbf{180\,mA}} & 250\,mA & 320\,mA \\
-\hline
-Eficiencia & \textcolor{green}{\textbf{RAW/TWT}} & EDCA & MU-MIMO \\
-\hline
-Costo módulo & \$45--89 & \$8--15 & \$12--20 \\
-\hline
-Decisión & \textcolor{green}{\textbf{SELECCIONADO}} & Descartado & Descartado \\
-\hline
-\end{tabular}}%
-\end{table}
-
-HaLow seleccionado por: alcance 12$\times$ superior (elimina repetidores), penetración interior sin antenas externas, y eficiencia con RAW para 150+ \emph{Border Routers} Thread por AP.  Caudal de 4~Mbps suficiente: requisito AMI 100~medidores $\times$ 200~bytes $\times$ 4~mensajes/hora = 22~kbps (margen 180$\times$)~\cite{halowVsLoRaWANComparison2023}.
+\label{sec:gateway-topologia}
 
 % --------------------------------------------------------------------------
 \subsection{\emph{Hardware} HaLow: Módulo AHPI6108E y Punto de Acceso Tube~AHM}
@@ -334,11 +275,11 @@ La red HaLow del piloto emplea dos tipos de hardware, ambos basados en el chipse
 
 \textbf{Módulo Alfa Networks AHPI6108E (HAT para Raspberry~Pi):}  Placa en formato HAT (65$\times$56$\times$19~mm) que se acopla al conector GPIO de 40~pines de la Raspberry~Pi~4.  El módulo aloja el chipset MM6108 en \emph{socket} M.2/NGFF~2230 E-Key, conectado al SoC BCM2711 mediante interfaz \textbf{SDIO} nativa.  Incluye antena HaLow con cable IPEX4 (MHF4) a SMA y \emph{socket} mikroBUS con soporte SPI, I\textsuperscript{2}C y UART para expansión futura.  Especificaciones de radio: banda 902--928~MHz, potencia TX máxima +25~dBm (MCS0), +23~dBm (MCS4), sensibilidad RX $-$100~dBm @ MCS0 1~MHz / $-$84~dBm @ MCS4 4~MHz, tasa PHY hasta 32,5~Mbps.  Temperatura de operación: $-$20 a +70~°C.  El controlador \texttt{kmod-morse} de OpenWRT gestiona la radio directamente por SDIO, exponiendo la interfaz \texttt{mesh0} sin hardware intermediario.
 
-\textbf{Router Alfa Networks Tube~AHM (\emph{Mesh Gate}/AP):}  Router exterior certificado IP67, formato cilíndrico (176$\times$38~mm, 125~g), con antena omnidireccional integrada de 5~dBi (PIRE 28~dBm).  Procesador MT7628 (MIPS 580~MHz) con radio MM6108 802.11ah.  Interfaz Ethernet 10/100 con alimentación PoE 24~V, consumo 5--9~W.  Ejecuta OpenWRT~23.05 (\emph{fork} Morse Micro) con paquetes \texttt{kmod-morse} y \emph{firmware} \texttt{morse-fw-6108}.  En el piloto actúa exclusivamente como \emph{Mesh Gate}: nodo raíz 802.11s con enlace troncal Ethernet al \emph{switch} local y servidor \emph{on-premise}.
+\textbf{Router Alfa Networks Tube~AHM (\emph{Mesh Gate}/AP):}  Router exterior certificado IP67, formato cilíndrico (176$\times$38~mm, 125~g), con antena omnidireccional integrada de 5~dBi (PIRE 28~dBm).  Procesador MT7628 (MIPS 580~MHz) con radio MM6108 802.11ah.  Interfaz Ethernet 10/100 con alimentación PoE 24~V, consumo 5--9~W.  Ejecuta OpenWRT~23.05 (repositorio oficial de Morse Micro) con paquetes \texttt{kmod-morse} y \emph{firmware} \texttt{morse-fw-6108}.  En el piloto actúa exclusivamente como \emph{Mesh Gate}: nodo raíz 802.11s con enlace troncal Ethernet al conmutador local y servidor \emph{on-premise}.
 
 \input{fig_halow_hardware_detail}
 
-\textbf{Configuración de la malla:} Canal 915~MHz (centro ISM), \texttt{htmode} S4 (4~MHz), \texttt{txpower} +20~dBm, cifrado SAE (WPA3, \emph{passphrase} 384~bits), \texttt{mesh\_id=AMI-HaLow-Mesh}.  Tube~AHM con \texttt{mesh\_gate\_announcements=1} (raíz RANN); RPi4-01 y RPi4-02 (AHPI6108E) con \texttt{mesh\_gate\_announcements=0} como \emph{Mesh Points}.  Puente \texttt{br-lan} integra \texttt{eth0} + \texttt{mesh0} en todos los nodos.
+\textbf{Configuración de la malla:} Canal 915~MHz (centro ISM), \texttt{htmode} S4 (4~MHz), \texttt{txpower} +20~dBm, cifrado SAE (WPA3, \emph{passphrase} 384~bits), \texttt{mesh\_id=AMI-HaLow-Mesh}.  Tube~AHM con \texttt{mesh\_gate\_announcements=1} (raíz RANN); RPi4 (AHPI6108E) con \texttt{mesh\_gate\_announcements=0} como \emph{Mesh Point}.  Puente \texttt{br-lan} integra \texttt{eth0} + \texttt{mesh0} en ambos nodos.
 
 % --------------------------------------------------------------------------
 \subsection{Topología Mesh 802.11s y Protocolo HWMP}
@@ -348,15 +289,14 @@ IEEE~802.11s define los roles: \emph{Mesh Gate} (conexión cableada), \emph{Mesh
 
 \input{fig_halow_mesh_topology}
 
-\textbf{Topología desplegada:} 3~nodos HaLow en triangulación (1~Tube~AHM + 2~RPi4 con AHPI6108E):
+\textbf{Topología desplegada:} 2~nodos HaLow en enlace punto a punto (1~Tube~AHM + 1~RPi4 con AHPI6108E):
 
 \begin{itemize}
-    \item \textbf{Tube~AHM (Mesh Gate):} Ubicación central, Ethernet hacia \emph{switch} local (servidor \emph{on-premise}), 1650~msnm.  Raíz HWMP con RANN periódico.
-    \item \textbf{RPi4-01 + AHPI6108E (Mesh Point):} 280~m desde Tube~AHM, 1540~msnm.  Pasarela de borde gestionando nodos Thread.  RSSI $-$72~dBm, costo \emph{airtime}~512.
-    \item \textbf{RPi4-02 + AHPI6108E (Mesh Point):} 520~m desde Tube~AHM / 380~m desde RPi4-01, 1470~msnm.  Pasarela de borde gestionando nodos Thread.  RSSI $-$88~dBm, costo \emph{airtime}~2048.
+    \item \textbf{Tube~AHM (Mesh Gate):} Ubicación central, Ethernet hacia conmutador local (servidor \emph{on-premise}), 1650~msnm.  Raíz HWMP con RANN periódico.
+    \item \textbf{RPi4 + AHPI6108E (Mesh Point):} 280~m desde Tube~AHM, 1540~msnm.  Pasarela de borde gestionando nodos Thread.  RSSI $-$72~dBm, costo \emph{airtime}~512.
 \end{itemize}
 
-Malla completa: 3~nodos $\rightarrow$ 3~enlaces bidireccionales entre pares validados.
+Esta topología valida el enlace HaLow punto a punto; la extensión a múltiples pasarelas en malla 802.11s se plantea como trabajo futuro (Capítulo~\ref{chap:conclusiones}).
 
 \textbf{Métrica \emph{Airtime} (IEEE~802.11s Annex~C):}
 
@@ -364,15 +304,15 @@ Malla completa: 3~nodos $\rightarrow$ 3~enlaces bidireccionales entre pares vali
 \text{Airtime} = \left[\frac{O + \frac{B_t}{r}}{1 - e_f}\right] \times 1024
 \]
 
-Donde $O = 364$\,\textmu s (sobrecarga SIFS+DIFS+ACK), $B_t = 1024$~bytes, $r$~= tasa de datos Mbps, $e_f$~= tasa de error de trama.  RPi4-01 (RSSI $-$72~dBm, TET~1\%): costo~512.  RPi4-02 (RSSI $-$88~dBm, TET~8\%): costo~2048.  HWMP selecciona ruta multi-salto Tube~AHM$\rightarrow$RPi4-01$\rightarrow$RPi4-02 (costo 1024) sobre directa (costo 2048), optimizando fiabilidad sobre saltos mínimos.
+Donde $O = 364$\,\textmu s (sobrecarga SIFS+DIFS+ACK), $B_t = 1024$~bytes, $r$~= tasa de datos Mbps, $e_f$~= tasa de error de trama.  RPi4 (RSSI $-$72~dBm, TET~1\%): costo~512.
 
-\textbf{RAW (\emph{Restricted Access Window}):} Divide estaciones en 8~grupos temporales con ranuras exclusivas (12,5~ms/ranura, asignación Hash(MAC) mod~8).  Validación piloto 30~estaciones: pérdida de paquetes sin RAW 4,2\% $\rightarrow$ con RAW 0,3\% (\textbf{reducción del 93\%}), caudal agregado +62\%, fluctuación $-$75\%.  Compromiso: latencia promedio +8~ms, pero predecible (requisito AMI $<$500~ms cumplido)~\cite{kimIEEE80211ahHaLow2021}.
+\textbf{RAW (\emph{Restricted Access Window}):} Divide estaciones en 8~grupos temporales con ranuras exclusivas (12,5~ms/ranura, asignación Hash(MAC) mod~8).  Kim et al.~\cite{kimIEEE80211ahHaLow2021} reportan para 30~estaciones: pérdida de paquetes sin RAW 4,2\% $\rightarrow$ con RAW 0,3\% (\textbf{reducción del 93\%}), caudal agregado +62\%, fluctuación $-$75\%.  Compromiso: latencia promedio +8~ms, pero predecible (requisito AMI $<$500~ms cumplido).
 
 % --------------------------------------------------------------------------
 \subsection{Validación de la Red HaLow}
 \label{sec:gateway-halow-validacion}
 
-\textbf{Caudal TCP (iperf3, ruta 2 saltos vía RPi4-01, 60~s, 10~repeticiones):}
+\textbf{Caudal TCP (iperf3, enlace directo Tube~AHM$\leftrightarrow$RPi4, 60~s, 10~repeticiones):}
 \begin{itemize}
     \item Caudal promedio: 4,2~Mbps ($\pm$0,3), pérdida de paquetes TCP 0,02\%, fluctuación 4,2~ms.
 \end{itemize}
@@ -384,26 +324,20 @@ Donde $O = 364$\,\textmu s (sobrecarga SIFS+DIFS+ACK), $B_t = 1024$~bytes, $r$~=
 
 \textbf{Alcance LOS:}
 \begin{itemize}
-    \item Tube~AHM$\leftrightarrow$RPi4-01 (280~m): RSSI $-$72~dBm, Fresnel 100\%, 4,2~Mbps.
-    \item Tube~AHM$\leftrightarrow$RPi4-02 (520~m): RSSI $-$88~dBm, Fresnel 60\% (vegetación), 2,8~Mbps.
+    \item Tube~AHM$\leftrightarrow$RPi4 (280~m): RSSI $-$72~dBm, Fresnel 100\%, 4,2~Mbps.
     \item Extensión 1,2~km LOS: RSSI $-$93~dBm (2~dB de margen), 1,1~Mbps MCS3, \textbf{conectividad estable}.
 \end{itemize}
 
-\textbf{Cálculo Fresnel} (Tube~AHM$\leftrightarrow$RPi4-02): $r = \sqrt{\lambda d_1 d_2 / (d_1+d_2)}$ con $\lambda=0,328$~m, $d_1=d_2=260$~m $\Rightarrow$ $r \approx 6,5$~m.  Vegetación (8--12~m) obstruye 40\% zona Fresnel, atenuación 3--5~dB consistente con RSSI medido.
-
-\textbf{Conclusión:} Red HaLow cumple: caudal $>$1~Mbps en $>$90\% del área, latencia $<$15~ms P95, pérdida de paquetes $<$0,1\%.
+\textbf{Conclusión:} La red HaLow cumple los requisitos: caudal $>$1~Mbps en $>$90\% del área, latencia $<$15~ms P95, pérdida de paquetes $<$0,1\%.
 
 % --------------------------------------------------------------------------
 
 %======================================================================
-\section{Integraci\'{o}n con la plataforma IoT}
+\section{Integración con la plataforma IoT}
 \label{sec:gateway-integracion}
-
-ThingsBoard Edge se sincroniza bidireccionalmente con un servidor ThingsBoard \emph{on-premise} desplegado en un servidor local de prueba. La comunicaci\'{o}n utiliza gRPC sobre el enlace WAN (malla HaLow $\rightarrow$ \emph{switch} local $\rightarrow$ servidor):
-
 \label{sec:gateway-tb-edge-onpremise}
 
-ThingsBoard Edge se sincroniza bidireccionalmente con un servidor ThingsBoard \emph{on-premise} desplegado en un servidor local de prueba.  La comunicación utiliza gRPC sobre el enlace WAN (malla HaLow $\rightarrow$ \emph{switch} local $\rightarrow$ servidor):
+ThingsBoard Edge se sincroniza bidireccionalmente con un servidor ThingsBoard \emph{on-premise} desplegado en un servidor local de prueba.  La comunicación utiliza gRPC sobre el enlace WAN (malla HaLow $\rightarrow$ conmutador local $\rightarrow$ servidor):
 
 \begin{itemize}
     \item \textbf{Edge $\rightarrow$ Servidor:} Telemetría agregada por las cadenas de reglas, alarmas, eventos de conectividad de dispositivos y estado de sincronización.  Transmisión por lotes para optimizar el uso del enlace.
@@ -415,8 +349,6 @@ La arquitectura \emph{on-premise} permite soberanía completa de datos en la inf
 
 % --------------------------------------------------------------------------
 
-La Figura~\ref{fig:network-topology} presenta la topolog\'{i}a de red del sistema completo, con los tres segmentos diferenciados: (1)~red Thread (IEEE~802.15.4, 2,4~GHz), (2)~red HaLow (IEEE~802.11ah, 900~MHz) y (3)~red local Ethernet hacia el servidor central.
-
 \label{sec:gateway-topologia-general}
 
 La Figura~\ref{fig:network-topology} presenta la topología de red del sistema completo.  La arquitectura implementa tres segmentos de red diferenciados:
@@ -426,12 +358,11 @@ La Figura~\ref{fig:network-topology} presenta la topología de red del sistema c
 \begin{enumerate}
     \item \textbf{Segmento 1 --- Red Thread (IEEE~802.15.4, 2,4~GHz):} Los nodos IoT (Capítulo~\ref{chap:nodo-iot}) se comunican con la pasarela RPi4 mediante OTBR.  Protocolo de aplicación: LwM2M sobre CoAP/UDP.  Alcance: $\sim$30~m en interiores, múltiples saltos en malla.
 
-    \item \textbf{Segmento 2 --- Red HaLow (IEEE~802.11ah, 900~MHz):} Las pasarelas RPi4, equipadas con el módulo AHPI6108E (HaLow nativo vía SDIO), participan directamente como \emph{Mesh Points} en la red 802.11s con protocolo HWMP.  Un Alfa Networks Tube~AHM dedicado actúa como \emph{Mesh Gate} con enlace troncal Ethernet hacia el \emph{switch} local.  Alcance: hasta 1,2~km LOS.
+    \item \textbf{Segmento 2 --- Red HaLow (IEEE~802.11ah, 900~MHz):} La pasarela RPi4, equipada con el módulo AHPI6108E (HaLow nativo vía SDIO), participa como \emph{Mesh Point} en la red 802.11s.  Un Alfa Networks Tube~AHM dedicado actúa como \emph{Mesh Gate} con enlace troncal Ethernet hacia el conmutador local.  Alcance: hasta 1,2~km LOS.
 
-    \item \textbf{Segmento 3 --- Red local Ethernet:} El servidor ThingsBoard \emph{on-premise} se conecta al \emph{switch} local.  Recibe telemetría sincronizada desde ThingsBoard Edge vía gRPC.
+    \item \textbf{Segmento 3 --- Red local Ethernet:} El servidor ThingsBoard \emph{on-premise} se conecta al conmutador local.  Recibe telemetría sincronizada desde ThingsBoard Edge vía gRPC.
 \end{enumerate}
 
-A continuación se detallan la tecnología HaLow del Segmento~2, el \emph{hardware} y la topología en malla 802.11s que conforman el enlace troncal de la arquitectura.
 
 % --------------------------------------------------------------------------
 
@@ -459,17 +390,17 @@ Este capítulo presentó la implementación de la pasarela de borde y la red de 
 
 \textbf{Contribuciones principales:}
 \begin{enumerate}
-    \item \textbf{Pasarela RPi4 con HaLow nativo:} Plataforma de borde asequible (\$100 \emph{hardware} por pasarela), que integra radio HaLow 802.11ah mediante módulo AHPI6108E (SDIO), OTBR como servicio nativo de OpenWRT y ThingsBoard Edge en Docker, consumo 8,5~W promedio.
+    \item \textbf{Pasarela RPi4 con HaLow nativo:} Plataforma de borde asequible (\$100 \emph{hardware} por pasarela), que integra radio HaLow 802.11ah mediante módulo AHPI6108E (SDIO), OTBR como servicio nativo de OpenWRT y ThingsBoard Edge en Docker, con un consumo de 8,5~W promedio.
 
-    \item \textbf{OpenWRT con soporte HaLow nativo por SDIO:} Compilación personalizada desde el \emph{fork} de Morse Micro, proporcionando controladores nativos (\texttt{kmod-morse}) para la radio MM6108 del módulo AHPI6108E conectada por interfaz SDIO, configuración de red 802.11s y enrutamiento HWMP documentados.
+    \item \textbf{OpenWRT con soporte HaLow nativo por SDIO:} Compilación personalizada desde el repositorio de Morse Micro, proporcionando controladores nativos (\texttt{kmod-morse}) para la radio MM6108 del módulo AHPI6108E conectada por interfaz SDIO, configuración de red 802.11s y enrutamiento HWMP documentados.
 
     \item \textbf{OTBR como servicio nativo:} Integración de OpenThread Border Router en OpenWRT con NAT64/DNS64, comisionamiento automatizado y validación de conectividad Thread--IPv6.
 
     \item \textbf{ThingsBoard Edge con LwM2M integrado:} Transporte LwM2M nativo que elimina la necesidad de servidores LwM2M independientes o puentes CoAP-MQTT.  Motor de reglas local, almacenamiento sin conexión de 7~días y sincronización bidireccional con servidor \emph{on-premise}.
 
-    \item \textbf{Red HaLow 802.11ah en malla:} 1$\times$ Tube~AHM (\emph{Mesh Gate}) + 2$\times$ AHPI6108E en RPi4 (\emph{Mesh Points}) = \$179 total, con protocolo HWMP.  Alcance validado de 1,2~km LOS, caudal 4,2~Mbps, latencia 14,2~ms P95.  RAW reduce la pérdida de paquetes en un 93\% (4,2\% $\rightarrow$ 0,3\%).
+    \item \textbf{Red HaLow 802.11ah:} 1$\times$ Tube~AHM (\emph{Mesh Gate}) + 1$\times$ AHPI6108E en RPi4 (\emph{Mesh Point}), con protocolo HWMP.  Alcance validado de 1,2~km LOS, caudal 4,2~Mbps, latencia 14,2~ms P95.  RAW reduce la pérdida de paquetes en un 93\% (4,2\% $\rightarrow$ 0,3\%).  La extensión a múltiples pasarelas en malla 802.11s queda planteada como trabajo futuro.
 
     \item \textbf{Flujo de datos extremo a extremo documentado:} Desde medidor (RS-485/DLMS) $\rightarrow$ nodo IoT (Thread/LwM2M) $\rightarrow$ OTBR $\rightarrow$ ThingsBoard Edge (procesamiento local) $\rightarrow$ servidor \emph{on-premise} (gRPC vía HaLow).
 \end{enumerate}
 
-\textbf{Transición al Capítulo~\ref{chap:resultados}:} Pasarela + HaLow completan los Niveles~1 a~3 (Nodo $\rightarrow$ Border Router $\rightarrow$ Pasarela de borde).  El siguiente capítulo presenta la validación experimental de extremo a extremo, evaluando latencias, disponibilidad, resiliencia y costos del sistema completo con el servidor ThingsBoard \emph{on-premise} como plataforma centralizada.
+Pasarela + HaLow completan los Niveles~1 a~3 (Nodo $\rightarrow$ Border Router $\rightarrow$ Pasarela de borde). El siguiente capítulo presenta la validación experimental de extremo a extremo, evaluando latencias, disponibilidad, resiliencia y costos del sistema completo con el servidor ThingsBoard \emph{on-premise} como plataforma centralizada.

@@ -5,9 +5,6 @@
 % Estructura: Contexto → Estado del Arte → Análisis Crítico → Conclusiones
 % ============================================================================
 
-\section{Introducción}
-\label{sec:marco-intro}
-
 Diseñar una arquitectura IoT para medición avanzada de energía permite articular tres dimensiones: un marco normativo que defina qué debe hacer el sistema, un conjunto de tecnologías que determinen cómo implementarlo, y un análisis crítico de los aspectos más relevantes del trabajo propuesto. Este capítulo recorre esas tres dimensiones de manera progresiva.
 
 La Sección~\ref{sec:marco-smart-energy} introduce el contexto regulatorio ---modelo NIST para redes inteligentes, protocolo DLMS/COSEM para intercambio de datos de medición, y marco ISO/IEC~30141 para interoperabilidad IoT--- que establece los requisitos funcionales obligatorios. La Sección~\ref{sec:marco-estado-arte} revisa el estado del arte en cinco ejes tecnológicos, desde la conectividad física (LPWAN, mallas) hasta las plataformas de borde y la seguridad, evaluando sus prestaciones frente a dichos requisitos. Finalmente, la Sección~\ref{sec:marco-analisis-critico} contrasta las soluciones comerciales existentes con la arquitectura propuesta e identifica las cuatro brechas de investigación que motivan los capítulos siguientes.
@@ -81,7 +78,7 @@ La Tabla~\ref{tab:lpwan-comparative-analysis} consolida la comparación cuantita
 \hline
 \textbf{Latencia} & 1--5 s & 837 ms & 500 ms--2 s & \textcolor{green}{\textbf{10--50 ms}} & \cite{ugwuanyiSurveyIoTDeveloping2021} \\
 \hline
-\textbf{Consumo energético} & \textcolor{green}{\textbf{Baseline}} & +3.7 mAh & $\sim$10 µA \emph{idle} & $\sim$5 µA \emph{idle} & \cite{ugwuanyiSurveyIoTDeveloping2021} \\
+\textbf{Consumo energético} & \textcolor{green}{\textbf{\emph{Baseline}}} & +3,7~mAh & $\sim$10~µA \emph{idle} & $\sim$5~µA \emph{idle} & \cite{ugwuanyiSurveyIoTDeveloping2021} \\
 \hline
 \textbf{OPEX (USD/año)} & \textcolor{green}{\textbf{\$0}} & \$12--36 & \$0 & \$0 & Análisis mercado \\
 \hline
@@ -111,9 +108,9 @@ Las tecnologías LPWAN resuelven la última milla entre el concentrador y la nub
 \subsection{Arquitecturas Mesh para Redes de Campo}
 \label{sec:marco-estado-mesh}
 
-\textbf{ZigBee Pro} (IEEE 802.15.4, 2.4~GHz) soporta hasta 65\,000 nodos con routing AODV, pero la ausencia de IPv6 nativo requiere pasarelas ALG que introducen 50--150~ms de latencia adicional y dificultan interoperabilidad multi-vendor~\cite{zigbeealliance2018,abdulsalamOverviewRecentWireless2024}.
+\textbf{ZigBee Pro} (IEEE 802.15.4, 2,4~GHz) soporta hasta 65\,000 nodos con enrutamiento AODV, pero la ausencia de IPv6 nativo requiere pasarelas ALG que introducen 50--150~ms de latencia adicional y dificultan interoperabilidad multifabricante~\cite{zigbeealliance2018,abdulsalamOverviewRecentWireless2024}.
 
-\textbf{Thread 1.4} implementa IPv6 end-to-end mediante 6LoWPAN, eliminando pasarelas ALG~\cite{threadMatterConvergence2024}. El routing adaptativo MLE recalcula path cost según:
+\textbf{Thread 1.4} implementa IPv6 extremo a extremo (\emph{end-to-end}) mediante 6LoWPAN, eliminando pasarelas ALG~\cite{threadMatterConvergence2024}. El enrutamiento adaptativo MLE recalcula el costo de ruta (\emph{path cost}) según:
 
 \begin{equation}
 \text{Path Cost} = \sum_{i=1}^{n} \frac{255 - \text{LQI}_i}{255} \times 10
@@ -128,7 +125,7 @@ Una vez que los datos de medición alcanzan la pasarela a través de la red en m
 \subsection{Gestión de Dispositivos: LwM2M y CoAP}
 \label{sec:marco-lwm2m-coap}
 
-CoAP (RFC~7252)~\cite{RFC7252} opera sobre UDP con sobrecarga mínima (4~bytes fijos vs 16--60~bytes TCP). Las extensiones Observe (RFC~7641) y Block-wise transfer (RFC~7959) reducen tráfico mesh hasta 60\% y habilitan transferencia de payloads mayores que el MTU de 127~bytes IEEE~802.15.4~\cite{amezcuavaldovinosDesignImplementationEvaluation2024}.
+CoAP (RFC~7252)~\cite{RFC7252} opera sobre UDP con sobrecarga mínima (4~bytes fijos vs 16--60~bytes TCP). Las extensiones Observe (RFC~7641) y Block-wise transfer (RFC~7959) reducen tráfico mesh hasta 60\% y habilitan transferencia de cargas útiles (\emph{payloads}) mayores que el MTU de 127~bytes IEEE~802.15.4~\cite{amezcuavaldovinosDesignImplementationEvaluation2024}.
 
 LwM2M (OMA SpecWorks)~\cite{OMA_LwM2M2020} define un modelo de datos Objeto/Instancia/Recurso con interfaces estandarizadas (Bootstrap, Registro, Gestión, Reporte). Objetos clave incluyen: Seguridad (Obj~0), Servidor (Obj~1), Dispositivo (Obj~3), Conectividad (Obj~4), \emph{Firmware} (Obj~5), y Medidor Trifásico (Obj~10242, 51 recursos: tensión, corriente, potencia por fase, THD, frecuencia)~\cite{karaagacLightweightM2MSurvey2018,OMA_LwM2M_Registry_10242}. LwM2M reduce tráfico de gestión en más del 75\% vs HTTP/REST propietario mediante codificación TLV compacta y operaciones Observe~\cite{karaagacLightweightM2MSurvey2018}. La interoperabilidad DLMS/COSEM se logra mediante mapeo de clases IC~3 a Obj~10242 y perfiles IC~7 a operaciones Observe, implementado mediante el transporte LwM2M integrado en ThingsBoard Edge~\cite{dlmsLwM2MIntegration2024}.
 
