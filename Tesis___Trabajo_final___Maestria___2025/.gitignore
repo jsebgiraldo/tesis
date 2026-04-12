@@ -35,6 +35,8 @@
 
 # Generated PDFs (comment out if you want to track PDFs)
 *.pdf
+# Exception: pre-compiled TikZ figures (needed for Overleaf)
+!tikz_pdfs/*.pdf
 
 # Backup files
 *_backup.tex

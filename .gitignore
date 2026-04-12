@@ -285,3 +285,20 @@ EXTRACCION_TECNICA_COMPLETA_OLD.md
 
 # Capítulos archivados (ya no compilan)
 04Implementacion_NEW_ARCHIVED.tex
+
+# --- Overleaf export artifacts ---
+tesis_overleaf.zip
+_overleaf_output/
+_overleaf_staging/
+
+# --- TikZ pre-compilation intermediates (keep only PDFs) ---
+Tesis___Trabajo_final___Maestria___2025/tikz_pdfs/*.tex
+Tesis___Trabajo_final___Maestria___2025/tikz_pdfs/*.aux
+Tesis___Trabajo_final___Maestria___2025/tikz_pdfs/*.log
+Tesis___Trabajo_final___Maestria___2025/tikz_pdfs/*.stdout
+Tesis___Trabajo_final___Maestria___2025/tikz_pdfs/*.stderr
+
+# --- Temp scripts (one-off analysis) ---
+compare_pdfs.py
+scan_annots.py
+rev17_comments.json
