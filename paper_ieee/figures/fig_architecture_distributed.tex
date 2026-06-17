@@ -1,0 +1,170 @@
+% TikZ body only -- IEEE-compliant compact v8 layout (Option B, v15.2).
+% Source: 17.6 cm wide x 7.5 cm tall -> renders at IEEE figure* width 1:1
+% so all \normalsize (10pt) text matches body-text size.
+%
+% Compared to v15.1 (which had truncated labels): shortened text labels
+% to fit 10pt fonts in 1.8-2.0 cm boxes:
+%   "ThingsBoard Edge" -> "TB Edge"
+%   "Emsitech P2000-T" -> "P2000-T meter"
+%   "30 synthetic nodes" -> "30 synth"
+%   "Tube AHM" -> "Mesh Gate"
+%   "PC ThingsBoard server" -> "TB server"
+%   "PostgreSQL" -> "Postgres"
+% Zones widened slightly to give boxes room.
+\begin{tikzpicture}[
+  font=\sffamily\normalsize,
+  Z1/.style={rounded corners=4pt, draw=green!50!black,  fill=green!4,  line width=0.9pt},
+  Z2/.style={rounded corners=4pt, draw=blue!55!black,   fill=blue!3,   line width=0.9pt},
+  Z3/.style={rounded corners=4pt, draw=orange!60!black, fill=orange!4, line width=0.9pt},
+  Z4/.style={rounded corners=4pt, draw=purple!55!black, fill=purple!3, line width=0.9pt},
+  zlab/.style={font=\sffamily\bfseries\normalsize, inner sep=2pt},
+  comp/.style={rounded corners=2pt, draw, line width=0.6pt, inner sep=3pt,
+               minimum height=0.7cm, align=center,
+               font=\sffamily\normalsize, fill=white},
+  nodebox/.style={comp, draw=green!55!black,  fill=green!14, minimum width=1.8cm, text=green!25!black},
+  meter/.style  ={comp, draw=brown!60,        fill=brown!10, minimum width=1.8cm, text=brown!50!black},
+  otbr/.style   ={comp, draw=green!55!black,  fill=green!12, minimum width=1.5cm, text=green!30!black},
+  tbedge/.style ={comp, draw=blue!50!black,   fill=blue!12,  minimum width=1.7cm, text=blue!30!black, font=\sffamily\normalsize\bfseries},
+  halow/.style  ={comp, draw=orange!60!black, fill=orange!12,minimum width=1.7cm, text=orange!40!black},
+  dbedge/.style ={comp, draw=purple!50!black, fill=purple!8, minimum width=1.6cm, minimum height=0.6cm, text=purple!40!black, font=\sffamily\normalsize},
+  meshgt/.style ={comp, draw=orange!60!black, fill=orange!14,minimum width=1.7cm, text=orange!40!black},
+  server/.style ={comp, draw=purple!55!black, fill=purple!12,minimum width=1.8cm, minimum height=1.0cm, text=purple!30!black},
+  dockbox/.style={rounded corners=3pt, draw=blue!35!black, fill=blue!5, line width=0.5pt, dashed},
+  arr/.style    ={-{Latex[length=2mm,width=1.4mm]}, line width=0.7pt},
+  arrthick/.style={-{Latex[length=2.6mm,width=1.8mm]}, line width=1.1pt},
+  arrbidir/.style={{Latex[length=2.6mm,width=1.8mm]}-{Latex[length=2.6mm,width=1.8mm]}, line width=1pt},
+  protoG/.style={rounded corners=2pt, draw=green!55!black, fill=green!12,
+                 font=\sffamily\normalsize, inner sep=2pt, minimum height=0.5cm,
+                 text=green!28!black, minimum width=2.6cm, align=center},
+  protoO/.style={rounded corners=2pt, draw=orange!55!black, fill=orange!12,
+                 font=\sffamily\normalsize, inner sep=2pt, minimum height=0.5cm,
+                 text=orange!35!black, minimum width=2.0cm, align=center},
+  meshlink/.style={green!55!black, line width=0.7pt, decorate,
+                   decoration={zigzag, amplitude=0.7pt, segment length=4pt}},
+  xzlabel/.style={font=\sffamily\normalsize\bfseries, fill=white, inner sep=1.5pt, rounded corners=1pt},
+]
+
+% =================================================================
+%  ZONE 1 --- Field network  (x: 0 to 4.4, h: 7.5)
+% =================================================================
+\node[Z1, minimum width=4.4cm, minimum height=7.5cm,
+      anchor=south west] (Z1F) at (0,0) {};
+\node[zlab, green!35!black, anchor=north west]
+  at (Z1F.north west) {Field network};
+
+\node[nodebox] (NP) at (1.1, 6.2) {ESP32-C6};
+\node[nodebox] (NS) at (3.3, 6.2) {30 synth};
+
+\draw[meshlink] (NP.east) -- (NS.west);
+\draw[meshlink] ([yshift=-3pt]NP.east) -- ([yshift=-3pt]NS.west);
+
+\node[meter] (MP) at (1.1, 4.9) {P2000-T\\meter};
+\draw[arr, brown!60] (MP.north) -- (NP.south)
+  node[midway, right=1pt, font=\sffamily\footnotesize, brown!55!black]
+  {RS-485};
+
+% Field stack
+\node[font=\sffamily\normalsize\bfseries, green!35!black] at (2.2, 3.7)
+  {Field stack};
+\node[protoG] at (2.2, 3.05) {LwM2M / DTLS};
+\node[protoG] at (2.2, 2.45) {CoAP / UDP};
+\node[protoG] at (2.2, 1.85) {6LoWPAN / IPHC};
+\node[protoG] at (2.2, 1.25) {IEEE 802.15.4};
+
+% =================================================================
+%  ZONE 2 --- Edge gateway  (x: 4.6 to 10.6, h: 7.5)
+% =================================================================
+\node[Z2, minimum width=6.0cm, minimum height=7.5cm,
+      anchor=south west] (Z2F) at (4.6,0) {};
+\node[zlab, blue!40!black, anchor=north west]
+  at (Z2F.north west) {Edge gateway};
+
+% Top row: OTBR | TB Edge | HaLow (aligned at y=6.2). No labels between boxes
+% (they did not fit at 10pt; the translation label below conveys the flow).
+\node[otbr]  (OTBR) at (5.5, 6.2) {OTBR};
+\node[tbedge](TBE)  at (7.55, 6.2){TB Edge};
+\node[halow] (HAL)  at (9.6, 6.2) {HaLow};
+
+\draw[arr, blue!55] (OTBR.east) -- (TBE.west);
+\draw[arr, blue!55] (TBE.east) -- (HAL.west);
+
+% Translation label
+\node[font=\sffamily\normalsize\bfseries\itshape, blue!45!black, align=center]
+  at (7.6, 5.2) {LwM2M $\rightarrow$ MQTT};
+
+% Docker box wrapping PG + Redis sidecars (closer to top, less wasted space)
+\node[dockbox, minimum width=5.6cm, minimum height=2.4cm,
+      anchor=south] (DOCK) at (7.6, 1.0) {};
+\node[font=\sffamily\normalsize\bfseries\itshape, blue!50!black, anchor=north west,
+      fill=blue!5, inner sep=1pt]
+  at ($(DOCK.north west)+(0.1,-0.05)$) {Docker};
+
+\node[dbedge] (PG) at (5.7, 2.0) {Postgres};
+\node[dbedge] (RD) at (9.5, 2.0) {Redis};
+
+\node[font=\sffamily\footnotesize\itshape, blue!45!black, align=center]
+  at (7.6, 1.4) {persistence \& cache};
+
+% =================================================================
+%  ZONE 3 --- Backhaul  (x: 10.8 to 13.4, h: 7.5)
+% =================================================================
+\node[Z3, minimum width=2.6cm, minimum height=7.5cm,
+      anchor=south west] (Z3F) at (10.8,0) {};
+\node[zlab, orange!40!black, anchor=north west]
+  at (Z3F.north west) {Backhaul};
+
+% Antennas + waves
+\node[font=\sffamily\normalsize, orange!55!black] at (11.2, 6.2) {$\blacktriangle$};
+\node[font=\sffamily\normalsize, orange!55!black] at (13.0, 6.2) {$\blacktriangle$};
+\foreach \r/\op in {0.13/0.9, 0.24/0.6} {
+  \draw[orange!60!black, line width=0.5pt, opacity=\op]
+    (11.35, 6.25) ++(170:\r) arc[start angle=170, end angle=190, radius=\r];
+  \draw[orange!60!black, line width=0.5pt, opacity=\op]
+    (12.85, 6.25) ++(-10:\r) arc[start angle=-10, end angle=10, radius=\r];
+}
+
+\node[font=\sffamily\normalsize\bfseries, orange!40!black, align=center]
+  at (12.1, 5.2) {IEEE\\802.11ah};
+\node[font=\sffamily\footnotesize\itshape, orange!45!black, align=center]
+  at (12.1, 4.5) {902--928 MHz};
+
+% Upstream stack
+\node[font=\sffamily\normalsize\bfseries, orange!40!black]
+  at (12.1, 3.85) {Upstream};
+\node[protoO] at (12.1, 3.20) {MQTT};
+\node[protoO] at (12.1, 2.65) {TLS 1.3};
+\node[protoO] at (12.1, 2.10) {TCP / IPv4};
+\node[protoO] at (12.1, 1.55) {802.11ah};
+
+% =================================================================
+%  ZONE 4 --- On-premises  (x: 13.6 to 18.4, h: 7.5)
+%  Wider zone (+0.8 cm) to give the LAN label room between boxes.
+% =================================================================
+\node[Z4, minimum width=4.8cm, minimum height=7.5cm,
+      anchor=south west] (Z4F) at (13.6,0) {};
+\node[zlab, purple!40!black, anchor=north west]
+  at (Z4F.north west) {On-premises};
+
+\node[meshgt] (TUBE) at (14.7, 6.2) {Mesh\\Gate};
+\node[server] (SRV)  at (17.3, 6.2) {PC\\TB\\server};
+
+\draw[arrbidir, purple!50] (TUBE.east) -- (SRV.west)
+  node[midway, font=\sffamily\footnotesize\bfseries, text=purple!50!black,
+       fill=white, inner sep=1pt, rounded corners=1pt] {LAN};
+
+\node[font=\sffamily\footnotesize\itshape, purple!45!black, align=center]
+  at (16.0, 4.5) {multi-gateway sync,\\historical persistence};
+
+% =================================================================
+%  CROSS-ZONE ARROWS
+% =================================================================
+
+% Field -> Edge gateway
+\draw[arrthick, green!55!black] (NS.east) -- (OTBR.west);
+\node[xzlabel, text=green!30!black] at (4.5, 6.85) {Thread};
+
+% Edge gateway -> On-prem (single thick arrow spanning the whole Backhaul zone;
+% the antennas + waves drawn earlier visually decorate this wireless link).
+\draw[arrthick, orange!60!black] (HAL.east) -- (TUBE.west);
+
+\end{tikzpicture}

@@ -1,6 +1,11 @@
-% Diagrama TikZ: Arquitectura jerárquica 3 niveles — v3 flechas sin cruces
-% Mejoras v3: rutas ortogonales claras, flechas sin pasar por encima de texto,
-% métricas como tabla integrada, mejor legibilidad general.
+% Diagrama TikZ: Arquitectura jerárquica 3 niveles — v4 legibilidad IEEE
+% Mejoras v4 (REORG FASE C, resuelve concern C6):
+%   - Fuentes elevadas: \tiny -> \footnotesize; \scriptsize -> \small
+%   - Rellenos de bandas saturados: !3 / !4  -> !12 / !15
+%   - Rellenos de cajas de métricas saturados: !4 -> !22
+%   - text width de métricas ampliado: 2.6cm -> 4.2cm (evita word-wrap)
+%   - Canvas ampliado a 22cm para que \resizebox no aplaste las fuentes
+%   - Conservadas todas las flechas/conexiones y labels (mismo \label)
 
 \begin{figure}[H]
 \centering
@@ -12,68 +17,68 @@
   clrN3/.style={orange!55!black},
   % ── Bandas de nivel ──
   levelband/.style={rounded corners=6pt, line width=1.2pt, inner sep=10pt},
-  bandN1/.style={levelband, draw=green!50!black, fill=green!4,
+  bandN1/.style={levelband, draw=green!50!black, fill=green!12,
                  drop shadow={shadow xshift=0.5pt, shadow yshift=-0.5pt, fill=black!8}},
-  bandN2/.style={levelband, draw=blue!45!black, fill=blue!3,
+  bandN2/.style={levelband, draw=blue!45!black, fill=blue!10,
                  drop shadow={shadow xshift=0.5pt, shadow yshift=-0.5pt, fill=black!8}},
-  bandN3/.style={levelband, draw=orange!45!black, fill=orange!4,
+  bandN3/.style={levelband, draw=orange!45!black, fill=orange!15,
                  drop shadow={shadow xshift=0.5pt, shadow yshift=-0.5pt, fill=black!8}},
   % ── Etiqueta de nivel ──
-  lvllabel/.style={font=\small\bfseries\sffamily, anchor=north west},
+  lvllabel/.style={font=\normalsize\bfseries\sffamily, anchor=north west},
   % ── Componentes (base) ──
-  comp/.style={rounded corners=3pt, minimum height=0.85cm,
-               font=\scriptsize\sffamily, inner sep=4pt, align=center,
+  comp/.style={rounded corners=3pt, minimum height=0.95cm,
+               font=\footnotesize\sffamily, inner sep=4pt, align=center,
                line width=0.7pt,
                drop shadow={shadow xshift=0.4pt, shadow yshift=-0.4pt, fill=black!10}},
-  % Variantes de color
-  meter/.style=  {comp, draw=brown!55, fill=brown!12,  text=brown!70!black},
-  znode/.style=  {comp, draw=green!55!black, fill=green!14, text=green!40!black},
-  otbrst/.style= {comp, draw=green!60!black, fill=green!20, text=green!35!black},
-  halowst/.style={comp, draw=orange!70!black, fill=orange!15, text=orange!40!black},
-  tbcomp/.style= {comp, draw=blue!55, fill=blue!10, text=blue!40!black},
-  dbcomp/.style= {comp, draw=purple!55, fill=purple!10, text=purple!40!black},
-  vizcomp/.style={comp, draw=teal!55, fill=teal!10, text=teal!40!black},
-  srvcomp/.style={comp, draw=red!45!black, fill=red!8, text=red!45!black},
-  dashcomp/.style={comp, draw=gray!55, fill=gray!10, text=gray!50!black},
+  % Variantes de color (rellenos saturados para impresión)
+  meter/.style=  {comp, draw=brown!55, fill=brown!22,  text=brown!70!black},
+  znode/.style=  {comp, draw=green!55!black, fill=green!22, text=green!40!black},
+  otbrst/.style= {comp, draw=green!60!black, fill=green!28, text=green!35!black},
+  halowst/.style={comp, draw=orange!70!black, fill=orange!25, text=orange!40!black},
+  tbcomp/.style= {comp, draw=blue!55, fill=blue!20, text=blue!40!black},
+  dbcomp/.style= {comp, draw=purple!55, fill=purple!20, text=purple!40!black},
+  vizcomp/.style={comp, draw=teal!55, fill=teal!22, text=teal!40!black},
+  srvcomp/.style={comp, draw=red!45!black, fill=red!18, text=red!45!black},
+  dashcomp/.style={comp, draw=gray!55, fill=gray!20, text=gray!50!black},
   % ── Flechas ──
   arr/.style={-{Latex[length=2.5mm, width=1.8mm]}, line width=0.8pt},
   arrbold/.style={-{Latex[length=3mm, width=2.2mm]}, line width=1.3pt},
   % ── Anotación sobre flecha ──
-  ann/.style={font=\tiny\sffamily, text=#1},
-  % ── Caja de métricas ──
-  metricbox/.style={draw=#1!40, fill=#1!4, rounded corners=3pt,
-                    font=\tiny\sffamily, inner sep=4pt, text width=2.6cm,
-                    anchor=west, text=#1!60!black},
+  ann/.style={font=\footnotesize\sffamily, text=#1},
+  % ── Caja de métricas (más ancha y con relleno saturado) ──
+  metricbox/.style={draw=#1!50, fill=#1!22, rounded corners=3pt,
+                    font=\footnotesize\sffamily, inner sep=5pt, text width=4.2cm,
+                    anchor=west, text=#1!60!black, line width=0.6pt},
   % ── Grupo funcional ──
-  funcgroup/.style={draw=#1!40, fill=#1!2, rounded corners=4pt,
+  funcgroup/.style={draw=#1!40, fill=#1!8, rounded corners=4pt,
                     line width=0.6pt, inner sep=6pt},
 ]
 
 % ═════════════════════════════════════════════════════════════════
 %  NIVEL 1 — Red de Campo (malla Thread)
 % ═════════════════════════════════════════════════════════════════
-\node[bandN1, minimum width=17cm, minimum height=3cm,
+\node[bandN1, minimum width=21cm, minimum height=3cm,
       anchor=south west] (L1) at (0, 0) {};
 \node[lvllabel, clrN1] at (0.35, 2.85)
   {Nivel 1 \normalfont\sffamily\small --- Red de campo (malla Thread)};
 
 % Medidores y nodos (3 explícitos + dots + nodo N)
 \foreach \i/\x in {1/1.8, 2/5.0, 3/8.2} {
-  \node[meter, minimum width=1.5cm] (M\i) at (\x, 0.50)
-    {\raisebox{1pt}{\scalebox{0.7}{$\mathbf{\sim}$}} Medidor\\[-1pt]DLMS/COSEM};
-  \node[znode, minimum width=1.8cm] (N\i) at (\x, 1.65)
+  \node[meter, minimum width=1.7cm] (M\i) at (\x, 0.50)
+    {\raisebox{1pt}{\scalebox{0.8}{$\mathbf{\sim}$}} Medidor\\[-1pt]DLMS/COSEM};
+  \node[znode, minimum width=2.0cm] (N\i) at (\x, 1.70)
     {Nodo Zephyr\\[-1pt]802.15.4};
   \draw[arr, brown!60] (M\i.north) -- (N\i.south)
     node[midway, right=2pt, ann=brown!60!black] {RS-485};
 }
 
 % Puntos suspensivos
-\node[font=\large, gray!50] at (10.6, 1.1) {\textbf{$\cdots$}};
+\node[font=\Large, gray!50] at (10.6, 1.1) {\textbf{$\cdots$}};
 
 % Último nodo
-\node[meter, minimum width=1.5cm] (MN) at (12.6, 0.50)
-  {\raisebox{1pt}{\scalebox{0.7}{$\mathbf{\sim}$}} Medidor\\[-1pt]DLMS/COSEM};
-\node[znode, minimum width=1.8cm] (NN) at (12.6, 1.65)
+\node[meter, minimum width=1.7cm] (MN) at (12.6, 0.50)
+  {\raisebox{1pt}{\scalebox{0.8}{$\mathbf{\sim}$}} Medidor\\[-1pt]DLMS/COSEM};
+\node[znode, minimum width=2.0cm] (NN) at (12.6, 1.70)
   {Nodo $n{=}60$\\[-1pt]802.15.4};
 \draw[arr, brown!60] (MN.north) -- (NN.south)
   node[midway, right=2pt, ann=brown!60!black] {RS-485};
@@ -87,19 +92,19 @@
   (N2.east) -- (N3.west);
 \draw[green!45!black, line width=0.9pt, densely dashed,
       decorate, decoration={zigzag, amplitude=0.8pt, segment length=6pt}]
-  (N3.east) -- (10.1, 1.65);
+  (N3.east) -- (10.1, 1.70);
 \draw[green!45!black, line width=0.9pt, densely dashed,
       decorate, decoration={zigzag, amplitude=0.8pt, segment length=6pt}]
-  (11.1, 1.65) -- (NN.west);
+  (11.1, 1.70) -- (NN.west);
 
-% Cajas de métricas Nivel 1
-\node[metricbox=green] at (15.0, 1.9) {
+% Cajas de métricas Nivel 1 (text width ampliado a 4.2cm)
+\node[metricbox=green] at (15.4, 1.95) {
   \textbf{Pila de protocolos}\\[1pt]
   IEEE 802.15.4 $\rightarrow$ 6LoWPAN\\
   Thread 1.4 $\rightarrow$ CoAP\\
   LwM2M (IPSO Objects)
 };
-\node[metricbox=green] at (15.0, 0.5) {
+\node[metricbox=green] at (15.4, 0.55) {
   \textbf{1--60 nodos en malla}\\[1pt]
   Latencia: 6\,ms (P50)\\
   Consumo: 27\,mA activo\\
@@ -109,35 +114,35 @@
 % ═════════════════════════════════════════════════════════════════
 %  NIVEL 2 — Pasarela de Borde (RPi 4 + Docker)
 % ═════════════════════════════════════════════════════════════════
-\node[bandN2, minimum width=17cm, minimum height=4cm,
+\node[bandN2, minimum width=21cm, minimum height=4cm,
       anchor=south west] (L2) at (0, 3.6) {};
 \node[lvllabel, clrN2] at (0.35, 7.45)
   {Nivel 2 \normalfont\sffamily\small --- Pasarela de borde (Raspberry Pi 4 + Docker)};
 
 % OTBR (border router) — posición izquierda
-\node[otbrst, minimum width=2.1cm, minimum height=0.95cm]
+\node[otbrst, minimum width=2.3cm, minimum height=1.0cm]
   (OTBR) at (2.0, 4.5) {OTBR\\[-1pt]nRF52840};
 
 % HaLow STA — posición izquierda arriba
-\node[halowst, minimum width=2.1cm, minimum height=0.95cm]
+\node[halowst, minimum width=2.3cm, minimum height=1.0cm]
   (HSTA) at (2.0, 6.6) {HaLow STA\\[-1pt]MM6108 SDIO};
 
 % Grupo ThingsBoard Edge
 \node[funcgroup=blue, minimum width=7.8cm, minimum height=3cm,
       anchor=south west] (tbgroup) at (4.5, 3.9) {};
-\node[font=\scriptsize\bfseries\sffamily, blue!55!black,
+\node[font=\small\bfseries\sffamily, blue!55!black,
       anchor=north west] at (4.7, 6.85)
   {ThingsBoard Edge 3.6};
 
 % Componentes TB — fila inferior
-\node[tbcomp, minimum width=2.2cm] (LWM2M) at (6.0, 4.55)
+\node[tbcomp, minimum width=2.4cm] (LWM2M) at (6.0, 4.55)
   {Transporte\\[-1pt]LwM2M / CoAP};
-\node[tbcomp, minimum width=2.2cm] (RULES) at (9.2, 4.55)
+\node[tbcomp, minimum width=2.4cm] (RULES) at (9.2, 4.55)
   {Motor de reglas\\[-1pt](Rule Engine)};
 % Componentes TB — fila superior
-\node[tbcomp, minimum width=2.2cm] (DEVMGR) at (6.0, 5.85)
+\node[tbcomp, minimum width=2.4cm] (DEVMGR) at (6.0, 5.85)
   {Perfiles y\\[-1pt]dispositivos};
-\node[tbcomp, minimum width=2.2cm] (SYNC) at (9.2, 5.85)
+\node[tbcomp, minimum width=2.4cm] (SYNC) at (9.2, 5.85)
   {Sincr.\ nube\\[-1pt](gRPC/MQTT)};
 
 % Flechas internas TB (horizontales y verticales cortas — sin cruces)
@@ -158,11 +163,11 @@
        fill=white, inner sep=2pt, rounded corners=1pt] {MQTT/TLS};
 
 % PostgreSQL + TimescaleDB
-\node[dbcomp, minimum width=2.3cm, minimum height=0.95cm]
+\node[dbcomp, minimum width=2.5cm, minimum height=1.0cm]
   (PG) at (13.7, 4.55) {PostgreSQL\\[-1pt]TimescaleDB};
 
 % Grafana
-\node[vizcomp, minimum width=2.3cm, minimum height=0.95cm]
+\node[vizcomp, minimum width=2.5cm, minimum height=1.0cm]
   (GRAF) at (13.7, 5.95) {Grafana\\[-1pt]Tableros};
 
 % Rule → PG (horizontal directa)
@@ -172,14 +177,14 @@
 % PG → Grafana (vertical directa)
 \draw[arr, teal!50, line width=0.6pt] (PG.north) -- (GRAF.south);
 
-% Cajas de métricas Nivel 2
-\node[metricbox=blue] at (15.5, 6.2) {
+% Cajas de métricas Nivel 2 (text width 4.2cm)
+\node[metricbox=blue] at (15.9, 6.25) {
   \textbf{Procesamiento local}\\[1pt]
   Docker: 7 contenedores\\
   RPi 4 (4\,GB) + OpenWrt\\
   Respaldo sin conexión: 7 días
 };
-\node[metricbox=blue] at (15.5, 4.5) {
+\node[metricbox=blue] at (15.9, 4.55) {
   \textbf{Métricas de borde}\\[1pt]
   Latencia E2E: 8\,ms P90\\
   Reducción WAN: 72\,\%
@@ -188,21 +193,21 @@
 % ═════════════════════════════════════════════════════════════════
 %  NIVEL 3 — Enlace Troncal HaLow + Servidor
 % ═════════════════════════════════════════════════════════════════
-\node[bandN3, minimum width=17cm, minimum height=2.8cm,
+\node[bandN3, minimum width=21cm, minimum height=2.8cm,
       anchor=south west] (L3) at (0, 8.2) {};
 \node[lvllabel, clrN3] at (0.35, 10.85)
   {Nivel 3 \normalfont\sffamily\small --- Enlace troncal Wi-Fi HaLow + Servidor};
 
 % HaLow Mesh (AHPI6108E / Tube AHM)
-\node[halowst, minimum width=2.6cm, minimum height=1cm]
+\node[halowst, minimum width=2.8cm, minimum height=1.05cm]
   (HAP) at (3.4, 9.2) {HaLow 802.11ah\\[-1pt]AHPI6108E / Tube AHM};
 
 % Servidor ThingsBoard
-\node[srvcomp, minimum width=2.8cm, minimum height=1cm]
+\node[srvcomp, minimum width=3.0cm, minimum height=1.05cm]
   (SRV) at (8.8, 9.2) {ThingsBoard\\[-1pt]Servidor / Nube};
 
 % Panel operador
-\node[dashcomp, minimum width=2.6cm, minimum height=1cm]
+\node[dashcomp, minimum width=2.8cm, minimum height=1.05cm]
   (DASH) at (13.7, 9.2) {Panel del\\[-1pt]operador};
 
 % Flechas Nivel 3 (horizontales directas)
@@ -213,13 +218,13 @@
   node[midway, above=3pt, ann=gray!50!black,
        fill=white, inner sep=2pt, rounded corners=1pt] {HTTPS / WS};
 
-% Cajas de métricas Nivel 3
-\node[metricbox=orange] at (15.5, 9.8) {
+% Cajas de métricas Nivel 3 (text width 4.2cm)
+\node[metricbox=orange] at (15.9, 9.85) {
   \textbf{Wi-Fi HaLow (802.11ah)}\\[1pt]
   Sub-1\,GHz: 902--928\,MHz\\
   Canal 14, WPA3-SAE
 };
-\node[metricbox=orange] at (15.5, 8.7) {
+\node[metricbox=orange] at (15.9, 8.75) {
   \textbf{Enlace troncal @ 2\,MHz}\\[1pt]
   DL: 3{,}77\,Mbps TCP\\
   UL: 1{,}34\,Mbps TCP\\
@@ -234,14 +239,14 @@
 \draw[arrbold, green!55!black]
   ([yshift=2pt] N3.north -| OTBR) -- (OTBR.south)
   node[pos=0.45, right=3pt,
-       font=\scriptsize\bfseries\sffamily, green!40!black,
+       font=\small\bfseries\sffamily, green!40!black,
        fill=white, inner sep=2pt, rounded corners=1pt] {6LoWPAN};
 
 % Nivel 2 → Nivel 3 (HaLow STA → HaLow AP) — vertical directa
 \draw[arrbold, orange!60!black]
   (HSTA.north) -- ([yshift=-2pt]HAP.south)
   node[pos=0.45, right=3pt,
-       font=\scriptsize\bfseries\sffamily, orange!45!black,
+       font=\small\bfseries\sffamily, orange!45!black,
        fill=white, inner sep=2pt, rounded corners=1pt] {802.11ah};
 
 \end{tikzpicture}%

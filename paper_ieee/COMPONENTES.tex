@@ -1,0 +1,323 @@
+% Lista de componentes -- versión PDF generada desde COMPONENTES.md
+% Compila con: pdflatex COMPONENTES.tex
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[spanish,es-tabla]{babel}
+\usepackage{lmodern}
+\usepackage[a4paper,margin=2.2cm,top=2.0cm,bottom=2.2cm]{geometry}
+\usepackage[table]{xcolor}   % [table] loads colortbl for \arrayrulecolor
+\usepackage{tabularx}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{ltablex}\keepXColumns   % allows X columns inside longtable-like envs
+\usepackage{array}
+\usepackage{ragged2e}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{mdframed}
+\usepackage[hidelinks,unicode,colorlinks=true,urlcolor=blue!60!black,linkcolor=black]{hyperref}
+
+% --- Colors (matching the paper figure palette) ---
+\definecolor{accentBlue}{RGB}{36,71,142}
+\definecolor{accentGreen}{RGB}{40,110,55}
+\definecolor{accentOrange}{RGB}{180,100,30}
+\definecolor{accentPurple}{RGB}{120,40,120}
+\definecolor{accentTeal}{RGB}{40,120,120}
+\definecolor{accentGray}{RGB}{90,90,90}
+\definecolor{tableHead}{RGB}{235,240,250}
+\definecolor{noteBg}{RGB}{255,250,225}
+\definecolor{noteBorder}{RGB}{180,150,80}
+
+% --- Section / heading style ---
+\titleformat{\section}
+  {\Large\bfseries\color{accentBlue}}{\thesection.}{0.5em}{}
+\titleformat{\subsection}
+  {\large\bfseries\color{accentBlue!85!black}}{\thesubsection}{0.5em}{}
+
+% --- Table style ---
+\renewcommand{\arraystretch}{1.18}
+\arrayrulecolor{black!50}
+\newcolumntype{Y}{>{\RaggedRight\arraybackslash}X}
+\newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}
+\newcolumntype{L}[1]{>{\RaggedRight\arraybackslash}p{#1}}
+
+% Header row helper for tables
+\newcommand{\tabhead}[1]{\textbf{\color{accentBlue!80!black}#1}}
+
+% Note callout (markdown blockquote equivalent) -- via mdframed for safe
+% multiline content support in \newenvironment.
+\newmdenv[
+  backgroundcolor=noteBg,
+  linecolor=noteBorder,
+  linewidth=0.5pt,
+  innertopmargin=6pt, innerbottommargin=6pt,
+  innerleftmargin=8pt, innerrightmargin=8pt,
+  roundcorner=3pt,
+  skipabove=8pt, skipbelow=8pt,
+  fontcolor=black,
+]{notebox}
+
+% PDF metadata
+\hypersetup{
+  pdftitle={Lista de componentes -- Arquitectura AMI edge-centric},
+  pdfauthor={Juan-Sebastián Giraldo Duque},
+  pdfsubject={Inventario completo del sistema AMI -- piloto 30 días},
+}
+
+\title{\bfseries\color{accentBlue}Lista de componentes\\
+       \large\mdseries\color{accentGray}Arquitectura AMI edge-centric}
+\author{Inventario completo del sistema validado en el piloto de 30 días}
+\date{2026-05-15}
+
+\begin{document}
+
+\maketitle
+
+\begin{notebox}
+\textbf{Estructura:} por segmento de la arquitectura
+(Field $\rightarrow$ Gateway $\rightarrow$ Backhaul $\rightarrow$ Edge $\rightarrow$ On-prem),
+separando hardware, software, estándares e instrumentación.
+\end{notebox}
+
+% =========================================================
+\section{Field Network (red de campo Thread)}
+
+\subsection*{1.1\quad Hardware}
+\noindent\begin{tabularx}{\linewidth}{L{3.4cm} Y C{1.2cm} Y}
+\toprule
+\tabhead{Componente} & \tabhead{Modelo / referencia} & \tabhead{Cant.} & \tabhead{Rol} \\
+\midrule
+MCU + radio Thread &
+\textbf{ESP32-C6} (Seeed XIAO ESP32-C6 / DevKitC equivalente) &
+31 & SoC con radio IEEE 802.15.4 integrada; ejecuta el firmware del nodo \\
+Medidor eléctrico físico & \textbf{Emsitech P2000-T} trifásico ANSI &
+1 & Fuente real de telemetría DLMS/COSEM por RS-485 \\
+Interfaz RS-485 $\leftrightarrow$ MCU & Transceptor RS-485 (TI MAX485 / SP3485 o integrado en placa) &
+1 & Conexión nodo$\leftrightarrow$medidor (solo nodo físico) \\
+Alimentación nodo & Puerto auxiliar 5\,V del medidor (200\,mA disp.) &
+31 & Sin baterías, MED siempre activo ($\sim$27\,mA) \\
+\bottomrule
+\end{tabularx}
+
+\begin{notebox}
+\textbf{Nota:} los 30 nodos sintéticos son \textbf{hardware ESP32-C6 real}
+corriendo el mismo firmware de producción, pero generan el payload OBIS
+programáticamente en lugar de leerlo de un medidor físico. Esto preserva la
+realidad de la red de RF y de la malla Thread.
+\end{notebox}
+
+\subsection*{1.2\quad Software / firmware}
+\noindent\begin{tabularx}{\linewidth}{L{3.6cm} L{4.2cm} Y}
+\toprule
+\tabhead{Componente} & \tabhead{Versión} & \tabhead{Rol} \\
+\midrule
+\textbf{Zephyr RTOS} & 4.x & Sistema operativo del nodo \\
+\textbf{OpenThread} & 1.4 (Thread 1.4 spec, build 2024-10-15) & Pila Thread (MLE, mesh, IPv6) \\
+\textbf{6LoWPAN / IPHC} & RFC 6282 & Compresión de cabeceras IPv6 \\
+\textbf{CoAP} & RFC 7252 + Observe (RFC 7641) & Mensajería REST sobre UDP \\
+\textbf{DTLS} & 1.2 & Seguridad CoAP \\
+\textbf{LwM2M client} & OMA LwM2M 1.2 & Gestión de dispositivo + telemetría \\
+\textbf{Objeto OMA personalizado} & \texttt{10242} (custom) & Recursos del medidor trifásico \\
+\textbf{DLMS/COSEM} & IEC 62056-21 Mode C & Lectura del medidor físico \\
+\bottomrule
+\end{tabularx}
+
+% =========================================================
+\section{Gateway / Edge Gateway (Raspberry Pi 4 — co-localizados en el piloto)}
+
+\begin{notebox}
+En la \textbf{arquitectura de referencia (Fig. 1 del paper)} Gateway y
+Edge Gateway son dispositivos físicos separados. En el \textbf{piloto} se
+co-localizan en un mismo RPi4 por simplicidad; la pila lógica es idéntica.
+\end{notebox}
+
+\subsection*{2.1\quad Hardware}
+\noindent\begin{tabularx}{\linewidth}{L{3.6cm} Y C{1.2cm} Y}
+\toprule
+\tabhead{Componente} & \tabhead{Modelo / referencia} & \tabhead{Cant.} & \tabhead{Rol} \\
+\midrule
+Computador de borde & \textbf{Raspberry Pi 4 Model B} (4 GB RAM) & 1 & Plataforma de cómputo del gateway \\
+Dongle Thread & \textbf{Nordic nRF52840 USB dongle} & 1 & Radio Co-Processor (RCP) para OTBR \\
+Radio HaLow & \textbf{Alfa Networks AHPI6108E HAT} (chipset Morse Micro \textbf{MM6108}, interfaz SDIO) & 1 & HaLow STA / cliente \\
+Almacenamiento & NVMe SSD 128\,GB (vía adaptador USB 3.0) & 1 & Persistencia local + buffer offline \\
+UPS & Li-ion 12\,V / 20\,Ah & 1 & Respaldo de energía \\
+Alimentación principal & Fuente 5\,V/3\,A & 1 & Alimentación primaria RPi4 \\
+\bottomrule
+\end{tabularx}
+
+\subsection*{2.2\quad Software (sistema base)}
+\noindent\begin{tabularx}{\linewidth}{L{4.0cm} L{4.2cm} Y}
+\toprule
+\tabhead{Componente} & \tabhead{Versión} & \tabhead{Rol} \\
+\midrule
+\textbf{OpenWrt} & 23.05 (build oficial \textbf{Morse Micro fork}) & Sistema operativo base del gateway \\
+Linux kernel & 5.15 LTS (parches BCM2711) & Kernel \\
+Driver HaLow & \texttt{kmod-morse} (incluido en fork Morse Micro) & Driver MM6108 vía SDIO \\
+\texttt{hostapd} / \texttt{wpa\_supplicant} & versiones OpenWrt 23.05 & Configuración 802.11s/AP/STA \\
+\bottomrule
+\end{tabularx}
+
+\subsection*{2.3\quad Software (Border Router Thread)}
+\noindent\begin{tabularx}{\linewidth}{L{3.8cm} L{4.6cm} Y}
+\toprule
+\tabhead{Componente} & \tabhead{Versión} & \tabhead{Rol} \\
+\midrule
+\textbf{OTBR (otbr-agent)} & OpenThread Border Router (build 2024) & Bridge Thread $\leftrightarrow$ IPv6 \\
+\texttt{wpantund} / RCP firmware & nRF52840 con \texttt{ot-rcp} & Capa de control del radio Thread \\
+NAT64 / DNS64 & \texttt{tayga} o equivalente & Acceso IPv4 desde nodos IPv6 (si aplica) \\
+\bottomrule
+\end{tabularx}
+
+\subsection*{2.4\quad Software (stack de aplicación — contenedores Docker)}
+\noindent\begin{tabularx}{\linewidth}{L{3.0cm} L{4.6cm} Y}
+\toprule
+\tabhead{Contenedor} & \tabhead{Imagen / versión} & \tabhead{Rol} \\
+\midrule
+\textbf{ThingsBoard Edge} & \texttt{thingsboard/tb-edge:3.6.2} (ARM64) & Plataforma IoT en el borde: ingesta LwM2M, motor de reglas, dashboards locales, sincronización gRPC con on-prem \\
+\textbf{PostgreSQL} & \texttt{postgres:15-alpine} (ARM64) & Persistencia local de telemetría y device profiles \\
+\textbf{Redis} & \texttt{redis:7.0-alpine} (ARM64) & Caché y coordinación \\
+Docker Engine & última estable & Runtime de contenedores \\
+\bottomrule
+\end{tabularx}
+
+\medskip
+\textbf{Recursos consumidos:} $\sim$2.5 vCPU, $\sim$1.8 GB RAM, $\sim$18 GB disco/60 días para 60 nodos.
+
+% =========================================================
+\section{HaLow Backhaul (enlace de radio sub-GHz)}
+
+\subsection*{3.1\quad Hardware}
+\noindent\begin{tabularx}{\linewidth}{L{3.4cm} Y C{1.2cm} Y}
+\toprule
+\tabhead{Componente} & \tabhead{Modelo / referencia} & \tabhead{Cant.} & \tabhead{Rol} \\
+\midrule
+Mesh gate / HaLow AP & \textbf{Alfa Tube-AHM} (chipset MM6108) & 1 & Punto de acceso HaLow del lado del borde \\
+Radio HaLow STA & (incluida en gateway, item 2.1: AHPI6108E) & 1 & Cliente HaLow del lado del campo \\
+Antenas HaLow & Antenas integradas Tube-AHM + AHPI6108E HAT & --- & RF sub-GHz \\
+\bottomrule
+\end{tabularx}
+
+\subsection*{3.2\quad Configuración del enlace}
+\noindent\begin{tabularx}{\linewidth}{L{4.0cm} Y}
+\toprule
+\tabhead{Parámetro} & \tabhead{Valor en el piloto} \\
+\midrule
+\textbf{Estándar} & IEEE 802.11ah-2016 (Wi-Fi HaLow) \\
+Banda & 902--928\,MHz (ISM, no licenciada — Región 2 / Américas) \\
+Canal & 14 (909\,MHz) primario; alternativos 8 (906\,MHz) y 12 (908\,MHz) \\
+Ancho de banda & \textbf{2\,MHz} (configuración recomendada del piloto); 4\,MHz y 8\,MHz también caracterizados \\
+Topología & 802.11s mesh (\texttt{mesh\_point} $\leftrightarrow$ \texttt{mesh\_gate}) \\
+Distancia & \textbf{180\,m LoS} (piloto); literatura $\geq$1\,km LoS \\
+Seguridad & WPA3-SAE \\
+Potencia TX & Tube-AHM $\sim$24\,dBm; AHPI6108E $\sim$1\,dBm (asimetría documentada) \\
+\bottomrule
+\end{tabularx}
+
+% =========================================================
+\section{On-Premises Platform (servidor central)}
+
+\subsection*{4.1\quad Hardware}
+\noindent\begin{tabularx}{\linewidth}{L{3.4cm} Y C{1.2cm} Y}
+\toprule
+\tabhead{Componente} & \tabhead{Modelo / referencia} & \tabhead{Cant.} & \tabhead{Rol} \\
+\midrule
+Servidor on-prem & x86 server o VM (en piloto: equivalente a NUC i5 / 16 GB RAM) & 1 & Hosting de ThingsBoard server \\
+Switch / red local & switch gigabit Ethernet & 1 & LAN entre Tube AHM y servidor \\
+\bottomrule
+\end{tabularx}
+
+\subsection*{4.2\quad Software}
+\noindent\begin{tabularx}{\linewidth}{L{4.4cm} L{2.2cm} Y}
+\toprule
+\tabhead{Componente} & \tabhead{Versión} & \tabhead{Rol} \\
+\midrule
+\textbf{ThingsBoard server (full edition)} & 3.6.x & Plataforma central: agregación multi-gateway, persistencia histórica, dashboards \\
+PostgreSQL central & 15+ & Base de datos del servidor \\
+Sistema operativo & Ubuntu Server 22.04 LTS & OS host \\
+\bottomrule
+\end{tabularx}
+
+\subsection*{4.3\quad Conectividad}
+\begin{itemize}[leftmargin=*,nosep]
+\item Enlace \textbf{Edge Gateway $\leftrightarrow$ On-prem} vía Ethernet LAN
+\item Protocolo de sincronización: \textbf{gRPC bidireccional} (TB Edge $\leftrightarrow$ TB Server)
+\item Tráfico aplicativo upstream: \textbf{MQTT/TLS 1.3 sobre TCP/IPv4}
+\end{itemize}
+
+% =========================================================
+\section{Estándares y protocolos (transversales)}
+
+% tabularx (with ltablex enhancement) breaks across pages like longtable
+% but supports the X column type. The longtable header macros (\endhead) work too.
+\noindent\begin{tabularx}{\linewidth}{L{4.4cm} L{2.6cm} Y}
+\toprule
+\tabhead{Estándar / RFC} & \tabhead{Capa} & \tabhead{Uso} \\
+\midrule
+\endfirsthead
+\toprule
+\tabhead{Estándar / RFC} & \tabhead{Capa} & \tabhead{Uso} \\
+\midrule
+\endhead
+\textbf{IEEE 802.15.4-2020} & PHY/MAC & Radio Thread (2.4\,GHz, O-QPSK, 250\,kbps, MTU 127\,B) \\
+\textbf{Thread 1.4} & red/malla & Especificación Thread Group (build 2024-10-15) \\
+\textbf{6LoWPAN (RFC 4944)} & adaptación & IPv6 sobre 802.15.4 \\
+\textbf{IPHC (RFC 6282)} & adaptación & Compresión de cabeceras IPv6 ($\sim$91\,\% observado en piloto) \\
+\textbf{IPv6} & red & Direccionamiento extremo a extremo \\
+\textbf{UDP} & transporte & Transporte sin conexión para CoAP \\
+\textbf{CoAP (RFC 7252)} & aplicación & Mensajería REST en dispositivos restringidos \\
+\textbf{CoAP Observe (RFC 7641)} & aplicación & Suscripciones a recursos \\
+\textbf{DTLS 1.2 (RFC 6347)} & seguridad & Seguridad CoAP \\
+\textbf{OMA LwM2M 1.2} & gestión & Modelo de objetos del dispositivo + telemetría \\
+\textbf{Objeto LwM2M 10242} & aplicación & Custom object del medidor trifásico \\
+\textbf{DLMS/COSEM (IEC 62056)} & aplicación & Lectura del medidor físico vía RS-485 \\
+\textbf{IEEE 802.11ah-2016} & PHY/MAC & Wi-Fi HaLow (sub-GHz) \\
+\textbf{IEEE 802.11s} & red & Malla HaLow \\
+\textbf{WPA3-SAE} & seguridad & Autenticación HaLow \\
+\textbf{TCP (RFC 9293)} & transporte & Transporte upstream \\
+\textbf{MQTT 5.0} & aplicación & Mensajería pub/sub upstream \\
+\textbf{TLS 1.3 (RFC 8446)} & seguridad & Seguridad upstream \\
+\textbf{gRPC} & aplicación & Sincronización TB Edge $\leftrightarrow$ TB Server \\
+\textbf{ISO/IEC 30141:2024} & arquitectura & Arquitectura de referencia IoT (entidades funcionales) \\
+\bottomrule
+\end{tabularx}
+
+% =========================================================
+\section{Instrumentación y herramientas (durante el piloto)}
+
+\noindent\begin{tabularx}{\linewidth}{L{4.6cm} Y}
+\toprule
+\tabhead{Herramienta} & \tabhead{Uso} \\
+\midrule
+\textbf{NTP (chrony)} & Sincronización de relojes nodo / gateway / on-prem ($\pm$5\,ms) \\
+\texttt{tcpdump} / \texttt{tshark} & Captura de paquetes en \texttt{wlan0} y otras interfaces \\
+\texttt{iperf3} & Pruebas de rendimiento HaLow (TCP, UDP, distintos BW) \\
+\texttt{ping} & Latencia ICMP del enlace HaLow \\
+\textbf{Nordic PPK2} & Profiler de potencia 100\,kS/s (consumo nodo) \\
+\textbf{Fluke 87V} & Multímetro registrador (tensiones, corrientes) \\
+\textbf{Grafana + Prometheus} & Dashboards de métricas del sistema durante el piloto \\
+\texttt{pandas} / \texttt{scipy} (Python) & Análisis estadístico de los datos del piloto \\
+\texttt{iwinfo} / \texttt{station dump} (OpenWrt) & Captura de info inalámbrica (RSSI, MCS) \\
+\texttt{journalctl} / \texttt{docker logs} & Trazas del sistema y los contenedores \\
+\bottomrule
+\end{tabularx}
+
+% =========================================================
+\section{Trazabilidad con la Fig.~1 del paper}
+
+Para que se pueda navegar fácilmente entre la figura del paper y este inventario:
+
+\noindent\begin{tabularx}{\linewidth}{L{4.5cm} Y}
+\toprule
+\tabhead{Zona en Fig.\ 1} & \tabhead{Componentes en este documento} \\
+\midrule
+\textbf{Field network} & §1 (ESP32-C6, P2000-T, Zephyr, OpenThread, LwM2M, etc.) \\
+\textbf{Gateway} & §2.1 (RPi4, nRF52840), §2.2--2.3 (OpenWrt, OTBR) \\
+\textbf{HaLow backhaul \#1 / \#2} & §3 (Tube-AHM, AHPI6108E, configuración del enlace) \\
+\textbf{Edge Gateway} & §2.1 (RPi4, AHPI6108E), §2.4 (Docker, TB Edge, PG, Redis) — esto es lo que detalla la nueva \textbf{Fig.~3} \\
+\textbf{On-premises platform} & §4 (servidor, TB Server, Ethernet) \\
+\bottomrule
+\end{tabularx}
+
+\end{document}

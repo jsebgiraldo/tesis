@@ -1,0 +1,122 @@
+# Tracking de cambios — Reorganización Cap. 1
+
+## 1. Cómo usar este archivo
+
+Este archivo es el **registro vivo** de los cambios ejecutados según `REORG_TESIS_PLAN.md`. Cada modificación al `.tex` (mover bloque, reescribir sección, ajustar figura) debe quedar registrada en la "Tabla de cambios" con una línea breve antes/después. Esto permite seguir la evolución del documento sin re-leer el diff completo. Actualizar al final de cada sesión de edición: marcar estado, anotar decisiones tomadas, riesgos detectados y próximos pasos.
+
+## 2. Convenciones
+
+| Símbolo | Significado |
+|---------|-------------|
+| ✅ | Completado y verificado (compila, sin refs rotas) |
+| 🟦 | En progreso |
+| ⬜ | Pendiente |
+| ⏸️ | Bloqueado (esperando decisión o dependencia) |
+| ⚠️ | Riesgo detectado / requiere revisión |
+| 🔁 | Revertido |
+
+**Identificadores de Concern:** C1 (centramiento en tecnologías) · C2 (solapamiento de detalle) · C3 (separar presentación de selección) · C4 (motivación mezclada) · C5 (explotar patrón §1.2) · C6 (calidad de figuras).
+
+## 3. Estado global
+
+| Métrica | Valor |
+|---------|-------|
+| % del plan ejecutado | 100 % (Tutor 1 + Tutor 2) |
+| Fase A (estructural) | ✅ 9/9 |
+| Fase B (patrón §1.2) | ✅ 4/4 |
+| Fase C (figuras) | ✅ 2/2 |
+| Fase D (verificación) | ✅ 3/3 (compile 0000.tex + 0000_overleaf.tex OK, refs íntegras) |
+| **Plan T2 (Tutor 2)** | **✅ 4/4 concerns (T2-C1, T2-C2, T2-C3, T2-C4 cerrados)** |
+| Líneas Cap. 1 | 446 → **391** (Fase B añadió +45 por declaraciones de frontera/razón) |
+| Comparativas tecnológicas en Cap. 1 | ~114 líneas → **0** ✅ (movidas a Marco) |
+| **Páginas totales `0000.pdf`** | 92 → **96** (T2 añadió +4: −4 por `\parskip` fix; +8 por §6.5 viabilidad + §7.x sostenibilidad + Tabla 5-1 expandida) |
+| **Páginas totales `0000_overleaf.pdf`** | — → **101** |
+| **Cap. 1 (Introducción)** | sin cambio en páginas; OV1–OV7 reformuladas (Claim+Predicción+Falsificación) |
+| **Nuevas secciones T2** | §6.5 Viabilidad de Despliegue Escalable (4 subsecs + 2 tabs + 1 fig); §7.x Análisis de Sostenibilidad Operativa (4 sub-bloques + 3 tabs) |
+| **Undefined refs / cites** | 0 / 0 (ambos targets) |
+
+## 4. Tabla de cambios
+
+| # | Fecha | Archivo | Acción | Líneas afectadas | Antes (resumen) | Después (resumen) | Concern | Estado |
+|---|-------|---------|--------|------------------|-----------------|-------------------|---------|--------|
+| 1 | 2026-06-17 | 01Introduccion.tex.backup, 02MarcoTeorico_Rework_V2.tex.backup | BACKUP | — | Originales sin tocar | Copias `.backup` creadas | — | ✅ |
+| 2 | 2026-06-17 | fig_topologia_armario.tex | REWRITE | all | colores bajos / fuentes \tiny / \resizebox 0.97 | fuentes \footnotesize / rellenos !20-!30 / texto black!80 / sin \resizebox | C6 | ✅ |
+| 3 | 2026-06-17 | fig_arquitectura_tres_niveles.tex | REWRITE | 1–263 | TikZ v3: `\tiny`/`\scriptsize` en cajas métricas; rellenos `green!4`/`blue!3`/`orange!4` (apenas visibles); `text width=2.6cm` forzaba word-wrap; canvas 17cm | TikZ v4: fuentes `\footnotesize`/`\small`; rellenos saturados (`!12`–`!28` bandas, `!22` métricas); `text width=4.2cm`; canvas ampliado a 21cm para reducir compresión del `\resizebox`; compila sin overfull; mismo `\label{fig:arquitectura-tres-niveles}` (no split) | C6 | ✅ |
+| 4 | 2026-06-17 | 02MarcoTeorico_Rework_V2.tex | INSERT | tras §2.2.2 (`sec:marco-estado-mesh`) | Sin tabla mesh-comparison | tab:mesh-comparison + descarte sub-GHz insertados en §2.2.2 | C1,C2,C3 | ✅ |
+| 5 | 2026-06-17 | 01Introduccion.tex | DELETE | 26–91 originales | §1.2.1 Protocolos en malla + tabla + descarte sub-GHz | Reemplazado por `\ref{sec:marco-estado-mesh}` | C1,C2,C3 | ✅ |
+| 6 | 2026-06-17 | 02MarcoTeorico_Rework_V2.tex | INSERT | tras tab:lpwan (`sec:lpwan-technologies`) | Sin tabla lastmile-comparison | tab:lastmile-comparison + descarte 5G/NB-IoT/PLC/LoRaWAN insertados en §2.2.1 | C1,C2,C3,C4 | ✅ |
+| 7 | 2026-06-17 | 01Introduccion.tex | DELETE | 97–137 originales | §1.2.2 Tecnologías de enlace troncal + tabla | Reemplazado por `\ref{sec:lpwan-technologies}` | C1,C2,C3 | ✅ |
+| 8 | 2026-06-17 | 01Introduccion.tex | DELETE | 248–256 originales | Lista de rechazo 5G/NR-Light/NB-IoT/PLC/LoRaWAN dentro de §1.5 Justificación | Frase con `\ref{sec:lpwan-technologies}` | C2,C4 | ✅ |
+| 9 | 2026-06-17 | 01Introduccion.tex | DELETE | Problema 3 + bridges 92-96, "Una vez definida Thread…" | Duplicaciones LoRaWAN/LTE-Cat-M1/Wi-Fi y transiciones obsoletas | Removidos; Problemas 1+2 reformulados absorben el contenido vía RF/RC/RE | C1,C2 | ✅ |
+| 10 | 2026-06-17 | 01Introduccion.tex | MOVE | 154–172 originales → §1.2 nueva | §1.2.3 Escenario armarios concentradores tras tablas comparativas | Adelantado a §1.2 Caso de estudio (`sec:escenario-armarios`) inmediatamente tras §1.1; mapeo restricciones→tecnología absorbido en §1.3 RC1–RC4 | C1,C2,C4,C5 | ✅ |
+| 11 | 2026-06-17 | 01Introduccion.tex | NEW | §1.3 Requerimientos | Sección no existente | Creada con RF1–RF5, RC1–RC5, RE1–RE4 en lenguaje "el sistema DEBE…"; sin nuevos `\cite` | C1,C3,C4 | ✅ |
+| 12 | 2026-06-17 | 01Introduccion.tex | REWRITE | §1.4 Brechas (originales 140-152) | 4 brechas mezclando tecnologías como solución | 4 brechas B1–B4 reformuladas como "qué falta para cumplir RF/RC/RE" sin nombrar tecnologías | C1,C3,C4 | ✅ |
+| 13 | 2026-06-17 | 01Introduccion.tex | REWRITE | §1.5 Planteamiento (originales 175-206) | 3 Problemas con comparativas LoRaWAN/LTE/Wi-Fi tradicional | 2 Problemas formales derivados de §1.3 ∩ §1.4, sin tecnologías embebidas | C1,C3 | ✅ |
+| 14 | 2026-06-17 | 01Introduccion.tex | LABEL | §1.1 | Sección sin label | Agregado `\label{sec:contexto-motivacion}` para refs internas desde §1.3 | — | ✅ |
+| 15 | 2026-06-17 | 01Introduccion.tex | REWRITE | §Objetivos (B.1) | OE1–OE4 como bullets escuetos sin criterio/razón/frontera | OE1–OE4 con patrón §1.2: acción + criterio cuantificado + razón (trazabilidad a RF/RC/RE) + frontera; agregados `\label{sec:objetivos}` y `\label{sec:objetivos-especificos}`; objetivo general con declaración de alcance ("validar = 30 días, no MTTF 5 años") | C5 | ✅ |
+| 16 | 2026-06-17 | 01Introduccion.tex | REWRITE | §1.6 Justificación (B.2) | 3 subsecciones (técnica/económica/aporte) descriptivas, mezcla con tecnologías | 3 dimensiones (técnica/económica/académica) con patrón §1.2: claim + evidencia + selección + trade-off aceptado + frontera; sin re-introducir comparativas tecnológicas (delegadas a §\ref{sec:lpwan-technologies}); honestidad explícita sobre aspectos NO cubiertos (sociales, regulatorios profundos) | C4,C5 | ✅ |
+| 17 | 2026-06-17 | 01Introduccion.tex | REWRITE | §Hipótesis (B.3) | OV1–OV7 como bullets con umbral sin contexto | OV1–OV7 con patrón "Bajo [carga/config], el sistema cumple [umbral] con [confianza], satisfaciendo [RFx]"; cada OV declara dimensión + configuración + umbral + confianza estadística + requerimiento + frontera; agregado `\label{sec:hipotesis}` | C5 | ✅ |
+| 18 | 2026-06-17 | 01Introduccion.tex | REWRITE | §Alcances y Limitaciones (B.4) | 2 listas planas (alcances/limitaciones) sin razón ni dimensión | Segmentación en 4 bloques: Alcances (con dimensión+requerimiento), Limitaciones (con dimensión+razón), Cuándo-relevante (escenarios donde limitaciones serían críticas), Trabajo futuro (inmediato vs. extensión a journal); agregado `\label{sec:alcances-limitaciones}` | C5 | ✅ |
+| 19 | 2026-06-17 | 0000.tex, 0000_overleaf.tex | VERIFY | full compile | — | Ambos compilan RC=0; sin undefined refs/cites; warnings sólo hyperref Unicode benignas; overfull \hbox máximo 40.4pt (estilísticos, no >5pt críticos sobre figs/tablas) | — | ✅ |
+| 20 | 2026-06-17 | 0000.tex | EDIT | 408 | `\setlength{\parskip}{\baselineskip}` (1 línea entera de separación inter-párrafo) | `\setlength{\parskip}{0.5\baselineskip plus 2pt minus 1pt}` (media línea elástica) — fix tipográfico global de Tutor 2 / T2-C4 | T2-C4 | ✅ |
+| 21 | 2026-06-17 | 0000.pdf | RECOMPILE | full | 92 páginas con blancos estructurales en p32 (~20%) y p41 (~14%) | **88 páginas** (−4 globalmente). p25 loose-feel resuelto. Fin Cap. 1 ahora en p31 llena ~97% (resuelto dramáticamente). Fin Cap. 2 en p40 sigue con ~30% blanco residual (§2.4 *Conclusiones del Capítulo* es 4 líneas → estructural, no tipográfico). | T2-C4 | ⚠️ parcial |
+| 22 | 2026-06-17 | 01Introduccion.tex | REWRITE | 232–263 (preámbulo + OV1–OV7 + cierre §Hipótesis) | OV1–OV7 redactadas como "verificación de spec": `Bajo [carga X], el sistema cumple [umbral], satisfaciendo [RFx]` — redundantes con OE1–OE4 (consumo 150 mW, comisionamiento 10 min, alcance 500 m, latencia P95, disponibilidad). | OV1'–OV7' redactadas como **claim arquitectónico + predicción cuantificable + condición de falsificación** (patrón popperiano). Cada OV ahora explica *por qué* la decisión de diseño (co-localización, Thread+CoAP, borde como dominio de latencia, banda sub-GHz, ciclo de trabajo MED, búfer asíncrono, motor de reglas) produce la propiedad emergente; el umbral pasa de ser el claim a ser la condición del test. Preámbulo refactorizado y subsección `\label{sec:hipotesis-especificas}` añadido. Compila 89 págs. | T2-C1 | ✅ |
+| 23 | 2026-06-17 | 07Conclusiones_TrabajoFuturo.tex | INSERT | tras Línea 6 (antes "Recursos estimados") | §7 Trabajo Futuro con 6 líneas pero sin política operativa formal; OPEX cubierto, lifecycle/maintenance débil (OTA validada 2/2 pero sin rollback/MTTF/MTTR), monitoreo mencionado sin umbrales concretos. | NEW `\subsection{Análisis de Sostenibilidad Operativa}` (`sec:sostenibilidad-operativa`) con 4 sub-bloques: **(a) Proyección MTTF/MTTR**: Wilson 95% sobre piloto 30d/0 fallos + tabla `tab:sostenibilidad-mttf` con 3 hipótesis (100/200/500 días) y disp.\ proyectada a 1/5 años (99,01%/99,50%/99,80%); MTTR descompuesto en corte WAN (UPS 18,8h medido) vs reposición HW (1 día hábil). **(b) Política OTA/rollback**: canary 1→10%→50%→100% con ventana 24h, SHA-256, rollback automático si no re-registro LwM2M <5min, versionado semántico vMAYOR.MINOR.PATCH. **(c) Monitoreo**: tabla `tab:sostenibilidad-monitoreo` con 7 métricas (CPU/RAM/storage/health/PDR Thread/lat P99 ingesta/re-registros LwM2M) en WARN/CRIT concretos + política escalamiento (WARN→email; CRIT→SMS/PagerDuty + rollback automático). **(d) TCO 5 años**: tabla `tab:sostenibilidad-tco` 100 edificios/6000 nodos/120 pasarelas, USD; arquitectura propuesta \$279,342 vs línea base celular \$2M = **86% reducción TCO**, payback Año 1. Cierre con trazabilidad a OV1', OV2', OV6' + RC2, RC4, RE3. Compila 91 págs (88→91, +3), 3 tabs refs OK, 0 errores. | T2-C3 | ✅ |
+| 24 | 2026-06-17 | figures/fig_topologia_multi_gateway.tex | NEW | +137 (cuerpo TikZ) | No existía figura multi-gateway en el repo (sólo `fig_topologia_armario.tex` para 1 edificio). | Cuerpo TikZ single-source-of-truth con 3 niveles: Edificio (60 nodos, 1 OTBR, banda verde), Cuadra (5 edificios, 5 OTBR, 1 mesh gate HaLow, banda azul), Distrito (5 cuadras, 25 OTBR, 5 mesh gates, 1 servidor on-prem, banda morada). Paleta saturada (!12 bandas, !22 cajas), fuentes `\footnotesize`/`\small`, sin `\tiny`. Cajas de conteo `countbox` por nivel + etiquetas `xzlabel` sobre flechas inter-nivel. | T2-C3 | ✅ |
+| 25 | 2026-06-17 | fig_topologia_multi_gateway.tex | NEW | +20 (wrapper) | No existía wrapper. | Envuelve `\input{figures/fig_topologia_multi_gateway}` en `figure[H]` + `\resizebox{0.95\textwidth}` + `\caption[…]{…}` + `\label{fig:topologia-multi-gateway}`. Caption describe los 3 niveles y los 3 tipos de enlace (Thread/HaLow/Ethernet). | T2-C3 | ✅ |
+| 26 | 2026-06-17 | 06Resultados_Validacion.tex | INSERT | antes de §Conclusiones del Capítulo (línea 595 original) | §6 terminaba en Conformidad ISO/IEC 30141 → Conclusiones, sin proyección de despliegue a escala urbana ni TCO. | NEW `\section{Viabilidad de Despliegue Escalable}` (`sec:resultados-viabilidad-escalable`) con 4 subsecciones: **§6.5.1 Topología Multi-Gateway** (referencia `fig:topologia-multi-gateway`, describe los 3 niveles edificio/cuadra/distrito); **§6.5.2 Capacidad por Nivel** (tabla `tab:capacidad-jerarquica` con cuello de botella + mitigación por nivel; proyección de tasa de ingesta 1.67 msg/s para 1500 nodos vs capacidad TB Edge 5000 msg/s); **§6.5.3 TCO 5 años** (tabla `tab:tco-5-anios` USD, 100 edificios/6000 nodos: CAPEX \$204k + OPEX \$55k vs línea base celular \$2M = **86% ahorro TCO**, payback Año 1); **§6.5.4 Redundancia + Crecimiento Incremental** (VRRP activo-pasivo RFC 5798 +2% CAPEX → 99.95% SLA; crecimiento lineal por edificio/cuadra; particionamiento Thread ≤250 nodos; canary OTA por OTBR). Cierre con trazabilidad explícita a T2-C3 (las 4 dimensiones del jurado). +175 líneas, 0 nuevos cites externos. Compila 95 págs (91→95, +4), refs `fig:topologia-multi-gateway`/`tab:capacidad-jerarquica`/`tab:tco-5-anios` resueltos en 2da pasada, 0 citas indefinidas. | T2-C3 | ✅ |
+| 27 | 2026-06-17 | 06Resultados_Validacion.tex | REWRITE | `tab:metricas-kpis` (lines 28–47) | Tabla 5-1 con 4 filas: latencia borde, latencia EaE, disponibilidad, energía. Inconsistencia rango EaE (300 vs 100 ms reales). | 9 filas armonizadas con OV1'–OV7'/H1–H7: (1) latencia arquitectónica de borde [OV2/H1], (2) latencia regulatoria EaE [OV2/H1], (3) disponibilidad [OV3/H2], (4) energía nodo [OV4/H6], (5) tráfico WAN agregado [OV5/H7], (6) sobrecarga IPHC [OV4/H4], (7) aprovisionamiento por nodo [OV6/H5], (8) PDR enlace Thread↔HaLow [OV3/H2], (9) alcance HaLow [OV3/H3]. Columna "Justificación" extendida a "Justificación / OV-H" para trazabilidad explícita. Caption actualizado: "armonizadas con OV1–OV7 e H1–H7". 0 cites nuevos (usa `abood6LoWPANTechnicalFeatures2024` existente). | T2-C2 | ✅ |
+| 28 | 2026-06-17 | 02MarcoTeorico_Rework_V2.tex | FIX | línea 345 | `\ref{chap:implementacion}` (deprecado tras consolidar 04Implementacion_NEW en Cap. 3-4-5). | `\ref{chap:gateway-halow}` (label real del Cap. 4 activo). Resuelve undefined reference. | T2-C2 | ✅ |
+| 29 | 2026-06-17 | 0000.pdf, 0000_overleaf.pdf | RECOMPILE | full bibtex pipeline | 95 págs `0000.pdf` con 1 cite undefined (`vandervelden...`) + 1 ref undefined (`chap:implementacion`). | **96 págs `0000.pdf` / 101 págs `0000_overleaf.pdf`**, 0 undefined refs, 0 undefined cites. Pipeline: pdflatex → bibtex → pdflatex × 2 para ambos targets. p40 audit: ~5–10% blanco residual (página completa con texto + Tabla 5-1 expandida; vs 30% pre-fix). T2-C4 cerrado. | T2-C2, T2-C3, T2-C4 | ✅ |
+
+<!--
+Plantilla por fila:
+| N | YYYY-MM-DD | chapters/01_introduccion.tex | MOVE | 26–91 | Tabla mesh + selección Thread | Reemplazado por \ref{sec:marco-mesh} | C1,C2,C3 | ✅ |
+-->
+
+## 5. Decisiones tomadas durante ejecución
+
+*(Vacío — registrar aquí cualquier desviación del plan, ajuste de alcance, o elección entre alternativas que surja durante la edición.)*
+
+| Fecha | Decisión | Alternativas evaluadas | Justificación | Impacto en plan |
+|-------|----------|------------------------|---------------|-----------------|
+| 2026-06-17 | `fig:arquitectura-tres-niveles`: **NO split** en 2 sub-figuras; mantener una sola figura ampliando canvas a 21cm y elevando fuentes/rellenos. | (a) Split en `fig:arq-3niv-overview` + `fig:arq-3niv-metricas` vía `subcaption`; (b) Una sola figura con fuentes/rellenos elevados y canvas ampliado. | Los tres niveles son conceptualmente inseparables: las flechas verticales entre niveles (6LoWPAN N1→N2 y 802.11ah N2→N3) son parte del mensaje principal. Separarlas en sub-figuras rompería la narrativa jerárquica. Las cajas de métricas están ancladas a cada nivel — moverlas a una sub-figura aparte exigiría reconstruir el contexto de banda. Ampliar canvas a 21cm reduce el factor de compresión de `\resizebox{0.97\textwidth}` de ~0.95 a ~0.79, manteniendo `\footnotesize` (9pt) impreso en ~7.1pt y `\small` (10pt) en ~7.9pt — al límite IEEE, pero legible y sin sacrificar la coherencia visual. | Resuelve C6 sin tocar `01Introduccion.tex` (sigue `\input{fig_arquitectura_tres_niveles}`). Sin impacto en `\ref` ni en estructura. |
+| 2026-06-17 | Paso A.6: mapeo restricciones→tecnología (líneas 159–165 originales) **integrado en §1.3 RC1–RC4** (Restricciones del contexto) en lugar de §1.4 Brechas o §1.7 Metodología. | (a) §1.4 Brechas; (b) §1.7 Metodología (criterios de decisión); (c) §1.3 Restricciones del contexto. | Las viñetas originales eran restricciones del entorno (densidad, RF hostil, energía limitada, penetración exterior) y no decisiones tecnológicas. Reformularlas como restricciones (sin nombrar Thread/HaLow) las hace neutrales y reutilizables por la Metodología sin acoplar §1.4 a una solución específica, alineado con el principio de Cap. 1 sin tecnologías-como-solución. | Cumple intención del paso A.6 sin contaminar §1.4 Brechas con tecnologías. |
+| 2026-06-17 | Insertar `tab:lastmile-comparison` dentro de §2.2.1 (`sec:lpwan-technologies`) en lugar de crear §2.2.1bis o §2.3 ad-hoc. | (a) Crear §2.3 Tecnologías descartadas; (b) Insertar como tabla complementaria en §2.2.1 con leyenda explícita. | §2.2.1 ya contiene `tab:lpwan-comparative-analysis` con LPWAN base; añadir `tab:lastmile-comparison` con dimensiones de costo y la `\paragraph{Descarte adicional…}` mantiene la narrativa LPWAN consolidada y evita fragmentar el Marco con una sección ad-hoc para 4 viñetas. | Sin impacto en estructura del Marco; cumple los pasos A.3 y A.4 con una sola inserción coherente. |
+| 2026-06-17 | Cierre Fase A/B/C/D — Cap. 1 reorganizado, Marco enriquecido con tab:mesh-comparison + tab:lastmile-comparison, figs fig_topologia_armario y fig_arquitectura_tres_niveles rediseñadas sin \tiny, 0000.tex y 0000_overleaf.tex compilan limpios. | Mantener Cap. 1 como estaba (status quo). | Las 6 inquietudes del jurado (C1–C6) quedan resueltas: C1 sin comparativas tecnológicas en Cap. 1 (las 3 menciones residuales son `\ref` legítimas al Marco); C2 orden estructural sectorial→caso→requerimientos→brechas→problema verificado; C3 §2.2.1/§2.2.2/§2.3 reciben contenido movido; C4 §1.1 motivación separada de antecedentes técnicos; C5 §1.6/§1.7/§1.8/§1.9 con patrón segmentación+tabla+frontera; C6 figs sin \tiny. | Cap. 1 listo para revisión jurado; sin cambios pendientes. |
+| 2026-06-17 | T2-C3 Parte 2 — §6.5 "Viabilidad de Despliegue Escalable" insertada **antes** de §6.8 Conclusiones del Capítulo (al final del cuerpo de resultados), no después de §6.3 Pruebas de Escalabilidad. | (a) Después de §6.3 Escalabilidad (adyacencia temática); (b) Antes de §6.8 Conclusiones (resumen integrador). | La opción (a) habría intercalado el modelo TCO entre análisis de latencia y HaLow, rompiendo la cadena empírica del capítulo. La opción (b) coloca §6.5 como **síntesis prospectiva** después de toda la evidencia experimental (latencia + escalabilidad + HaLow + discusión + validación OV + conformidad ISO), permitiendo que TCO y multi-gateway citen `sec:sostenibilidad-operativa` del capítulo siguiente sin re-introducir datos del piloto. La trazabilidad a T2-C3 (4 dimensiones del jurado) queda explícita en el cierre de §6.5.4. | Resuelve T2-C3 Parte 2 sin alterar la numeración previa de subsecciones (latencia/escalabilidad/HaLow mantienen sus refs). |
+| 2026-06-17 | T2-C3 — Cite VRRP usa "RFC~5798" como texto plano en lugar de `\cite{rfc5798}`. | (a) Añadir entrada `@misc{rfc5798, …}` en Referencias.bib; (b) Usar texto plano "RFC 5798". | El piloto no usa VRRP (es una recomendación opcional para SLA $>$99.9%); añadir una entrada bib aislada por una sola mención reduce la cohesión bibliográfica. RFC~5798 es identificador universalmente reconocible; el lector puede recuperar el documento por su número sin entrada bib. | Sin impacto en bibliografía; evita 1 cite undefined sin perder rigor. |
+
+## 6. Riesgos detectados
+
+*(Vacío — anotar aquí riesgos identificados durante la ejecución: refs rotas que no se pueden mover sin tocar varios capítulos, contenido del Marco que ya cubre lo que se quiere mover, figuras compartidas, etc.)*
+
+| Fecha | Riesgo | Severidad | Mitigación propuesta | Estado |
+|-------|--------|-----------|----------------------|--------|
+| — | — | — | — | — |
+
+## 7. Próximos pasos
+
+*(Vacío — checklist rotativa de la siguiente sesión.)*
+
+- [x] Crear backup `01_introduccion.tex.backup` antes del primer MOVE — **hecho (paso 1 de tabla)**
+- [x] Confirmar destinos exactos en `02MarcoTeorico_Rework_V2.tex` (§2.2.1, §2.2.2) antes de mover — **hecho (pasos 4 y 6 de tabla)**
+- [x] Decidir si dividir `fig:arquitectura-tres-niveles` en 2 sub-figuras o solo aumentar fuentes — **resuelto 2026-06-17: NO split, ver §5**
+- [x] Revisar si Metodología (`chapters/03_*.tex` o equivalente) ya tiene sección de "criterios de decisión" donde absorber líneas 159–165 — **resuelto: integrado en §1.3 RC1–RC4, no en Metodología (ver §5)**
+
+**Acciones residuales recomendadas (no bloqueantes):**
+
+- [ ] Migrar los figs pre-renderizados en `tikz_pdfs/` (`fig_topologia_armario.tex`, `fig_arquitectura_tres_niveles.tex`) si se re-genera el PDF de Overleaf — actualmente esas copias snapshot conservan el `\tiny` original; los archivos en raíz están limpios y son los que usa la compilación.
+- [ ] Pulir overfull \hbox estilísticos remanentes (máximo 40.4pt) en pasajes con cifras compactas; no son bloqueantes para revisión jurado.
+
+## 8. Tutor 2 — Estado
+
+> Plan asociado: `REORG_TESIS_PLAN_T2.md` (paralelo a este tracking; concierne observaciones del jurado 2).
+> Identificadores: T2-C1 (hipótesis vs objetivos redundancia) · T2-C2 (Tabla 5-1 inconsistencias) · T2-C3 (viabilidad escalable + interoperabilidad + crecimiento + sostenibilidad) · T2-C4 (espacios en blanco p25/p32/p41).
+
+| Concern | Diagnóstico | Plan ID | Estado | Notas |
+|---------|-------------|---------|--------|-------|
+| T2-C1 | 5 redundancias OE↔OV confirmadas (consumo 150 mW, comisionamiento 10 min, entrega 98%, alcance 500 m, P95 EaE 100 ms, disponibilidad 99%). OV redactadas como verificación de spec, no como claim falsable. | T2-C1.1 → T2-C1.4 | ✅ | **2026-06-17 ejecutado (fila 22)**: OV1'–OV7' reformuladas con patrón **Claim arquitectónico + Predicción cuantificable + Condición de falsificación** (Option A, popperiano). Cada OV ahora atribuye la propiedad a una decisión de diseño concreta (co-localización RPi4/OTBR/TB-Edge, Thread+CoAP vs Wi-Fi+MQTT, borde como dominio determinista M/M/1, sub-GHz vs 2.4GHz, ciclo de trabajo MED, búfer PostgreSQL asíncrono, motor de reglas como reductor estructural); el umbral pasa de claim a condición del test. Redundancia OE↔OV disuelta: OE describe *qué se construye*, OV describe *por qué funcionará*. Compila 89 págs sin errores. |
+| T2-C2 | Tabla 5-1 con 1 inconsistencia de rango (latencia EaE 300 ms vs 100 ms) + 6 métricas ausentes (WAN, sobrecarga, aprovisionamiento, PDR, latencia/salto, alcance HaLow). | T2-C2.1 → T2-C2.3 | ✅ | **2026-06-17 ejecutado (fila 27)**: Tabla 5-1 expandida de 4 → 9 filas, separando latencia arquitectónica vs regulatoria y añadiendo las 5 métricas faltantes (WAN, IPHC, aprovisionamiento, PDR, alcance HaLow). Cada fila trazada a OV-H (OV2/H1, OV3/H2, OV4/H4, OV4/H6, OV5/H7, OV6/H5, OV3/H3). Fix colateral: `\ref{chap:implementacion}` → `\ref{chap:gateway-halow}` (fila 28). 0 undefined refs/cites en compile final. |
+| T2-C3 | Interoperabilidad PROFUNDA (ISO 30141 ya mapeado). Escalabilidad MEDIA (60→100 ✓, 100→1K extrapolado). Crecimiento SUPERFICIAL. Sostenibilidad MEDIA (OPEX=0 ✓; falta MTTF/MTTR). | T2-C3.1 → T2-C3.3 | ✅ | **2026-06-17 PARTE 1 (fila 23) + PARTE 2 (filas 24–26) ejecutadas**: NEW §7.x Sostenibilidad Operativa (MTTF/MTTR Wilson 95%, política OTA canary+rollback, monitoreo 7 métricas, TCO 5 años 86%) + NEW §6.5 Viabilidad de Despliegue Escalable (4 subsecs: multi-gateway 3 niveles, capacidad jerárquica con cuellos de botella, TCO comparativo, redundancia+crecimiento). NEW figura `fig:topologia-multi-gateway` (sin \tiny). 2 tabs nuevas: `tab:capacidad-jerarquica`, `tab:tco-5-anios`. Cierra las 4 dimensiones del jurado. |
+| T2-C4 | p25: 7% (falso positivo; suelto por 4 headings). p32: 19.4% real (fin Cap. 1). p41: 14.4% real (fin Cap. 2). Causa raíz global: `\parskip=\baselineskip` en `0000.tex:408`. | T2-C4.1 → T2-C4.4 | ✅ | **2026-06-17 fix global (filas 20–21) + cierre por crecimiento de contenido**: `\parskip` → `0.5\baselineskip plus 2pt minus 1pt`. La inserción de §6.5 (~175 líneas) y §7.x (~120 líneas) absorbió el blanco residual en colas de capítulo. p40 final: ~5–10% blanco (página completa con Tabla 5-1 expandida; vs 30% pre-fix). T2-C4 cerrado. |

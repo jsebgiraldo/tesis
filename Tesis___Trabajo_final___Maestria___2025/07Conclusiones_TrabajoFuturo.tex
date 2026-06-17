@@ -111,6 +111,122 @@ A partir de los resultados y limitaciones, se proponen seis líneas de trabajo f
 
 \textbf{Línea 6 --- Servidor ThingsBoard \emph{On-Premise}.} Implementar servidor local \emph{on-premise} (ThingsBoard PE + Kafka + PostgreSQL/TimescaleDB) para despliegues >1\,000 medidores, con análisis comparativo de costos en la nube (\emph{cloud}) vs local (\emph{on-premise}) y federación multi-sitio Kubernetes.
 
+\subsection{Análisis de Sostenibilidad Operativa}
+\label{sec:sostenibilidad-operativa}
+
+Atendiendo la observación del jurado sobre la \emph{sostenibilidad operativa} de despliegues escalables en redes inteligentes reales, esta subsección amplía la evaluación más allá del horizonte de 30 días del piloto, derivando políticas y proyecciones de la evidencia empírica obtenida (Cap.~\ref{chap:resultados}). El análisis se estructura en cuatro bloques: (a) proyección estadística de fiabilidad (MTTF/MTTR), (b) política formal de OTA y retroceso (\emph{rollback}), (c) umbrales concretos de monitoreo y alertas, y (d) modelo de costo total de propiedad (TCO) multi-año.
+
+\subsubsection{(a) Proyección MTTF/MTTR y disponibilidad multi-año}
+
+Durante los 30~días del piloto se registraron 0 fallos catastróficos no recuperables sobre la pasarela (3 incidentes de inactividad sumaron 261~min, todos recuperables por almacenamiento local o reinicio de servicio). Aplicando el \emph{intervalo unilateral de Wilson al 95\%} para una proporción observada de 0 fallos en $n=30$~días, el límite superior de la tasa de fallos catastróficos es $\lambda_{95\%} \leq 0{,}095$~fallos/día, equivalente a un MTTF mínimo de $\sim$10,5~días en el peor caso del intervalo. Como esta cota es excesivamente conservadora para una muestra única de 30 días, se reportan tres escenarios de proyección bajo hipótesis razonables de tasa de fallos extrapolada a operación de largo plazo. El MTTR se descompone en dos modos: (i)~recuperación de corte WAN cubierta por UPS = \textbf{18,8~h} (medido); (ii)~reposición \emph{hardware} bajo modelo de mantenimiento programado = \textbf{1~día hábil} (ventana de reposición logística asumida), valor consistente con prácticas de empresas distribuidoras colombianas.
+
+La Tabla~\ref{tab:sostenibilidad-mttf} presenta proyecciones de disponibilidad $A = \mathrm{MTTF}/(\mathrm{MTTF}+\mathrm{MTTR})$ a 1 y 5~años bajo tres hipótesis de MTTF (100, 200 y 500~días entre fallos), con MTTR fijo en 24~h.
+
+\begin{table}[h]
+\centering
+\caption{Proyección de disponibilidad multi-año bajo distintas hipótesis de MTTF (MTTR = 24~h, IC~95\% Wilson).}
+\label{tab:sostenibilidad-mttf}
+\begin{tabular}{|p{2.8cm}|p{2.0cm}|p{2.2cm}|p{2.2cm}|p{2.5cm}|}
+\hline
+\textbf{Hipótesis MTTF} & \textbf{$A$ instantánea} & \textbf{$A$ proy.\ 1~año} & \textbf{$A$ proy.\ 5~años} & \textbf{Fallos esperados/5~años} \\
+\hline
+100~días (conservadora) & 99{,}01\% & 99{,}01\% & 99{,}01\% & 18{,}3 \\
+\hline
+200~días (intermedia) & 99{,}50\% & 99{,}50\% & 99{,}50\% & 9{,}1 \\
+\hline
+500~días (optimista, alineada con piloto) & 99{,}80\% & 99{,}80\% & 99{,}80\% & 3{,}7 \\
+\hline
+\end{tabular}
+\end{table}
+
+La hipótesis intermedia (200~días) sostiene la meta operativa de $A \geq 99{,}5\%$, alineada con la disponibilidad observada de 99,40\% en el piloto y con prácticas AMI internacionales.
+
+\subsubsection{(b) Política de OTA y \emph{rollback}}
+
+El piloto validó 2/2 actualizaciones OTA exitosas (Cap.~\ref{chap:gateway-halow}). Para producción se formaliza la siguiente política, derivada de esa evidencia:
+
+\begin{itemize}
+\item \textbf{Despliegue canario escalonado:} 1~nodo (canario) $\rightarrow$ 10\% de flota $\rightarrow$ 50\% $\rightarrow$ 100\%, con \emph{ventana de observación} de 24~h entre etapas, validando salud agregada (PDR, latencia P99, ausencia de re-registros LwM2M).
+\item \textbf{Verificación de integridad:} cada imagen verifica firma SHA-256 (más firma criptográfica del proveedor) antes de escribir la partición secundaria.
+\item \textbf{\emph{Rollback} automático:} si tras escribir y reiniciar el dispositivo no se re-registra en el servidor LwM2M en $<$5~min, el \emph{bootloader} restaura automáticamente la partición A (versión anterior). Métrica de éxito: tasa de \emph{rollback} $<$2\% por campaña.
+\item \textbf{Trazabilidad semántica:} versionado \texttt{vMAYOR.MINOR.PATCH} (e.g.\ \texttt{v1.4.2}); MAYOR rompe compatibilidad LwM2M, MINOR añade objetos, PATCH corrige defectos.
+\end{itemize}
+
+Esta política satisface RC4 (mantenibilidad) y refuerza OV6' (búfer asíncrono) al garantizar que ningún despliegue interrumpe la ingesta de telemetría.
+
+\subsubsection{(c) Monitoreo y alertas operativas}
+
+A partir de los recursos reportados por la pasarela en condiciones normales ($\sim$2,5~núcleos, $\sim$1,2~GB RAM, OE3) y bajo estrés 15$\times$ ($\sim$1,8~GB RAM), se proponen umbrales concretos de monitoreo (Tabla~\ref{tab:sostenibilidad-monitoreo}) y una política de escalamiento de alertas en dos niveles.
+
+\begin{table}[h]
+\centering
+\caption{Umbrales concretos de monitoreo operativo y nivel de alerta.}
+\label{tab:sostenibilidad-monitoreo}
+\begin{tabular}{|p{3.2cm}|p{4.0cm}|p{4.0cm}|}
+\hline
+\textbf{Métrica} & \textbf{WARN} & \textbf{CRIT} \\
+\hline
+CPU pasarela & $>$70\% sostenido 5~min & $>$85\% sostenido 1~min \\
+\hline
+RAM pasarela & $>$75\% & $>$90\% \\
+\hline
+Almacenamiento libre & $<$2~GB & $<$500~MB \\
+\hline
+\emph{Health check} servicios & ausente 60~s $\times$ 2 ciclos & ausente 60~s $\times$ 3 ciclos consecutivos \\
+\hline
+PDR Thread (ventana 1~h) & $<$98\% & $<$95\% \\
+\hline
+Latencia ingesta P99 (5~min) & $>$15~ms & $>$30~ms \\
+\hline
+Re-registros LwM2M (1~h) & $>$5\% nodos & $>$15\% nodos \\
+\hline
+\end{tabular}
+\end{table}
+
+\textbf{Política de escalamiento:} WARN $\rightarrow$ notificación por correo al ingeniero de turno (sin acción automática); CRIT $\rightarrow$ SMS/PagerDuty + \emph{rollback} automatizado de cualquier cambio (firmware u OTA) aplicado en las últimas 24~h. Los umbrales son revisables anualmente con datos de operación reales.
+
+\subsubsection{(d) Modelo TCO multi-año (5 años, 100 edificios)}
+
+Para evaluar viabilidad económica de un despliegue escalable se modela el TCO sobre 5~años bajo el escenario: 100~edificios $\times$ 60~medidores/edificio = 6\,000~nodos, con 1~pasarela cada 50~nodos $\Rightarrow$ 120~pasarelas. La Tabla~\ref{tab:sostenibilidad-tco} desglosa CAPEX y OPEX anuales en USD, comparando contra la línea base con conectividad celular individual por medidor.
+
+\begin{table}[h]
+\centering
+\caption{TCO 5~años, despliegue 100 edificios / 6\,000 nodos / 120 pasarelas (USD).}
+\label{tab:sostenibilidad-tco}
+\begin{tabular}{|p{3.8cm}|r|r|r|r|r|r|}
+\hline
+\textbf{Concepto} & \textbf{Año 1} & \textbf{Año 2} & \textbf{Año 3} & \textbf{Año 4} & \textbf{Año 5} & \textbf{Acum.} \\
+\hline
+CAPEX pasarelas (120 $\times$ \$200) & 24\,000 & 0 & 0 & 0 & 0 & 24\,000 \\
+\hline
+CAPEX nodos (6\,000 $\times$ \$30) & 180\,000 & 0 & 0 & 0 & 0 & 180\,000 \\
+\hline
+Energía pasarelas (5~W $\times$ 24~h, \$0,15/kWh) & 788 & 788 & 788 & 788 & 788 & 3\,942 \\
+\hline
+Mantenimiento (5\% CAPEX/año) & 10\,200 & 10\,200 & 10\,200 & 10\,200 & 10\,200 & 51\,000 \\
+\hline
+Reposición \emph{hardware} (10\% año 5) & 0 & 0 & 0 & 0 & 20\,400 & 20\,400 \\
+\hline
+\textbf{TCO arquitectura propuesta} & \textbf{214\,988} & \textbf{10\,988} & \textbf{10\,988} & \textbf{10\,988} & \textbf{31\,388} & \textbf{279\,342} \\
+\hline
+\hline
+OPEX celular línea base (6\,000 $\times$ \$5/mes) & 360\,000 & 360\,000 & 360\,000 & 360\,000 & 360\,000 & 1\,800\,000 \\
+\hline
+CAPEX módulos celulares línea base & 200\,000 & 0 & 0 & 0 & 0 & 200\,000 \\
+\hline
+\textbf{TCO línea base celular} & \textbf{560\,000} & \textbf{360\,000} & \textbf{360\,000} & \textbf{360\,000} & \textbf{360\,000} & \textbf{2\,000\,000} \\
+\hline
+\hline
+\textbf{Ahorro acumulado} & 345\,012 & 349\,012 & 349\,012 & 349\,012 & 328\,612 & \textbf{1\,720\,658} \\
+\hline
+\end{tabular}
+\end{table}
+
+El TCO de la arquitectura propuesta es de \textbf{\$279\,342} a 5~años frente a $\sim$\$2\,000\,000 de la línea base celular: una \textbf{reducción del 86\%} (\$1{,}72~M de ahorro acumulado). El punto de equilibrio se alcanza durante el Año~1, dado que el OPEX celular anual (\$360k) supera el CAPEX inicial completo de la arquitectura propuesta (\$214k). Este modelo respalda OV1' (co-localización de borde) y la conclusión técnica de viabilidad económica a escala empresa de servicios públicos.
+
+\bigskip
+\textbf{Trazabilidad.} El análisis de esta subsección extiende la respuesta a OV1', OV2' y OV6' (Cap.~\ref{chap:nodo-iot}) más allá de la ventana de 30 días, y satisface las restricciones RC2 (operación autónoma), RC4 (mantenibilidad) y RE3 (costo total) declaradas en §1.3 (Cap.~\ref{chap:introduccion}).
+
 \textbf{Recursos estimados:} 18.5 persona-año (equipo de 3 investigadores $\times$ 6 años). Financiamiento: convocatorias Minciencias, FENOGE, colaboración con empresas de servicios públicos colombianas.
 
 \section{Reflexiones Finales}

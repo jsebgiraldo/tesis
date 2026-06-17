@@ -96,7 +96,50 @@ La Tabla~\ref{tab:lpwan-comparative-analysis} consolida la comparación cuantita
 
 \input{fig_lpwan_comparison}
 
-Los datos de la tabla evidencian que Wi-Fi HaLow domina en tasa efectiva y latencia, pero carece de topología en malla. El competidor más maduro en despliegues AMI es Wi-SUN FAN, cuya comparación directa con la combinación Thread~+~HaLow resulta determinante para la selección tecnológica.
+La Tabla~\ref{tab:lastmile-comparison} amplía la perspectiva con un análisis comparativo orientado al segmento pasarela--nube, incorporando dimensiones de costo por nodo y gasto operativo relevantes para el despliegue masivo.
+
+\begin{table}[H]
+\centering
+\caption{Comparación de tecnologías de enlace troncal para energía inteligente}
+\label{tab:lastmile-comparison}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{|l|l|l|l|l|}
+\hline
+\rowcolor{gray!20}
+\textbf{Característica} & \textbf{HaLow (802.11ah)} & \textbf{LoRaWAN} & \textbf{LTE Cat-M1} & \textbf{NB-IoT} \\
+\hline
+\textbf{Alcance típico} & \textcolor{blue}{1~km} urbano / \textcolor{blue}{3--5~km} LoS & 5--15~km & 10--35~km & 10--35~km \\
+\hline
+\textbf{Rendimiento máx.} & \textcolor{blue}{43,3~Mbps} @ 8~MHz & \textcolor{red}{50~kbps} & 1~Mbps & \textcolor{red}{250~kbps} \\
+\hline
+\textbf{Latencia típica} & \textcolor{blue}{10--30~ms} & \textcolor{red}{1--5~s} & 50--100~ms & \textcolor{red}{1,5--10~s} \\
+\hline
+\textbf{Topología} & \textcolor{blue}{Estrella/Malla} & Estrella & Estrella (celular) & Estrella (celular) \\
+\hline
+\textbf{Cobertura interiores} & \textcolor{blue}{Excelente} (sub-GHz) & Media & Buena & \textcolor{blue}{Excelente} \\
+\hline
+\textbf{Espectro} & \textcolor{blue}{No licenciado} ISM & \textcolor{blue}{No licenciado} & \textcolor{red}{Licenciado} & \textcolor{red}{Licenciado} \\
+\hline
+\textbf{Costo por nodo} & \$25--40 módulo & \textcolor{blue}{\$8--15} & \$12--25 & \textcolor{blue}{\$5--15} \\
+\hline
+\textbf{Gasto operativo} & \textcolor{blue}{\$0} (privado) & \textcolor{blue}{\$0} (privado) & \textcolor{red}{\$10--15/nodo/año} & \textcolor{red}{\$5--10/nodo/año} \\
+\hline
+\end{tabular}}%
+\end{table}
+
+Wi-Fi HaLow combina rendimiento superior (43,3~Mbps), latencia determinista (10--30~ms) y operación en espectro no licenciado sin costos recurrentes~\cite{qiaoSurveyWiFiHaLow2018,austIEEE80211ahSubOnegigahertz2012}. Las demás alternativas presentan limitaciones claras: LoRaWAN ofrece rendimiento insuficiente (50~kbps) para agregar datos de múltiples medidores; LTE Cat-M1 y NB-IoT operan en espectro licenciado con costos recurrentes que crecen linealmente con el número de dispositivos; LTE privado (CBRS) demanda inversión de capital elevada por celda y, en Latinoamérica, opera bajo marcos regulatorios para bandas compartidas aún limitados, con licencias y esquemas de incentivos que varían significativamente por país; y las redes no terrestres (LEO-IoT) presentan nula cobertura en interiores, latencia variable (20--600~ms) y costos por terminal mensuales acumulables. HaLow opera en banda 902--928~MHz con penetración en edificaciones 15--20~dB superior a 2,4~GHz, posicionándose como tecnología óptima para el enlace troncal en entornos urbanos y suburbanos.
+
+\paragraph{Descarte adicional de alternativas de enlace troncal.}
+A las tecnologías ya consideradas en la Tabla~\ref{tab:lpwan-comparative-analysis} se añaden, por completitud, otras opciones cuyo descarte se justifica formalmente:
+
+\begin{itemize}
+    \item \textbf{5G/NR-Light:} costos operativos recurrentes significativos en espectro licenciado, que limitan la viabilidad a gran escala.
+    \item \textbf{NB-IoT:} rendimiento de 250~kbps, insuficiente para telemetría trifásica IEC~61000-4-30 (se requieren al menos 468~kbps).
+    \item \textbf{PLC (G3-PLC/PRIME):} requiere dispositivos de derivación por transformador con costos significativos por unidad.
+    \item \textbf{LoRaWAN:} rendimiento máximo de 50~kbps, inadecuado para agregación de datos de múltiples medidores.
+\end{itemize}
+
+Los datos de las tablas evidencian que Wi-Fi HaLow domina en tasa efectiva y latencia, pero carece de topología en malla. El competidor más maduro en despliegues AMI es Wi-SUN FAN, cuya comparación directa con la combinación Thread~+~HaLow resulta determinante para la selección tecnológica.
 
 \subsubsection{Wi-SUN FAN vs Thread + HaLow}
 \label{sec:marco-wisun}
@@ -119,6 +162,52 @@ Las tecnologías LPWAN resuelven la última milla entre el concentrador y la nub
 con convergencia $<$5~s tras falla (vs 30--60~s en ZigBee). Limitación práctica: 250 nodos por partición, escalable mediante múltiples Border Routers~\cite{openthread2024,abdulsalamOverviewRecentWireless2024}.
 
 \textbf{Bluetooth Mesh} (BT SIG, 2019) emplea inundación gestionada con tráfico $O(n^2)$, inviable para AMI con $>$100 dispositivos~\cite{bluetoothsig2019,choudharyInternetThingsComprehensive2024}.
+
+La Tabla~\ref{tab:mesh-comparison} consolida la comparación cuantitativa entre las tres tecnologías dominantes en malla a 2,4~GHz para redes de campo.
+
+\begin{table}[H]
+\centering
+\caption{Comparación de protocolos en malla 2,4~GHz para IoT}
+\label{tab:mesh-comparison}
+\footnotesize
+\begin{tabularx}{\textwidth}{|l|X|X|X|}
+\hline
+\rowcolor{gray!20}
+\textbf{Característica} & \textbf{Thread 1.4}$^{*}$ & \textbf{Zigbee 3.0} & \textbf{Bluetooth Mesh} \\
+\hline
+\textbf{Capa física} & IEEE 802.15.4 & IEEE 802.15.4 & Bluetooth 5.3 LE \\
+\hline
+\textbf{Topología} & Malla (enrutamiento MLE) & Malla (AODV) & Inundación gestionada \\
+\hline
+\textbf{IPv6 nativo} & \textcolor{blue}{Sí} (6LoWPAN) & \textcolor{red}{No} (propietario) & \textcolor{red}{No} (proxy GATT) \\
+\hline
+\textbf{Nodos máx.} & hasta 250 & 65\,535 (teórico) & 32\,767 \\
+\hline
+\textbf{Latencia (3~saltos)} & \textcolor{blue}{40--60~ms} & 80--120~ms & 100--200~ms \\
+\hline
+\textbf{Consumo RX/TX} & 19/22~mA & 24/31~mA & \textcolor{blue}{9,2/10,5~mA} \\
+\hline
+\textbf{Interoperabilidad} & \textcolor{blue}{OTBR estándar} & Requiere coordinador & Requiere aprovisionador \\
+\hline
+\textbf{Seguridad} & DTLS~1.2$^{\dagger}$ & AES-128 CCM & AES-CCM \\
+\hline
+\multicolumn{4}{|p{\dimexpr\textwidth-2\tabcolsep\relax}|}{\footnotesize $^{*}$Valores según especificaciones Thread~1.4.0. Detalles de implementación en §\ref{sec:nodo-thread}. $^{\dagger}$DTLS~1.2 sobre UDP; TLS~1.2/1.3 durante comisionamiento.} \\
+\hline
+\end{tabularx}
+\end{table}
+
+Thread emerge como protocolo preferencial para la red de campo por tres razones: (1)~enrutamiento IPv6 nativo, que elimina pasarelas de traducción propietarias y facilita la integración directa con infraestructuras IP existentes; (2)~estandarización completa con certificación del Thread Group, que garantiza interoperabilidad entre fabricantes; y (3)~latencia menor: 40--60~ms en tres saltos, frente a 80--120~ms de Zigbee y 100--200~ms de Bluetooth Mesh~\cite{shelby6LoWPANWirelessEmbedded2009,parkScalableThreadMesh2023}.
+
+\paragraph{Descarte de alternativas en malla sub-GHz.}
+Existen también tecnologías de malla que operan en bandas inferiores a 1~GHz (Wi-SUN, LoRa Mesh, DigiMesh), ofreciendo mayor alcance (1--5~km por salto) a costa de menor rendimiento. Sin embargo, para el escenario objetivo de armarios concentradores ---distancias menores a 100~m--- estas alternativas no aportan ventaja:
+
+\begin{itemize}
+    \item \textbf{Wi-SUN} (IEEE~802.15.4g): latencias de 200--500~ms en rutas de 5--10~saltos y pila de protocolos compleja (6TiSCH, RPL)~\cite{haradaIEEE802154g2017}.
+    \item \textbf{LoRa Mesh} (Meshtastic, Pycom): rendimiento extremadamente limitado (0,3--50~kbps) con ciclo útil regulado (1--10\%) que genera latencias impredecibles de segundos a minutos.
+    \item \textbf{DigiMesh y protocolos propietarios:} dependencia total de un único fabricante, incompatibilidad con pilas IPv6 estándar y costos de módulos 3--5 veces superiores.
+\end{itemize}
+
+En resumen, las tecnologías sub-GHz son preferibles cuando las distancias entre nodos superan los 500~m (medidores rurales dispersos), pero Thread resulta óptimo para armarios concentradores por su latencia determinista, IPv6 nativo y costo reducido por nodo.
 
 Una vez que los datos de medición alcanzan la pasarela a través de la red en malla, surge la necesidad de gestionar los dispositivos de forma estandarizada: aprovisionamiento, actualización de \emph{firmware}, lectura de recursos y configuración remota. El protocolo LwM2M, operando sobre CoAP, ofrece una solución ligera diseñada específicamente para redes con restricciones de ancho de banda.
 
@@ -248,3 +337,9 @@ El análisis del estado del arte revela cuatro brechas que motivan las decisione
 \label{sec:marco-conclusiones}
 
 La revisión de literatura (2018--2026) no identificó implementaciones que integren simultáneamente Thread~1.4 en malla, Wi-Fi HaLow como enlace troncal, ThingsBoard Edge para procesamiento local autónomo, y LwM2M para gestión estandarizada de dispositivos. La evaluación de soluciones comerciales demuestra que ninguna satisface los cinco requisitos para empresas de servicios públicos Latinoamericanas: TCO~$<$\$200/pasarela, OPEX cero, soporte nativo DLMS/COSEM + LwM2M, ausencia de dependencia de proveedor, y operación sin conexión indefinida. La arquitectura de código abierto propuesta logra 91--98\% de reducción de TCO. Las cuatro brechas identificadas motivan directamente las decisiones de diseño documentadas en los Capítulos~\ref{chap:nodo-iot} a~\ref{chap:resultados}.
+
+Las cuatro brechas no son problemas aislados sino manifestaciones de una decisión arquitectónica común a la mayoría de despliegues AMI revisados: la dependencia cloud-céntrica, donde el medidor actúa como un mero productor de telemetría y la inteligencia operativa reside exclusivamente en la nube del proveedor. Esta elección estructural explica simultáneamente la ausencia de enlaces troncales de alta capacidad en el borde (B1), la dificultad para preservar interfaces COSEM extremo a extremo cuando intervienen pasarelas propietarias (B2), la escasez de validación en campo bajo condiciones de pérdida de conectividad (B3) y el sobrecosto en CAPEX/OPEX trasladado al operador Latinoamericano (B4). Una respuesta integral exige, por tanto, reubicar parte del plano de control y del procesamiento de calidad de energía hacia el borde, sin sacrificar la interoperabilidad normativa.
+
+El espacio de soluciones admisibles está acotado por tres marcos normativos que actúan como restricciones de diseño y no como recomendaciones opcionales. ISO/IEC~30141:2024 define siete entidades funcionales (FE) que cualquier arquitectura de referencia AMI debe cubrir y trazar a sus componentes físicos; el diseño propuesto en los capítulos siguientes documenta este mapeo en forma explícita. DLMS/COSEM debe preservarse extremo a extremo --- desde el medidor hasta el sistema central de la empresa --- lo que obliga a definir una traducción auditada hacia LwM2M en la pasarela y no una sustitución silenciosa del protocolo. Finalmente, el marco regulatorio Latinoamericano para la banda 902--928~MHz, donde opera Wi-Fi HaLow, es heterogéneo entre jurisdicciones y debe documentarse por país, particularmente respecto a potencias máximas, máscaras espectrales y reglas de coexistencia con sistemas incumbentes.
+
+A partir de este planteamiento, los capítulos siguientes desarrollan la arquitectura propuesta por capas. El Capítulo~\ref{chap:nodo-iot} aborda la red de campo como primera capa de la respuesta arquitectónica, justificando la selección de Thread~1.4 sobre alternativas competidoras y detallando la pila LwM2M que materializa el plano de gestión estandarizado. El Capítulo~\ref{chap:gateway-halow} aborda la pasarela de borde, incluyendo el enlace troncal Wi-Fi HaLow en malla 802.11s y la lógica de cómputo local que sostiene la operación durante eventos de desconexión prolongada. El Capítulo~\ref{chap:resultados} consolida la validación experimental que cierra la Brecha~3 y verifica explícitamente la conformidad del diseño con las siete FE de ISO/IEC~30141, cerrando así el lazo entre revisión de literatura, decisiones de diseño y evidencia empírica.

@@ -182,6 +182,11 @@ ref/**/*.pdf
 *Arquitectura*.tex
 *Conclusiones*.tex
 *MarcoTeorico.tex
+# Excepción: la figura multi-gateway NO es un capítulo duplicado (el patrón
+# *Gateway*.tex la captura por error en sistemas case-insensitive). Es una
+# figura referenciada por §6.5 y DEBE versionarse.
+!Tesis___Trabajo_final___Maestria___2025/fig_topologia_multi_gateway.tex
+!Tesis___Trabajo_final___Maestria___2025/figures/fig_topologia_multi_gateway.tex
 
 # Scripts y documentación temporal
 PLAN_*.md
@@ -302,3 +307,9 @@ Tesis___Trabajo_final___Maestria___2025/tikz_pdfs/*.stderr
 compare_pdfs.py
 scan_annots.py
 rev17_comments.json
+
+# --- Sesión reorganización jurados: artefactos transitorios ---
+# PNGs de diagnóstico de espacios en blanco (no versionar; regenerables)
+Tesis___Trabajo_final___Maestria___2025/audit-whitespace/
+# Zip de exportación del paper (redundante con la carpeta paper_ieee/)
+paper_ieee.zip

@@ -6,6 +6,7 @@ Este capítulo guía al lector desde el contexto general de las redes de energí
 
 %% ═══════════════════════════════════════════════════
 \section{Contexto y Motivación}
+\label{sec:contexto-motivacion}
 %% ═══════════════════════════════════════════════════
 
 La propuesta de esta tesis surge de la confluencia de tres tendencias: el crecimiento exponencial de medidores inteligentes, la madurez de protocolos de malla IPv6 como Thread y la disponibilidad comercial de enlaces sub-GHz de alto rendimiento como Wi-Fi HaLow.
@@ -20,189 +21,97 @@ La transición energética global hacia sistemas descentralizados, con alta pene
     \item \textbf{Costos prohibitivos a escala:} las plataformas IoT en la nube cobran por volumen de mensajes, resultando en gastos operativos inviables cuando la densidad de medidores es alta~\cite{alsafranChallengesImplementingIoT2025,alsuwaidiSecuringSmartGrid2024}.
 \end{itemize}
 
-Estas limitaciones motivan la búsqueda de arquitecturas alternativas que procesen datos localmente, empleen protocolos ligeros y utilicen tecnologías de enlace troncal sin costos recurrentes de conectividad. Para diseñar una arquitectura así, el primer paso es evaluar las tecnologías de comunicación disponibles.
+Estas limitaciones motivan la búsqueda de arquitecturas alternativas que procesen datos localmente, empleen protocolos ligeros y utilicen tecnologías de enlace troncal sin costos recurrentes de conectividad. La selección de tecnologías para una red de telemetría energética requiere evaluar dos segmentos diferenciados ---red de campo entre medidores y pasarela (distancias cortas, alta densidad, baja latencia) y enlace troncal entre pasarela e infraestructura central (alcance extendido, alto rendimiento, bajo costo operativo)---; el detalle comparativo de las tecnologías candidatas para cada segmento se desarrolla en el Capítulo~\ref{chap:marco-teorico} (§\ref{sec:marco-estado-mesh} para malla y §\ref{sec:lpwan-technologies} para enlace troncal). Para los fines de este capítulo, basta señalar que la combinación seleccionada es Thread~1.4 sobre IEEE~802.15.4 en la red de campo y Wi-Fi HaLow (IEEE~802.11ah) en el enlace troncal.
 
 
-\subsection{Comparativa de tecnologías de comunicación IoT}
-
-La selección de tecnologías para una red de telemetría energética requiere evaluar dos segmentos diferenciados:
-
-\begin{enumerate}
-    \item \textbf{Red de campo} (comunicación entre medidores y pasarela): distancias cortas, alta densidad, baja latencia.
-    \item \textbf{Enlace troncal} (comunicación entre pasarela e infraestructura central): alcance extendido, alto rendimiento, bajo costo operativo.
-\end{enumerate}
-
-Cada segmento impone requisitos distintos; a continuación se comparan las opciones en cada caso.
-
-
-\subsubsection{Protocolos en malla para la red de campo}
-
-La Tabla~\ref{tab:mesh-comparison} compara las tres tecnologías dominantes en malla a 2,4~GHz para redes de campo.
-
-\begin{table}[H]
-\centering
-\caption{Comparación de protocolos en malla 2,4~GHz para IoT}
-\label{tab:mesh-comparison}
-\footnotesize
-\begin{tabularx}{\textwidth}{|l|X|X|X|}
-\hline
-\rowcolor{gray!20}
-\textbf{Característica} & \textbf{Thread 1.4}$^{*}$ & \textbf{Zigbee 3.0} & \textbf{Bluetooth Mesh} \\
-\hline
-\textbf{Capa física} & IEEE 802.15.4 & IEEE 802.15.4 & Bluetooth 5.3 LE \\
-\hline
-\textbf{Topología} & Malla (enrutamiento MLE) & Malla (AODV) & Inundación gestionada \\
-\hline
-\textbf{IPv6 nativo} & \textcolor{blue}{Sí} (6LoWPAN) & \textcolor{red}{No} (propietario) & \textcolor{red}{No} (proxy GATT) \\
-\hline
-\textbf{Nodos máx.} & hasta 250 & 65\,535 (teórico) & 32\,767 \\
-\hline
-\textbf{Latencia (3~saltos)} & \textcolor{blue}{40--60~ms} & 80--120~ms & 100--200~ms \\
-\hline
-\textbf{Consumo RX/TX} & 19/22~mA & 24/31~mA & \textcolor{blue}{9,2/10,5~mA} \\
-\hline
-\textbf{Interoperabilidad} & \textcolor{blue}{OTBR estándar} & Requiere coordinador & Requiere aprovisionador \\
-\hline
-\textbf{Seguridad} & DTLS~1.2$^{\dagger}$ & AES-128 CCM & AES-CCM \\
-\hline
-\multicolumn{4}{|p{\dimexpr\textwidth-2\tabcolsep\relax}|}{\footnotesize $^{*}$Valores según especificaciones Thread~1.4.0. Detalles de implementación en §\ref{sec:nodo-thread}. $^{\dagger}$DTLS~1.2 sobre UDP; TLS~1.2/1.3 durante comisionamiento.} \\
-\hline
-\end{tabularx}
-\end{table}
-
-Thread emerge como protocolo preferencial para la red de campo por tres razones:
-
-\begin{enumerate}
-    \item \textbf{Enrutamiento IPv6 nativo:} elimina pasarelas de traducción propietarias y facilita la integración directa con infraestructuras IP existentes.
-    \item \textbf{Estandarización completa:} la certificación del Thread Group garantiza interoperabilidad entre fabricantes, reduciendo la dependencia de proveedor.
-    \item \textbf{Latencia menor:} 40--60~ms en tres saltos, frente a 80--120~ms de Zigbee y 100--200~ms de Bluetooth Mesh~\cite{shelby6LoWPANWirelessEmbedded2009,parkScalableThreadMesh2023}.
-\end{enumerate}
-
-\paragraph{Descarte de alternativas en malla sub-GHz.}
-Existen también tecnologías de malla que operan en bandas inferiores a 1~GHz (Wi-SUN, LoRa Mesh, DigiMesh), ofreciendo mayor alcance (1--5~km por salto) a costa de menor rendimiento. Sin embargo, para el escenario objetivo de esta tesis ---armarios concentradores con distancias menores a 100~m--- estas alternativas no aportan ventaja:
-
-\begin{itemize}
-    \item \textbf{Wi-SUN} (IEEE~802.15.4g): latencias de 200--500~ms en rutas de 5--10~saltos y pila de protocolos compleja (6TiSCH, RPL)~\cite{haradaIEEE802154g2017}.
-    \item \textbf{LoRa Mesh} (Meshtastic, Pycom): rendimiento extremadamente limitado (0,3--50~kbps) con ciclo útil regulado (1--10\%) que genera latencias impredecibles de segundos a minutos.
-    \item \textbf{DigiMesh y protocolos propietarios:} dependencia total de un único fabricante, incompatibilidad con pilas IPv6 estándar y costos de módulos 3--5 veces superiores.
-\end{itemize}
-
-En resumen, las tecnologías sub-GHz son preferibles cuando las distancias entre nodos superan los 500~m (medidores rurales dispersos), pero Thread resulta óptimo para armarios concentradores por su latencia determinista, IPv6 nativo y costo reducido por nodo.
-
-Una vez definida Thread como tecnología de campo, es necesario evaluar las opciones disponibles para el segundo segmento: el enlace troncal entre la pasarela y la infraestructura central.
-
-
-\subsubsection{Tecnologías de enlace troncal}
-
-La Tabla~\ref{tab:lastmile-comparison} compara las principales tecnologías de área amplia para el segmento pasarela--nube.
-
-\begin{table}[H]
-\centering
-\caption{Comparación de tecnologías de enlace troncal para energía inteligente}
-\label{tab:lastmile-comparison}
-\resizebox{\textwidth}{!}{%
-\begin{tabular}{|l|l|l|l|l|}
-\hline
-\rowcolor{gray!20}
-\textbf{Característica} & \textbf{HaLow (802.11ah)} & \textbf{LoRaWAN} & \textbf{LTE Cat-M1} & \textbf{NB-IoT} \\
-\hline
-\textbf{Alcance típico} & \textcolor{blue}{1~km} urbano / \textcolor{blue}{3--5~km} LoS & 5--15~km & 10--35~km & 10--35~km \\
-\hline
-\textbf{Rendimiento máx.} & \textcolor{blue}{43,3~Mbps} @ 8~MHz & \textcolor{red}{50~kbps} & 1~Mbps & \textcolor{red}{250~kbps} \\
-\hline
-\textbf{Latencia típica} & \textcolor{blue}{10--30~ms} & \textcolor{red}{1--5~s} & 50--100~ms & \textcolor{red}{1,5--10~s} \\
-\hline
-\textbf{Topología} & \textcolor{blue}{Estrella/Malla} & Estrella & Estrella (celular) & Estrella (celular) \\
-\hline
-\textbf{Cobertura interiores} & \textcolor{blue}{Excelente} (sub-GHz) & Media & Buena & \textcolor{blue}{Excelente} \\
-\hline
-\textbf{Espectro} & \textcolor{blue}{No licenciado} ISM & \textcolor{blue}{No licenciado} & \textcolor{red}{Licenciado} & \textcolor{red}{Licenciado} \\
-\hline
-\textbf{Costo por nodo} & \$25--40 módulo & \textcolor{blue}{\$8--15} & \$12--25 & \textcolor{blue}{\$5--15} \\
-\hline
-\textbf{Gasto operativo} & \textcolor{blue}{\$0} (privado) & \textcolor{blue}{\$0} (privado) & \textcolor{red}{\$10--15/nodo/año} & \textcolor{red}{\$5--10/nodo/año} \\
-\hline
-\end{tabular}}%
-\end{table}
-
-Wi-Fi HaLow (IEEE~802.11ah) combina rendimiento superior (43,3~Mbps), latencia determinista (10--30~ms) y operación en espectro no licenciado sin costos recurrentes~\cite{qiaoSurveyWiFiHaLow2018,austIEEE80211ahSubOnegigahertz2012}. Las demás alternativas presentan limitaciones claras:
-
-\begin{itemize}
-    \item \textbf{LoRaWAN:} rendimiento insuficiente (50~kbps) para agregar datos de múltiples medidores.
-    \item \textbf{LTE Cat-M1 y NB-IoT:} operan en espectro licenciado con costos recurrentes de conectividad significativos a escala, que se incrementan linealmente con el número de dispositivos.
-    \item \textbf{LTE privado (CBRS):} inversión de capital elevada por celda; en Latinoamérica el marco regulatorio para bandas compartidas es aún limitado, con licencias y esquemas de incentivos que varían significativamente por país.
-    \item \textbf{Redes no terrestres (LEO-IoT):} nula cobertura en interiores, latencia variable (20--600~ms) y costos por terminal que se acumulan mensualmente.
-\end{itemize}
-
-HaLow opera en banda 902--928~MHz con penetración en edificaciones 15--20~dB superior a 2,4~GHz, posicionándose como tecnología óptima para el enlace troncal en entornos urbanos y suburbanos.
-
-
-\subsection{Brechas en las arquitecturas IoT existentes}
-
-El análisis del estado del arte revela limitaciones estructurales que no se resuelven adoptando solamente Thread y HaLow~\cite{laghariInternetThingsIoT2024}:
-
-\begin{itemize}
-    \item \textbf{Dependencia de la nube:} puntos únicos de fallo en enlaces WAN con disponibilidades limitadas en redes celulares~\cite{laghariInternetThingsIoT2024}, insuficientes para infraestructura crítica.
-    \item \textbf{Sobrecarga de traducción:} cadenas de protocolos Thread--MQTT--HTTP--nube introducen 150--300~ms de latencia acumulada y complejidad en los mapeos de datos.
-    \item \textbf{Escalabilidad costosa:} plataformas IoT en la nube cobran por volumen de mensajes, generando costos de ingesta que crecen linealmente con la densidad de medidores y la frecuencia de reporte.
-    \item \textbf{Ausencia de interoperabilidad:} interfaces propietarias dificultan la migración entre proveedores y bloquean a los operadores en ecosistemas cerrados~\cite{tangResearchInteroperabilityIoT,ISOIEC30141v2024}.
-\end{itemize}
-
-Es necesario, por tanto, una arquitectura que procese datos en el borde, emplee protocolos ligeros de extremo a extremo (CoAP/LwM2M en lugar de MQTT/HTTP), y combine Thread con HaLow en un diseño que no dependa de la nube para operar. Estas brechas se manifiestan con especial intensidad en un escenario de despliegue recurrente en Latinoamérica: los armarios concentradores de medidores.
-
-
-\subsection{Escenario de despliegue: armarios concentradores}
+%% ═══════════════════════════════════════════════════
+\section{Caso de estudio: el armario concentrador}
 \label{sec:escenario-armarios}
+%% ═══════════════════════════════════════════════════
 
-Los \textbf{armarios concentradores} agrupan entre 10 y 60 medidores inteligentes en espacios confinados: sótanos de edificios residenciales, cuartos técnicos o recintos subterráneos de difícil acceso. Este escenario impone restricciones que determinan directamente la selección de tecnologías:
-
-\begin{itemize}
-    \item \textbf{Distancias cortas ($<$80~m):} Thread (IEEE~802.15.4, 2,4~GHz) cubre el armario con 1--2 saltos sin necesidad de alcance kilométrico.
-    \item \textbf{Entorno de radiofrecuencia hostil:} concreto armado e interferencia eléctrica; la robustez de la malla Thread (retransmisión automática, enrutamiento MLE, potencia TX de hasta +20~dBm) compensa la banda 2,4~GHz.
-    \item \textbf{Alta densidad (10--60 nodos):} Thread emplea CSMA/CA con retroceso exponencial, soportando hasta 250 nodos con latencias inferiores a 60~ms.
-    \item \textbf{Salida hacia la WAN:} HaLow sub-GHz ofrece 15--20~dB de ganancia en penetración respecto a 2,4~GHz, permitiendo alcanzar puntos de acceso exteriores a 1~km sin línea de vista.
-    \item \textbf{Alimentación desde el medidor:} los nodos se alimentan del puerto auxiliar 5\,V del medidor (200~mA disponibles), eliminando baterías y justificando la operación como dispositivo final en modo siempre activo (MED, 19~mA).
-\end{itemize}
-
-La Figura~\ref{fig:topologia-armario} ilustra esta topología: los nodos Thread dentro del armario forman una red en malla que converge en un enrutador de frontera (OTBR), el cual se conecta a la pasarela de borde mediante enlace HaLow sub-GHz capaz de atravesar las barreras constructivas del edificio.
+Los \textbf{armarios concentradores} agrupan entre 10 y 60 medidores inteligentes en espacios confinados: sótanos de edificios residenciales, cuartos técnicos o recintos subterráneos de difícil acceso. Este escenario condensa simultáneamente alta densidad de dispositivos, entorno de radiofrecuencia hostil (concreto armado e interferencia eléctrica), alimentación limitada al puerto auxiliar 5\,V del medidor (200~mA disponibles) y necesidad de salida hacia la WAN a través de barreras constructivas. La Figura~\ref{fig:topologia-armario} ilustra la topología objetivo: los nodos dentro del armario forman una red en malla que converge en un enrutador de frontera (OTBR), el cual se conecta a la pasarela de borde mediante un enlace sub-GHz capaz de atravesar las barreras del edificio.
 
 \input{fig_topologia_armario}
 
-La combinación de estas restricciones ---alta densidad, entorno hostil, alimentación limitada, necesidad de enlace troncal con penetración en edificaciones--- configura el problema que se formaliza a continuación.
+Este caso de estudio articula las restricciones que se formalizan a continuación como requerimientos funcionales, no funcionales y regulatorios.
+
+
+%% ═══════════════════════════════════════════════════
+\section{Requerimientos, contexto y restricciones}
+\label{sec:requerimientos}
+%% ═══════════════════════════════════════════════════
+
+A partir del caso de estudio (§\ref{sec:escenario-armarios}) y de las limitaciones de las arquitecturas tradicionales (§\ref{sec:contexto-motivacion}), esta sección consolida ---en lenguaje normativo de ``el sistema DEBE''--- los requerimientos funcionales, las restricciones del contexto y las restricciones regulatorias y económicas que cualquier arquitectura candidata debe satisfacer. Estos requerimientos se utilizan en §\ref{sec:brechas} como referencia para identificar las brechas del estado actual y en §\ref{sec:planteamiento-problema} para formular el problema de investigación.
+
+\subsection{Requerimientos funcionales}
+\label{sec:req-funcionales}
+
+\begin{itemize}
+    \item \textbf{RF1 --- Latencia extremo a extremo:} el sistema DEBE entregar telemetría desde el medidor hasta la aplicación local con latencia P95 inferior a 100~ms y P99 inferior a 200~ms; las operaciones de coordinación interna deben permanecer por debajo de 50~ms~\cite{laghariInternetThingsIoT2024,IEEERecommendedPractice}.
+    \item \textbf{RF2 --- Disponibilidad y operación sin conexión:} el sistema DEBE garantizar tiempo activo superior al 99\% y operación continua durante desconexiones WAN prolongadas ($\geq$72~h) sin pérdida de mensajes~\cite{NISTFramework2022}.
+    \item \textbf{RF3 --- Telemetría e información de calidad:} el sistema DEBE soportar lectura de potencia activa y reactiva, voltaje, corriente y energía acumulada, así como indicadores de calidad de energía conforme a IEC~61000-4-30.
+    \item \textbf{RF4 --- Conformidad de datos del medidor:} la pila DEBE preservar el modelo DLMS/COSEM (IEC~62056) del medidor a lo largo de la cadena de protocolos~\cite{dlmsCOSEMArchitecture2023}.
+    \item \textbf{RF5 --- Gestión de dispositivos:} el sistema DEBE permitir aprovisionamiento, actualización de \emph{firmware} y configuración remota de los nodos con tiempo de comisionamiento inferior a 10~min por nodo.
+\end{itemize}
+
+\subsection{Restricciones del contexto}
+\label{sec:req-contexto}
+
+\begin{itemize}
+    \item \textbf{RC1 --- Densidad y topología:} el sistema DEBE soportar 60--100 nodos por pasarela en espacios menores a 80~m, con tolerancia a obstrucciones de concreto armado e interferencia eléctrica del entorno del armario.
+    \item \textbf{RC2 --- Energía del nodo:} el nodo DEBE operar con consumo medio inferior a 150~mW desde el puerto auxiliar 5\,V del medidor (200~mA disponibles), sin baterías recargables ni cableado adicional.
+    \item \textbf{RC3 --- Penetración hacia el exterior:} el enlace troncal DEBE atravesar las barreras constructivas del edificio (sótanos, cuartos técnicos) y alcanzar puntos de acceso a 500~m o más en línea de vista.
+    \item \textbf{RC4 --- Comisionamiento sin cableado:} el aprovisionamiento de la red DEBE realizarse sin tendido de cable adicional, empleando exclusivamente el enlace inalámbrico de fábrica.
+    \item \textbf{RC5 --- Multifabricante:} la arquitectura DEBE evitar protocolos propietarios en las interfaces críticas, permitiendo sustitución de fabricantes en el nodo, la pasarela y la plataforma.
+\end{itemize}
+
+\subsection{Restricciones regulatorias y económicas}
+\label{sec:req-regulatorias-economicas}
+
+\begin{itemize}
+    \item \textbf{RE1 --- Espectro no licenciado:} el enlace troncal DEBE operar en bandas ISM (902--928~MHz en América; con adaptación documentada para Europa/Asia), evitando costos recurrentes de espectro licenciado~\cite{IEEE802.11ah-2016}.
+    \item \textbf{RE2 --- CAPEX/OPEX por pasarela:} el CAPEX por pasarela DEBE permanecer por debajo de USD~\$200 y el OPEX recurrente DEBE ser nulo o despreciable, condición indispensable para la viabilidad económica en operadores Latinoamericanos~\cite{hossainComparativeStudyIoTCommunication2018}.
+    \item \textbf{RE3 --- Marco regulatorio Latinoamericano:} la arquitectura DEBE ser viable bajo los marcos regulatorios actuales de bandas ISM y de comunicación de datos de medición (DLMS/COSEM) en Latinoamérica, sin depender de licencias específicas (CBRS, espectro compartido) cuyo despliegue es desigual por país.
+    \item \textbf{RE4 --- Interoperabilidad ISO/IEC 30141:} la arquitectura DEBE alinearse con las siete entidades funcionales de ISO/IEC~30141:2024 para garantizar interoperabilidad horizontal entre operadores~\cite{ISOIEC30141v2024}.
+\end{itemize}
+
+Estos requerimientos serán contrastados con el estado del arte (Capítulo~\ref{chap:marco-teorico}) para identificar las brechas que motivan la propuesta.
+
+
+%% ═══════════════════════════════════════════════════
+\section{Brechas del estado actual}
+\label{sec:brechas}
+%% ═══════════════════════════════════════════════════
+
+El contraste entre los requerimientos definidos en §\ref{sec:requerimientos} y el estado del arte revisado en el Capítulo~\ref{chap:marco-teorico} revela cuatro brechas estructurales que impiden a las arquitecturas existentes satisfacer simultáneamente los criterios de latencia, disponibilidad, costo e interoperabilidad. Estas brechas se formulan a continuación en términos del requerimiento que queda sin satisfacer.
+
+\textbf{Brecha~B1 --- Latencia estructural incompatible con RF1.} Las cadenas de protocolos Thread--MQTT--HTTP--nube introducen 150--300~ms de latencia acumulada por sobrecarga de traducción y retornan tráfico a la nube para tareas que podrían resolverse localmente, excediendo el umbral P95~$<$~100~ms de RF1~\cite{laghariInternetThingsIoT2024}. El detalle cuantitativo se desarrolla en §\ref{sec:edge-vs-cloud}.
+
+\textbf{Brecha~B2 --- Disponibilidad limitada por dependencia WAN respecto a RF2.} Las arquitecturas centradas en la nube convierten al enlace WAN celular en punto único de fallo: durante las particiones se pierden simultáneamente la visualización en tiempo real, la ejecución de reglas de negocio, la persistencia histórica y la gestión remota, lo cual viola el requerimiento de operación sin conexión $\geq$72~h de RF2~\cite{laghariInternetThingsIoT2024,NISTFramework2022}.
+
+\textbf{Brecha~B3 --- Escalabilidad económica incompatible con RE2.} Las plataformas IoT en la nube cobran por volumen de mensajes y las opciones de enlace troncal evaluadas (LTE Cat-M1, NB-IoT) imponen OPEX recurrente por dispositivo, generando costos que crecen linealmente con la densidad de medidores y violan el umbral CAPEX~$<$~USD~\$200/pasarela y OPEX nulo de RE2~\cite{alsafranChallengesImplementingIoT2025,alsuwaidiSecuringSmartGrid2024}. La comparativa detallada se desarrolla en §\ref{sec:marco-soluciones-comerciales}.
+
+\textbf{Brecha~B4 --- Ausencia de interoperabilidad multifabricante respecto a RC5 y RE4.} Las interfaces propietarias dominantes en soluciones comerciales (Cisco, Dell, AWS) dificultan la sustitución de fabricantes y no implementan nativamente DLMS/COSEM ni LwM2M ni el mapeo a las siete entidades funcionales de ISO/IEC~30141, violando RC5 y RE4~\cite{tangResearchInteroperabilityIoT,ISOIEC30141v2024}.
+
+Estas cuatro brechas no se resuelven incorporando una sola tecnología, sino rediseñando la arquitectura completa de comunicación bajo principios de procesamiento en el borde, protocolos ligeros extremo a extremo (CoAP/LwM2M) y enlace troncal sin OPEX recurrente.
 
 
 %% ═══════════════════════════════════════════════════
 \section{Planteamiento del Problema}
+\label{sec:planteamiento-problema}
 %% ═══════════════════════════════════════════════════
 
-Las brechas descritas en la sección anterior ---dependencia de la nube, sobrecarga de protocolos, costos crecientes y falta de interoperabilidad--- no se resuelven incorporando una sola tecnología nueva, sino rediseñando la arquitectura completa de comunicación. Esta sección formaliza los tres problemas centrales, delimita el alcance de la investigación y formula la pregunta que guía el resto del trabajo. Como punto de partida, la Figura~\ref{fig:arquitectura-tres-niveles} presenta la visión general de la arquitectura jerárquica de tres niveles propuesta como respuesta a dichas brechas.
+A partir de los requerimientos (§\ref{sec:requerimientos}) y de las brechas identificadas (§\ref{sec:brechas}), el problema de investigación se formula como sigue. La Figura~\ref{fig:arquitectura-tres-niveles} presenta la visión general de la arquitectura jerárquica de tres niveles propuesta como respuesta.
 
 \input{fig_arquitectura_tres_niveles}
 
 \subsection{Definición del problema}
 
-Las redes de telemetría para energía inteligente enfrentan tres limitaciones interrelacionadas:
+\textbf{Problema~1 --- Latencia, disponibilidad e interoperabilidad de la red de telemetría AMI.} Dados los requerimientos RF1 (latencia P95~$<$~100~ms), RF2 (disponibilidad $>$99\% con operación sin conexión $\geq$72~h), RF3--RF4 (telemetría conforme a IEC~61000-4-30 y modelo DLMS/COSEM) y RC1--RC2 (60--100~nodos por pasarela con consumo $<$~150~mW por nodo), y dadas las brechas B1 (latencia estructural), B2 (dependencia WAN) y B4 (ausencia de interoperabilidad), no existe una arquitectura de referencia validada que combine red de campo IPv6 nativa, procesamiento en el borde con gestión estandarizada de dispositivos (LwM2M/CoAP) y mapeo explícito a ISO/IEC~30141, de modo que satisfaga estos cuatro umbrales simultáneamente en el caso de estudio del armario concentrador.
 
-\textbf{Problema~1 --- Sobrecarga de protocolos.} Las arquitecturas tradicionales (MQTT/JSON sobre TCP/IP) generan sobrecarga del 60--80\% en tramas IEEE~802.15.4 (MTU de 127~bytes). Un paquete MQTT/JSON típico (15--20~bytes útiles) transporta 48~bytes de encabezados, resultando en eficiencia menor al 30\%. Esta sobrecarga se amplifica en topologías en malla con múltiples saltos, acumulando latencias de 150--300~ms en 3--5 saltos y consumo energético excesivo en el canal de radio.
+\textbf{Problema~2 --- Costo total de propiedad del enlace troncal.} Dados los requerimientos RE1 (espectro no licenciado), RE2 (CAPEX~$<$~USD~\$200/pasarela, OPEX nulo) y RC3 (alcance $\geq$~500~m con penetración en edificaciones), y dada la brecha B3 (escalabilidad económica), no existe una caracterización empírica que demuestre la viabilidad de un enlace troncal sub-GHz no licenciado integrado con procesamiento en el borde, que reduzca el TCO a 5~años por más de un orden de magnitud respecto a las soluciones comerciales basadas en LTE Cat-M1 o NB-IoT.
 
-\textbf{Problema~2 --- Dependencia de conectividad WAN.} Las arquitecturas centradas en la nube dependen de enlaces WAN celulares cuya disponibilidad resulta insuficiente para infraestructura crítica~\cite{laghariInternetThingsIoT2024}. Durante las particiones WAN se pierden simultáneamente:
-\begin{itemize}
-    \item Visualización de telemetría en tiempo real.
-    \item Ejecución de reglas de negocio (alarmas, eventos).
-    \item Persistencia de datos históricos.
-    \item Gestión remota de dispositivos.
-\end{itemize}
-Las latencias estructurales superan 200~ms en P50 (mediana) y 450~ms en P99 (percentil 99), excediendo los requisitos de telemetría en tiempo real ($<$100~ms) y coordinación de microrredes ($<$50~ms).
-
-\textbf{Problema~3 --- Limitaciones del enlace troncal.} Las tecnologías de área amplia existentes no satisfacen simultáneamente los requisitos de rendimiento, latencia, alcance y costo:
-\begin{itemize}
-    \item LoRaWAN alcanza 50~kbps máximo con latencias de 1--5~s.
-    \item LTE Cat-M1 genera costos operativos recurrentes de conectividad que crecen linealmente con la cantidad de dispositivos.
-    \item Wi-Fi tradicional tiene alcance limitado a 50--100~m.
-\end{itemize}
-La ausencia de una tecnología que combine alcance superior a 1~km, rendimiento mayor a 4~Mbps, latencia menor a 50~ms y espectro no licenciado limita la viabilidad económica de redes de telemetría a gran escala~\cite{kandahNavigatingIoTSecurity2025}.
-
-Estos tres problemas están interrelacionados: la sobrecarga de protocolos agrava la dependencia WAN (al requerir mayor ancho de banda), mientras que la falta de un enlace troncal adecuado impide migrar el procesamiento al borde. Para abordarlos de manera conjunta es necesario primero delimitar el alcance de la investigación.
+Ambos problemas son interdependientes: la sobrecarga de protocolos amplifica la dependencia WAN, y la ausencia de un enlace troncal adecuado impide migrar el procesamiento al borde. Su resolución conjunta requiere primero delimitar el alcance de la investigación.
 
 \subsection{Delimitación}
 
@@ -244,99 +153,127 @@ A partir del problema definido y su delimitación, la pregunta central que orien
 \label{sec:justificacion-investigacion}
 %% ═════════════════════════════════════════════════
 
-\subsection{Necesidad técnica}
+La justificación de esta tesis se segmenta en tres dimensiones --- \emph{técnica}, \emph{económica} y \emph{académica} --- siguiendo el mismo patrón analítico empleado en §\ref{sec:contexto-motivacion}: para cada dimensión se enuncia un \emph{claim}, se respalda con \emph{evidencia} (literatura o requerimiento), se justifica por qué la tesis aborda esa dimensión, se reconoce el \emph{trade-off} aceptado y se declara la \emph{frontera} de lo que no se cubre. El descarte comparativo de tecnologías alternativas (5G/NR-Light, NB-IoT, PLC, LoRaWAN) se desarrolla en §\ref{sec:lpwan-technologies} del Marco; aquí solo se justifica \emph{por qué} esta tesis es necesaria y \emph{qué} aporta.
 
-Las arquitecturas de computación en el borde para IoT industrial requieren procesamiento local, almacenamiento persistente y autonomía sin conexión que las soluciones centradas en la nube no garantizan~\cite{satyanarayananEmergenceEdgeComputing2017,bonomiFogComputingItsRole2012}. Las alternativas de enlace troncal evaluadas presentan limitaciones que restringen su aplicabilidad:
+\subsection{Dimensión técnica}
 
-\begin{itemize}
-    \item \textbf{5G/NR-Light:} costos operativos recurrentes significativos en espectro licenciado, que limitan la viabilidad a gran escala.
-    \item \textbf{NB-IoT:} rendimiento de 250~kbps, insuficiente para telemetría trifásica IEC~61000-4-30 (se requieren al menos 468~kbps).
-    \item \textbf{PLC (G3-PLC/PRIME):} requiere dispositivos de derivación por transformador con costos significativos por unidad.
-    \item \textbf{LoRaWAN:} rendimiento máximo de 50~kbps, inadecuado para agregación de datos de múltiples medidores.
-\end{itemize}
+\textbf{Claim:} Las arquitecturas dispositivo-nube tradicionales no satisfacen simultáneamente RF1 (latencia P95~$<$~100~ms) y RF2 (operación sin conexión $\geq$72~h) en el escenario del armario concentrador.
+\textbf{Evidencia:} las cadenas Thread--MQTT--HTTP--nube introducen 150--300~ms de latencia acumulada~\cite{laghariInternetThingsIoT2024} y dependen del enlace WAN como punto único de fallo~\cite{NISTFramework2022} (Brechas B1 y B2 de §\ref{sec:brechas}).
+\textbf{Selección:} la tesis aborda esta dimensión porque ningún componente aislado (mejor procesador, mejor red) resuelve el problema; se requiere el rediseño arquitectónico completo bajo principios de procesamiento en el borde y protocolos ligeros extremo a extremo~\cite{satyanarayananEmergenceEdgeComputing2017,bonomiFogComputingItsRole2012}.
+\textbf{Trade-off aceptado:} mover el procesamiento al borde incrementa la complejidad de despliegue y operación de la pasarela frente a una solución centralizada en la nube; se acepta como precio por la independencia del WAN.
+\textbf{Frontera:} no se aborda la optimización de algoritmos de detección de fallos en el borde (analítica avanzada, ML) más allá de las reglas de negocio de ThingsBoard Edge.
 
-Wi-Fi HaLow satisface simultáneamente los tres requisitos: rendimiento de hasta 43,3~Mbps, espectro no licenciado sin costos recurrentes, y alcance de 1~km sin línea de vista en entorno urbano~\cite{amrilPerformanceEvaluationWiFi2025,IEEE802.11ah-2016}.
+\subsection{Dimensión económica}
 
-No obstante, la superioridad técnica de una solución no basta si su despliegue resulta más costoso que las alternativas. A continuación se analiza la viabilidad económica de la arquitectura propuesta.
+\textbf{Claim:} La arquitectura propuesta reduce el TCO a 5~años por más de un orden de magnitud frente a soluciones LTE Cat-M1/NB-IoT cumpliendo RE2 (CAPEX~$<$~USD~\$200/pasarela, OPEX nulo).
+\textbf{Evidencia:} las plataformas IoT en la nube y los enlaces celulares cobran por volumen de mensajes y por dispositivo respectivamente~\cite{alsafranChallengesImplementingIoT2025,hossainComparativeStudyIoTCommunication2018}, mientras que el espectro ISM 902--928~MHz es libre.
+\textbf{Selección:} la dimensión económica es decisiva en el contexto latinoamericano, donde el OPEX recurrente determina la viabilidad de la modernización AMI en operadores regionales.
+\textbf{Trade-off aceptado:} la inversión inicial en infraestructura local (RPi4 + HaLow) es mayor que la de un módem LTE; el retorno depende de la densidad de medidores por pasarela.
+\textbf{Frontera:} no se modela el costo de mantenimiento humano (visitas técnicas, recambio de hardware) ni se realiza análisis financiero formal (VAN/TIR) más allá del cálculo de TCO comparativo.
 
-\subsection{Viabilidad económica}
+\subsection{Dimensión académica y sectorial}
 
-La principal ventaja económica de la arquitectura propuesta radica en la eliminación de costos recurrentes de conectividad celular. Mientras que las soluciones basadas en LTE Cat-M1 o NB-IoT incurren en tarifas mensuales por dispositivo que se acumulan linealmente con la escala del despliegue, Wi-Fi HaLow opera en espectro no licenciado (902--928~MHz) con inversión única de capital~\cite{hossainComparativeStudyIoTCommunication2018}. Esta diferencia estructural favorece la arquitectura propuesta a medida que crece el número de medidores, al sustituir gastos operativos recurrentes por una inversión puntual en infraestructura local.
-
-Más allá del ahorro cuantificable, la investigación busca generar conocimiento transferible al ámbito académico y aportar soluciones al sector energético latinoamericano.
-
-\subsection{Aporte académico e impacto sectorial}
-
-La investigación contribuye al cuerpo de conocimiento en arquitecturas IoT heterogéneas mediante:
-
-\begin{enumerate}
-    \item Arquitectura de referencia con múltiples capas físicas (multi-PHY) conforme ISO/IEC~30141.
-    \item Caracterización empírica de la integración Thread--HaLow con malla 802.11s (latencias, rendimiento, fiabilidad).
-\end{enumerate}
-
-Desde la perspectiva aplicada, la propuesta es relevante para operadores de red y comercializadores que requieren modernizar AMI con estándares abiertos, reduciendo dependencia de proveedores cerrados en el contexto de la transición energética latinoamericana.
+\textbf{Claim:} No existe una arquitectura de referencia validada empíricamente que integre 6LoWPAN/CoAP/LwM2M con Wi-Fi HaLow y mapeo explícito a ISO/IEC~30141:2024.
+\textbf{Evidencia:} la literatura reporta integraciones parciales (Thread sin HaLow, HaLow sin LwM2M, LwM2M sin borde)~\cite{alharbi6LoWPANBasedAMI2021,jonnakutiEDGEBASEDFAULTDETECTION}; no se identifica caracterización conjunta de latencias, rendimiento y disponibilidad de la pila completa.
+\textbf{Selección:} la tesis llena este vacío publicando código abierto, configuraciones reproducibles y conjuntos de datos del piloto.
+\textbf{Trade-off aceptado:} la profundidad del aporte técnico se prioriza sobre la generalización a otros dominios (agua, gas, industrial); el aporte se circunscribe a energía residencial/comercial.
+\textbf{Frontera:} no se cubren (i)~aspectos sociales del despliegue de AMI (privacidad del consumidor, aceptación), (ii)~análisis regulatorio profundo país por país (CRC, ANE, ARCEP, FCC), ni (iii)~modelos de negocio para operadores. Estos quedan como trabajo futuro para extensión a \emph{journal}.
 
 %% ═════════════════════════════════════════════════
 \section{Objetivos}
+\label{sec:objetivos}
 %% ═════════════════════════════════════════════════
+
+Los objetivos se derivan directamente de los requerimientos (§\ref{sec:requerimientos}) y de las brechas (§\ref{sec:brechas}), y se descomponen siguiendo la misma estructura analítica utilizada para seleccionar la red de campo en §\ref{sec:contexto-motivacion}: \emph{segmentación} del problema en componentes arquitectónicos, \emph{criterio cuantificado} para cada uno, \emph{selección explícita} de alcance, \emph{razones} del criterio y \emph{frontera} de lo que queda fuera.
 
 \subsection{Objetivo general}
 
-Diseñar, implementar y validar una arquitectura IoT centrada en pasarelas de borde para energía inteligente que integre:
+Diseñar, implementar y validar una arquitectura IoT centrada en pasarelas de borde para energía inteligente que integre (i)~la pila 6LoWPAN/CoAP/LwM2M sobre IEEE~802.15.4 en la red de campo, (ii)~procesamiento en el borde para telemetría en tiempo real, y (iii)~conectividad IEEE~802.11ah multibanda (2/4/8~MHz) en el enlace troncal, garantizando \emph{simultáneamente} latencia extremo a extremo P95~$<$~100~ms (RF1), reducción de tráfico WAN superior al 65\,\% y disponibilidad mayor al 99\,\% durante particiones WAN $\geq$72~h (RF2), con conformidad DLMS/COSEM (IEC~62056) e ISO/IEC~30141:2024.
 
-\begin{enumerate}
-    \item Pila de protocolos 6LoWPAN/CoAP/LwM2M sobre IEEE~802.15.4 para la red de campo.
-    \item Procesamiento en el borde para telemetría en tiempo real.
-    \item Conectividad IEEE~802.11ah multibanda (2/4/8~MHz) para el enlace troncal.
-\end{enumerate}
-
-Garantizando latencia extremo a extremo menor a 100~ms, reducción de tráfico WAN superior al 65\% y disponibilidad mayor al 99\%, con conformidad DLMS/COSEM (IEC~62056) e ISO/IEC~30141:2024.
-
-Para alcanzar este objetivo general, se descompone el trabajo en cuatro objetivos específicos. Cada uno aborda un componente distinto de la arquitectura y se desarrolla en el capítulo correspondiente.
+\textbf{Alcance del objetivo general.} El verbo rector es ``diseñar, implementar y validar''. ``Validar'' significa demostrar el cumplimiento de los umbrales mediante un piloto de 30 días con 1~medidor físico y 59~nodos sintéticos (RC1) en el escenario del armario concentrador (§\ref{sec:escenario-armarios}); no incluye validar MTTF a 5 años, certificación formal Thread/DLMS, ni operación en extremos industriales ($-40$\,°C a $+85$\,°C).
 
 \subsection{Objetivos específicos}
+\label{sec:objetivos-especificos}
 
-Los cuatro objetivos específicos se organizan siguiendo la estructura de la arquitectura propuesta, desde el diseño general hasta la validación experimental.
+La descomposición sigue la arquitectura de tres niveles: nodo (OE1), pasarela de borde + troncal (OE2--OE3) y piloto integral (OE4). Para cada OE se declara: \emph{criterio de éxito cuantificado}, \emph{razón} del criterio (trazabilidad a RF/RC/RE), y \emph{frontera} (qué queda fuera del OE).
 
-\textbf{OE1 --- Arquitectura multicapa:} Diseñar arquitectura de cuatro capas (Conectividad, Orquestación, Procesamiento, Aplicación) alineada con ISO/IEC~30141:2024, con requisitos de latencia extremo a extremo menor a 700~ms, procesamiento en el borde menor a 10~ms P99 y disponibilidad mayor al 99\% durante particiones WAN. Desarrollo en Capítulo~\ref{chap:nodo-iot}.
+\paragraph{OE1 --- Arquitectura multicapa y nodo IoT.}
+\textit{Acción:} Diseñar la arquitectura de cuatro capas (Conectividad, Orquestación, Procesamiento, Aplicación) alineada con ISO/IEC~30141:2024 e implementar los nodos Zephyr con radio IEEE~802.15.4, Thread~1.4, LwM2M e interfaz RS-485 DLMS/COSEM.
+\textit{Criterio cuantificado:} consumo medio del nodo $<$150~mW desde el puerto auxiliar 5\,V (200~mA disponibles); tiempo de aprovisionamiento por nodo $<$10~min.
+\textit{Razón:} traza directa a RC2 (energía del nodo) y RF5 (gestión); el umbral 150~mW deja $\sim$25\,\% de margen sobre los 200~mA del puerto y es el límite reportado para nodos Thread comerciales bajo carga LwM2M.
+\textit{Frontera:} no se diseña el ASIC ni el front-end de medición de potencia (se reutiliza el medidor Emsitech P2000-T); no se aborda la conformidad CE/FCC del nodo. Desarrollo en Capítulo~\ref{chap:nodo-iot}.
 
-\textbf{OE2 --- Integración Thread--HaLow:} Implementar OTBR con nRF52840 RCP sobre RPi4, configurar enlaces HaLow (Morse Micro MM6108) en 2/4/8~MHz con topologías estrella y malla 802.11s, y validar la cadena nodo$\rightarrow$OTBR$\rightarrow$HaLow$\rightarrow$plataforma con tasa de entrega superior al 98\% y latencia por salto menor a 30~ms en 3--5 saltos con 60 nodos. Desarrollo en Capítulo~\ref{chap:gateway-halow}.
+\paragraph{OE2 --- Integración Thread--HaLow y enlace troncal.}
+\textit{Acción:} Implementar OTBR con nRF52840 RCP sobre RPi4 y configurar enlaces HaLow (Morse Micro MM6108) en 2/4/8~MHz con topologías estrella y malla 802.11s.
+\textit{Criterio cuantificado:} tasa de entrega $>$98\,\% y latencia por salto $<$30~ms en 3--5 saltos con 60 nodos; alcance HaLow $>$500~m en línea de vista.
+\textit{Razón:} traza a RF1 (latencia P95~$<$~100~ms requiere $<$30~ms por salto para 3 saltos con margen) y RC3 (penetración $\geq$500~m).
+\textit{Frontera:} no se evalúan topologías de más de 5 saltos (la malla 802.11s pierde determinismo) ni canales con interferencia controlada (cámara anecoica); validación en entorno urbano/suburbano. Desarrollo en Capítulo~\ref{chap:gateway-halow}.
 
-\textbf{OE3 --- Plataforma en el borde en contenedores:} Desplegar 3 contenedores Docker (ThingsBoard Edge~3.6.2 con transporte LwM2M integrado, PostgreSQL~15, Redis~7.0) y OTBR como servicio nativo de OpenWRT sobre RPi4 4~GB, verificando huella de memoria menor a 3\,400~MB, latencia de ingesta menor a 10~ms P99, y almacenamiento sin conexión de más de 100\,000 mensajes con sincronización tras más de 72~h de desconexión. Desarrollo en Capítulo~\ref{chap:gateway-halow}.
+\paragraph{OE3 --- Plataforma en el borde en contenedores.}
+\textit{Acción:} Desplegar 3 contenedores Docker (ThingsBoard Edge~3.6.2 con transporte LwM2M integrado, PostgreSQL~15, Redis~7.0) y OTBR como servicio nativo de OpenWRT sobre RPi4 4~GB.
+\textit{Criterio cuantificado:} huella de memoria $<$3\,400~MB; latencia de ingesta P99~$<$10~ms; almacenamiento sin conexión de $>$100\,000 mensajes con sincronización tras $>$72~h de desconexión.
+\textit{Razón:} traza a RF2 (disponibilidad $>$99\,\% y operación sin conexión $\geq$72~h) y RE2 (CAPEX por pasarela $<$USD~\$200, alcanzable con RPi4 4~GB).
+\textit{Frontera:} no se evalúa escalabilidad a $>$1\,000 mensajes/s ni alta disponibilidad multi-pasarela (clúster activo/activo); el almacenamiento es local sin replicación geo-distribuida. Desarrollo en Capítulo~\ref{chap:gateway-halow}.
 
-\textbf{OE4 --- Caso de estudio:} Desplegar piloto con 1 medidor físico Emsitech P2000-T y nodos simulados (radio IEEE~802.15.4, Thread~1.4, LwM2M, interfaz RS-485 DLMS/COSEM), validando cumplimiento de todos los umbrales y publicando conjuntos de datos abiertos. Desarrollo en Capítulo~\ref{chap:resultados}.
+\paragraph{OE4 --- Caso de estudio y validación experimental.}
+\textit{Acción:} Desplegar el piloto con 1~medidor físico Emsitech P2000-T y 59~nodos sintéticos en el escenario del armario concentrador, durante 30~días, y publicar el conjunto de datos abierto.
+\textit{Criterio cuantificado:} cumplimiento simultáneo de OV1--OV7 (§\ref{sec:hipotesis}) con $>$99\,\% de lecturas exitosas durante el periodo.
+\textit{Razón:} traza a todos los RF/RC/RE; el piloto de 30~días es suficiente para detectar deriva en $\sim$2\,500\,000 mensajes/nodo y caracterizar la cola de latencia hasta P99.
+\textit{Frontera:} no se valida MTTF a 5 años, ni el comportamiento ante eventos meteorológicos extremos, ni un despliegue rural; los datos son sintéticos en 59~nodos (no provienen de consumo real de usuarios). Desarrollo en Capítulo~\ref{chap:resultados}.
 
-Los objetivos anteriores se operacionalizan mediante hipótesis cuantificables que definen los umbrales de validación.
+Los criterios cuantificados se operacionalizan en las hipótesis OV1--OV7 (§\ref{sec:hipotesis}), que definen el procedimiento estadístico de validación.
 
 
 %% ═══════════════════════════════════════════════════
 \section{Hipótesis de trabajo}
+\label{sec:hipotesis}
 %% ═══════════════════════════════════════════════════
 
-\textbf{Hipótesis general:} Una arquitectura IoT para energía inteligente basada en (1)~6LoWPAN/CoAP/LwM2M sobre IEEE~802.15.4, (2)~pasarelas de borde con procesamiento local, y (3)~conectividad IEEE~802.11ah con selección adaptativa de ancho de banda, ofrece una alternativa viable frente a arquitecturas MQTT/HTTP sobre conectividad celular. Específicamente, se espera:
+A diferencia de los objetivos específicos (OE1--OE4), que enuncian \emph{qué se construye} y bajo qué criterio de aceptación, las hipótesis OV1--OV7 enuncian \emph{por qué se espera} que la combinación arquitectónica propuesta produzca cada propiedad emergente. Cada OV se compone de tres elementos: (i)~un \emph{claim arquitectónico} que atribuye una propiedad observable a una decisión de diseño concreta (no al umbral en sí); (ii)~una \emph{predicción cuantificable} que opera el claim como experimento, con configuración, métrica, umbral, confianza estadística y trazabilidad a RF/RC/RE (§\ref{sec:requerimientos}); y (iii)~una \emph{condición de falsificación} que enuncia qué resultado experimental refutaría el claim. Este formato es estrictamente popperiano: cada OV es falsable, separando la afirmación causal (claim) de su test empírico (predicción) y de su umbral de refutación (falsificación).
 
-\begin{itemize}
-    \item Reducción de latencia extremo a extremo superior al 70\%.
-    \item Reducción de sobrecarga de paquetes superior al 60\%.
-    \item Reducción de tráfico WAN superior al 65\%.
-    \item Disponibilidad superior al 99\% durante desconexiones prolongadas.
-\end{itemize}
+\subsection{Hipótesis general}
 
-Estos umbrales se fundamentan en resultados reportados en la literatura: reducción de tráfico WAN del 70\% mediante procesamiento en el borde~\cite{jonnakutiEDGEBASEDFAULTDETECTION}, reducción de sobrecarga del 87\% con compresión IPHC en redes 6LoWPAN~\cite{alharbi6LoWPANBasedAMI2021}, y requisitos de disponibilidad superior al 99\% establecidos por marcos regulatorios de infraestructura crítica~\cite{NISTFramework2022}. Los objetivos de validación específicos (OV1--OV7) que operacionalizan estas hipótesis son:
+Una arquitectura IoT para energía inteligente que combine (i)~la pila 6LoWPAN/CoAP/LwM2M sobre IEEE~802.15.4 en la red de campo, (ii)~la co-localización del procesamiento de borde, persistencia local y \emph{border-routing} IPv6 en una única pasarela embebida y (iii)~un enlace troncal IEEE~802.11ah con selección adaptativa de ancho de banda, satisfará \emph{simultáneamente} los requerimientos RF1, RF2, RC1--RC3 y RE2 en el escenario del armario concentrador (§\ref{sec:escenario-armarios}). El claim central es que ningún componente aislado produce la combinación de latencia $<$100\,ms, disponibilidad $>$99\,\% y reducción de tráfico WAN $>$65\,\%: solo la integración estructural de los tres elementos lo logra. Los umbrales esperados ---reducción de latencia $>$70\,\%, reducción de sobrecarga $>$60\,\%, reducción de tráfico WAN $>$65\,\% y disponibilidad $>$99\,\%--- se fundamentan en literatura previa: reducción de tráfico WAN del 70\,\% mediante procesamiento en el borde~\cite{jonnakutiEDGEBASEDFAULTDETECTION}, reducción de sobrecarga del 87\,\% con compresión IPHC en 6LoWPAN~\cite{alharbi6LoWPANBasedAMI2021} y disponibilidad $>$99\,\% exigida por marcos regulatorios de infraestructura crítica~\cite{NISTFramework2022}.
 
-\begin{enumerate}
-    \item[OV1] \textbf{Viabilidad arquitectura 4 niveles:} despliegue funcional continuo ($\geq$30 días) con $>$99\% de lecturas exitosas.
-    \item[OV2] \textbf{Thread simplifica comisionado:} tiempo de aprovisionamiento por nodo menor a 10~min.
-    \item[OV3] \textbf{Latencia de borde en tiempo real:} latencia P95 en el borde $<$10~ms; reducción extremo a extremo $>$70\% frente a línea base centrada en la nube.
-    \item[OV4] \textbf{Alcance HaLow:} enlace funcional $>$500~m en línea de vista (LOS).
-    \item[OV5] \textbf{Consumo de nodo:} nodo alimentado desde medidor con consumo $<$150~mW.
-    \item[OV6] \textbf{Disponibilidad:} tiempo activo $>$99\% con cero pérdida de mensajes durante desconexiones WAN prolongadas.
-    \item[OV7] \textbf{Reducción de tráfico WAN:} el procesamiento en el borde reduce el tráfico WAN $>$70\% frente a arquitectura directa a la nube.
-\end{enumerate}
+\subsection{Hipótesis específicas (OV1--OV7)}
+\label{sec:hipotesis-especificas}
 
-Su validación cuantitativa se detalla en la §\ref{sec:resultados-validacion-hipotesis}.
+\paragraph{OV1 --- Viabilidad operacional integral de la pasarela co-localizada.}
+\emph{Claim:} La co-localización de las funciones de procesamiento de borde, persistencia local y \emph{border-routing} IPv6 en una única pasarela embebida (Raspberry~Pi~4 + OpenWRT + OTBR + ThingsBoard~Edge contenedorizado) es operacionalmente sostenible durante operación continua sin acoplamiento sincrónico con servicios en la nube; el desacoplamiento Thread$\rightarrow$LwM2M$\rightarrow$almacén local elimina el WAN como punto único de fallo durante la ingesta.
+\emph{Predicción cuantificable:} En un piloto de 30~días con 1~medidor físico Emsitech P2000-T y 59~nodos sintéticos (RC1), la tasa de lecturas exitosas extremo a extremo superará 99\,\% sobre $\sim$2{,}5\,M de mensajes/nodo, satisfaciendo RF2 y RF3.
+\emph{Condición de falsificación:} Pérdidas no recuperables $>$1\,\% en cualquier ventana móvil de 24~h, o necesidad de reinicio operacional $\geq$1 vez al mes, o fallo de sincronización tras restauración WAN. \emph{Frontera:} no extrapolable a 60--100~nodos físicos ni a 5~años de operación.
 
-Para validar estas hipótesis se diseñó una metodología en cuatro fases que se describe a continuación.
+\paragraph{OV2 --- Eficiencia estructural del comisionado Thread/LwM2M.}
+\emph{Claim:} La adopción de Thread~1.4 con comisionado fuera de banda por BLE+QR y registro LwM2M sobre CoAP \emph{reduce estructuralmente} el tiempo de incorporación de un nodo frente al par tradicional Wi-Fi~+~MQTT/HTTP, al evitar handshakes TCP/TLS encadenados, traducciones de pasarela aplicativa y descubrimiento por \emph{broadcast}; el coste de incorporación queda dominado por el escaneo QR y la autenticación DTLS, no por el protocolo.
+\emph{Predicción cuantificable:} En 60 nodos comisionados secuencialmente con Thread~1.4 + BLE+QR, el tiempo mediano por nodo será $<$10~min sobre $n=60$ comisionados, satisfaciendo RF5.
+\emph{Condición de falsificación:} Mediana $\geq$10~min sostenida, o $>$20\,\% de nodos requiere recomisionado manual, o el descubrimiento del \emph{commissioner} excede 2~min en mediana. \emph{Frontera:} no cubre comisionado en lotes ($>$10 nodos simultáneos) ni \emph{out-of-band} avanzado (NFC, BLE provisioning industrial).
+
+\paragraph{OV3 --- El borde como dominio de latencia acotada.}
+\emph{Claim:} Mover la terminación del lazo de telemetría desde la nube hacia un broker LwM2M co-localizado con el OTBR \emph{transforma el modelo de latencia}: el componente dominante deja de ser la RTT WAN (decenas a cientos de ms, alta varianza) y pasa a ser el procesamiento local determinista (cola M/M/1 con $\mu\gg\lambda$); el extremo del lazo es acotable por diseño, no por sintonización de red.
+\emph{Predicción cuantificable:} Bajo carga de $N\in\{5,10,25\}$ nodos a periodos 5/30/60~s durante 72~h por configuración, la latencia de ingesta en el borde será P95~$<$10~ms y la reducción extremo a extremo respecto a la línea base nube será $>$70\,\%, satisfaciendo RF1. Percentiles con IC~95\,\% por \emph{bootstrap}.
+\emph{Condición de falsificación:} P95 $\geq$10~ms en cualquier configuración estable, o reducción $<$70\,\% frente a línea base, o pendiente positiva significativa de P95 respecto a $N$ (el borde se satura antes de los 25 nodos). \emph{Frontera:} no cubre $N>25$ ni periodos $<$5~s.
+
+\paragraph{OV4 --- Penetración estructural del enlace troncal HaLow en banda sub-GHz.}
+\emph{Claim:} La elección de IEEE~802.11ah (HaLow) en 902--928\,MHz como troncal \emph{en lugar de} Wi-Fi 2{,}4/5\,GHz o celular licenciado se justifica porque la propagación sub-GHz penetra estructuralmente las barreras del edificio (sótanos, concreto armado, cuartos técnicos) descritas en RC3, y el ancho de banda estrecho (2/4/8\,MHz) mantiene el presupuesto de enlace incluso a baja SNR; el alcance no depende de la potencia, sino de la banda.
+\emph{Predicción cuantificable:} En configuración MM6108 a 902--928\,MHz con 2/4/8\,MHz, la entrega de paquetes será $>$98\,\% a $>$500~m en línea de vista, sobre $n=30$ mediciones por distancia, satisfaciendo RC3 y RE1.
+\emph{Condición de falsificación:} Entrega $<$98\,\% a 500~m en línea de vista en cualquiera de los tres anchos, o necesidad de potencia superior al límite FCC Part~15 para alcanzar el umbral, o degradación $>$10\,dB respecto al modelo de pérdidas teórico. \emph{Frontera:} no se evalúa NLoS rural ni distancias $>$1\,000~m.
+
+\paragraph{OV5 --- Suficiencia energética del nodo Thread/LwM2M con telemetría periódica.}
+\emph{Claim:} El perfil energético de un nodo Zephyr con Thread~1.4 + LwM2M en modo MED con telemetría periódica permite operar bajo el presupuesto del puerto auxiliar 5\,V/200\,mA del medidor \emph{sin requerir circuitería adicional de gestión de energía}; el ciclo de trabajo dominante (escucha intermitente + ráfaga de transmisión cada 30\,s) es estructuralmente compatible con RC2.
+\emph{Predicción cuantificable:} Bajo operación nominal (Thread~1.4 + LwM2M, telemetría a 30~s), el consumo medio desde el puerto auxiliar 5\,V será $<$150~mW, sobre ventana de 24~h con muestreo de 1~Hz, satisfaciendo RC2.
+\emph{Condición de falsificación:} Consumo medio $\geq$150~mW sostenido, o picos $>$200~mA que dispararían la protección del puerto, o aumento $>$20\,\% al activar reportes de calidad de energía. \emph{Frontera:} no cubre actualización OTA simultánea (ráfaga) ni temperaturas $<$0\,°C o $>$40\,°C.
+
+\paragraph{OV6 --- Tolerancia a partición WAN por almacenamiento local desacoplado.}
+\emph{Claim:} La persistencia local (PostgreSQL~15 en la pasarela) operando como búfer asíncrono entre ingesta LwM2M y sincronización a la nube \emph{desacopla} la disponibilidad del lazo de telemetría de la disponibilidad del enlace WAN; el sistema mantiene servicio aguas abajo del border-router porque el almacenamiento es la frontera del dominio crítico, no la nube.
+\emph{Predicción cuantificable:} Bajo desconexión simulada del WAN de 48~h, el tiempo activo del sistema será $>$99\,\% con cero pérdida de mensajes y sincronización completa al restaurar el enlace, sobre verificación binaria del conjunto de mensajes almacenados, satisfaciendo RF2.
+\emph{Condición de falsificación:} Pérdida de cualquier mensaje durante la ventana de partición, o fallo de sincronización tras restauración, o saturación del almacenamiento antes de las 48~h. \emph{Frontera:} no cubre desconexiones $>$72~h (límite de $>$100\,000 mensajes a 30~s).
+
+\paragraph{OV7 --- Filtrado y agregación en el borde como reductor estructural de tráfico WAN.}
+\emph{Claim:} El motor de reglas de ThingsBoard~Edge ejecutado localmente \emph{cambia la unidad de información} enviada al WAN: en lugar de mensajes crudos por nodo, sube eventos agregados y excepciones; esta transformación reduce el caudal WAN en proporción al ratio de redundancia de la telemetría, y la reducción es estructural (depende del modelo de datos), no oportunista (depende de la red).
+\emph{Predicción cuantificable:} Bajo procesamiento de reglas de negocio en el borde (filtrado de telemetría redundante, agregación de eventos), el tráfico WAN se reducirá $>$70\,\% frente a la arquitectura directa a la nube, sobre razón empírica de 30~días de operación, satisfaciendo RE2.
+\emph{Condición de falsificación:} Reducción $<$65\,\% (umbral mínimo del OG) en cualquier ventana semanal estable, o aumento de latencia P95 atribuible al motor de reglas $>$5\,ms, o pérdida de información crítica (alarmas no propagadas). \emph{Frontera:} no cubre escenarios con alta tasa de eventos críticos en que todos los mensajes deban subir sin filtrar.
+
+La verificación cuantitativa de las predicciones OV1--OV7 y la evaluación explícita de las condiciones de falsificación se detallan en §\ref{sec:resultados-validacion-hipotesis}.
 
 
 %% ═══════════════════════════════════════════════════
@@ -379,31 +316,52 @@ A continuación se delimitan los alcances y las limitaciones del trabajo para en
 
 %% ═══════════════════════════════════════════════════
 \section{Alcances y Limitaciones}
+\label{sec:alcances-limitaciones}
 %% ═══════════════════════════════════════════════════
 
-Toda investigación opera dentro de fronteras que condicionan la interpretación de sus resultados. En esta sección se explicitan, por un lado, los alcances que definen lo que el trabajo efectivamente entrega y, por otro, las limitaciones que acotan la generalización de las conclusiones.
+Esta sección aplica el mismo patrón analítico de §\ref{sec:contexto-motivacion}: \emph{segmenta} la frontera del trabajo en tres bloques --- \emph{alcances} (lo que el trabajo entrega), \emph{limitaciones} (lo que queda fuera) y \emph{cuándo-relevante} (en qué escenario una limitación se vuelve crítica) --- declarando para cada ítem la dimensión afectada y la razón de la frontera. Cierra distinguiendo trabajo futuro inmediato (extensión natural del piloto) de extensión a \emph{journal} (nuevo aporte académico).
 
-\textbf{Alcances:}
+\subsection{Alcances: lo que el trabajo entrega}
+
+Para cada alcance se indica la dimensión cubierta y el requerimiento al que da respuesta.
+
 \begin{enumerate}
-    \item Arquitectura multicapa completa con mapeo a vistas ISO/IEC~30141.
-    \item Prototipo funcional en RPi4 con Thread (nRF52840 RCP), HaLow (MM6108), OpenWRT y 3 contenedores Docker (ThingsBoard Edge, PostgreSQL, Redis).
-    \item Nodos Zephyr con radio IEEE~802.15.4, Thread~1.4, LwM2M, RS-485 DLMS/COSEM y actualización remota (OTA).
-    \item Validación experimental de latencia, rendimiento, disponibilidad y resiliencia de enlace troncal.
-    \item Documentación técnica completa con guías de instalación y código fuente en GitHub.
+    \item \textbf{Arquitectura multicapa de referencia} con mapeo explícito a las 7 vistas funcionales de ISO/IEC~30141:2024. \emph{Dimensión:} interoperabilidad (RE4). \emph{Razón:} la arquitectura se convierte en plantilla reutilizable más allá del piloto.
+    \item \textbf{Prototipo funcional integrado} en RPi4 con Thread (nRF52840 RCP), HaLow (MM6108), OpenWRT y 3 contenedores Docker (ThingsBoard Edge con LwM2M integrado, PostgreSQL, Redis). \emph{Dimensión:} implementación (OE2--OE3). \emph{Razón:} demuestra integración real, no solo simulación.
+    \item \textbf{Nodos Zephyr} con radio IEEE~802.15.4, Thread~1.4, LwM2M, interfaz RS-485 DLMS/COSEM y actualización remota OTA. \emph{Dimensión:} nodo (OE1, RF4, RF5).
+    \item \textbf{Validación experimental cuantitativa} de latencia, rendimiento, disponibilidad y resiliencia (30~días, OV1--OV7). \emph{Dimensión:} validación (OE4).
+    \item \textbf{Documentación abierta} con guías de instalación, código fuente y datos del piloto en repositorio público GitHub. \emph{Dimensión:} reproducibilidad académica.
 \end{enumerate}
 
-\textbf{Limitaciones:}
+\subsection{Limitaciones: lo que queda fuera y por qué}
+
+Para cada limitación se indica la dimensión afectada y la razón de la frontera.
+
 \begin{enumerate}
-    \item Validación con 1 medidor físico y nodos simulados, 2 pasarelas, sin escalar a miles de dispositivos.
-    \item Dependencia del circuito integrado Morse Micro MM6108 (único HaLow comercial en 2024).
-    \item Conformidad funcional sin certificación formal Thread ni DLMS/COSEM.
-    \item Seguridad TLS/X.509 implementada pero sin auditoría de penetración.
-    \item Entorno urbano/suburbano sin validación rural ni en extremos industriales ($-$40\,°C a +85\,°C).
-    \item Banda ISM 902--928~MHz (América); requiere adaptación para Europa/Asia.
-    \item Datos de validación sintéticos, sin datos reales de consumo de usuarios.
+    \item \textbf{Escala de validación:} 1~medidor físico + 59~nodos sintéticos + 2~pasarelas; no se escala a miles de dispositivos. \emph{Dimensión:} RC1. \emph{Razón:} restricción de recursos del piloto académico; la arquitectura es escalable por diseño pero la validación empírica no cubre esa frontera.
+    \item \textbf{Dependencia de hardware HaLow:} chipset Morse Micro MM6108 (único comercial en 2024--2026). \emph{Dimensión:} portabilidad. \emph{Razón:} no existe segunda fuente; cuando aparezcan competidores la portabilidad debe revalidarse.
+    \item \textbf{Sin certificación formal Thread ni DLMS/COSEM:} solo conformidad funcional verificada en piloto. \emph{Dimensión:} despliegue comercial. \emph{Razón:} la certificación formal cuesta $>$USD~\$50\,000 y requiere laboratorio acreditado, fuera del alcance académico.
+    \item \textbf{Seguridad sin auditoría:} TLS/X.509 y DTLS~1.2 implementados, sin \emph{penetration test} ni análisis formal de superficie de ataque. \emph{Dimensión:} ciberseguridad (NIST CSF).
+    \item \textbf{Entorno urbano/suburbano:} sin validación rural (cobertura, multipath largos) ni en extremos industriales ($-40$\,°C a $+85$\,°C). \emph{Dimensión:} entorno físico.
+    \item \textbf{Banda 902--928~MHz (América):} requiere adaptación para Europa (863--868~MHz) y Asia/Japón (916--927~MHz) con re-certificación de potencia y ciclo de trabajo. \emph{Dimensión:} regulatoria (RE1).
+    \item \textbf{Telemetría sintética en 59~nodos:} solo 1~nodo con datos reales de medidor físico. \emph{Dimensión:} representatividad de tráfico. \emph{Razón:} no se dispone de acceso a 60~medidores reales en un armario operativo bajo acuerdos de privacidad.
 \end{enumerate}
 
-Estas limitaciones acotan los resultados pero no comprometen la validez de las contribuciones, que se enumeran a continuación.
+\subsection{Cuándo las limitaciones se vuelven críticas}
+
+Las limitaciones anteriores \emph{no comprometen} la validez del trabajo para el escenario validado, pero \emph{sí} serían críticas en los siguientes contextos:
+
+\begin{itemize}
+    \item \textbf{Despliegue comercial regulado} (operador eléctrico con $>$10\,000 medidores): la falta de certificación formal Thread/DLMS y la auditoría de seguridad son bloqueantes.
+    \item \textbf{Operación rural o industrial extrema:} la limitación de entorno y la dependencia de un único chipset HaLow exigen revalidación.
+    \item \textbf{Modelos de negocio con SLA estricto:} la validación de 30~días no permite estimar MTTF ni MTTR con confianza, y el almacenamiento local de 72~h fija el peor caso de partición tolerable.
+\end{itemize}
+
+\subsection{Trabajo futuro: inmediato vs. extensión a \emph{journal}}
+
+\textbf{Trabajo futuro inmediato (extensión natural del piloto):} (i)~aumentar la escala a 60--100~nodos físicos en un armario operativo; (ii)~caracterizar 90~días continuos para refinar estimaciones de MTTF; (iii)~portar OpenWRT a otro \emph{single-board} (Orange Pi, RockPi) para validar independencia de hardware.
+
+\textbf{Extensión a \emph{journal} (nuevo aporte académico):} (i)~adaptación regulatoria y validación en Europa/Asia; (ii)~modelo formal de viabilidad económica (VAN/TIR) con datos de operadores reales; (iii)~auditoría de seguridad formal con divulgación responsable; (iv)~analítica avanzada de detección de fallos en el borde con \emph{machine learning}.
 
 
 %% ═══════════════════════════════════════════════════

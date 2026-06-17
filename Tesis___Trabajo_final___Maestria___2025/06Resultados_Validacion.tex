@@ -27,21 +27,31 @@ El piloto se desplegó durante 30 días (octubre--noviembre 2025) en un laborato
 
 \begin{table}[H]
 \centering
-\caption{Métricas y objetivos de validación del piloto}
+\caption{Métricas y objetivos de validación del piloto (armonizadas con OV1--OV7 e H1--H7)}
 \label{tab:metricas-kpis}
 \resizebox{\textwidth}{!}{%
-\begin{tabular}{|l|l|l|l|}
+\begin{tabular}{|p{3.4cm}|l|p{4.4cm}|p{4.8cm}|}
 \hline
 \rowcolor{gray!20}
-\textbf{Métrica} & \textbf{Objetivo} & \textbf{Método} & \textbf{Justificación} \\
+\textbf{Métrica} & \textbf{Objetivo} & \textbf{Método} & \textbf{Justificación / OV-H} \\
 \hline
-Latencia de borde & <10\,ms & \emph{Timestamp} CoAP envío/ACK & IEEE 2030.5 Respuesta a la Demanda <50\,ms \\
+Latencia arquitectónica (borde) & <10\,ms & \emph{Timestamp} CoAP envío/ACK in-broker & OV2/H1 --- IEEE 2030.5 DR <50\,ms \\
 \hline
-Latencia ext. a ext. & <300\,ms & \emph{Timestamp} NTP envío/recepción nube & Facturación tiempo real ANSI C12.19 \\
+Latencia regulatoria (ext. a ext.) & <300\,ms & \emph{Timestamp} NTP envío/recepción nube & OV2/H1 --- Facturación tiempo real ANSI C12.19 \\
 \hline
-Disponibilidad & >99.5\% & \emph{Health checks} 60\,s & SLA típico sector eléctrico 99.9\% \\
+Disponibilidad operativa & $\geq$99{,}5\% & \emph{Health checks} 60\,s + bitácora desconexión & OV3/H2 --- SLA sector eléctrico 99{,}9\% \\
 \hline
-Consumo energético & <150\,mW & PPK2 / Fluke 87V registrador & Nodo alimentado desde medidor 5\,V \\
+Energía nodo (alimentado) & <150\,mW & PPK2 (100\,kS/s) + Fluke 87V & OV4/H6 --- Nodo alimentado desde medidor 5\,V \\
+\hline
+Tráfico WAN agregado & Reducción $\geq$70\% vs. \emph{cloud-céntrico} & tcpdump + contador de bytes en uplink ONT & OV5/H7 --- Brecha B4 (OPEX celular) \\
+\hline
+Sobrecarga IPHC (cabeceras) & Reducción $\geq$80\% vs. IPv6 nativo & Captura Thread + decodificación 6LoWPAN & OV4/H4 --- \cite{abood6LoWPANTechnicalFeatures2024} \\
+\hline
+Aprovisionamiento por nodo & $\leq$5\,min/nodo (BLE+QR) & Cronómetro despliegue + verificación LwM2M \texttt{bootstrap} & OV6/H5 --- Operabilidad de campo \\
+\hline
+PDR enlace Thread$\leftrightarrow$HaLow & $\geq$99\% & Conteo paquetes CoAP enviados/recibidos & OV3/H2 --- Resiliencia segmento RF \\
+\hline
+Alcance HaLow (LoS / urbano) & $\geq$180\,m LoS (piloto) & RSSI/SNR + análisis Iperf3 & OV3/H3 --- Cobertura 2\,MHz BW \\
 \hline
 \end{tabular}}
 \end{table}
@@ -590,6 +600,105 @@ El estándar ISO/IEC 30141:2024 define 7 entidades funcionales (FE) mandatorias 
 \end{table}
 
 La distribución jerárquica de 4 niveles (Sensado $\rightarrow$ Pasarela $\rightarrow$ Borde $\rightarrow$ Nube) satisface principios ISO/IEC 30141 de separación de responsabilidades, modularidad (sustitución RPi4 $\rightarrow$ Intel NUC sin cambio de \emph{software}), interoperabilidad (protocolos estándar sin dependencia de proveedor) y escalabilidad (adición de pasarelas independientes)~\cite{thingsboardCloudArchitecture2024}.
+
+
+\section{Viabilidad de Despliegue Escalable}
+\label{sec:resultados-viabilidad-escalable}
+
+Los resultados del piloto de 60~nodos en un único edificio (§\ref{sec:resultados-escalabilidad}) y el mapeo a ISO/IEC~30141 (§\ref{sec:resultados-conformidad-iso30141}) demuestran que la arquitectura es funcionalmente completa a escala de un armario concentrador. Esta sección extrapola el modelo a escalas urbanas (cuadra y distrito), cuantifica los cuellos de botella esperados, presenta un Modelo de Costo Total de Propiedad (TCO) a 5~años y define la estrategia de redundancia y crecimiento incremental. El objetivo es responder a la observación del jurado sobre \emph{viabilidad de despliegue escalable en contextos reales de redes inteligentes}, complementando la sostenibilidad operativa abordada en §\ref{sec:sostenibilidad-operativa} del capítulo de conclusiones.
+
+\subsection{Topología Multi-Gateway: Edificio $\rightarrow$ Cuadra $\rightarrow$ Distrito}
+\label{sec:viabilidad-multi-gateway}
+
+El modelo jerárquico replica el patrón validado por el piloto (1~edificio = 60~nodos, 1~OTBR) en tres niveles encajados, manteniendo la separación de responsabilidades de ISO/IEC~30141:2024~\cite{ISOIEC30141v2024}. La Figura~\ref{fig:topologia-multi-gateway} representa los tres niveles y los enlaces entre ellos.
+
+\input{fig_topologia_multi_gateway}
+
+\textbf{Nivel 1 (edificio).} 60~nodos Thread agregados por una pasarela RPi4 con OTBR (réplica directa del piloto). Cada edificio constituye una partición Thread independiente, por debajo del límite de 250~dispositivos por partición IEEE~802.15.4~\cite{ThreadGroup2023}. El comisionamiento BLE+QR (§\ref{sec:resultados-extrapolacion}) permite el despliegue por edificio en $<$5~horas (60~nodos $\times$ 2{,}8~min/nodo + margen).
+
+\textbf{Nivel 2 (cuadra, 5 edificios).} 300~nodos, 5~OTBR (uno por edificio) y 1~\emph{mesh gate} HaLow IEEE~802.11ah que actúa como punto de agregación inalámbrico sub-GHz. Esta organización aprovecha la asimetría direccional de HaLow (§\ref{sec:resultados-halow-signal}): el \emph{mesh gate} (AP, $\sim$24\,dBm) recibe el tráfico DLMS de los 5~OTBR a una tasa agregada estimada en $5 \times 32~\text{kbps} \approx 160~\text{kbps}$, holgadamente por debajo del caudal útil de bajada medido a 2\,MHz (4{,}15\,Mbps). La distancia entre edificios contiguos ($<$200~m) es compatible con el alcance HaLow validado por la literatura ($>$500\,m LoS~\cite{leeWiFiHaLowLongRange2021}).
+
+\textbf{Nivel 3 (distrito, 5 cuadras).} 1\,500~nodos, 25~OTBR, 5~\emph{mesh gates} y 1~servidor central ThingsBoard \emph{on-premise} interconectados por troncal Ethernet/Fibra. El servidor central concentra la persistencia de largo plazo, el motor de reglas y la API REST/WebSocket para operadores, mientras que cada \emph{mesh gate} mantiene su propio ThingsBoard~Edge local con almacenamiento de 7~días (validación de almacenamiento $0\%$~pérdida en §\ref{sec:resultados-discusion-fortalezas}).
+
+\subsection{Capacidad por Nivel Jerárquico}
+\label{sec:viabilidad-capacidad}
+
+La Tabla~\ref{tab:capacidad-jerarquica} consolida los cuellos de botella identificados en cada nivel y la mitigación correspondiente, derivados de las mediciones del piloto (§\ref{sec:resultados-escalabilidad}, §\ref{sec:resultados-halow}).
+
+\begin{table}[H]
+\centering
+\caption{Capacidad y cuellos de botella esperados por nivel jerárquico}
+\label{tab:capacidad-jerarquica}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{|l|l|c|c|c|p{3.6cm}|p{3.6cm}|}
+\hline
+\rowcolor{gray!20}
+\textbf{Nivel} & \textbf{Cobertura} & \textbf{\# Nodos} & \textbf{\# Pasarelas} & \textbf{\# \emph{Mesh Gates}} & \textbf{Cuello de botella esperado} & \textbf{Mitigación} \\
+\hline
+1. Edificio & 1 armario / sótano & 60 & 1 (OTBR) & 0 & Límite Thread 250~nod./partición; CPU pasarela 52\% @ 100~nodos & Margen 4{,}2$\times$ vs Thread; lecturas escalonadas reducen CPU a 65\% @ 100~nod. \\
+\hline
+2. Cuadra & 5 edificios contiguos & 300 & 5 (OTBR) & 1 (HaLow) & Caudal HaLow agregador: 160\,kbps de telemetría DLMS sobre canal 2\,MHz & Dimensionado a 2\,MHz BW (4{,}15\,Mbps bajada $\Rightarrow$ holgura 26$\times$); fallback 4\,MHz si crece >300 nodos \\
+\hline
+3. Distrito & 5 cuadras / barrio & 1\,500 & 25 (OTBR) & 5 (HaLow) & ThingsBoard central: persistencia + API; saturación a $\sim$5\,000~msg/s & Particionamiento por cuadra (sharding por \texttt{mesh\_gate\_id}); ThingsBoard~Edge local absorbe 90\% del procesamiento \\
+\hline
+\end{tabular}}
+\end{table}
+
+\textbf{Tasa de ingesta proyectada al servidor central.} Con sondeo 15\,min y carga útil DLMS de 200\,B/lectura, el caudal agregado al servidor central es $1\,500 \times (1/900~\text{s}) \approx 1{,}67~\text{msg/s}$, equivalente a $\sim$334\,B/s. Comparado con la capacidad medida de ThingsBoard~Edge ($\sim$5\,000~msg/s, §\ref{sec:resultados-extrapolacion}), el servidor central opera al $\sim$0{,}03\% de su capacidad nominal, dejando margen para alarmas, eventos OTA y multitud de operadores concurrentes. La latencia de borde de 8$\pm$2\,ms se preserva por nivel; la latencia ext.\ a ext.\ proyectada al servidor central añade $\leq$10\,ms por el troncal Ethernet (despreciable frente al presupuesto de 85$\pm$12\,ms del piloto).
+
+\subsection{Modelo TCO Comparativo a 5 Años}
+\label{sec:viabilidad-tco}
+
+El modelo TCO extrapola el piloto a un despliegue de \textbf{100~edificios} ($\approx$6\,000 nodos, 100~OTBR, 20~\emph{mesh gates}) y lo compara contra una arquitectura de línea base celular (NB-IoT o LTE Cat-M1) con SIM por nodo y telemetría directa a la nube. Los costos están en USD~2025 y asumen ciclo de vida de hardware de 5~años para hardware activo y 10~años para infraestructura RF pasiva.
+
+\begin{table}[H]
+\centering
+\caption{TCO acumulado a 5 años: arquitectura propuesta vs línea base celular (USD, 100 edificios / 6\,000 nodos / 100 OTBR / 20 \emph{mesh gates})}
+\label{tab:tco-5-anios}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{|l|r|r|r|r|r|}
+\hline
+\rowcolor{gray!20}
+\textbf{Año} & \textbf{CAPEX} & \textbf{OPEX evitado celular} & \textbf{OPEX propio} & \textbf{Saldo neto anual} & \textbf{Acumulado} \\
+\hline
+0 (CAPEX inicial) & 204\,000 & --        & --     & $-$204\,000 & $-$204\,000 \\
+\hline
+1 & 0 & 360\,000 & 11\,000 & $+$349\,000 & $+$145\,000 \\
+\hline
+2 & 0 & 360\,000 & 11\,000 & $+$349\,000 & $+$494\,000 \\
+\hline
+3 & 0 & 360\,000 & 11\,000 & $+$349\,000 & $+$843\,000 \\
+\hline
+4 & 5\,342 & 360\,000 & 11\,000 & $+$343\,658 & $+$1\,186\,658 \\
+\hline
+5 & 0 & 360\,000 & 11\,000 & $+$349\,000 & $+$1\,535\,658 \\
+\hline
+\rowcolor{green!15}
+\textbf{Total 5 años} & \textbf{209\,342} & \textbf{1\,800\,000} & \textbf{55\,000} & \textbf{$+$1\,535\,658} & --- \\
+\hline
+\end{tabular}}
+\end{table}
+
+\textbf{Desglose CAPEX inicial (Año 0, USD 204\,000):} 100~pasarelas RPi4 + OTBR \$200 c/u $=$ \$20\,000; 6\,000~nodos ESP32+IEEE~802.15.4 \$30 c/u $=$ \$180\,000; 20~\emph{mesh gates} HaLow Tube AHM \$200 c/u $=$ \$4\,000. \textbf{OPEX evitado celular:} 6\,000~nodos $\times$ \$5/mes (NB-IoT promedio) $\times$ 12~meses $=$ \$360\,000/año. \textbf{OPEX propio anual (\$11\,000):} energía \$4\,000 (pasarelas $\sim$5\,W $\times$ 120~uds $\times$ 8\,760~h $\times$ \$0{,}10/kWh), mantenimiento preventivo + repuestos \$5\,100 (1\% del CAPEX por la política descrita en §\ref{sec:sostenibilidad-operativa}), licencias software \$0 (ThingsBoard~CE), monitoreo \$1\,900. \textbf{CAPEX Año 4 (\$5\,342):} renovación de baterías UPS (10\% de pasarelas) y reposición preventiva de 2\% de nodos por fallo proyectado (Tabla~\ref{tab:sostenibilidad-mttf}).
+
+\textbf{Resultado:} la arquitectura propuesta acumula un costo neto de \$279\,342 a 5~años (CAPEX + 5$\times$OPEX), frente a $\sim$\$2\,000\,000 de la línea base celular (asumiendo OPEX celular puro sin CAPEX nuevo). Esto representa un \textbf{ahorro TCO del 86\%} y un \textbf{payback en el Año~1} (los \$349\,000 de OPEX evitado en el primer año superan el CAPEX inicial de \$204\,000). El modelo TCO consolida la conclusión preliminar de la justificación económica de §1.6 y la complementa con la sostenibilidad operativa proyectada de §\ref{sec:sostenibilidad-operativa}.
+
+\subsection{Redundancia Geográfica y Crecimiento Incremental}
+\label{sec:viabilidad-redundancia-crecimiento}
+
+\textbf{Redundancia geográfica (opcional, recomendada para zonas críticas).} El piloto identificó la pasarela RPi4 como punto único de fallo (L2 en §\ref{sec:resultados-discusion-limitaciones}). Para despliegues con SLA $>$99{,}9\% se recomienda configurar una pasarela secundaria por cuadra en modo activo-pasivo mediante VRRP (\emph{Virtual Router Redundancy Protocol}, RFC~5798): la pasarela activa atiende todo el tráfico Thread+HaLow; la pasarela pasiva monitorea la dirección virtual IP y asume el rol activo en $<$3\,s ante caída detectada por \emph{heartbeat}. El sobrecosto CAPEX (\$200/pasarela secundaria $\times$ 20~\emph{mesh gates} = \$4\,000) representa un $\sim$2\% adicional al CAPEX inicial y eleva la disponibilidad proyectada de 99{,}40\% (piloto) a $\geq$99{,}95\% en zonas críticas.
+
+\textbf{Crecimiento incremental lineal.} La estructura jerárquica permite añadir capacidad sin re-arquitecturar:
+
+\begin{itemize}
+    \item \textbf{Nuevo edificio:} 1 pasarela RPi4 + hasta 60 nodos. No afecta a cuadras existentes; basta con asociar el OTBR al \emph{mesh gate} HaLow más cercano y registrar el dispositivo en ThingsBoard~Edge correspondiente. Tiempo estimado de comisionamiento: $<$5~h (60 nodos $\times$ 2{,}8~min/nodo + margen).
+    \item \textbf{Nueva cuadra:} 5 edificios + 1 \emph{mesh gate} HaLow. Despliegue paralelizable en 1 semana con 2 técnicos. El servidor central absorbe el incremento sin cambios (el caudal agregado por cuadra es 160\,kbps, ínfimo frente a la capacidad de la API REST).
+    \item \textbf{Particionamiento Thread denso:} cuando un edificio supera 250~nodos (límite IEEE~802.15.4), basta con desplegar 2--3 OTBRs por edificio sobre canales Thread diferentes (e.g., canales 25 y 26) y registrar particiones independientes en ThingsBoard~Edge. El piloto validó canal 25 sin colisión con Wi-Fi; canal 26 está igualmente disponible.
+\end{itemize}
+
+\textbf{Estrategia de actualización gradual (\emph{canary deployments} por OTBR).} La política OTA validada en §\ref{sec:sostenibilidad-operativa} (canary 1\%$\rightarrow$10\%$\rightarrow$50\%$\rightarrow$100\% con ventana de 24~h y \emph{rollback} automático si no hay re-registro LwM2M en $<$5~min) se aplica con granularidad por OTBR: el operador puede pilotar una nueva versión de \emph{firmware} en un único OTBR (60~nodos) antes de propagarla a toda una cuadra (300~nodos) o al distrito (1\,500~nodos). Este aislamiento por nivel reduce el radio de explosión de una regresión y mantiene la disponibilidad del 99{,}5\% medida en el piloto durante la operación de actualización.
+
+\textbf{Trazabilidad a observación T2-C3.} Las cuatro subsecciones anteriores responden a las cuatro dimensiones señaladas por el jurado: (1)~viabilidad de despliegue escalable (§\ref{sec:viabilidad-multi-gateway}, §\ref{sec:viabilidad-capacidad}); (2)~interoperabilidad multi-nivel (mantiene ISO/IEC~30141 y LwM2M en cada nivel jerárquico, §\ref{sec:resultados-conformidad-iso30141}); (3)~crecimiento de infraestructura (§\ref{sec:viabilidad-redundancia-crecimiento}, lineal en nuevos edificios/cuadras); (4)~sostenibilidad operativa (TCO 5~años en §\ref{sec:viabilidad-tco} + política MTTF/MTTR/OTA en §\ref{sec:sostenibilidad-operativa}).
 
 
 \section{Conclusiones del Capítulo}

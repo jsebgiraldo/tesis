@@ -1,0 +1,366 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+% The preceding line is only needed to identify funding in the first footnote. If that is unneeded, please comment it out.
+%Template version as of 6/27/2024
+
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{xurl}
+\usepackage[hidelinks]{hyperref}
+\urlstyle{same}
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+
+\usepackage{tikz}       % TikZ figures
+\usetikzlibrary{arrows.meta}
+\usetikzlibrary{
+    arrows.meta,
+    positioning,
+    calc,
+    fit,
+    backgrounds,
+    shapes.geometric,
+    decorations.pathmorphing
+}
+\begin{document}
+
+\title{
+%Design and Experimental Evaluation of an Edge-Centric Multiprotocol IoT Architecture for Advanced Metering Infrastructure
+
+% \\
+% or\\
+  Low-Latency and Resilient AMI through an Edge-Centric Multiprotocol IoT Architecture with Thread, LwM2M, and Wi-Fi HaLow
+%{\footnotesize \textsuperscript{*}Note: Sub-titles are not captured for https://ieeexplore.ieee.org  and
+%should not be used}
+\thanks{Identify applicable funding agency here. If none, delete this.}
+}
+
+ \author{
+\IEEEauthorblockN{Juan-Sebasti\'an Giraldo Duque}
+\IEEEauthorblockA{\textit{Dept. of Electrical, Electronics} \\ \textit{and Computing Engineering} \\
+\textit{Universidad Nacional de Colombia}\\
+Manizales, Colombia \\
+e-mail: \href{mailto:jsgiraldod@unal.edu.co}{jsgiraldod@unal.edu.co}}
+\and
+\IEEEauthorblockN{Gustavo Pisso}
+\IEEEauthorblockA{\textit{dept. name of organization (of Aff.)} \\
+\textit{name of organization (of Aff.)}\\
+City, Country \\
+email address or ORCID}
+\and
+\IEEEauthorblockN{Edward Fabian Goyeneche}
+\IEEEauthorblockA{\textit{Dept. of Electrical, Electronics} \\ \textit{and Computing Engineering} \\
+\textit{Universidad Nacional de Colombia}\\
+Manizales, Colombia \\
+e-mail: \href{mailto:egoyeneche@unal.edu.co}{egoyeneche@unal.edu.co}}
+\and
+\IEEEauthorblockN{Gustavo Osorio}
+\IEEEauthorblockA{\textit{Dept. of Electrical, Electronics} \\ \textit{and Computing Engineering} \\
+\textit{Universidad Nacional de Colombia}\\
+Manizales, Colombia \\
+e-mail: \href{mailto:gaosoriol@unal.edu.co}{gaosoriol@unal.edu.co}}
+\and
+\IEEEauthorblockN{Juan-Bernardo G\'omez-Mendoza}
+\IEEEauthorblockA{\textit{Dept. of Electrical, Electronics} \\ \textit{and Computing Engineering} \\
+\textit{Universidad Nacional de Colombia}\\
+Manizales, Colombia \\
+e-mail: \href{mailto:jbgomezm@unal.edu.co}{jbgomezm@unal.edu.co}}
+}
+
+\maketitle
+
+\begin{abstract}
+Advanced Metering Infrastructure (AMI) requires scalable IoT architectures capable of reducing latency, operating under intermittent connectivity, and limiting the message-volume costs of conventional cloud-centric deployments. This paper presents an edge-centric multiprotocol smart metering architecture integrating a Thread 1.4 field network over IEEE 802.15.4 with IPv6/6LoWPAN and LwM2M/CoAP, a private Wi-Fi HaLow IEEE 802.11ah field-to-edge link, and a prototype edge gateway running OpenWrt with containerized ThingsBoard Edge, PostgreSQL, and Redis services. The architecture was evaluated during a 30-day laboratory pilot using one physical three-phase DLMS/COSEM smart meter and 30 firmware-based nodes generating synthetic telemetry with the same metering data profile. Experimental results show an end-to-end latency of 85$\pm$12~ms under the evaluated workload, which is one to two orders of magnitude below the latencies typically reported in the literature for cloud-centric AMI architectures (hundreds of milliseconds to several seconds). The system reached 99.40\% system availability, IPHC compression reduced IPv6 header overhead by 91\%, and local edge aggregation reduced WAN traffic by at least 72\% under the evaluated workload. These results support the feasibility of edge-centric multiprotocol AMI architectures under controlled laboratory conditions, while a same-workload measurement of a cloud-centric baseline, larger field trials with physical meters, extended outage scenarios, and security hardening remain necessary.
+\end{abstract}
+
+\begin{IEEEkeywords}
+Advanced Metering Infrastructure, edge computing, Thread, 6LoWPAN, LwM2M, Wi-Fi HaLow, IoT gateway, smart metering.
+\end{IEEEkeywords}
+
+\section{Introduction}
+\label{sec:introduction}
+
+Advanced Metering Infrastructure (AMI) is a key component of smart grids, enabling bidirectional communication, remote metering, operational monitoring, and integration with demand-response and distribution-level applications~\cite{NISTFramework2022,gungorSmartGridTechnologies2011}. Beyond periodic billing, which lacks real-time data gathering constraints, modern AMI deployments encompass high-frequency telemetry, local alarms, and distribution-level support. This evolution forces a shift in communication design, requiring architectures that guarantee low latency, interoperability, and high availability to manage the resulting surge in message volume~\cite{abdulsalamOverviewRecentWireless2024,alsafranChallengesImplementingIoT2025}.
+
+Conventional cloud-centric IoT architectures simplify centralized storage, analytics, and fleet-wide coordination. However, they may introduce important limitations for AMI operation. First, end-to-end latency can increase when telemetry ingestion, preprocessing, rule execution, and persistence depend primarily on a remote cloud path. Second, continuous WAN connectivity becomes a critical dependency: during WAN outages, telemetry acquisition, alarm processing, and historical persistence may be degraded or interrupted. Third, forwarding raw telemetry streams upstream can increase message volume and operational cost, particularly as reporting intervals become shorter and the number of meters grows. These issues are especially relevant in deployments where meters are located in cabinets, basements, or constrained technical rooms, and where continuous cellular or WAN connectivity cannot always be assumed.
+
+Edge computing provides an alternative by relocating selected time-sensitive, connectivity-sensitive, and bandwidth-intensive functions closer to field devices~\cite{satyanarayananEmergenceEdgeComputing2017,minhEdgeComputingIoTEnabled2022}. In this context, edge processing does not eliminate the need for on-premises or cloud infrastructure; rather, it redistributes responsibilities across the system. Local ingestion, buffering, rule execution, and short-term persistence can be handled at the edge, while long-term storage, fleet-wide coordination, and advanced analytics can remain in upstream platforms.
+
+Nevertheless, an AMI edge architecture requires more than a local compute node. It must integrate a constrained field network, a suitable field-to-edge communication link, a lightweight device-management model, local persistence mechanisms, and synchronization with upstream infrastructure. Several technologies address different parts of this problem. Thread provides an IPv6-based mesh network over IEEE~802.15.4~\cite{ThreadGroup1-4-0}; 6LoWPAN enables IPv6 adaptation and header compression for constrained links~\cite{RFC6282}; LwM2M over CoAP supports lightweight device management and telemetry for constrained IoT devices~\cite{OMA_LwM2M2020,RFC7252}; and Wi-Fi HaLow IEEE~802.11ah provides sub-GHz wireless connectivity for IoT scenarios requiring extended coverage and higher capacity than many low-power alternatives~\cite{IEEE802.11ah-2016,qiaoSurveyWiFiHaLow2018,tianWiFiHaLowInternet2021}.
+
+In the architecture proposed in this paper, these technologies play complementary roles. Thread/6LoWPAN/LwM2M is used for the constrained metering field network, while Wi-Fi HaLow is used as a private field-to-edge link between the Thread-side infrastructure and the edge/on-premises domain. HaLow is therefore not considered here as the metering-node protocol itself, but as a sub-GHz backhaul segment for aggregated traffic. The edge gateway provides the integration point by hosting containerized services for local ingestion, buffering, rule execution, storage, and synchronization with an on-premises server.
+
+Although the individual technologies have been widely studied, integrated experimental validations that combine constrained IPv6 field networking, Wi-Fi HaLow field-to-edge connectivity, lightweight device management, and containerized edge services for AMI remain limited. This gap motivates the design and laboratory evaluation presented in this paper.
+
+This paper presents the design and experimental evaluation of an edge-centric multiprotocol IoT architecture for AMI. The proposed prototype integrates three segments: a Thread/6LoWPAN/LwM2M field network, a private Wi-Fi HaLow IEEE~802.11ah field-to-edge link, and a containerized edge gateway that provides local ingestion, buffering, rule execution, storage, and synchronization with an on-premises server. The architecture was evaluated in a 30-day laboratory pilot using one physical three-phase DLMS/COSEM smart meter and 30 firmware-based synthetic telemetry nodes.
+
+The main contributions of this paper are:
+\begin{itemize}
+\item the design of an edge-centric multiprotocol AMI architecture that integrates Thread/6LoWPAN/LwM2M, Wi-Fi HaLow, and containerized edge services;
+\item the implementation of a laboratory prototype combining one physical DLMS/COSEM smart meter with 30 firmware-based synthetic telemetry nodes;
+\item an experimental evaluation of latency, operational continuity during bounded WAN disconnections, IPHC overhead reduction, and WAN traffic reduction through local aggregation;
+\item an analysis of implementation constraints and future extensions toward field trials, security hardening, observability, SDN-based orchestration, and edge AI agents.
+\end{itemize}
+
+
+\section{Proposed Architecture}
+\label{sec:proposed_architecture}
+
+\subsection{Architecture Overview}
+\label{subsec:architecture_overview}
+
+The proposed architecture organizes the AMI communication and processing chain into three segments: a Thread-based field network, a private Wi-Fi HaLow field-to-edge link, and a containerized edge platform. Fig.~\ref{fig:architecture_overview} illustrates the main components and data path.
+
+\begin{figure*}[t]
+    \centering
+    \resizebox{1\linewidth}{!}{
+        \input{figures/fig_architecture_distributed.tex}
+    }
+    \caption{Overview of the proposed edge-centric multiprotocol AMI architecture. The architecture combines a Thread/6LoWPAN/LwM2M field network, a private Wi-Fi HaLow IEEE~802.11ah field-to-edge link, and a containerized edge gateway with local ingestion, buffering, rule execution, storage, and synchronization with an on-premises server.}
+    \label{fig:architecture_overview}
+\end{figure*}
+
+The field segment connects smart meters and metering nodes through Thread 1.4 over IEEE 802.15.4, using IPv6/6LoWPAN and LwM2M/CoAP for device management and telemetry. The field-to-edge segment uses Wi-Fi HaLow IEEE 802.11ah to connect the Thread-side infrastructure with the edge gateway. The edge segment hosts local IoT services for ingestion, buffering, rule execution, storage, dashboards, and synchronization with an on-premises server.
+
+This structure separates constrained metering communication from edge processing and upstream synchronization. Time-sensitive and connectivity-sensitive functions can be handled locally, while long-term storage, fleet-wide management, and advanced analytics may remain in the on-premises or cloud domain.
+
+Fig.~\ref{fig:architecture_overview} depicts the architecture as a fully distributed deployment in which the Gateway (border-routing only) and the Edge Gateway (application processing) are separate physical devices. This is the target deployment for production scenarios in which multiple metering cabinets feed a centralized edge platform. For cost and complexity reasons, the 30-day laboratory pilot reported in this paper implements the Gateway and Edge Gateway functions co-located on a single Raspberry Pi 4 device while preserving the same data path and protocol stacks shown in the figure.
+
+\subsection{Thread/6LoWPAN/LwM2M Field Network}
+\label{subsec:field_network}
+
+The field network is implemented as an IPv6-based Thread 1.4 mesh over IEEE~802.15.4. Fig.~\ref{fig:protocol_stack} summarizes the field-device stack, where 6LoWPAN/IPHC adapts IPv6 to constrained frames, CoAP/UDP transports telemetry, and LwM2M exposes metering data as device resources.
+
+\begin{figure}[t]
+\centering
+\resizebox{\columnwidth}{!}{%
+\begin{tikzpicture}[
+    font=\sffamily,
+    layer/.style={
+        rounded corners=2pt,
+        draw=black!65,
+        fill=gray!8,
+        line width=0.45pt,
+        minimum width=6.4cm,
+        minimum height=0.58cm,
+        align=center,
+        inner sep=2pt,
+        font=\scriptsize\sffamily
+    },
+    app/.style={layer, fill=blue!8, draw=blue!55!black},
+    trans/.style={layer, fill=violet!8, draw=violet!55!black},
+    net/.style={layer, fill=green!8, draw=green!45!black},
+    link/.style={layer, fill=orange!10, draw=orange!60!black},
+    phy/.style={layer, fill=gray!12, draw=black!55},
+    smallnote/.style={
+        font=\tiny\sffamily,
+        align=center,
+        text=black!70
+    },
+    arrow/.style={
+        -{Latex[length=1.4mm,width=1.1mm]},
+        line width=0.45pt,
+        black!55
+    }
+]
+
+% Vertical coordinates
+\def\dy{0.68}
+
+\node[app]   (lwm2m) at (0,6*\dy) {LwM2M 1.2\\ \textit{device management and telemetry objects}};
+\node[app]   (coap)  at (0,5*\dy) {CoAP / Observe\\ \textit{RESTful messaging over UDP}};
+\node[trans] (udp)   at (0,4*\dy) {UDP\\ \textit{connectionless transport}};
+\node[net]   (ipv6)  at (0,3*\dy) {IPv6 / OpenThread MLE\\ \textit{mesh routing and network discovery}};
+\node[net]   (six)   at (0,2*\dy) {6LoWPAN / IPHC\\ \textit{IPv6 adaptation and header compression}};
+\node[link]  (mac)   at (0,1*\dy) {IEEE 802.15.4 MAC\\ \textit{CSMA/CA, ACK, 127-byte MTU}};
+\node[phy]   (phy)   at (0,0)     {IEEE 802.15.4 PHY\\ \textit{2.4 GHz ISM, O-QPSK, 250 kbps}};
+
+% Inter-layer arrows
+\foreach \a/\b in {phy/mac,mac/six,six/ipv6,ipv6/udp,udp/coap,coap/lwm2m}{
+    \draw[arrow] (\a.north) -- (\b.south);
+}
+
+% Left-side grouping labels
+\node[smallnote, rotate=90, anchor=center] at (-3.75,5.5*\dy) {Application};
+\node[smallnote, rotate=90, anchor=center] at (-3.75,4*\dy) {Transport};
+\node[smallnote, rotate=90, anchor=center] at (-3.75,2.5*\dy) {Network / Adaptation};
+\node[smallnote, rotate=90, anchor=center] at (-3.75,0.5*\dy) {PHY / MAC};
+
+% Right-side concise standards / overhead notes
+\node[smallnote, anchor=west] at (3.35,6*\dy) {OMA};
+\node[smallnote, anchor=west] at (3.35,5*\dy) {RFC 7252};
+\node[smallnote, anchor=west] at (3.35,4*\dy) {8 B hdr.};
+\node[smallnote, anchor=west] at (3.35,3*\dy) {Thread 1.4};
+\node[smallnote, anchor=west] at (3.35,2*\dy) {RFC 6282};
+\node[smallnote, anchor=west] at (3.35,1*\dy) {127 B MTU};
+\node[smallnote, anchor=west] at (3.35,0)     {802.15.4};
+
+% Meter-data mapping note
+\node[
+    rounded corners=2pt,
+    draw=black!55,
+    fill=yellow!10,
+    line width=0.4pt,
+    align=center,
+    font=\tiny\sffamily,
+    minimum width=2.55cm,
+    inner sep=2pt
+] (dlms) at (-5.05,6*\dy) {DLMS/COSEM\\over RS-485};
+
+\draw[arrow] (dlms.east) -- (lwm2m.west)
+    node[midway, above, font=\tiny\sffamily, text=black!65] {mapped};
+
+% Bottom note
+\node[smallnote, text=black!75] at (0,-0.72)
+{Effective IEEE 802.15.4 payload is constrained by MAC overhead; IPHC reduces IPv6 header overhead in the 6LoWPAN layer.};
+
+\end{tikzpicture}%
+}
+\caption{Compact protocol stack implemented in the Thread/LwM2M field network. DLMS/COSEM meter data acquired over RS-485 are mapped to LwM2M resources and transported through CoAP/UDP over IPv6, 6LoWPAN/IPHC, Thread, and IEEE~802.15.4.}
+\label{fig:protocol_stack}
+\end{figure}
+
+In our study case, one physical metering device and 30 synthetic devices are deployed in the network. Metering data are exposed as LwM2M resources transported over CoAP. In the physical-meter path, electrical variables are acquired from a DLMS/COSEM smart meter through RS-485 and mapped to the LwM2M data model. In the synthetic-node path used for workload generation, the same metering profile is produced by the firmware.
+
+The use of LwM2M/CoAP allows the edge platform to receive device registrations and telemetry directly through its integrated LwM2M transport. This avoids an external CoAP--MQTT bridge in the evaluated architecture and reduces protocol-conversion complexity at the gateway.
+
+\subsection{Wi-Fi HaLow Field-to-Edge Link}
+\label{subsec:halow_link}
+
+The second segment uses Wi-Fi HaLow IEEE 802.11ah as a private field-to-edge wireless link. In this paper, the term \emph{field-to-edge link} is used instead of \emph{backhaul} to distinguish this segment from operator-managed WAN or cellular connectivity.
+
+The role of HaLow is to transport aggregated traffic between the Thread-side infrastructure and the edge/on-premises domain. It does not replace the Thread field mesh or the LwM2M device-management layer. Instead, it complements them by providing a sub-GHz wireless link suitable for meter cabinets, basements, technical rooms, and other locations where propagation conditions may be challenging.
+
+This division of roles keeps the field network optimized for constrained metering nodes, while the field-to-edge link provides higher-capacity private connectivity toward the gateway and local infrastructure.
+
+\subsection{Containerized Edge Gateway Services}
+\label{subsec:edge_gateway_services}
+
+The edge gateway integrates the Thread Border Router function, the Wi-Fi HaLow interface, and the local IoT service stack. In the laboratory prototype, the gateway was implemented on a Raspberry Pi 4 running OpenWrt and containerized edge services. The software architecture is portable to industrial gateway platforms, such as R1000-class computers, which are considered as deployment targets for future field trials.
+
+\begin{figure}[t]
+\centering
+\resizebox{0.85\columnwidth}{!}{%
+    \input{figures/fig_edge_gateway.tex}
+}
+\caption{Edge Gateway internals. Incoming CoAP/LwM2M traffic from the HaLow backhaul is processed by the ThingsBoard Edge container (LwM2M transport, rule engine, offline buffer, gRPC sync, local dashboards), with PostgreSQL and Redis as sidecar containers for persistent storage and caching. Outgoing telemetry is forwarded to the on-premises platform as MQTT/TLS, with bidirectional gRPC sync for device management and rule updates.}
+\label{fig:edge_gateway}
+\end{figure}
+
+Fig.~\ref{fig:edge_gateway} details the containerized service stack. ThingsBoard Edge provides telemetry ingestion through its integrated LwM2M transport, rule execution, local dashboards, offline buffering, and bidirectional synchronization with the on-premises server. PostgreSQL provides persistent local storage, while Redis supports caching and coordination functions. All three services run as Docker containers on the same machine, which simplifies deployment and lifecycle management.
+
+By placing these services at the gateway, the architecture decouples field telemetry acquisition from continuous WAN availability and reduces the amount of raw data that must be forwarded upstream. The experimental evaluation of these functions is reported in Section~\ref{sec:results}.
+
+\section{Results}
+\label{sec:results}
+This section reports the measured and derived results of the 30-day laboratory pilot described in Section~\ref{sec:proposed_architecture}. The workload included one physical three-phase DLMS/COSEM meter and 30 firmware-based nodes generating synthetic telemetry with the same metering data profile. Table~\ref{tab:core_results} summarizes the core experimental results used to support the latency, resilience, and traffic-efficiency claims discussed in the following subsections.
+
+\begin{table}[t]
+\caption{Core experimental results.}
+\label{tab:core_results}
+\centering
+\begin{tabular}{p{0.255\columnwidth}p{0.335\columnwidth}p{0.26\columnwidth}}
+\hline
+\textbf{Metric} & \textbf{Result} & \textbf{Role} \\
+\hline
+Pilot duration & 30 days & Laboratory validation \\
+Deployment scale & 1 phys. +30 synth. nodes & Scope of evaluation \\
+End-to-end latency & $85 \pm 12$ ms & Main latency result \\
+Cloud-centric AMI literature & hundreds of ms to several seconds~\cite{minhEdgeComputingIoTEnabled2022,alsafranChallengesImplementingIoT2025} & Qualitative reference (not measured) \\
+Availability & 99.40\% & Operational continuity \\
+WAN outage test & 30 min, zero message loss & Edge buffering \\
+IPHC reduction & 91\% & Header compression \\
+WAN traffic reduction & $\geq$72\% & Edge aggregation \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{End-to-End Latency}
+\label{subsec:results_latency}
+
+The proposed architecture achieved an end-to-end latency of $85 \pm 12$ ms under the evaluated workload. This value lies one to two orders of magnitude below the latencies typically reported in the literature for cloud-centric AMI architectures, which range from hundreds of milliseconds to several seconds depending on the access technology, broker location, and platform pipeline~\cite{minhEdgeComputingIoTEnabled2022,alsafranChallengesImplementingIoT2025,abdulsalamOverviewRecentWireless2024}. The comparison is qualitative: it positions the measured value against published cloud-centric ranges rather than against a controlled cloud baseline measured under the same workload as this pilot. A same-workload measurement of an equivalent cloud-centric configuration is identified as immediate future work (Section~\ref{sec:conclusion}).
+
+Local edge processing remained within the latency budget of the pilot, with an average processing latency close to $8 \pm 2$~ms and a 95th percentile (P95) near 10~ms. The Thread field segment also showed bounded delay in the laboratory setting, with an average node-to-border-router latency of 45.2 ms and a P95 of 58.3 ms.
+
+\subsection{WAN Disconnection and Availability}
+\label{subsec:results_availability}
+
+The system reached 99.4\% availability during the 30-day pilot. During controlled 30-minute WAN disconnection events, telemetry acquisition continued locally at the edge gateway. After reconnection, buffered messages were synchronized with the on-premises platform with zero message loss in the evaluated tests.
+
+These results show that the gateway operated as a local persistence and synchronization layer, decoupling field telemetry acquisition from continuous WAN availability during the evaluated outage intervals.
+
+\subsection{Protocol Overhead and WAN Traffic Reduction}
+\label{subsec:results_overhead}
+
+Two communication-efficiency mechanisms were evaluated. First, IPHC compression reduced IPv6 header overhead by approximately 91\%, from 48 B to $4.2 \pm 1.1$ B, improving payload efficiency in the constrained IEEE 802.15.4 field network.
+
+Second, local aggregation at the edge gateway reduced WAN traffic by at least 72\% under the evaluated workload. This value is used as the conservative system-level traffic-reduction result in this paper.
+
+\section{Discussion and Limitations}
+\label{sec:discussion}
+
+The results suggest that the main benefit of the proposed architecture comes from relocating selected AMI functions to the edge rather than from any single technology in isolation. Thread/6LoWPAN/LwM2M provides an IPv6-based field network, Wi-Fi HaLow provides a private field-to-edge link, and the containerized gateway performs local ingestion, buffering, rule execution, storage, and synchronization. Together, these elements explain the observed latency, resilience, and traffic-reduction results under the evaluated workload.
+
+The latency comparison with cloud-centric architectures is qualitative and bounded by the literature ranges cited in Section~\ref{sec:results}. A same-workload, controlled measurement of an equivalent cloud-centric configuration was not performed in this pilot and is identified as immediate future work. As a result, the position of the $85 \pm 12$~ms result with respect to cloud-centric AMI should be read as supportive evidence rather than as a universal ranking. Cloud latency further depends on WAN quality, broker location, platform configuration, and data-processing pipelines, all of which would need to be controlled in such a measurement.
+
+The main limitation is the scale and composition of the pilot. Although the workload included 31 telemetry sources, only one was a physical three-phase DLMS/COSEM meter; the remaining 30 nodes generated firmware-based synthetic telemetry. This enabled repeatable laboratory evaluation and partial scalability assessment, but it does not replace field trials with larger populations of physical meters, heterogeneous meter models, real consumption profiles, and uncontrolled radio-frequency conditions.
+
+The resilience and traffic-reduction claims are also bounded. The gateway preserved messages during the evaluated 30-minute WAN disconnection events, but longer outages, power interruptions, degraded storage media, concurrent failures, and larger traffic bursts remain to be tested. Similarly, the 91\% IPHC reduction corresponds to header compression in the 6LoWPAN field network, whereas the $\geq$72\% WAN traffic reduction corresponds to local aggregation at the edge gateway; these metrics refer to different layers and should not be merged into a single claim.
+
+Finally, production-oriented capabilities such as security hardening, certificate lifecycle management, observability pipelines, SDN-based orchestration, and AI agents for local diagnosis and autonomous operation remain outside the validated contribution of this paper. They are considered future extensions to be evaluated in field deployments.
+
+\section{Conclusion and Future Work}
+\label{sec:conclusion}
+
+This paper presented an edge-centric multiprotocol IoT architecture for AMI that integrates Thread/6LoWPAN/LwM2M, Wi-Fi HaLow, and containerized edge computing. The architecture was validated through a 30-day laboratory pilot combining one physical DLMS/COSEM smart meter with 30 firmware-based synthetic telemetry nodes.
+
+The results indicate that the proposed architecture can support low-latency telemetry, bounded operation during WAN disconnections, and reduced upstream traffic in controlled laboratory conditions. The main contribution is the experimental integration of IPv6-based field networking, private field-to-edge wireless connectivity, and local edge services for AMI. The immediate next step is a same-workload, controlled measurement of an equivalent cloud-centric configuration to convert the qualitative latency comparison reported here into a directly measured one. Subsequent future work will focus on larger field trials with physical meters, longer outage scenarios, heterogeneous devices, security hardening, observability, SDN-based orchestration, and edge AI agents for local diagnosis and autonomous operation.
+
+\begin{thebibliography}{00}
+
+\bibitem{NISTFramework2022}
+National Institute of Standards and Technology, \emph{NIST Framework and Roadmap for Smart Grid Interoperability Standards, Release 4.0}, NIST Special Publication 1108r4, U.S. Department of Commerce, National Institute of Standards and Technology, Feb. 2022, doi: 10.6028/NIST.SP.1108r4.
+
+\bibitem{gungorSmartGridTechnologies2011}
+V. C. Gungor, D. Sahin, T. Kocak, S. Ergut, C. Buccella, C. Cecati, and G. P. Hancke, ``Smart grid technologies: Communication technologies and standards,'' \emph{IEEE Transactions on Industrial Informatics}, vol. 7, no. 4, pp. 529--539, Nov. 2011, doi: 10.1109/TII.2011.2166794.
+
+\bibitem{abdulsalamOverviewRecentWireless2024}
+R. Abdul Salam, N. Iqbal Ratyal, U. Ahmed, I. Aziz, M. Sajid, and A. Mahmood, ``An overview of recent wireless technologies for IoT-enabled smart grids,'' \emph{Journal of Electrical and Computer Engineering}, vol. 2024, no. 1, Art. no. 2568751, Jan. 2024, doi: 10.1155/jece/2568751.
+
+\bibitem{alsafranChallengesImplementingIoT2025}
+A. S. Alsafran, M. Alwabari, and M. Al-Bahrani, ``Challenges in implementing IoT for enhanced reliability and effectiveness in smart grids: Literature review,'' \emph{International Transactions on Electrical Energy Systems}, vol. 2025, no. 1, Art. no. 5514628, Jan. 2025, doi: 10.1155/etep/5514628.
+
+\bibitem{satyanarayananEmergenceEdgeComputing2017}
+M. Satyanarayanan, ``The emergence of edge computing,'' \emph{Computer}, vol. 50, no. 1, pp. 30--39, Jan. 2017, doi: 10.1109/MC.2017.9.
+
+\bibitem{minhEdgeComputingIoTEnabled2022}
+Q. N. Minh, V.-H. Nguyen, V. K. Quy, L. A. Ngoc, A. Chehri, and G. Jeon, ``Edge computing for IoT-enabled smart grid: The future of energy,'' \emph{Energies}, vol. 15, no. 17, Art. no. 6140, Aug. 2022, doi: 10.3390/en15176140.
+
+\bibitem{ThreadGroup1-4-0}
+Thread Group, Inc., \emph{Thread 1.4.0 Specification}, Thread 1.4.0-20241015, Oct. 2024. [Online]. Available: \url{https://www.threadgroup.org/What-is-Thread/Thread-1-4-Specification}
+
+\bibitem{RFC6282}
+J. Hui and P. Thubert, ``Compression format for IPv6 datagrams over IEEE 802.15.4-based networks,'' IETF, RFC 6282, Sep. 2011, doi: 10.17487/RFC6282. [Online]. Available: \url{https://www.rfc-editor.org/rfc/rfc6282}
+
+\bibitem{OMA_LwM2M2020}
+ OMA SpecWorks, \emph{Lightweight M2M 1.2 Enabler Specification}, Open Mobile Alliance, 2020. [Online]. Available:  \url{https://www.openmobilealliance.org/release/LightweightM2M/V1_2-20201110-A/}
+
+\bibitem{RFC7252}
+Z. Shelby, K. Hartke, and C. Bormann, ``The Constrained Application Protocol (CoAP),'' IETF, RFC 7252, Jun. 2014, doi: 10.17487/RFC7252. [Online]. Available: \url{https://www.rfc-editor.org/rfc/rfc7252}
+
+\bibitem{IEEE802.11ah-2016}
+IEEE, \emph{IEEE Standard for Information Technology--Telecommunications and Information Exchange between Systems Local and Metropolitan Area Networks--Specific Requirements--Part 11: Wireless LAN Medium Access Control (MAC) and Physical Layer (PHY) Specifications Amendment 2: Sub 1 GHz License Exempt Operation}, IEEE Std. 802.11ah-2016, 2016, doi: 10.1109/IEEESTD.2017.7920364.
+
+\bibitem{qiaoSurveyWiFiHaLow2018}
+L. Qiao, Z. Zheng, W. Cui, and L. Wang, ``A survey on Wi-Fi HaLow technology for Internet of Things,'' in \emph{Proc. 2nd IEEE Conf. Energy Internet and Energy System Integration (EI2)}, Beijing, China, Oct. 2018, pp. 1--5, doi: 10.1109/EI2.2018.8582141.
+
+\bibitem{tianWiFiHaLowInternet2021}
+L. Tian, S. Santi, A. Seferagi\'c, J. Lan, and J. Famaey, ``Wi-Fi HaLow for the Internet of Things: An up-to-date survey on IEEE 802.11ah research,'' \emph{Journal of Network and Computer Applications}, vol. 182, Art. no. 103036, May 2021, doi: 10.1016/j.jnca.2021.103036.
+
+\end{thebibliography}
+
+\end{document}

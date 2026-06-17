@@ -1,0 +1,13 @@
+% fig_topologia_multi_gateway.tex
+% Wrapper de tesis: envuelve el cuerpo TikZ (figures/fig_topologia_multi_gateway.tex)
+% en un entorno figure[H] con caption + label. Single source of truth: el cuerpo
+% TikZ vive en figures/ y se reutiliza si se quisiera generar un PDF standalone.
+\begin{figure}[H]
+\centering
+\resizebox{0.95\textwidth}{!}{%
+\input{figures/fig_topologia_multi_gateway}%
+}%
+\caption[Topología jerárquica multi-gateway: edificio $\rightarrow$ cuadra $\rightarrow$ distrito]%
+{Modelo de despliegue escalable en tres niveles jerárquicos. \textbf{Nivel 1 (edificio):} 60 nodos Thread agregados por una pasarela RPi4 con OTBR (replicación directa del piloto validado). \textbf{Nivel 2 (cuadra, 5 edificios):} 300 nodos, 5 OTBR (uno por edificio) y 1~\emph{mesh gate} HaLow IEEE~802.11ah @ 2\,MHz que agrega el tráfico de la cuadra. \textbf{Nivel 3 (distrito, 5 cuadras):} 1\,500 nodos, 25 OTBR, 5~\emph{mesh gates} y 1 servidor ThingsBoard \emph{on-premise} interconectados por troncal Ethernet/Fibra. Las flechas verdes a trazos representan enlaces Thread 802.15.4 (nodo$\rightarrow$OTBR), las naranja sinusoidales el enlace HaLow sub-GHz (OTBR$\rightarrow$\emph{mesh gate}) y las moradas continuas el troncal cableado (\emph{mesh gate}$\rightarrow$servidor).}
+\label{fig:topologia-multi-gateway}
+\end{figure}

@@ -405,7 +405,9 @@ Fei-Fei Li
 }
 
 {\pagenumbering{arabic}
-\setlength{\parskip}{\baselineskip}
+% T2-C4 fix: parskip reducido para eliminar espacios excesivos en bottoms de página
+% (originalmente `\baselineskip` causaba blancos visibles en pp. 25/32/41).
+\setlength{\parskip}{0.5\baselineskip plus 2pt minus 1pt}
 %Incluir secciones del documento de aqui en adelante
 %Use \include para incluir desde una página nueva e \input para incluir sin salto de página
 %\include{00Intrucciones} % Anular esta linea con comentario de ser necesario

@@ -1,0 +1,146 @@
+% figures/fig_topologia_multi_gateway.tex
+% Cuerpo TikZ (single source of truth) — Topología jerárquica multi-gateway
+% Niveles: Edificio (60 nodos, 1 OTBR) -> Cuadra (300 nodos, 5 OTBR, 1 mesh gate HaLow)
+%          -> Distrito (1500 nodos, 25 OTBR, 5 mesh gates, 1 servidor on-prem)
+% Convenciones paleta tikz-figure: green=Thread/nodos, blue=OTBR/edge, orange=HaLow,
+% purple=servidor on-premise. Fuentes \footnotesize / \small (sin \tiny).
+\begin{tikzpicture}[
+    font=\sffamily\footnotesize,
+    >=Latex,
+    % --- Bandas por nivel ---
+    bandEdif/.style={rounded corners=6pt, draw=green!50!black, fill=green!12, line width=0.9pt},
+    bandCuadra/.style={rounded corners=6pt, draw=blue!50!black, fill=blue!10, line width=0.9pt},
+    bandDistrito/.style={rounded corners=6pt, draw=purple!50!black, fill=purple!10, line width=0.9pt},
+    lvlhead/.style={font=\small\bfseries\sffamily, anchor=north west, inner sep=3pt},
+    % --- Componentes ---
+    meter/.style={rectangle, rounded corners=2pt, draw=green!55!black, fill=green!22,
+                  minimum width=0.95cm, minimum height=0.5cm, font=\footnotesize,
+                  text=green!28!black, inner sep=2pt, align=center},
+    otbr/.style={rectangle, rounded corners=2pt, draw=blue!55!black, fill=blue!22,
+                 minimum width=1.5cm, minimum height=0.7cm, font=\footnotesize\bfseries,
+                 text=blue!30!black, align=center, inner sep=2pt},
+    halowgw/.style={rectangle, rounded corners=3pt, draw=orange!60!black, fill=orange!22,
+                    minimum width=2.0cm, minimum height=0.8cm, font=\footnotesize\bfseries,
+                    text=orange!35!black, align=center, inner sep=2pt},
+    server/.style={rectangle, rounded corners=3pt, draw=purple!55!black, fill=purple!22,
+                   minimum width=2.6cm, minimum height=0.9cm, font=\small\bfseries,
+                   text=purple!28!black, align=center, inner sep=3pt},
+    countbox/.style={rectangle, rounded corners=2pt, fill=white, draw=black!50,
+                     font=\footnotesize\bfseries, inner sep=2.5pt, align=center},
+    % --- Flechas ---
+    threadarr/.style={->, draw=green!55!black, line width=0.6pt, dashed},
+    halowarr/.style={->, draw=orange!60!black, line width=0.9pt, decorate,
+                     decoration={snake, amplitude=0.5mm, segment length=3mm, post length=1.5mm}},
+    backbonearr/.style={->, draw=purple!55!black, line width=1.0pt},
+    xzlabel/.style={font=\footnotesize\bfseries\sffamily, fill=white, inner sep=1.5pt,
+                    rounded corners=1pt},
+]
+
+% =========================================================================
+% NIVEL 1: EDIFICIO (60 nodos, 1 OTBR)
+% =========================================================================
+\node[bandEdif, minimum width=5.6cm, minimum height=5.2cm,
+      anchor=south west] (B1) at (0, 0) {};
+\node[lvlhead, text=green!35!black, anchor=north west]
+    at (B1.north west) {Nivel 1 — Edificio};
+
+% 60 nodos como mini-medidores (representativos: 6 visibles + indicador)
+\foreach \x/\y in {0.6/4.0, 1.5/4.0, 2.4/4.0, 3.3/4.0, 4.2/4.0,
+                   0.6/3.4, 1.5/3.4, 2.4/3.4, 3.3/3.4, 4.2/3.4,
+                   0.6/2.8, 1.5/2.8, 2.4/2.8, 3.3/2.8, 4.2/2.8} {
+    \node[meter, minimum width=0.7cm, minimum height=0.35cm] at (\x, \y) {};
+}
+\node[font=\footnotesize, text=green!30!black] at (2.8, 2.35) {$\cdots$ 60 nodos $\cdots$};
+
+% OTBR del edificio
+\node[otbr] (otbrE1) at (2.8, 1.55) {OTBR \#1\\(RPi4)};
+
+% Flechas Thread (nodos -> OTBR, agregadas)
+\draw[threadarr] (1.5, 2.7) -- (otbrE1.north west);
+\draw[threadarr] (2.8, 2.7) -- (otbrE1.north);
+\draw[threadarr] (4.2, 2.7) -- (otbrE1.north east);
+
+% Cajas de conteo del nivel 1
+\node[countbox, anchor=south west, text=green!28!black] at ([xshift=2pt, yshift=2pt]B1.south west) {%
+    60 nodos\\1 OTBR\\Thread 802.15.4};
+
+% =========================================================================
+% NIVEL 2: CUADRA (5 edificios, 300 nodos, 5 OTBR, 1 mesh gate HaLow)
+% =========================================================================
+\node[bandCuadra, minimum width=6.6cm, minimum height=5.2cm,
+      anchor=south west] (B2) at (6.2, 0) {};
+\node[lvlhead, text=blue!30!black, anchor=north west]
+    at (B2.north west) {Nivel 2 — Cuadra (5 edificios)};
+
+% 5 OTBRs (uno por edificio) — representados como cajas pequeñas
+\foreach \i/\x in {1/7.0, 2/8.1, 3/9.2, 4/10.3, 5/11.4} {
+    \node[otbr, minimum width=0.95cm, minimum height=0.55cm, font=\footnotesize]
+        at (\x, 3.9) (otbrC\i) {OTBR \#\i};
+}
+
+% Mini-edificios (5) abajo de cada OTBR — indican el conjunto de nodos
+\foreach \i/\x in {1/7.0, 2/8.1, 3/9.2, 4/10.3, 5/11.4} {
+    \node[draw=green!50!black, fill=green!14, rounded corners=2pt,
+          minimum width=0.9cm, minimum height=0.6cm, font=\footnotesize,
+          text=green!30!black, align=center] at (\x, 3.05) {60 nod.};
+}
+
+% Mesh gate HaLow agregador (centro de la cuadra)
+\node[halowgw] (mgC) at (9.2, 1.7) {Mesh Gate\\HaLow};
+
+% Flechas OTBR -> Mesh Gate (HaLow sub-GHz)
+\foreach \i in {1,2,3,4,5} {
+    \draw[halowarr] (otbrC\i.south) -- (mgC.north);
+}
+
+% Caja de conteo del nivel 2
+\node[countbox, anchor=south west, text=blue!30!black] at ([xshift=2pt, yshift=2pt]B2.south west) {%
+    300 nodos\\5 OTBR + 1 Mesh Gate\\HaLow 802.11ah 2\,MHz};
+
+% Etiqueta de enlace HaLow
+\node[xzlabel, text=orange!40!black] at (10.7, 2.4) {HaLow 920\,MHz};
+
+% =========================================================================
+% NIVEL 3: DISTRITO (5 cuadras, 1500 nodos, 25 OTBR, 5 mesh gates, 1 servidor)
+% =========================================================================
+\node[bandDistrito, minimum width=12.8cm, minimum height=4.0cm,
+      anchor=south west] (B3) at (0, -4.4) {};
+\node[lvlhead, text=purple!30!black, anchor=north west]
+    at (B3.north west) {Nivel 3 — Distrito (5 cuadras)};
+
+% 5 mesh gates (uno por cuadra)
+\foreach \i/\x in {1/1.5, 2/3.8, 3/6.1, 4/8.4, 5/10.7} {
+    \node[halowgw, minimum width=1.3cm, minimum height=0.6cm, font=\footnotesize]
+        at (\x, -2.1) (mgD\i) {MG \#\i};
+}
+
+% Servidor central on-premise
+\node[server] (srvD) at (6.4, -3.6) {Servidor central\\ThingsBoard \emph{on-prem}};
+
+% Flechas mesh gates -> servidor (Ethernet/Fibra backbone)
+\foreach \i in {1,2,3,4,5} {
+    \draw[backbonearr] (mgD\i.south) -- (srvD.north);
+}
+
+% Caja de conteo del nivel 3
+\node[countbox, anchor=south east, text=purple!28!black] at ([xshift=-2pt, yshift=2pt]B3.south east) {%
+    1\,500 nodos\\25 OTBR + 5 Mesh Gates\\1 servidor \emph{on-prem}};
+
+% Etiqueta de enlace backbone
+\node[xzlabel, text=purple!30!black] at (8.6, -2.9) {Ethernet / Fibra};
+
+% =========================================================================
+% Conexión inter-nivel: Nivel 1 (edificio ejemplar) -> Nivel 2 (su OTBR)
+% =========================================================================
+\draw[->, draw=blue!50!black, line width=0.7pt, dashed]
+    (otbrE1.east) to[bend right=15] node[xzlabel, text=blue!30!black] {agregación}
+    (otbrC1.west);
+
+% =========================================================================
+% Conexión inter-nivel: Nivel 2 (mesh gate ejemplar) -> Nivel 3
+% =========================================================================
+\draw[->, draw=orange!55!black, line width=0.9pt, dashed]
+    (mgC.south) to[bend left=10] node[xzlabel, text=orange!40!black, pos=0.6] {troncal}
+    (mgD3.north);
+
+\end{tikzpicture}%

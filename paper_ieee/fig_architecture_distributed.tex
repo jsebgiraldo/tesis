@@ -1,0 +1,15 @@
+% Standalone wrapper for the distributed architecture figure.
+% The actual TikZ body lives in figures/fig_architecture_distributed.tex
+% so the paper (\input) and the standalone (PDF/SVG/PNG generation) share
+% one source of truth. To regenerate vector outputs:
+%   pdflatex fig_architecture_distributed.tex
+%   pdftocairo -svg fig_architecture_distributed.pdf
+%   pdftoppm -png -r 150 fig_architecture_distributed.pdf fig_architecture_distributed
+\documentclass[border=12pt,tikz]{standalone}
+\usepackage[T1]{fontenc}
+\usepackage{amssymb}
+\usepackage{tikz}
+\usetikzlibrary{calc,arrows.meta,positioning,fit,backgrounds,decorations.pathmorphing}
+\begin{document}
+\input{figures/fig_architecture_distributed.tex}
+\end{document}
